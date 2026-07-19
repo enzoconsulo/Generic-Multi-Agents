@@ -1,0 +1,10 @@
+# Projetos são repositórios git próprios — a raiz versiona só o sistema
+projetos/
+
+# Aprovações locais de permissão (pessoais, não versionar)
+.claude/settings.local.json
+
+# Lixo de SO
+Thumbs.db
+desktop.ini
+.DS_Store
