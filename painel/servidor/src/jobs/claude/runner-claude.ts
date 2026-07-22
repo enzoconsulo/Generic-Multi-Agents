@@ -20,6 +20,8 @@ export interface ParamsClaude {
   modelo: string;
   /** Modelo de fallback (SDK cai nele se o primário estiver sem limite/sobrecarregado). */
   fallback?: string;
+  /** Agentes dinâmicos (options.agents do SDK); ausente = só os agentes de arquivo. */
+  agentes?: Record<string, unknown>;
   /** Modo de permissão do SDK; default seguro para ferramenta local pessoal. */
   permissionMode?: string;
   /** Limite de turnos agênticos (guarda de custo); ausente = sem limite. */
@@ -85,6 +87,8 @@ export class RunnerClaude implements Runner {
         // fallbackModel do SDK é string (lista separada por vírgula); re-tenta o primário
         // a cada turno, então uma indisponibilidade temporária não rebaixa a sessão.
         ...(p.fallback !== undefined ? { fallbackModel: p.fallback } : {}),
+        // Especialistas do projeto injetados como subagentes (options.agents do SDK).
+        ...(p.agentes !== undefined ? { agents: p.agentes } : {}),
         permissionMode: p.permissionMode ?? "bypassPermissions",
         abortController: controlador,
         ...(p.maxTurns !== undefined ? { maxTurns: p.maxTurns } : {}),
@@ -173,6 +177,7 @@ function lerParams(params: Record<string, unknown>): ParamsClaude {
     throw new Error("Job claude sem `modelo` válido em params.");
   }
   const fallback = params["fallback"];
+  const agentes = params["agentes"];
   const permissionMode = params["permissionMode"];
   const maxTurns = params["maxTurns"];
   return {
@@ -180,6 +185,9 @@ function lerParams(params: Record<string, unknown>): ParamsClaude {
     cwd,
     modelo,
     ...(typeof fallback === "string" && fallback !== "" ? { fallback } : {}),
+    ...(agentes !== null && typeof agentes === "object"
+      ? { agentes: agentes as Record<string, unknown> }
+      : {}),
     ...(typeof permissionMode === "string" ? { permissionMode } : {}),
     ...(typeof maxTurns === "number" ? { maxTurns } : {}),
   };

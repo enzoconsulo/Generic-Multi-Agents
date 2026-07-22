@@ -33,6 +33,8 @@ export interface PedidoAcao {
   modelo: string;
   /** Fallback (alias) já resolvido da estratégia; ausente = sem fallback. */
   fallback?: string | null;
+  /** Agentes dinâmicos (options.agents do SDK) — só para /trabalhar com equipe. */
+  agentes?: Record<string, unknown>;
   /** Guarda de custo opcional. */
   maxTurns?: number;
 }
@@ -69,6 +71,9 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
       cwd: fabricaRaiz,
       modelo: pedido.modelo,
       ...(pedido.fallback ? { fallback: pedido.fallback } : {}),
+      ...(pedido.agentes && Object.keys(pedido.agentes).length > 0
+        ? { agentes: pedido.agentes }
+        : {}),
       ...(pedido.maxTurns !== undefined ? { maxTurns: pedido.maxTurns } : {}),
     },
   };

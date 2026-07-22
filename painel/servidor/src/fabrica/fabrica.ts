@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { faseAtualDoPlano, parsearPlano } from "./plano.js";
 import { contarPorStatus, lerTarefas } from "./tarefas.js";
 import { lerIdeias, lerLogMaisRecente } from "./sistema.js";
+import { lerEquipe } from "./equipe.js";
 import type {
   ContagemPorStatus,
   EstadoFabrica,
@@ -54,10 +55,11 @@ export async function lerProjeto(raiz: string, nome: string): Promise<ProjetoDet
 
   const base = await lerBaseProjeto(raiz, nome);
   const dirGestao = join(raiz, "projetos", nome, "_gestao");
-  const [decisoes, progresso, analise] = await Promise.all([
+  const [decisoes, progresso, analise, equipe] = await Promise.all([
     lerTextoOpcional(join(dirGestao, "DECISOES.md")),
     lerTextoOpcional(join(dirGestao, "PROGRESSO.md")),
     lerTextoOpcional(join(dirGestao, "ANALISE.md")),
+    lerEquipe(raiz, nome),
   ]);
 
   return {
@@ -66,6 +68,7 @@ export async function lerProjeto(raiz: string, nome: string): Promise<ProjetoDet
     contagemPorStatus: base.contagemPorStatus,
     faseAtual: base.faseAtual,
     plano: base.plano,
+    equipe,
     decisoes,
     progresso,
     analise,

@@ -74,11 +74,17 @@ export function parsearTarefa(arquivo: string, texto: string): TarefaCompleta {
   const criada = lerData(dados, "criada", erros);
   const atualizada = lerData(dados, "atualizada", erros);
 
-  // Opcional: só é validado (e reportado) quando o campo existe no frontmatter.
+  // Opcionais: só são validados (e reportados) quando o campo existe no frontmatter.
   let replanejadaDe: string | null = null;
   if (dados["replanejada-de"] !== undefined) {
     replanejadaDe = campoTexto(dados["replanejada-de"]);
     if (replanejadaDe === null) erros.push("campo replanejada-de inválido");
+  }
+
+  let agente: string | null = null;
+  if (dados["agente"] !== undefined) {
+    agente = campoTexto(dados["agente"]);
+    if (agente === null) erros.push("campo agente inválido");
   }
 
   return {
@@ -91,6 +97,7 @@ export function parsearTarefa(arquivo: string, texto: string): TarefaCompleta {
     areas,
     tentativas,
     replanejadaDe,
+    agente,
     criada,
     atualizada,
     erros,

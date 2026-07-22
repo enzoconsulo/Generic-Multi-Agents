@@ -234,3 +234,19 @@ estratégia e uma ESTIMATIVA de custo qualitativa = peso da ação (leve/médio/
 o custo antes de gastar. Data-driven para editar sem tocar em lógica. Default econômico
 (`sonnet`, env `ESTRATEGIA_PADRAO`).
 **Quem:** usuário + orquestrador
+
+## 2026-07-21 — Agentes dinâmicos sob demanda no /trabalhar ("Equipe do projeto")
+**Decisão:** implementado o design de `_gestao/pesquisas/2026-07-21-agentes-dinamicos.md`.
+Cada projeto pode ter `_gestao/equipe.json` (gerado pelo planejador a partir da ideia):
+especialistas de CONSTRUÇÃO. As tarefas ganham o campo opcional `agente:`. Ao disparar
+`/trabalhar <projeto>`, o painel lê a equipe e injeta em `options.agents` do SDK; o
+`/trabalhar` despacha cada tarefa ao seu especialista (fallback: executor genérico).
+Testador e revisor seguem fixos e genéricos. Validado ao vivo: injeção correta dos
+especialistas nos params do job. Toca a fábrica (planejador, comando /trabalhar, template
+e protocolo de tarefa) e o painel (leitor de equipe, injeção, exibição).
+**Motivo:** pedido do usuário — orquestração genérica que cria/ordena sub-agentes sob
+demanda por projeto. Especialistas só na construção = agentes dinâmicos onde importa sem
+arriscar a estabilidade da verificação. File-based (equipe.json versionado) e nativo
+(`options.agents`). Alternativa descartada: agentes de arquivo em projetos/<nome>/.claude/
+(não carregam com cwd na raiz da fábrica).
+**Quem:** usuário + orquestrador

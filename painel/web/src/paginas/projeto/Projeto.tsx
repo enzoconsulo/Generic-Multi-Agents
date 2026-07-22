@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useDados } from "../../lib/useDados";
-import type { FasePlano, ProjetoDetalhe, TarefaCompleta } from "../../lib/tipos";
+import type { EquipeProjeto, FasePlano, ProjetoDetalhe, TarefaCompleta } from "../../lib/tipos";
 import {
   ORDEM_STATUS,
   classePrioridade,
@@ -58,6 +58,8 @@ function DetalheProjeto({ projeto }: { projeto: ProjetoDetalhe }) {
         <h3 className="secao-titulo">Resumo</h3>
         <ResumoStatus contagem={projeto.contagemPorStatus} />
       </section>
+
+      <BlocoEquipe equipe={projeto.equipe} />
 
       <QuadroTarefas tarefas={projeto.tarefas} />
 
@@ -181,6 +183,7 @@ function DetalheTarefa({
           <Campo rot="Dependências" valor={tarefa.dependencias.join(", ")} />
         )}
         {tarefa.areas.length > 0 && <Campo rot="Áreas" valor={tarefa.areas.join(", ")} />}
+        {tarefa.agente !== null && <Campo rot="Agente" valor={tarefa.agente} />}
         {tarefa.atualizada !== null && <Campo rot="Atualizada" valor={tarefa.atualizada} />}
       </dl>
 
@@ -218,6 +221,45 @@ function CampoSecao({ rot, texto }: { rot: string; texto: string }) {
         <pre className="bloco-texto">{conteudo}</pre>
       )}
     </div>
+  );
+}
+
+function BlocoEquipe({ equipe }: { equipe: EquipeProjeto }) {
+  return (
+    <section className="secao">
+      <h3 className="secao-titulo">Equipe de especialistas</h3>
+      {equipe.erros.length > 0 && (
+        <div className="aviso aviso-erro">{equipe.erros.join(" · ")}</div>
+      )}
+      {equipe.agentes.length === 0 ? (
+        <p className="texto-suave">
+          Sem equipe definida. Os especialistas são criados pelo planejador a partir da ideia
+          do projeto (em <code>_gestao/equipe.json</code>); enquanto não houver, o{" "}
+          <span className="mono">/trabalhar</span> usa o executor genérico.
+        </p>
+      ) : (
+        <div className="grade-cards">
+          {equipe.agentes.map((a) => (
+            <article key={a.id} className="card">
+              <div className="card-cab">
+                <h4 className="card-titulo">{a.nome}</h4>
+                <span className="badge badge-suave mono">{a.id}</span>
+              </div>
+              {a.descricao !== "" && <p className="card-desc">{a.descricao}</p>}
+              {a.ferramentas !== null && a.ferramentas.length > 0 && (
+                <p className="card-args">
+                  <span className="card-args-rot">Ferramentas</span>
+                  <code>{a.ferramentas.join(", ")}</code>
+                </p>
+              )}
+              {a.erros.length > 0 && (
+                <span className="badge badge-alerta">{a.erros.join(" · ")}</span>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

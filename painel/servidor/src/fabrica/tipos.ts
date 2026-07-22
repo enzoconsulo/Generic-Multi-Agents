@@ -44,6 +44,8 @@ export interface TarefaResumo {
   tentativas: number;
   /** Presente apenas em tarefas nascidas de replanejamento automático. */
   replanejadaDe: string | null;
+  /** Id do especialista da equipe que deve executar (opcional; null = executor genérico). */
+  agente: string | null;
   /** AAAA-MM-DD ou null quando ausente/inválida. */
   criada: string | null;
   atualizada: string | null;
@@ -107,12 +109,35 @@ export interface ProjetoResumo {
   erros: string[];
 }
 
+/** Especialista dinâmico do projeto (de `_gestao/equipe.json`, gerado pelo planejador). */
+export interface AgenteEspecialista {
+  /** Id único (kebab-case) — vira o nome do subagente injetado no SDK. */
+  id: string;
+  nome: string;
+  /** Quando usar este agente (vira o `description` do AgentDefinition). */
+  descricao: string;
+  /** System prompt do especialista. */
+  prompt: string;
+  /** Ferramentas permitidas; null = herda todas do agente principal. */
+  ferramentas: string[] | null;
+  /** Problemas de validação; vazio = agente pronto para injeção. */
+  erros: string[];
+}
+
+export interface EquipeProjeto {
+  agentes: AgenteEspecialista[];
+  /** Problemas no nível do arquivo (JSON inválido, sem array `agentes`). */
+  erros: string[];
+}
+
 export interface ProjetoDetalhe {
   nome: string;
   tarefas: TarefaCompleta[];
   contagemPorStatus: ContagemPorStatus;
   faseAtual: FaseAtual | null;
   plano: Plano | null;
+  /** Equipe de especialistas do projeto (vazia quando não há equipe.json). */
+  equipe: EquipeProjeto;
   /** Conteúdo integral dos arquivos de gestão; null quando o arquivo não existe. */
   decisoes: string | null;
   progresso: string | null;

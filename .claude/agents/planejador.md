@@ -37,6 +37,30 @@ Trabalhe em português (BR).
    - seção Contexto dizendo ao executor o que ele precisa saber sem redescobrir tudo.
 4. Se tomou decisões relevantes (stack, arquitetura, corte de escopo), registre cada uma
    em `_gestao/DECISOES.md` com data e motivo.
+5. **Equipe do projeto** em `_gestao/equipe.json` — os ESPECIALISTAS que a fábrica usa para
+   CONSTRUIR este projeto (agentes sob demanda, sintetizados da ideia/stack). O painel
+   injeta essa equipe como subagentes quando roda o /trabalhar. Formato:
+   ```json
+   {
+     "agentes": [
+       {
+         "id": "frontend",
+         "nome": "Especialista Frontend",
+         "descricao": "Quando a tarefa toca UI/componentes/estilos",
+         "prompt": "System prompt do especialista: stack e convenções DESTE projeto, o que priorizar, e a MESMA disciplina do executor (ler PROTOCOLO_TAREFAS + a tarefa, implementar, testar só o que tocou, commitar, registrar nas Notas de execução). Confinado a projetos/<nome>/.",
+         "ferramentas": ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "PowerShell"]
+       }
+     ]
+   }
+   ```
+   Regras: **2–5 especialistas**, cada um cobrindo uma ÁREA de construção (ex.: frontend,
+   api, dados, infra) — genéricos ao TIPO de projeto (web, CLI, pipeline, lib...). O
+   especialista É um executor especializado: o `prompt` herda a disciplina do executor.
+   `ferramentas` é opcional (omitir = herda todas). Projeto muito simples pode ter equipe
+   vazia (`{"agentes": []}`) → a fábrica usa o executor genérico. **Testador e revisor NÃO
+   entram na equipe** (são fixos e genéricos). Ao criar as tarefas, preencha o campo
+   opcional `agente:` no frontmatter com o `id` do especialista que deve executá-la (pela
+   área/natureza); sem `agente:`, cai no executor genérico.
 
 ## Regras
 

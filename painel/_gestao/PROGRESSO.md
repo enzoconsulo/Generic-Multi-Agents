@@ -52,3 +52,12 @@ modelos individuais; **estimativa de custo** (peso da ação × tier do modelo) 
 disparar; home e Jobs mais claros (o que cada ação faz, selo de peso, legenda do console).
 Suíte: 90/90 (servidor) + 7/7 (web); fluxo `fable-opus` validado ao vivo (fable + fallback
 opus passados ao SDK, disparo e cancelamento).
+
+**Agentes dinâmicos sob demanda ("Equipe do projeto")** — as 4 fases do design
+`_gestao/pesquisas/2026-07-21-agentes-dinamicos.md`: o planejador gera `equipe.json`
+(especialistas de construção sintetizados da ideia); tarefas ganham `agente:`; o painel
+injeta a equipe em `options.agents` do SDK ao rodar `/trabalhar <projeto>`; o `/trabalhar`
+despacha por especialista (fallback executor); a página do projeto exibe a equipe. Testador
+e revisor seguem fixos. Suíte: 99/99 (servidor) + 7/7 (web). Validado ao vivo com projeto
+de exemplo: injeção dos especialistas nos params e exibição na API. Falta na Fase 2: T-010
+(inputs pela UI), T-012 (análise/ANALISE.md), T-013 (cadastro/importação).

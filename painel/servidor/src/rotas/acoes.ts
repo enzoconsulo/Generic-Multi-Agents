@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { config, resolverEstrategia } from "../config.js";
 import { ErroAcaoDesconhecida, montarJobAcao } from "../acoes/acoes.js";
+import { agentesParaAcao } from "../acoes/agentes-dinamicos.js";
 import { obterGerenciador } from "../jobs/instancia.js";
 
 /**
@@ -13,7 +14,7 @@ export const prefixo = "/api/acoes";
 export const router: Router = Router();
 
 /** POST /api/acoes/:id — corpo { argumentos?, estrategia?, maxTurns? } → cria o job. */
-router.post("/:id", (req, res) => {
+router.post("/:id", async (req, res) => {
   const corpo = (req.body ?? {}) as {
     argumentos?: unknown;
     estrategia?: unknown;
@@ -44,13 +45,19 @@ router.post("/:id", (req, res) => {
     return;
   }
 
+  const argumentos = typeof corpo.argumentos === "string" ? corpo.argumentos : "";
+
   try {
+    // Agentes dinâmicos: só /trabalhar <projeto> com equipe.json recebe especialistas.
+    const agentes = await agentesParaAcao(config.fabricaRaiz, req.params.id, argumentos);
+
     const novo = montarJobAcao(
       {
         id: req.params.id,
-        ...(typeof corpo.argumentos === "string" ? { argumentos: corpo.argumentos } : {}),
+        argumentos,
         modelo: estrategia.modelo,
         fallback: estrategia.fallback,
+        ...(agentes ? { agentes } : {}),
         ...(typeof corpo.maxTurns === "number" ? { maxTurns: corpo.maxTurns } : {}),
       },
       config.fabricaRaiz,

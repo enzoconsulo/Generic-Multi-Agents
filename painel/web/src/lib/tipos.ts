@@ -83,10 +83,26 @@ export interface TarefaCompleta {
   areas: string[];
   tentativas: number;
   replanejadaDe: string | null;
+  /** Id do especialista da equipe que executa (null = executor genérico). */
+  agente: string | null;
   criada: string | null;
   atualizada: string | null;
   erros: string[];
   secoes: SecoesTarefa;
+}
+
+export interface AgenteEspecialista {
+  id: string;
+  nome: string;
+  descricao: string;
+  prompt: string;
+  ferramentas: string[] | null;
+  erros: string[];
+}
+
+export interface EquipeProjeto {
+  agentes: AgenteEspecialista[];
+  erros: string[];
 }
 
 export interface ProjetoResumo {
@@ -102,6 +118,7 @@ export interface ProjetoDetalhe {
   contagemPorStatus: ContagemPorStatus;
   faseAtual: FaseAtual | null;
   plano: Plano | null;
+  equipe: EquipeProjeto;
   decisoes: string | null;
   progresso: string | null;
   analise: string | null;

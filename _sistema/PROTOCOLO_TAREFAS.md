@@ -24,6 +24,7 @@ prioridade: alta        # alta | media | baixa
 dependencias: []        # ex.: [T-002, T-003] — IDs que precisam estar concluida
 areas: []               # pastas/arquivos que a tarefa toca, ex.: [src/api/, src/db/schema.sql]
 tentativas: 0           # incrementado pelo executor a cada vez que pega a tarefa
+agente: <id>            # OPCIONAL: especialista da equipe (_gestao/equipe.json) que executa; vazio = executor genérico
 replanejada-de: T-NNN   # OPCIONAL: só em tarefas criadas por replanejamento automático
 criada: AAAA-MM-DD
 atualizada: AAAA-MM-DD  # atualizar em TODA mudança de status

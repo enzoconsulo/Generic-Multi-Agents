@@ -30,11 +30,16 @@ Trabalhe até esgotar as tarefas ou tudo estar bloqueado.
 1. **Selecione até 3 tarefas `pronta`** independentes entre si: prioridade `alta`
    primeiro; entre iguais, a que destrava mais dependentes. Mesmo projeto na mesma
    leva: só com `areas` disjuntas.
-2. **Despache um `executor` por tarefa** (em paralelo quando a regra acima permitir).
-   Prompt de despacho sempre inclui: caminho absoluto do projeto, ID da tarefa e, em
-   retrabalho, aviso de que há relatório de reprovação a atender. **Ao retorno de CADA
-   agente**, confirme por busca que o status no frontmatter confere com o relatório dele
-   antes do próximo despacho; divergência → corrija você mesmo conforme o protocolo e
+2. **Despache um construtor por tarefa** (em paralelo quando a regra acima permitir).
+   Qual construtor: se a tarefa tem o campo `agente:` no frontmatter E existe um subagente
+   com esse nome disponível nesta sessão (a equipe do projeto, `_gestao/equipe.json`, é
+   injetada como subagentes quando o /trabalhar roda pelo painel), despache ESSE
+   especialista; caso contrário, o `executor` genérico. O prompt de despacho é o mesmo nos
+   dois casos: caminho absoluto do projeto, ID da tarefa e, em retrabalho, aviso de que há
+   relatório de reprovação a atender. Especialista e executor genérico seguem a MESMA
+   disciplina (protocolo, testar o que tocou, commitar, registrar Notas). **Ao retorno de
+   CADA agente**, confirme por busca que o status no frontmatter confere com o relatório
+   dele antes do próximo despacho; divergência → corrija você mesmo conforme o protocolo e
    anote no log.
 3. **Quando um executor terminar:** despache o `testador` da tarefa — respeitando a
    regra de projeto quieto (nenhum executor/testador ativo no MESMO projeto; enquanto
