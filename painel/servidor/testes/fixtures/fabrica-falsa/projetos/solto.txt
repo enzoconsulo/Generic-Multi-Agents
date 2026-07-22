@@ -1,0 +1,1 @@
+Arquivo solto em projetos/ — não é diretório, não pode aparecer como projeto.
