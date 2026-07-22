@@ -1,10 +1,20 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDados } from "../../lib/useDados";
-import type { EquipeProjeto, FasePlano, ProjetoDetalhe, TarefaCompleta } from "../../lib/tipos";
+import { api, ErroApi } from "../../lib/api";
+import type {
+  EquipeProjeto,
+  EstrategiaModelo,
+  FasePlano,
+  ProjetoDetalhe,
+  RespostaAcao,
+  RespostaFabrica,
+  TarefaCompleta,
+} from "../../lib/tipos";
 import {
   ORDEM_STATUS,
   classePrioridade,
+  estimarCusto,
   rotuloPrioridade,
   rotuloStatus,
 } from "../../lib/formato";
@@ -65,11 +75,7 @@ function DetalheProjeto({ projeto }: { projeto: ProjetoDetalhe }) {
 
       {projeto.plano !== null && <BlocoPlano fases={projeto.plano.fases} />}
 
-      <SecaoTexto
-        titulo="Análise do código"
-        texto={projeto.analise}
-        vazio="Análise ainda não gerada para este projeto. (Ela será criada pela ação de análise de ponta a ponta, na próxima fase do painel.)"
-      />
+      <SecaoAnalise projeto={projeto.nome} analise={projeto.analise} />
 
       <SecaoTexto titulo="Decisões" texto={projeto.decisoes} vazio="Sem DECISOES.md." />
       <SecaoTexto titulo="Progresso" texto={projeto.progresso} vazio="Sem PROGRESSO.md." />
@@ -286,6 +292,129 @@ function BlocoPlano({ fases }: { fases: FasePlano[] }) {
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * Seção "Análise do código": mostra o ANALISE.md (se houver) e um botão para DISPARAR a
+ * ação de análise (T-012), que lê o projeto de ponta a ponta e gera/atualiza o arquivo.
+ * As estratégias de modelo vêm de /api/fabrica (mesmas da home).
+ */
+function SecaoAnalise({ projeto, analise }: { projeto: string; analise: string | null }) {
+  const fabrica = useDados<RespostaFabrica>("/api/fabrica");
+  const temAnalise = analise !== null && analise.trim() !== "";
+
+  return (
+    <section className="secao">
+      <div className="secao-cab-acao">
+        <h3 className="secao-titulo">Análise do código</h3>
+        {fabrica.dados !== null && (
+          <ControleAnalise
+            projeto={projeto}
+            estrategias={fabrica.dados.estrategias}
+            estrategiaPadrao={fabrica.dados.estrategiaPadrao}
+            temAnalise={temAnalise}
+          />
+        )}
+      </div>
+      {temAnalise ? (
+        <pre className="bloco-texto bloco-texto-grande">{(analise as string).trim()}</pre>
+      ) : (
+        <p className="texto-suave">
+          Análise ainda não gerada. Clique em <strong>Analisar</strong> — o painel lê o código
+          de ponta a ponta e gera o <code>_gestao/ANALISE.md</code> (arquitetura, fluxo, stack e
+          pontos de atenção), acompanhável ao vivo na aba <Link to="/jobs">Jobs</Link>.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function ControleAnalise({
+  projeto,
+  estrategias,
+  estrategiaPadrao,
+  temAnalise,
+}: {
+  projeto: string;
+  estrategias: EstrategiaModelo[];
+  estrategiaPadrao: string;
+  temAnalise: boolean;
+}) {
+  const navegar = useNavigate();
+  const [aberto, setAberto] = useState(false);
+  const [estrategiaId, setEstrategiaId] = useState(estrategiaPadrao);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const estrategia = estrategias.find((e) => e.id === estrategiaId) ?? estrategias[0];
+  // Análise lê o projeto todo mas escreve só um arquivo: peso "médio" para a estimativa.
+  const estimativa = estrategia ? estimarCusto("medio", estrategia.custo) : null;
+
+  async function analisar(evento: React.FormEvent) {
+    evento.preventDefault();
+    setEnviando(true);
+    setErro(null);
+    try {
+      const { job } = await api<RespostaAcao>("/api/acoes/analisar", {
+        method: "POST",
+        body: JSON.stringify({ projeto, estrategia: estrategiaId }),
+      });
+      navegar(`/jobs?job=${encodeURIComponent(job.id)}`);
+    } catch (e) {
+      setErro(e instanceof ErroApi || e instanceof Error ? e.message : "Falha ao disparar");
+      setEnviando(false);
+    }
+  }
+
+  if (!aberto) {
+    return (
+      <button
+        type="button"
+        className="botao botao-acao botao-compacto"
+        onClick={() => setAberto(true)}
+      >
+        {temAnalise ? "Reanalisar" : "Analisar"}
+      </button>
+    );
+  }
+
+  return (
+    <form className="form-acao form-acao-inline" onSubmit={analisar}>
+      <label className="campo-form">
+        <span>Modelo</span>
+        <select value={estrategiaId} onChange={(e) => setEstrategiaId(e.target.value)}>
+          {estrategias.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.rotulo}
+              {e.id === estrategiaPadrao ? " (padrão)" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      {estimativa && (
+        <span
+          className={`badge custo-${estimativa.tier}`}
+          title="Estimativa — a análise lê o projeto inteiro; o custo real aparece ao terminar."
+        >
+          Custo ~{estimativa.rotulo}
+        </span>
+      )}
+      {erro !== null && <div className="aviso aviso-erro aviso-compacto">{erro}</div>}
+      <div className="form-acoes">
+        <button type="submit" className="botao botao-acao botao-compacto" disabled={enviando}>
+          {enviando ? "Disparando…" : "Gerar análise"}
+        </button>
+        <button
+          type="button"
+          className="botao botao-secundario botao-compacto"
+          onClick={() => setAberto(false)}
+          disabled={enviando}
+        >
+          Cancelar
+        </button>
+      </div>
+    </form>
   );
 }
 

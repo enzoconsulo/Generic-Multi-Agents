@@ -735,6 +735,34 @@ a:hover {
   padding: 0.5rem 0.6rem;
 }
 
+/* Cabeçalho de seção com botão de ação à direita (ex.: Análise do código) */
+.secao-cab-acao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+.secao-cab-acao .secao-titulo {
+  margin: 0;
+}
+/* Variante do form de ação em linha (para caber ao lado do título) */
+.form-acao-inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-top: 0;
+}
+.form-acao-inline .campo-form {
+  margin: 0;
+}
+.botao-compacto {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+}
+
 /* Peso da ação (badge) */
 .peso-leve {
   color: var(--cor-sucesso);
