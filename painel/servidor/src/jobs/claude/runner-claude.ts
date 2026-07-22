@@ -53,6 +53,8 @@ interface BlocoConteudo {
   type?: string;
   text?: string;
   name?: string;
+  /** Input da ferramenta (usado p/ extrair `subagent_type` de despachos `Task`). */
+  input?: Record<string, unknown>;
 }
 interface MensagemSDK {
   type?: string;
@@ -125,9 +127,12 @@ export class RunnerClaude implements Runner {
                 texto: bloco.text,
               });
             } else if (bloco.type === "tool_use" && bloco.name) {
+              const alvo = alvoDeSubagente(bloco);
               ctx.emitir("log", {
                 nivel: "ferramenta",
-                texto: `${subagente ? "(subagente) " : ""}${bloco.name}`,
+                texto:
+                  `${subagente ? "(subagente) " : ""}${bloco.name}` +
+                  `${alvo !== null ? ` → ${alvo}` : ""}`,
               });
             }
           }
@@ -161,6 +166,23 @@ export class RunnerClaude implements Runner {
     }
     return { sessionId, custoUsd, numTurnos, erro, texto };
   }
+}
+
+/** Ferramentas que despacham um subagente (varia conforme o binário/SDK). */
+const FERRAMENTAS_DESPACHO: ReadonlySet<string> = new Set(["Agent", "Task"]);
+
+/**
+ * Para despachos de subagente (ferramenta `Agent` no Claude Code, `Task` em outros
+ * SDKs), extrai o tipo de subagente (`subagent_type`) do input — assim o log mostra
+ * QUAL especialista/agente foi despachado (ex.: "Agent → domain", "Agent → testador"),
+ * não só o nome cru, dando a "visão profunda" de qual membro da equipe está trabalhando.
+ * Robusto a churn de versão: qualquer forma inesperada retorna null e o log cai no
+ * nome cru da ferramenta.
+ */
+function alvoDeSubagente(bloco: BlocoConteudo): string | null {
+  if (bloco.name === undefined || !FERRAMENTAS_DESPACHO.has(bloco.name)) return null;
+  const tipo = bloco.input?.["subagent_type"];
+  return typeof tipo === "string" && tipo !== "" ? tipo : null;
 }
 
 function lerParams(params: Record<string, unknown>): ParamsClaude {

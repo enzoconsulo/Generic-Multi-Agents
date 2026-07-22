@@ -8,6 +8,23 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-22 — Runner loga o especialista despachado; ferramenta de despacho é `Agent`
+**Decisão:** o runner (`servidor/src/jobs/claude/runner-claude.ts`) passa a extrair o
+`subagent_type` do input das ferramentas de despacho e a incluí-lo no log
+(`Agent → domain`, `Agent → testador`), em vez de só o nome cru da ferramenta. Reconhece
+tanto `Agent` (o nome real no Claude Code, descoberto no teste ponta a ponta) quanto `Task`
+(usado por outros SDKs). Forma inesperada → cai no nome cru, sem quebrar.
+**Motivo:** o log antes mostrava só `(subagente) Task`, sem dizer QUEM estava trabalhando —
+contra o requisito de "visão profunda" da equipe. O teste real dos agentes dinâmicos revelou
+que a ferramenta de despacho aqui se chama `Agent`, então o gancho anterior (mirado em `Task`)
+nunca dispararia. Corrigido e coberto por 2 testes novos (servidor 99→101).
+**Relacionado (fábrica, fora do painel):** o mesmo teste pegou um bug no
+`.claude/commands/trabalhar.md` — o orquestrador headless condicionava usar o especialista a
+"rodar pelo painel", coisa que ele não consegue verificar, e caía no executor genérico.
+Corrigido para seleção determinística por `_gestao/equipe.json`. Re-validado: T-002→`domain`,
+T-003→`cli-core`. (Ver `_sistema/logs/2026-07-22.md`.)
+**Quem:** orquestrador
+
 ## 2026-07-21 — Stack do painel: Express 5 + React/Vite + TypeScript, sem banco
 **Decisão:** Monorepo npm workspaces com `servidor/` (Express 5, TS estrito, bind
 exclusivo em 127.0.0.1:8765) e `web/` (React 18 + Vite + TS, CSS puro com variáveis,

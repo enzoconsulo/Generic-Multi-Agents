@@ -72,6 +72,63 @@ describe("RunnerClaude — tradução de mensagens do SDK em eventos e resultado
     expect(niveis).toContain("resultado");
   });
 
+  it("mostra o subagente despachado no log (Agent/Task → <tipo>)", async () => {
+    const mensagens = [
+      // Claude Code despacha via ferramenta "Agent".
+      {
+        type: "assistant",
+        message: {
+          content: [
+            {
+              type: "tool_use",
+              name: "Agent",
+              input: { subagent_type: "domain", description: "T-002", prompt: "..." },
+            },
+          ],
+        },
+      },
+      // Outros SDKs usam "Task" — também suportado.
+      {
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", name: "Task", input: { subagent_type: "testador" } }],
+        },
+      },
+      // Subagente (parent_tool_use_id != null) usando uma ferramenta comum: sem alvo.
+      {
+        type: "assistant",
+        parent_tool_use_id: "toolu_1",
+        message: { content: [{ type: "tool_use", name: "Edit" }] },
+      },
+      { type: "result", is_error: false },
+    ];
+    const runner = new RunnerClaude(consultaDe(mensagens));
+    const { ctx, eventos } = contexto(new AbortController().signal);
+
+    await runner.executar(jobFake(PARAMS), ctx);
+
+    const textos = eventos
+      .filter((e) => (e.dados as { nivel: string }).nivel === "ferramenta")
+      .map((e) => (e.dados as { texto: string }).texto);
+    expect(textos).toContain("Agent → domain");
+    expect(textos).toContain("Task → testador");
+    expect(textos).toContain("(subagente) Edit");
+  });
+
+  it("despacho sem subagent_type válido cai no nome cru, sem quebrar", async () => {
+    const mensagens = [
+      { type: "assistant", message: { content: [{ type: "tool_use", name: "Agent", input: {} }] } },
+      { type: "result", is_error: false },
+    ];
+    const runner = new RunnerClaude(consultaDe(mensagens));
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    await runner.executar(jobFake(PARAMS), ctx);
+    const textos = eventos
+      .filter((e) => (e.dados as { nivel: string }).nivel === "ferramenta")
+      .map((e) => (e.dados as { texto: string }).texto);
+    expect(textos).toContain("Agent");
+  });
+
   it("lança quando o result vem com is_error", async () => {
     const mensagens = [
       { type: "result", subtype: "error", is_error: true, result: "algo falhou" },

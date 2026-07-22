@@ -5,6 +5,19 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-22
+**Agentes dinâmicos validados ponta a ponta com modelo real (Haiku), pelo painel.** Criado
+projeto-teste descartável (`projetos/teste-todo-cli`, CLI Node), rodado o planejador de
+verdade (gerou equipe coerente `domain`+`cli-core` e tarefas com `agente:`) e o `/trabalhar`
+pelo painel. O teste pegou um bug de comportamento na fábrica (o `/trabalhar` headless não
+sabia que rodava "via painel" e ignorava os especialistas) — corrigido em
+`.claude/commands/trabalhar.md` (seleção determinística por `equipe.json`) e **re-validado:
+T-002→`Agent → domain`, T-003→`Agent → cli-core`**, com código funcional (16 testes passando).
+**Melhoria no painel:** o runner agora loga QUAL especialista foi despachado (`Agent → domain`
+em vez de só `Task`) — descoberto que a ferramenta de despacho aqui é `Agent`, não `Task`.
+Suíte: **servidor 101/101** (+2) **+ web 7/7**. Próximo: T-012 (análise), T-013 (cadastro),
+T-010 (inputs UI), Fase 3 (CI/CD).
+
 ## 2026-07-21
 Projeto criado e Fase 1 (fundação) quase fechada num único dia de trabalho. Pesquisa
 técnica (Agent SDK), especificação, plano de 3 fases e backlog de 20 tarefas prontos.

@@ -14,10 +14,11 @@ Trabalhe até esgotar as tarefas ou tudo estar bloqueado.
 
 1. Leia o log mais recente de `_sistema/logs/` (contexto do que vinha acontecendo).
 2. Escaneie os frontmatters de `projetos/*/_gestao/tarefas/*.md` no escopo — um único
-   Grep em modo content de `^(status|prioridade|dependencias|areas):`, sem ler os
+   Grep em modo content de `^(status|prioridade|dependencias|areas|agente):`, sem ler os
    arquivos inteiros; leia por completo apenas o que for despachar. Leia também o
    PLANO.md dos projetos ativos (fases e linhas `Marco:`) — é a base para detectar
-   marcos de fase.
+   marcos de fase — e, se existir, `_gestao/equipe.json` de cada projeto ativo: é a
+   equipe de especialistas que você vai usar para despachar as tarefas com `agente:`.
 3. **Saneamento** (sobras de sessão anterior, sem agente rodando): `em-teste`/`em-revisao`
    NÃO regridem — a etapa anterior está commitada/registrada; apenas despache
    testador/revisor no loop normal. `em-execucao` volta para `pronta` — exceto se as
@@ -31,16 +32,21 @@ Trabalhe até esgotar as tarefas ou tudo estar bloqueado.
    primeiro; entre iguais, a que destrava mais dependentes. Mesmo projeto na mesma
    leva: só com `areas` disjuntas.
 2. **Despache um construtor por tarefa** (em paralelo quando a regra acima permitir).
-   Qual construtor: se a tarefa tem o campo `agente:` no frontmatter E existe um subagente
-   com esse nome disponível nesta sessão (a equipe do projeto, `_gestao/equipe.json`, é
-   injetada como subagentes quando o /trabalhar roda pelo painel), despache ESSE
-   especialista; caso contrário, o `executor` genérico. O prompt de despacho é o mesmo nos
-   dois casos: caminho absoluto do projeto, ID da tarefa e, em retrabalho, aviso de que há
-   relatório de reprovação a atender. Especialista e executor genérico seguem a MESMA
-   disciplina (protocolo, testar o que tocou, commitar, registrar Notas). **Ao retorno de
-   CADA agente**, confirme por busca que o status no frontmatter confere com o relatório
-   dele antes do próximo despacho; divergência → corrija você mesmo conforme o protocolo e
-   anote no log.
+   Qual construtor — regra determinística, sem adivinhação: se a tarefa tem `agente: <id>`
+   no frontmatter E `<id>` consta na equipe (`_gestao/equipe.json` que você leu na
+   preparação), despache o subagente `<id>` DIRETAMENTE. A equipe é injetada como
+   subagentes sempre que o /trabalhar roda pelo painel — que é o jeito normal de rodar —
+   então **confie que o especialista existe e despache-o; não presuma que ele não está
+   disponível**. Use o `executor` genérico só quando a tarefa não tem `agente:` ou o id não
+   consta na equipe. (Borda: se você estiver rodando /trabalhar manualmente no chat, fora
+   do painel, os especialistas podem não estar injetados; só nesse caso, se o despacho de
+   um especialista falhar por subagente inexistente, refaça com o `executor` genérico.)
+   O prompt de despacho é o mesmo para especialista e executor: caminho absoluto do
+   projeto, ID da tarefa e, em retrabalho, aviso de que há relatório de reprovação a
+   atender. Ambos seguem a MESMA disciplina (protocolo, testar o que tocou, commitar,
+   registrar Notas). **Ao retorno de CADA agente**, confirme por busca que o status no
+   frontmatter confere com o relatório dele antes do próximo despacho; divergência →
+   corrija você mesmo conforme o protocolo e anote no log.
 3. **Quando um executor terminar:** despache o `testador` da tarefa — respeitando a
    regra de projeto quieto (nenhum executor/testador ativo no MESMO projeto; enquanto
    não der, siga com outras tarefas e despache assim que o projeto liberar). Pulo de
