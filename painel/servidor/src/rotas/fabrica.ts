@@ -53,9 +53,9 @@ router.get("/", async (_req, res) => {
       projetos: estado.projetos.length,
       tarefasPorStatus: agregarContagens(estado.projetos),
     },
-    /** Modelos que a UI pode escolher ao disparar uma ação (do mais barato ao mais caro). */
-    modelos: config.modelosPermitidos,
-    modeloPadrao: config.modeloPadrao,
+    /** Estratégias de modelo que a UI oferece ao disparar (id, rótulo, custo, descrição). */
+    estrategias: config.estrategiasModelo,
+    estrategiaPadrao: config.estrategiaPadrao,
     /** Problemas no nível da raiz da fábrica (ex.: pasta projetos/ inexistente). */
     erros: estado.erros,
   });

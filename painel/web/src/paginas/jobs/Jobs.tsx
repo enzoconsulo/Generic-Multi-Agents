@@ -24,7 +24,8 @@ export function Jobs() {
       <section className="intro">
         <h2 className="intro-titulo">Jobs</h2>
         <p className="intro-sub">
-          Execuções da fábrica disparadas pelo painel, com log ao vivo.{" "}
+          Cada fluxo que você dispara vira um “job” aqui: escolha um à esquerda para ver a
+          saída ao vivo, o modelo usado, o custo real ao terminar e o botão de cancelar.{" "}
           <span className={`ponto-conexao ${conectado ? "on" : "off"}`} aria-hidden="true" />
           <span className="texto-suave">{conectado ? "conectado ao vivo" : "reconectando…"}</span>
         </p>
@@ -116,6 +117,13 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
 
       {erroCancel !== null && <div className="aviso aviso-erro">{erroCancel}</div>}
 
+      <div className="console-legenda" aria-hidden="true">
+        <span>▶ início</span>
+        <span>◆ resposta</span>
+        <span>↳ subagente</span>
+        <span>⚙ ferramenta</span>
+        <span>■ resultado</span>
+      </div>
       <Console linhas={linhas} estado={job.estado} />
     </div>
   );

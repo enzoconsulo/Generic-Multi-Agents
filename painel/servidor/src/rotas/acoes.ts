@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { config } from "../config.js";
+import { config, resolverEstrategia } from "../config.js";
 import { ErroAcaoDesconhecida, montarJobAcao } from "../acoes/acoes.js";
 import { obterGerenciador } from "../jobs/instancia.js";
 
@@ -12,27 +12,27 @@ export const prefixo = "/api/acoes";
 
 export const router: Router = Router();
 
-/** POST /api/acoes/:id — corpo { argumentos?, modelo?, maxTurns? } → cria o job. */
+/** POST /api/acoes/:id — corpo { argumentos?, estrategia?, maxTurns? } → cria o job. */
 router.post("/:id", (req, res) => {
   const corpo = (req.body ?? {}) as {
     argumentos?: unknown;
-    modelo?: unknown;
+    estrategia?: unknown;
     maxTurns?: unknown;
   };
 
-  // Modelo: valida contra a lista; ausente = padrão econômico da config.
-  let modelo = config.modeloPadrao as string;
-  if (corpo.modelo !== undefined) {
-    if (
-      typeof corpo.modelo !== "string" ||
-      !(config.modelosPermitidos as readonly string[]).includes(corpo.modelo)
-    ) {
-      res.status(400).json({
-        erro: `Modelo inválido. Use um de: ${config.modelosPermitidos.join(", ")}.`,
-      });
-      return;
-    }
-    modelo = corpo.modelo;
+  // Estratégia de modelo: valida contra a lista; ausente = padrão da config.
+  const idEstrategia =
+    typeof corpo.estrategia === "string" && corpo.estrategia !== ""
+      ? corpo.estrategia
+      : config.estrategiaPadrao;
+  const estrategia = resolverEstrategia(idEstrategia);
+  if (estrategia === undefined) {
+    res.status(400).json({
+      erro: `Estratégia de modelo inválida. Use uma de: ${config.estrategiasModelo
+        .map((e) => e.id)
+        .join(", ")}.`,
+    });
+    return;
   }
 
   if (corpo.argumentos !== undefined && typeof corpo.argumentos !== "string") {
@@ -49,7 +49,8 @@ router.post("/:id", (req, res) => {
       {
         id: req.params.id,
         ...(typeof corpo.argumentos === "string" ? { argumentos: corpo.argumentos } : {}),
-        modelo,
+        modelo: estrategia.modelo,
+        fallback: estrategia.fallback,
         ...(typeof corpo.maxTurns === "number" ? { maxTurns: corpo.maxTurns } : {}),
       },
       config.fabricaRaiz,

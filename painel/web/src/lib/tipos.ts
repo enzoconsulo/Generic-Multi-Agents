@@ -18,11 +18,24 @@ export type StatusTarefa = (typeof STATUS_TAREFA)[number];
 
 export type ContagemPorStatus = Record<StatusTarefa, number>;
 
+export type PesoAcao = "leve" | "medio" | "pesado";
+export type TierCusto = "baixo" | "medio" | "alto";
+
+export interface EstrategiaModelo {
+  id: string;
+  rotulo: string;
+  modelo: string;
+  fallback: string | null;
+  custo: TierCusto;
+  descricao: string;
+}
+
 export interface AcaoFabrica {
   id: string;
   nome: string;
   descricao: string;
   argumentos: string | null;
+  peso: PesoAcao;
   disponivel: boolean;
 }
 
@@ -99,8 +112,8 @@ export interface ProjetoDetalhe {
 export interface RespostaFabrica {
   acoes: AcaoFabrica[];
   resumo: { projetos: number; tarefasPorStatus: ContagemPorStatus };
-  modelos: string[];
-  modeloPadrao: string;
+  estrategias: EstrategiaModelo[];
+  estrategiaPadrao: string;
   erros: string[];
 }
 

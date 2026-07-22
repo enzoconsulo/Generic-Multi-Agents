@@ -26,6 +26,19 @@ export const IDS_ACOES = [
 ] as const;
 export type IdAcao = (typeof IDS_ACOES)[number];
 
+/** Quão "pesado" (custo/tempo) o fluxo tende a ser — entra na estimativa de custo. */
+export type PesoAcao = "leve" | "medio" | "pesado";
+
+/** Peso típico de cada ação (referência para a estimativa; o custo real vem no result). */
+const PESO_ACAO: Record<IdAcao, PesoAcao> = {
+  status: "leve",
+  manutencao: "medio",
+  ideia: "medio",
+  "encerrar-dia": "medio",
+  "novo-projeto": "pesado",
+  trabalhar: "pesado",
+};
+
 export interface AcaoFabrica {
   /** Identificador estável (nome do comando sem a barra), ex.: "novo-projeto". */
   id: IdAcao;
@@ -34,6 +47,8 @@ export interface AcaoFabrica {
   descricao: string;
   /** Dica dos argumentos esperados (`argument-hint`); null = ação sem argumentos. */
   argumentos: string | null;
+  /** Peso típico do fluxo (leve/medio/pesado) — usado na estimativa de custo. */
+  peso: PesoAcao;
   /** false até existirem os endpoints de disparo (T-011). */
   disponivel: boolean;
 }
@@ -108,7 +123,7 @@ export async function catalogoAcoes(raiz: string): Promise<AcaoFabrica[]> {
         }
       }
 
-      return { id, nome: `/${id}`, descricao, argumentos, disponivel: true };
+      return { id, nome: `/${id}`, descricao, argumentos, peso: PESO_ACAO[id], disponivel: true };
     }),
   );
 }

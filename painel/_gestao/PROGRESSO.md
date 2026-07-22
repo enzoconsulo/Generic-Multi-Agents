@@ -44,3 +44,11 @@ no disparo (default econômico `sonnet`), aviso na ação pesada, cancelamento p
 Falta na Fase 2: inputs pendentes via UI (T-010, hoje bypass local), ação de análise que
 gera ANALISE.md (T-012), cadastro/importação de projetos (T-013) e ações por projeto
 (T-016). Fase 3 (CI, robustez, polimento) intacta.
+
+**Painel movido para a raiz da fábrica** (`<fabrica>/painel/`) como ferramenta de sistema,
+versionado no repo da raiz (git antes parecia "vazio"). E **refino de UX + custo:**
+estratégias de modelo data-driven com **Fable→Opus** (fallback nativo do SDK) além dos
+modelos individuais; **estimativa de custo** (peso da ação × tier do modelo) na hora de
+disparar; home e Jobs mais claros (o que cada ação faz, selo de peso, legenda do console).
+Suíte: 90/90 (servidor) + 7/7 (web); fluxo `fable-opus` validado ao vivo (fable + fallback
+opus passados ao SDK, disparo e cancelamento).

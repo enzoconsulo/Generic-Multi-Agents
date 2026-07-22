@@ -29,7 +29,7 @@ describe("POST /api/acoes/:id", () => {
   });
 
   it("cria um job claude para uma ação válida (201)", async () => {
-    const resp = await request(app).post("/api/acoes/status").send({ modelo: "haiku" });
+    const resp = await request(app).post("/api/acoes/status").send({ estrategia: "haiku" });
     expect(resp.status).toBe(201);
     expect(resp.body.job.tipo).toBe("claude");
     expect(resp.body.job.titulo).toBe("/status");
@@ -39,27 +39,34 @@ describe("POST /api/acoes/:id", () => {
   it("passa argumentos para o comando", async () => {
     const resp = await request(app)
       .post("/api/acoes/trabalhar")
-      .send({ argumentos: "painel-fabrica", modelo: "sonnet" });
+      .send({ argumentos: "painel-fabrica", estrategia: "sonnet" });
     expect(resp.status).toBe(201);
     expect(resp.body.job.titulo).toBe("/trabalhar painel-fabrica");
     expect(resp.body.job.escopo).toBe("projeto:painel-fabrica");
   });
 
-  it("rejeita modelo fora da lista (400)", async () => {
-    const resp = await request(app).post("/api/acoes/status").send({ modelo: "gpt" });
+  it("rejeita estratégia inválida (400)", async () => {
+    const resp = await request(app).post("/api/acoes/status").send({ estrategia: "gpt" });
     expect(resp.status).toBe(400);
     expect(typeof resp.body.erro).toBe("string");
   });
 
+  it("estratégia com fallback resolve modelo primário + fallback nos params", async () => {
+    const resp = await request(app).post("/api/acoes/status").send({ estrategia: "fable-opus" });
+    expect(resp.status).toBe(201);
+    expect(resp.body.job.params.modelo).toBe("fable");
+    expect(resp.body.job.params.fallback).toBe("opus");
+  });
+
   it("ação desconhecida → 404", async () => {
-    const resp = await request(app).post("/api/acoes/inexistente").send({ modelo: "haiku" });
+    const resp = await request(app).post("/api/acoes/inexistente").send({ estrategia: "haiku" });
     expect(resp.status).toBe(404);
   });
 
   it("sem runner claude registrado → 503 (mensagem clara)", async () => {
     reiniciarComTemp(false);
     const appSemRunner = await criarApp();
-    const resp = await request(appSemRunner).post("/api/acoes/status").send({ modelo: "haiku" });
+    const resp = await request(appSemRunner).post("/api/acoes/status").send({ estrategia: "haiku" });
     expect(resp.status).toBe(503);
     expect(resp.body.erro).toMatch(/runner Claude/i);
   });

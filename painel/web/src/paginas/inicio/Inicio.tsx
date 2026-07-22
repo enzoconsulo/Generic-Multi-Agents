@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDados } from "../../lib/useDados";
 import { api, ErroApi } from "../../lib/api";
 import type {
   AcaoFabrica,
+  EstrategiaModelo,
   ProjetoResumo,
   RespostaAcao,
   RespostaFabrica,
@@ -11,6 +12,7 @@ import type {
 } from "../../lib/tipos";
 import { Carregando, MensagemErro, Vazio } from "../../componentes/Estados";
 import { BadgeMarco, ResumoStatus } from "../../componentes/Indicadores";
+import { estimarCusto, rotuloPeso } from "../../lib/formato";
 
 export function Inicio() {
   const fabrica = useDados<RespostaFabrica>("/api/fabrica");
@@ -21,9 +23,8 @@ export function Inicio() {
       <section className="intro">
         <h2 className="intro-titulo">Painel da Fábrica</h2>
         <p className="intro-sub">
-          Visão única da sua fábrica de software multi-agente: o que cada ação faz, o
-          panorama de todos os projetos e a situação detalhada de cada um — tudo lido ao
-          vivo dos arquivos da fábrica, sem você abrir uma pasta sequer.
+          Seu cockpit da fábrica de software multi-agente. Aqui você vê o estado de tudo e
+          dispara os fluxos reais da fábrica pela web — sem abrir uma pasta ou um terminal.
         </p>
       </section>
 
@@ -33,7 +34,7 @@ export function Inicio() {
         {fabrica.erro !== null && (
           <MensagemErro
             erro={fabrica.erro}
-            dica="O servidor do painel está no ar? Rode `npm run dev` na raiz do projeto."
+            dica="O servidor do painel está no ar? Rode `npm run dev` na pasta do painel."
           />
         )}
         {fabrica.dados !== null && (
@@ -46,13 +47,6 @@ export function Inicio() {
             </div>
             <div className="espaco-sm" />
             <ResumoStatus contagem={fabrica.dados.resumo.tarefasPorStatus} />
-            {fabrica.dados.erros.length > 0 && (
-              <div className="aviso aviso-info">
-                {fabrica.dados.erros.map((e, i) => (
-                  <div key={i}>{e}</div>
-                ))}
-              </div>
-            )}
           </>
         )}
       </section>
@@ -60,9 +54,10 @@ export function Inicio() {
       <section className="secao">
         <h3 className="secao-titulo">Ações da fábrica</h3>
         <p className="texto-suave secao-desc">
-          As seis operações que conduzem a fábrica. Clique em “Executar” para disparar o
-          fluxo real pela web — escolha o modelo (quanto mais barato, menor o custo) e
-          acompanhe a saída ao vivo na página de Jobs.
+          Cada ação executa um fluxo real da fábrica. Clique em <strong>Executar</strong>,
+          escolha o <strong>modelo</strong> (afeta custo e qualidade) e acompanhe a saída ao
+          vivo na aba <Link to="/jobs">Jobs</Link>. O selo de <strong>peso</strong> e a{" "}
+          <strong>estimativa de custo</strong> ajudam a decidir antes de gastar.
         </p>
         {fabrica.carregando && <Carregando />}
         {fabrica.dados !== null && (
@@ -71,8 +66,8 @@ export function Inicio() {
               <CartaoAcao
                 key={acao.id}
                 acao={acao}
-                modelos={fabrica.dados!.modelos}
-                modeloPadrao={fabrica.dados!.modeloPadrao}
+                estrategias={fabrica.dados!.estrategias}
+                estrategiaPadrao={fabrica.dados!.estrategiaPadrao}
               />
             ))}
           </div>
@@ -85,7 +80,7 @@ export function Inicio() {
         {projetos.erro !== null && <MensagemErro erro={projetos.erro} />}
         {projetos.dados !== null &&
           (projetos.dados.projetos.length === 0 ? (
-            <Vazio texto="Nenhum projeto na fábrica ainda." />
+            <Vazio texto="Nenhum projeto na fábrica ainda. Use a ação /novo-projeto para criar o primeiro." />
           ) : (
             <div className="grade-cards">
               {projetos.dados.projetos.map((p) => (
@@ -100,21 +95,26 @@ export function Inicio() {
 
 function CartaoAcao({
   acao,
-  modelos,
-  modeloPadrao,
+  estrategias,
+  estrategiaPadrao,
 }: {
   acao: AcaoFabrica;
-  modelos: string[];
-  modeloPadrao: string;
+  estrategias: EstrategiaModelo[];
+  estrategiaPadrao: string;
 }) {
   const navegar = useNavigate();
   const [aberto, setAberto] = useState(false);
   const [args, setArgs] = useState("");
-  const [modelo, setModelo] = useState(modeloPadrao);
+  const [estrategiaId, setEstrategiaId] = useState(estrategiaPadrao);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const pesado = acao.id === "trabalhar";
+  const estrategia = useMemo(
+    () => estrategias.find((e) => e.id === estrategiaId) ?? estrategias[0],
+    [estrategias, estrategiaId],
+  );
+  const estimativa = estrategia ? estimarCusto(acao.peso, estrategia.custo) : null;
+  const pesado = acao.peso === "pesado";
 
   async function disparar(evento: React.FormEvent) {
     evento.preventDefault();
@@ -123,7 +123,7 @@ function CartaoAcao({
     try {
       const { job } = await api<RespostaAcao>(`/api/acoes/${acao.id}`, {
         method: "POST",
-        body: JSON.stringify({ argumentos: args.trim(), modelo }),
+        body: JSON.stringify({ argumentos: args.trim(), estrategia: estrategiaId }),
       });
       navegar(`/jobs?job=${encodeURIComponent(job.id)}`);
     } catch (e) {
@@ -133,15 +133,15 @@ function CartaoAcao({
   }
 
   return (
-    <article className="card card-acao">
+    <article className={`card card-acao ${aberto ? "aberto" : ""}`}>
       <div className="card-cab">
         <h4 className="card-titulo mono">{acao.nome}</h4>
-        <span className={`badge ${acao.disponivel ? "badge-ok" : "badge-em-breve"}`}>
-          {acao.disponivel ? "disponível" : "em breve"}
+        <span className={`badge peso-${acao.peso}`} title="Peso típico do fluxo">
+          {rotuloPeso(acao.peso)}
         </span>
       </div>
       <p className="card-desc">{acao.descricao}</p>
-      {acao.argumentos !== null && (
+      {acao.argumentos !== null && !aberto && (
         <p className="card-args">
           <span className="card-args-rot">Argumentos</span>
           <code>{acao.argumentos}</code>
@@ -149,12 +149,7 @@ function CartaoAcao({
       )}
 
       {!aberto ? (
-        <button
-          type="button"
-          className="botao botao-acao"
-          onClick={() => setAberto(true)}
-          disabled={!acao.disponivel}
-        >
+        <button type="button" className="botao botao-acao" onClick={() => setAberto(true)}>
           Executar
         </button>
       ) : (
@@ -169,26 +164,42 @@ function CartaoAcao({
                 placeholder={acao.argumentos ?? ""}
                 autoFocus
               />
+              <span className="campo-ajuda">{acao.argumentos}</span>
             </label>
           )}
+
           <label className="campo-form">
             <span>Modelo</span>
-            <select value={modelo} onChange={(e) => setModelo(e.target.value)}>
-              {modelos.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                  {m === modeloPadrao ? " (padrão)" : ""}
+            <select value={estrategiaId} onChange={(e) => setEstrategiaId(e.target.value)}>
+              {estrategias.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.rotulo}
+                  {e.id === estrategiaPadrao ? " (padrão)" : ""}
                 </option>
               ))}
             </select>
+            {estrategia && <span className="campo-ajuda">{estrategia.descricao}</span>}
           </label>
+
+          {estimativa && (
+            <div className="estimativa">
+              <span className="estimativa-rot">Custo estimado</span>
+              <span className={`badge custo-${estimativa.tier}`}>{estimativa.rotulo}</span>
+              <span className="estimativa-nota">
+                {acao.nome} é <strong>{rotuloPeso(acao.peso).toLowerCase()}</strong>; o custo real
+                aparece ao terminar.
+              </span>
+            </div>
+          )}
+
           {pesado && (
-            <p className="aviso aviso-info aviso-compacto">
-              Este fluxo pode ser longo e consumir bastante — comece com um modelo barato e
-              acompanhe pelos Jobs (dá pra cancelar a qualquer momento).
+            <p className="aviso aviso-alerta aviso-compacto">
+              ⚠ Fluxo pesado: escala com o volume de trabalho e pode custar bastante. Comece
+              por um modelo barato — dá para cancelar a qualquer momento.
             </p>
           )}
           {erro !== null && <div className="aviso aviso-erro aviso-compacto">{erro}</div>}
+
           <div className="form-acoes">
             <button type="submit" className="botao botao-acao" disabled={enviando}>
               {enviando ? "Disparando…" : "Disparar fluxo"}

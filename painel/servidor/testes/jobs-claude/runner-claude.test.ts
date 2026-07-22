@@ -96,6 +96,26 @@ describe("RunnerClaude — tradução de mensagens do SDK em eventos e resultado
     expect(opcoes?.["cwd"]).toBe("C:/fabrica");
   });
 
+  it("passa fallbackModel ao SDK quando params tem fallback", async () => {
+    let opcoes: Record<string, unknown> | undefined;
+    const runner = new RunnerClaude(
+      consultaDe([{ type: "result", is_error: false }], (o) => (opcoes = o)),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    await runner.executar(jobFake({ ...PARAMS, fallback: "opus" }), ctx);
+    expect(opcoes?.["fallbackModel"]).toBe("opus");
+  });
+
+  it("sem fallback, não passa fallbackModel", async () => {
+    let opcoes: Record<string, unknown> | undefined;
+    const runner = new RunnerClaude(
+      consultaDe([{ type: "result", is_error: false }], (o) => (opcoes = o)),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    await runner.executar(jobFake(PARAMS), ctx);
+    expect(opcoes?.["fallbackModel"]).toBeUndefined();
+  });
+
   it("rejeita params sem prompt/cwd/modelo válidos", async () => {
     const runner = new RunnerClaude(consultaDe([]));
     const { ctx } = contexto(new AbortController().signal);

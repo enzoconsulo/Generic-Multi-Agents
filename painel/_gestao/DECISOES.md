@@ -219,3 +219,18 @@ painel pelo pipeline executor/testador/revisor (que só opera em `projetos/`) �
 mantido à mão pelo orquestrador. Alternativa descartada: manter em `projetos/` com um
 ponteiro no README da raiz.
 **Quem:** usuário + orquestrador
+
+## 2026-07-21 — Estratégias de modelo data-driven (com fallback Fable→Opus) + estimativa de custo
+**Decisão:** o disparo deixou de escolher um modelo "cru" e passou a escolher uma
+ESTRATÉGIA nomeada, definida numa lista data-driven em `config.ts` (`ESTRATEGIAS_MODELO`)
+— nada de modelo hardcoded no fluxo. Cada estratégia é `{ id, rotulo, modelo, fallback,
+custo, descricao }`. A `fable-opus` usa o suporte NATIVO do SDK (`fallbackModel`, string no
+`Options` do `query()`): prioriza Fable e cai para Opus quando o primário está sem
+limite/sobrecarregado, re-tentando o primário a cada turno. A UI mostra a descrição da
+estratégia e uma ESTIMATIVA de custo qualitativa = peso da ação (leve/médio/pesado, em
+`catalogo-acoes.ts`) + tier de custo do modelo. Custo REAL continua vindo do evento
+`result` do SDK.
+**Motivo:** pedido do usuário — opção inteligente Fable→Opus sem hardcodar, e deixar claro
+o custo antes de gastar. Data-driven para editar sem tocar em lógica. Default econômico
+(`sonnet`, env `ESTRATEGIA_PADRAO`).
+**Quem:** usuário + orquestrador

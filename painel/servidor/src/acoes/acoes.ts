@@ -29,7 +29,10 @@ export interface PedidoAcao {
   id: string;
   /** Texto dos argumentos do comando (ex.: nome do projeto). */
   argumentos?: string;
+  /** Modelo primário (alias) já resolvido da estratégia. */
   modelo: string;
+  /** Fallback (alias) já resolvido da estratégia; ausente = sem fallback. */
+  fallback?: string | null;
   /** Guarda de custo opcional. */
   maxTurns?: number;
 }
@@ -65,6 +68,7 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
       prompt,
       cwd: fabricaRaiz,
       modelo: pedido.modelo,
+      ...(pedido.fallback ? { fallback: pedido.fallback } : {}),
       ...(pedido.maxTurns !== undefined ? { maxTurns: pedido.maxTurns } : {}),
     },
   };

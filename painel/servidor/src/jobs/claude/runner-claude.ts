@@ -16,8 +16,10 @@ export interface ParamsClaude {
   prompt: string;
   /** Diretório de trabalho — carrega CLAUDE.md/agents/commands dali (raiz da fábrica). */
   cwd: string;
-  /** Alias do modelo (headless não herda; sempre explícito). */
+  /** Alias do modelo primário (headless não herda; sempre explícito). */
   modelo: string;
+  /** Modelo de fallback (SDK cai nele se o primário estiver sem limite/sobrecarregado). */
+  fallback?: string;
   /** Modo de permissão do SDK; default seguro para ferramenta local pessoal. */
   permissionMode?: string;
   /** Limite de turnos agênticos (guarda de custo); ausente = sem limite. */
@@ -80,6 +82,9 @@ export class RunnerClaude implements Runner {
       options: {
         cwd: p.cwd,
         model: p.modelo,
+        // fallbackModel do SDK é string (lista separada por vírgula); re-tenta o primário
+        // a cada turno, então uma indisponibilidade temporária não rebaixa a sessão.
+        ...(p.fallback !== undefined ? { fallbackModel: p.fallback } : {}),
         permissionMode: p.permissionMode ?? "bypassPermissions",
         abortController: controlador,
         ...(p.maxTurns !== undefined ? { maxTurns: p.maxTurns } : {}),
@@ -167,12 +172,14 @@ function lerParams(params: Record<string, unknown>): ParamsClaude {
   if (typeof modelo !== "string" || modelo.trim() === "") {
     throw new Error("Job claude sem `modelo` válido em params.");
   }
+  const fallback = params["fallback"];
   const permissionMode = params["permissionMode"];
   const maxTurns = params["maxTurns"];
   return {
     prompt,
     cwd,
     modelo,
+    ...(typeof fallback === "string" && fallback !== "" ? { fallback } : {}),
     ...(typeof permissionMode === "string" ? { permissionMode } : {}),
     ...(typeof maxTurns === "number" ? { maxTurns } : {}),
   };
