@@ -1,0 +1,12 @@
+# Dependências
+node_modules/
+
+# Builds
+dist/
+
+# Dados operacionais do painel (descartável — jobs, logs, CI)
+dados/
+
+# Diversos
+*.log
+.env

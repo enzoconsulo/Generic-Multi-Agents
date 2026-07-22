@@ -25,6 +25,9 @@ Gerador_de_projetos/
 │   ├── templates/           ← modelos de tarefa, especificação, plano e docs de projeto
 │   ├── ideias/              ← caixa de entrada de ideias brutas (via /ideia)
 │   └── logs/                ← um log por dia: AAAA-MM-DD.md
+├── painel/                  ← COCKPIT WEB do sistema (Express + React); versionado NESTA raiz.
+│                              Ferramenta de operação da fábrica — não é um projeto de projetos/.
+│                              Mantido à mão (fica fora do pipeline executor/testador/revisor).
 └── projetos/                ← UM SUBDIRETÓRIO POR PROJETO; cada um é um repositório git próprio
     └── <nome>/
         ├── CLAUDE.md        ← contexto específico do projeto
@@ -151,10 +154,14 @@ trabalho — ideia, pergunta ou lista de tarefas concluídas.)
   (`T-XXX: descrição`, incluindo o arquivo da tarefa atualizado); pendências de
   `_gestao/` são commitadas no encerramento de /trabalhar e /encerrar-dia
   (`chore: gestão AAAA-MM-DD`).
-- A raiz da fábrica TAMBÉM é um repositório git, mas versiona apenas o sistema
-  (`_sistema/`, `.claude/`, CLAUDE.md, README) — `projetos/` está no `.gitignore`.
-  Alterou arquivo da fábrica? Commite na raiz (`chore: ...`). Quebrou algo do sistema?
-  `git restore` recupera.
+- A raiz da fábrica TAMBÉM é um repositório git, que versiona o sistema
+  (`_sistema/`, `.claude/`, CLAUDE.md, README) **e o `painel/`** (o cockpit é ferramenta do
+  sistema; seu `node_modules/`, `dist/` e `dados/` ficam fora via `painel/.gitignore`) —
+  só `projetos/` está no `.gitignore`. Alterou arquivo da fábrica ou o painel? Commite na
+  raiz (`chore: ...` ou `painel: ...`). Quebrou algo do sistema? `git restore` recupera.
+- **O painel é mantido à mão** pelo orquestrador (fica fora do pipeline
+  executor/testador/revisor, que só opera em `projetos/`). Mudou o painel? Rode
+  `cd painel && npm test` antes de commitar.
 
 ## Rituais
 

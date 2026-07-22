@@ -1,0 +1,25 @@
+{
+  "name": "painel-fabrica",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cockpit web local da fábrica de software multi-agente Gerador_de_projetos",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "servidor",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n servidor,web -c blue,magenta \"npm:dev:servidor\" \"npm:dev:web\"",
+    "dev:servidor": "npm run dev -w servidor",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w servidor && npm run build -w web",
+    "start": "node servidor/dist/index.js",
+    "test": "npm run test --workspaces --if-present",
+    "teste:integracao": "echo Sem testes de integracao ainda (placeholder criado na T-002)"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

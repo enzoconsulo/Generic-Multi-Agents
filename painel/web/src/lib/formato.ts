@@ -1,0 +1,81 @@
+/** Rótulos e ordenação em PT-BR para os vocabulários da fábrica. */
+import { STATUS_TAREFA, type StatusTarefa } from "./tipos";
+
+/** Ordem canônica do pipeline (usada nas colunas do kanban e nos resumos). */
+export const ORDEM_STATUS: readonly StatusTarefa[] = STATUS_TAREFA;
+
+export const ROTULO_STATUS: Record<StatusTarefa, string> = {
+  backlog: "Backlog",
+  pronta: "Pronta",
+  "em-execucao": "Em execução",
+  "em-teste": "Em teste",
+  "em-revisao": "Em revisão",
+  concluida: "Concluída",
+  bloqueada: "Bloqueada",
+  cancelada: "Cancelada",
+};
+
+export const ROTULO_PRIORIDADE: Record<string, string> = {
+  alta: "Alta",
+  media: "Média",
+  baixa: "Baixa",
+};
+
+/** Classe CSS de cor por status (ex.: "em-execucao" → "st-em-execucao"). */
+export function classeStatus(status: string): string {
+  return `st-${status}`;
+}
+
+/** Classe CSS de cor por prioridade; desconhecida cai em "media". */
+export function classePrioridade(prioridade: string): string {
+  const p = prioridade === "alta" || prioridade === "baixa" ? prioridade : "media";
+  return `pri-${p}`;
+}
+
+export function rotuloStatus(status: string): string {
+  return (ROTULO_STATUS as Record<string, string>)[status] ?? status;
+}
+
+export function rotuloPrioridade(prioridade: string): string {
+  return ROTULO_PRIORIDADE[prioridade] ?? prioridade;
+}
+
+export function rotuloMarco(estado: string): string {
+  switch (estado) {
+    case "pendente":
+      return "Marco pendente";
+    case "aprovado":
+      return "Marco aprovado";
+    case "reprovado":
+      return "Marco reprovado";
+    default:
+      return "Marco desconhecido";
+  }
+}
+
+export function classeMarco(estado: string): string {
+  return `marco-${estado}`;
+}
+
+export const ROTULO_ESTADO_JOB: Record<string, string> = {
+  "na-fila": "Na fila",
+  executando: "Executando",
+  "aguardando-input": "Aguardando input",
+  concluido: "Concluído",
+  falhou: "Falhou",
+  cancelado: "Cancelado",
+  interrompido: "Interrompido",
+};
+
+export function rotuloEstadoJob(estado: string): string {
+  return ROTULO_ESTADO_JOB[estado] ?? estado;
+}
+
+export function classeEstadoJob(estado: string): string {
+  return `job-${estado}`;
+}
+
+const ESTADOS_JOB_CANCELAVEIS = new Set(["na-fila", "executando", "aguardando-input"]);
+export function jobCancelavel(estado: string): boolean {
+  return ESTADOS_JOB_CANCELAVEIS.has(estado);
+}
