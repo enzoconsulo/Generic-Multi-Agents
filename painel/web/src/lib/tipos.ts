@@ -172,6 +172,23 @@ export interface RespostaJobs {
   jobs: Job[];
 }
 
+/** Pendência de input (T-010): o fluxo pausou esperando aprovação ou uma resposta. */
+export interface Pendencia {
+  id: string;
+  jobId: string;
+  tipo: "aprovacao-ferramenta" | "pergunta";
+  titulo: string;
+  descricao: string;
+  opcoes?: string[];
+  criadaEm: string;
+  respondidaEm?: string;
+}
+
+/** GET /api/inputs */
+export interface RespostaInputs {
+  inputs: Pendencia[];
+}
+
 /** POST /api/acoes/:id */
 export interface RespostaAcao {
   job: Job;

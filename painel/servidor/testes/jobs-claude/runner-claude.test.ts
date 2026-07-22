@@ -20,6 +20,7 @@ function contexto(sinal: AbortSignal) {
   const ctx: ContextoExecucao = {
     emitir: (tipo, dados) => eventos.push({ tipo, dados }),
     sinal,
+    pedirInput: async () => ({}),
   };
   return { ctx, eventos };
 }

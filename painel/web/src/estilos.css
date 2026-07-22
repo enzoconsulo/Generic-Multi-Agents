@@ -768,6 +768,40 @@ a:hover {
   max-width: 34rem;
 }
 
+/* Inputs pendentes (T-010): fluxos pausados esperando resposta do usuário */
+.inputs-pendentes {
+  border: 1px solid var(--cor-acento);
+  border-radius: var(--raio-md, 10px);
+  padding: 0.9rem 1rem;
+  background-color: color-mix(in srgb, var(--cor-acento) 8%, transparent);
+}
+.card-input {
+  border-color: var(--cor-acento);
+}
+.input-acoes,
+.input-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.input-motivo {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  background-color: var(--cor-superficie-2);
+  color: var(--cor-texto);
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-sm);
+  padding: 0.4rem 0.5rem;
+}
+.input-motivo:focus {
+  outline: none;
+  border-color: var(--cor-acento);
+}
+
 /* Peso da ação (badge) */
 .peso-leve {
   color: var(--cor-sucesso);

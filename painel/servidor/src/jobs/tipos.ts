@@ -35,6 +35,37 @@ export const ESTADOS_CANCELAVEIS: ReadonlySet<EstadoJob> = new Set<EstadoJob>([
 /** Escopo de lock: `global` (exclusivo total) ou `projeto:<nome>` (exclusivo por projeto). */
 export type EscopoLock = "global" | `projeto:${string}`;
 
+/** Tipo de pendência de input (T-010): aprovação de ferramenta ou pergunta ao usuário. */
+export type TipoPendencia = "aprovacao-ferramenta" | "pergunta";
+
+/** Descrição de um input necessário (o runner diz o que precisa; textos em PT-BR). */
+export interface NovaPendencia {
+  tipo: TipoPendencia;
+  titulo: string;
+  descricao: string;
+  /** Opções para escolha (perguntas); ausente = aprovação ou resposta livre. */
+  opcoes?: string[];
+}
+
+/** Resposta do usuário a uma pendência. */
+export interface RespostaInput {
+  /** aprovacao-ferramenta: true = allow, false = deny. */
+  aprovado?: boolean;
+  /** Mensagem opcional repassada ao agente (ex.: motivo da negação). */
+  mensagem?: string;
+  /** pergunta: opção escolhida ou texto digitado. */
+  escolha?: string;
+}
+
+/** Pendência de input exposta pela API e persistida no metadado do job (auditoria). */
+export interface Pendencia extends NovaPendencia {
+  id: string;
+  jobId: string;
+  criadaEm: string;
+  respondidaEm?: string;
+  resposta?: RespostaInput;
+}
+
 export interface Job {
   /** Identificador curto e único (8 hex). */
   id: string;
@@ -55,6 +86,8 @@ export interface Job {
   resultado?: unknown;
   /** Mensagem em PT-BR quando `falhou`/`interrompido`. */
   erro?: string;
+  /** Histórico de pendências de input (abertas e respondidas) — auditoria (T-010). */
+  inputs?: Pendencia[];
 }
 
 /**
@@ -83,6 +116,12 @@ export interface ContextoExecucao {
   emitir(tipo: string, dados?: unknown): void;
   /** Acionado quando o usuário cancela o job — o runner deve encerrar o quanto antes. */
   sinal: AbortSignal;
+  /**
+   * Pede um input ao usuário (T-010): cria a pendência, põe o job em `aguardando-input`,
+   * emite o evento `input-pendente` e resolve quando a resposta chegar pela API. Rejeita
+   * se o job for cancelado enquanto espera (o runner deve deixar o erro propagar).
+   */
+  pedirInput(pendencia: NovaPendencia): Promise<RespostaInput>;
 }
 
 /**

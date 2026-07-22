@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { RegistroInputs } from "./inputs.js";
 import { carregarJobs, salvarJob } from "./persistencia.js";
 import {
   ESTADOS_CANCELAVEIS,
@@ -9,6 +10,9 @@ import {
   type EstadoJob,
   type EventoJob,
   type Job,
+  type NovaPendencia,
+  type Pendencia,
+  type RespostaInput,
   type Runner,
 } from "./tipos.js";
 
@@ -71,6 +75,8 @@ export class GerenciadorJobs {
   /** Jobs cujo cancelamento foi pedido enquanto executavam. */
   private readonly cancelamentosPedidos = new Set<string>();
   private readonly runners = new Map<string, Runner>();
+  /** Pendências de input (T-010): pareamento pergunta↔resposta entre runner e usuário. */
+  private readonly inputs = new RegistroInputs();
   private readonly dirJobs: string;
   private readonly tetoClaude: number;
 
@@ -164,6 +170,9 @@ export class GerenciadorJobs {
     // usuário). Sem ela, o `?.abort()` abaixo vira no-op silencioso e o 202 da rota
     // promete um cancelamento que nunca assenta. Na T-007 nada gera esse estado.
     this.cancelamentosPedidos.add(id);
+    // Se estava aguardando input, rejeita as pendências abertas para o runner destravar
+    // (o `?.abort()` sozinho não acorda uma Promise de input pendente).
+    this.inputs.abortarDeJob(id, "Job cancelado enquanto aguardava input.");
     this.execucoes.get(id)?.controlador.abort();
     return job;
   }
@@ -173,7 +182,55 @@ export class GerenciadorJobs {
     return this.execucoes.size;
   }
 
+  /** Pendências de input ABERTAS (aguardando resposta do usuário). (T-010) */
+  listarInputs(): Pendencia[] {
+    return this.inputs.listar();
+  }
+
+  /**
+   * Responde uma pendência: resolve a Promise que o runner aguarda e, se o job estava
+   * `aguardando-input`, volta para `executando`. Lança ErroInput* (404/409) do registro.
+   */
+  responderInput(pendenciaId: string, resposta: RespostaInput): Pendencia {
+    const pendencia = this.inputs.responder(pendenciaId, resposta);
+    const job = this.jobs.get(pendencia.jobId);
+    if (job) {
+      this.sincronizarPendenciaNoJob(job, pendencia);
+      if (job.estado === "aguardando-input") {
+        this.mudarEstado(job, "executando", {});
+      } else {
+        this.persistir(job);
+      }
+      this.emitirEvento(job.id, "input-respondido", { pendencia });
+    }
+    return pendencia;
+  }
+
   // ------------------------------------------------------------------ internos
+
+  /**
+   * Ponto de extensão `ctx.pedirInput` (T-010): cria a pendência, registra no metadado do
+   * job, muda para `aguardando-input`, emite `input-pendente` e devolve a Promise que
+   * resolve na resposta (ou rejeita no cancelamento, via `abortarDeJob`).
+   */
+  private pedirInput(job: Job, sinal: AbortSignal, nova: NovaPendencia): Promise<RespostaInput> {
+    const { pendencia, promessa } = this.inputs.criar(job.id, nova);
+    job.inputs = [...(job.inputs ?? []), pendencia];
+    this.mudarEstado(job, "aguardando-input", {});
+    this.emitirEvento(job.id, "input-pendente", pendencia);
+    // Cancelado antes mesmo de pendurar: rejeita na hora para não travar o runner.
+    if (sinal.aborted) {
+      this.inputs.abortarDeJob(job.id, "Job cancelado enquanto aguardava input.");
+    }
+    return promessa;
+  }
+
+  /** Reflete no metadado do job a pendência respondida (auditoria no histórico). */
+  private sincronizarPendenciaNoJob(job: Job, pendencia: Pendencia): void {
+    if (!job.inputs) return;
+    const i = job.inputs.findIndex((p) => p.id === pendencia.id);
+    if (i !== -1) job.inputs[i] = pendencia;
+  }
 
   private agendar(): void {
     // Global executando = exclusividade total: nada inicia até ele terminar.
@@ -216,6 +273,7 @@ export class GerenciadorJobs {
     const contexto: ContextoExecucao = {
       emitir: (tipo, dados) => this.emitirEvento(job.id, tipo, dados),
       sinal: controlador.signal,
+      pedirInput: (nova) => this.pedirInput(job, controlador.signal, nova),
     };
 
     // Promise.resolve().then(...) também captura runner que lança sincronamente.

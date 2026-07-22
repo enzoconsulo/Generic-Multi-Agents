@@ -1,5 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import type { ContextoExecucao, Job, Runner } from "../tipos.js";
+import type { ContextoExecucao, Job, NovaPendencia, Runner } from "../tipos.js";
 
 /**
  * Runner que executa um fluxo da fábrica via Claude Agent SDK (T-008). O padrão de uso
@@ -81,6 +81,32 @@ export class RunnerClaude implements Runner {
     if (ctx.sinal.aborted) controlador.abort();
     else ctx.sinal.addEventListener("abort", () => controlador.abort(), { once: true });
 
+    // Inputs pela UI (T-010): quando o SDK consulta permissão (permissionMode != bypass),
+    // roteamos a aprovação/pergunta para o painel via `ctx.pedirInput`. Sob o default
+    // `bypassPermissions` o SDK NÃO chama este callback (autonomia preservada); um disparo
+    // que queira aprovações na tela manda `permissionMode: "default"`.
+    const canUseTool = async (
+      toolName: string,
+      input: Record<string, unknown>,
+    ): Promise<
+      | { behavior: "allow"; updatedInput: Record<string, unknown> }
+      | { behavior: "deny"; message: string }
+    > => {
+      if (toolName === "AskUserQuestion") {
+        const resp = await ctx.pedirInput(pendenciaPergunta(input));
+        return {
+          behavior: "allow",
+          updatedInput: { ...input, respostaUsuario: resp.escolha ?? "" },
+        };
+      }
+      const resp = await ctx.pedirInput(pendenciaAprovacao(toolName, input));
+      if (resp.aprovado === true) return { behavior: "allow", updatedInput: input };
+      return {
+        behavior: "deny",
+        message: resp.mensagem ?? "Ação negada pelo usuário no painel.",
+      };
+    };
+
     const consulta = this.consulta({
       prompt: p.prompt,
       options: {
@@ -92,6 +118,7 @@ export class RunnerClaude implements Runner {
         // Especialistas do projeto injetados como subagentes (options.agents do SDK).
         ...(p.agentes !== undefined ? { agents: p.agentes } : {}),
         permissionMode: p.permissionMode ?? "bypassPermissions",
+        canUseTool,
         abortController: controlador,
         ...(p.maxTurns !== undefined ? { maxTurns: p.maxTurns } : {}),
       },
@@ -170,6 +197,45 @@ export class RunnerClaude implements Runner {
 
 /** Ferramentas que despacham um subagente (varia conforme o binário/SDK). */
 const FERRAMENTAS_DESPACHO: ReadonlySet<string> = new Set(["Agent", "Task"]);
+
+/** Resumo curto e seguro do input de uma ferramenta, para exibir no pedido de aprovação. */
+function resumoInput(input: Record<string, unknown>): string {
+  let texto: string;
+  try {
+    texto = JSON.stringify(input);
+  } catch {
+    return "(input não serializável)";
+  }
+  return texto.length > 300 ? `${texto.slice(0, 300)}…` : texto;
+}
+
+/** Monta a pendência de aprovação de uma ferramenta fora do allowlist. */
+function pendenciaAprovacao(toolName: string, input: Record<string, unknown>): NovaPendencia {
+  return {
+    tipo: "aprovacao-ferramenta",
+    titulo: `Aprovar uso da ferramenta "${toolName}"?`,
+    descricao: `O fluxo quer usar ${toolName} com: ${resumoInput(input)}`,
+  };
+}
+
+/** Monta a pendência de uma pergunta (AskUserQuestion), de forma defensiva ao formato. */
+function pendenciaPergunta(input: Record<string, unknown>): NovaPendencia {
+  const perguntas = Array.isArray(input["questions"]) ? (input["questions"] as unknown[]) : [];
+  const primeira = (perguntas[0] ?? {}) as { question?: unknown; options?: unknown };
+  const texto =
+    typeof primeira.question === "string" ? primeira.question : "O fluxo fez uma pergunta.";
+  const opcoes = Array.isArray(primeira.options)
+    ? (primeira.options as unknown[]).map((o) =>
+        typeof o === "string" ? o : String((o as { label?: unknown })?.label ?? o),
+      )
+    : undefined;
+  return {
+    tipo: "pergunta",
+    titulo: "Pergunta do fluxo",
+    descricao: texto,
+    ...(opcoes && opcoes.length > 0 ? { opcoes } : {}),
+  };
+}
 
 /**
  * Para despachos de subagente (ferramenta `Agent` no Claude Code, `Task` em outros

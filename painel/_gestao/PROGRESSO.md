@@ -32,8 +32,18 @@ preservando `.git` ou `git init`+commit), gera `_gestao/` mínimo dos templates 
 sobrescrever) e enfileira a análise (lock por projeto serializa cópia→análise). Form
 **"Importar pasta existente"** na home. Smoke ao vivo: pasta de teste importada com
 `node_modules` ignorado, git inicializado, `_gestao/` criado, listada na API e análise
-enfileirada. Suíte: **servidor 130/130** (+16) **+ web 7/7**. Próximo: T-010 (inputs pela UI),
-Fase 3 (CI/CD).
+enfileirada. Suíte: **servidor 130/130** (+16) **+ web 7/7**.
+
+**T-010 — inputs pela UI (concluída).** Mecanismo pergunta→resposta: quando um fluxo precisa
+de aprovação de ferramenta (`canUseTool`) ou faz uma pergunta (`AskUserQuestion`), o job pausa
+em `aguardando-input`, a pendência aparece em `GET /api/inputs` (+ evento SSE `input-pendente`)
+e a resposta (`POST /api/inputs/:id/resposta`) destrava o fluxo. Registro de pendências
+(`jobs/inputs.ts`), métodos no gerenciador, `ctx.pedirInput` no runner, e painel **"⏸
+Aguardando você"** na página de Jobs (aprovar/negar/escolher, ao vivo pelo SSE). Autonomia
+preservada: sob o `bypassPermissions` padrão o SDK não chama o callback; um disparo com
+`permissionMode: default` liga as aprovações pela UI. Suíte: **servidor 135/135** (+5) **+ web
+7/7**. Integração real do canUseTool com o SDK fica para `teste:integracao` (run pago).
+Próximo: Fase 3 (CI/CD, T-017–020).
 
 ## 2026-07-21
 Projeto criado e Fase 1 (fundação) quase fechada num único dia de trabalho. Pesquisa

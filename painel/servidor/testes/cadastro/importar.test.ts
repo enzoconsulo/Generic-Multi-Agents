@@ -13,7 +13,11 @@ import { RunnerImportar } from "../../src/projetos/runner-importar.js";
 import { obterGerenciador, reiniciarGerenciador } from "../../src/jobs/instancia.js";
 import type { ContextoExecucao, Job, Runner } from "../../src/jobs/tipos.js";
 
-const ctxFake: ContextoExecucao = { emitir: () => {}, sinal: new AbortController().signal };
+const ctxFake: ContextoExecucao = {
+  emitir: () => {},
+  sinal: new AbortController().signal,
+  pedirInput: async () => ({}),
+};
 
 /** Fábrica falsa com projetos/ e templates mínimos. */
 function fabricaTemp(): string {

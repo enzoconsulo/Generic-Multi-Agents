@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import type { EventoJob, Job, LinhaLog, RespostaJobs } from "./tipos";
+import type {
+  EventoJob,
+  Job,
+  LinhaLog,
+  Pendencia,
+  RespostaInputs,
+  RespostaJobs,
+} from "./tipos";
 
 interface EstadoAoVivo {
   jobs: Job[];
   /** Log acumulado por jobId (a partir dos eventos "log" do SSE). */
   logs: Record<string, LinhaLog[]>;
+  /** Inputs pendentes (T-010): fluxos pausados esperando resposta do usuário. */
+  pendencias: Pendencia[];
   conectado: boolean;
 }
 
@@ -26,6 +35,7 @@ interface DadosLog {
 export function useJobsAoVivo(): EstadoAoVivo {
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [logs, setLogs] = useState<Record<string, LinhaLog[]>>({});
+  const [pendencias, setPendencias] = useState<Record<string, Pendencia>>({});
   const [conectado, setConectado] = useState(false);
   const jaCarregou = useRef(false);
 
@@ -46,6 +56,19 @@ export function useJobsAoVivo(): EstadoAoVivo {
         .catch(() => {
           /* a lista inicial pode falhar; o SSE ainda popula ao vivo */
         });
+
+      api<RespostaInputs>("/api/inputs")
+        .then((r) => {
+          if (!ativo) return;
+          setPendencias((atual) => {
+            const mapa = { ...atual };
+            for (const p of r.inputs) mapa[p.id] = p;
+            return mapa;
+          });
+        })
+        .catch(() => {
+          /* idem: o SSE ainda traz input-pendente ao vivo */
+        });
     }
 
     const fonte = new EventSource("/api/eventos");
@@ -58,6 +81,17 @@ export function useJobsAoVivo(): EstadoAoVivo {
       try {
         evento = JSON.parse((e as MessageEvent).data) as EventoJob;
       } catch {
+        return;
+      }
+
+      if (evento.tipo === "input-pendente") {
+        const p = evento.dados as Pendencia | undefined;
+        if (p?.id) setPendencias((atual) => ({ ...atual, [p.id]: p }));
+        return;
+      }
+      if (evento.tipo === "input-respondido") {
+        const id = (evento.dados as { pendencia?: { id?: string } } | undefined)?.pendencia?.id;
+        if (id) setPendencias((atual) => remover(atual, id));
         return;
       }
 
@@ -85,5 +119,14 @@ export function useJobsAoVivo(): EstadoAoVivo {
   }, []);
 
   const lista = Object.values(jobs).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
-  return { jobs: lista, logs, conectado };
+  const pend = Object.values(pendencias).sort((a, b) => a.criadaEm.localeCompare(b.criadaEm));
+  return { jobs: lista, logs, pendencias: pend, conectado };
+}
+
+/** Remove uma chave de um Record sem mutar o original. */
+function remover<T>(mapa: Record<string, T>, id: string): Record<string, T> {
+  if (!(id in mapa)) return mapa;
+  const copia = { ...mapa };
+  delete copia[id];
+  return copia;
 }
