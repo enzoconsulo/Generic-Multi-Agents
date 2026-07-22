@@ -1,6 +1,6 @@
 ---
 description: Painel do estado atual - projetos, tarefas por status, bloqueios e próximos passos
-argument-hint: [nome-do-projeto] (vazio = todos)
+argument-hint: "[nome-do-projeto] (vazio = todos)"
 ---
 
 Montar o painel de status. Escopo: $ARGUMENTS (se vazio, todos os projetos).

@@ -1,6 +1,6 @@
 ---
 description: Loop principal da fábrica - executa o pipeline completo (executor → testador → revisor) em todas as tarefas prontas, sem intervenção
-argument-hint: [nome-do-projeto] (vazio = todos os projetos)
+argument-hint: "[nome-do-projeto] (vazio = todos os projetos)"
 ---
 
 Rodar a fábrica. Escopo: $ARGUMENTS (se vazio, todos os projetos em `projetos/`).
