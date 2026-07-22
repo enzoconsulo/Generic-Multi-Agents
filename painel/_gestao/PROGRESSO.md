@@ -23,8 +23,17 @@ cria um job com cwd no projeto que lê o código de ponta a ponta e gera/atualiz
 + rodapé data/commit + atualização incremental). Botão **Analisar/Reanalisar** na página do
 projeto (picker de modelo + estimativa + link pro console). Smoke ao vivo (Haiku): análise do
 `teste-todo-cli` com as 5 seções e rodapé por US$0,09; re-análise preserva a estrutura. Suíte:
-**servidor 114/114** (+13) **+ web 7/7**. Próximo: T-013 (cadastro/importação), T-010 (inputs
-pela UI), Fase 3 (CI/CD).
+**servidor 114/114** (+13) **+ web 7/7**.
+
+**T-013 — cadastro/importação de projetos pela web (concluída).** Criar projeto novo já era
+`/novo-projeto`; adicionada a IMPORTAÇÃO de pasta existente: `POST /api/projetos/importar`
+cria um job NÃO-Claude que copia a pasta para `projetos/<nome>/` (ignorando `node_modules`,
+preservando `.git` ou `git init`+commit), gera `_gestao/` mínimo dos templates (sem
+sobrescrever) e enfileira a análise (lock por projeto serializa cópia→análise). Form
+**"Importar pasta existente"** na home. Smoke ao vivo: pasta de teste importada com
+`node_modules` ignorado, git inicializado, `_gestao/` criado, listada na API e análise
+enfileirada. Suíte: **servidor 130/130** (+16) **+ web 7/7**. Próximo: T-010 (inputs pela UI),
+Fase 3 (CI/CD).
 
 ## 2026-07-21
 Projeto criado e Fase 1 (fundação) quase fechada num único dia de trabalho. Pesquisa

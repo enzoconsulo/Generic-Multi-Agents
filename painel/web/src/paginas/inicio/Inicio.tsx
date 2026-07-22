@@ -76,6 +76,12 @@ export function Inicio() {
 
       <section className="secao">
         <h3 className="secao-titulo">Projetos</h3>
+        {fabrica.dados !== null && (
+          <ImportarProjeto
+            estrategias={fabrica.dados.estrategias}
+            estrategiaPadrao={fabrica.dados.estrategiaPadrao}
+          />
+        )}
         {projetos.carregando && <Carregando />}
         {projetos.erro !== null && <MensagemErro erro={projetos.erro} />}
         {projetos.dados !== null &&
@@ -216,6 +222,115 @@ function CartaoAcao({
         </form>
       )}
     </article>
+  );
+}
+
+/**
+ * Importação de uma pasta existente pela web (T-013): POST /api/projetos/importar cria um
+ * job não-Claude que copia a pasta para projetos/, garante git + _gestao/ e dispara a
+ * análise. Criar projeto NOVO continua sendo a ação /novo-projeto (cards acima).
+ */
+function ImportarProjeto({
+  estrategias,
+  estrategiaPadrao,
+}: {
+  estrategias: EstrategiaModelo[];
+  estrategiaPadrao: string;
+}) {
+  const navegar = useNavigate();
+  const [aberto, setAberto] = useState(false);
+  const [caminho, setCaminho] = useState("");
+  const [nome, setNome] = useState("");
+  const [estrategiaId, setEstrategiaId] = useState(estrategiaPadrao);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function importar(evento: React.FormEvent) {
+    evento.preventDefault();
+    setEnviando(true);
+    setErro(null);
+    try {
+      const { job } = await api<RespostaAcao>("/api/projetos/importar", {
+        method: "POST",
+        body: JSON.stringify({
+          caminho: caminho.trim(),
+          nome: nome.trim() !== "" ? nome.trim() : undefined,
+          estrategia: estrategiaId,
+        }),
+      });
+      navegar(`/jobs?job=${encodeURIComponent(job.id)}`);
+    } catch (e) {
+      setErro(e instanceof ErroApi || e instanceof Error ? e.message : "Falha ao importar");
+      setEnviando(false);
+    }
+  }
+
+  if (!aberto) {
+    return (
+      <div className="importar-projeto">
+        <button
+          type="button"
+          className="botao botao-secundario botao-compacto"
+          onClick={() => setAberto(true)}
+        >
+          + Importar pasta existente…
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form className="form-acao importar-projeto" onSubmit={importar}>
+      <label className="campo-form">
+        <span>Caminho absoluto da pasta</span>
+        <input
+          type="text"
+          value={caminho}
+          onChange={(e) => setCaminho(e.target.value)}
+          placeholder="C:\Users\voce\meu-projeto"
+          autoFocus
+          required
+        />
+      </label>
+      <label className="campo-form">
+        <span>Nome (opcional — derivado da pasta se vazio)</span>
+        <input
+          type="text"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="meu-projeto"
+        />
+      </label>
+      <label className="campo-form">
+        <span>Modelo da análise automática</span>
+        <select value={estrategiaId} onChange={(e) => setEstrategiaId(e.target.value)}>
+          {estrategias.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.rotulo}
+              {e.id === estrategiaPadrao ? " (padrão)" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="texto-suave campo-ajuda">
+        A pasta é copiada para <code>projetos/</code> (ignorando <code>node_modules</code>), com
+        git e <code>_gestao/</code> mínimos; a análise do código roda logo em seguida.
+      </p>
+      {erro !== null && <div className="aviso aviso-erro aviso-compacto">{erro}</div>}
+      <div className="form-acoes">
+        <button type="submit" className="botao botao-acao" disabled={enviando}>
+          {enviando ? "Importando…" : "Importar"}
+        </button>
+        <button
+          type="button"
+          className="botao botao-secundario"
+          onClick={() => setAberto(false)}
+          disabled={enviando}
+        >
+          Cancelar
+        </button>
+      </div>
+    </form>
   );
 }
 

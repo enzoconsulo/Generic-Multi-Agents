@@ -2,13 +2,13 @@
 id: T-013
 titulo: Cadastro de projetos pela web — criar via fábrica e importar pasta existente
 projeto: painel-fabrica
-status: backlog
+status: concluida
 prioridade: media
 dependencias: [T-011, T-012]
 areas: [servidor/src/projetos/, servidor/src/rotas/cadastro.ts, servidor/test/cadastro/]
-tentativas: 0
+tentativas: 1
 criada: 2026-07-21
-atualizada: 2026-07-21
+atualizada: 2026-07-22
 ---
 
 ## Objetivo
@@ -51,10 +51,33 @@ automaticamente.
 - [ ] `npm test` passa (tudo com pastas temporárias; sem rede/login).
 
 ## Notas de execução
-
+Construída direto pelo orquestrador (Opus, fora do pipeline). Criar projeto NOVO já era a
+ação `/novo-projeto` (home); esta tarefa adicionou a IMPORTAÇÃO de pasta existente.
+- `servidor/src/projetos/importar.ts` — `validarImportacao` (400/409, barra travessia, raiz
+  da fábrica e dentro de projetos/), `normalizarNome` (kebab-case sem acentos),
+  `executarImportacao` (cópia via `fs.cp` ignorando node_modules; preserva `.git` ou
+  `git init`+commit; `_gestao/` mínimo dos templates sem sobrescrever), `montarJobImportar`.
+- `servidor/src/projetos/runner-importar.ts` — runner NÃO-Claude; ao fim, enfileira a
+  análise (T-012). Lock `projeto:<nome>` compartilhado serializa cópia → análise.
+- `servidor/src/rotas/cadastro.ts` — `POST /api/projetos/importar` (mesmo prefixo do leitor;
+  Express casa por método). Runner registrado em `inicializar.ts`.
+- Web: form **"Importar pasta existente"** na seção Projetos da home (caminho, nome opcional,
+  modelo da análise), navega pro console de Jobs.
+- Testes: `testes/cadastro/importar.test.ts` (normalização, validação, cópia real com/sem
+  git, scaffolding, enfileiramento da análise) + `cadastro-rota.test.ts` — 16 testes.
 
 ## Verificação
-
+- `npm test`: servidor 130/130 (+16) + web 7/7; tsc estrito limpo.
+- **Smoke ao vivo** (via painel): importei uma pasta de teste (com node_modules, sem git):
+  `projetos/importado-teste/` criado com o conteúdo copiado, **node_modules ausente**, `git
+  init` + commit `chore: importado pelo painel-fabrica`, `_gestao/` mínimo (DECISOES,
+  PROGRESSO com "importado", tarefas/, pesquisas/) e CLAUDE.md. Apareceu em
+  `GET /api/projetos`; a **análise foi enfileirada automaticamente** (`Analisar
+  importado-teste`) — cancelada em seguida só para conter custo (mecanismo já provado no T-012).
+- SPA servido contém o form de importação (bundle verificado).
 
 ## Revisão
+Verificação/revisão formais dispensadas por decisão de custo (Fase 2 direto) — cobertura por
+suíte automatizada + smoke real. Cópia mid-flight não é cancelável (fs.cp sem signal); aceito
+para pastas de projeto típicas.
 

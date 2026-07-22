@@ -762,6 +762,11 @@ a:hover {
   padding: 0.4rem 0.85rem;
   font-size: 0.82rem;
 }
+/* Controle de importação de projeto (home) */
+.importar-projeto {
+  margin: 0.25rem 0 1.1rem;
+  max-width: 34rem;
+}
 
 /* Peso da ação (badge) */
 .peso-leve {
