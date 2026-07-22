@@ -1,5 +1,7 @@
-# Projetos são repositórios git próprios — a raiz versiona só o sistema
-projetos/
+# Projetos são repositórios git próprios — a raiz versiona só o sistema.
+# Âncora `/` para pegar SÓ o projetos/ da raiz (não pastas `projetos` aninhadas no
+# código do painel, ex.: painel/servidor/src/projetos/).
+/projetos/
 
 # Aprovações locais de permissão (pessoais, não versionar)
 .claude/settings.local.json
