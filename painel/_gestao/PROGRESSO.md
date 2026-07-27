@@ -5,6 +5,22 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (T-019)
+**T-019 — robustez de execução (concluída).** Módulo novo `servidor/src/jobs/robustez/`:
+**watchdog** de inatividade que interrompe fluxo Claude travado (conta do último evento,
+não do início; `aguardando-input` não conta — esperar humano não é travar; jobs não-Claude
+ficam de fora porque o CI já tem timeout próprio), **guardrails** por ação data-driven
+(`/trabalhar` 200 turnos, `/status` 40, desconhecida cai no padrão — nenhum fluxo sobe sem
+teto) e **recuperação de boot** completa: job pendurado → `interrompido` com transição
+agora publicada no SSE (antes era emitida no construtor, sem ninguém escutando), pendência
+de input aberta é fechada (parava de mentir "aguardando resposta" para sempre) e histórico
+de CI deixado como `executando` é reconciliado para `interrompido`. Núcleo ganhou
+`interromper()` (irmão de `cancelar`, mas decisão do sistema, não do usuário) e
+`ctx.anotar()`, que grava `sessionId`/`cwd` no `system/init` — antes o `sessionId` só
+existia no job concluído, isto é, nunca quando a retomada manual importa.
+Suíte: **servidor 195/195** (+23) **+ web 14/14**. Build limpo. **Falta só a T-020**
+(polimento + docs) para fechar a Fase 3 e o projeto.
+
 ## 2026-07-27 (revisão)
 **Revisão dedicada do T-016/T-017/T-018 (a pedido do usuário, modelo mais forte).** Achou
 e corrigiu 1 bug real, 1 regressão de UX, 1 fragilidade e 1 teste quebrado:

@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { EstagioCi } from "./config.js";
 
@@ -9,7 +16,13 @@ import type { EstagioCi } from "./config.js";
  */
 
 export type EstadoEstagioCi = "sucesso" | "falhou" | "pulado" | "cancelado";
-export type EstadoResultadoCi = "executando" | "sucesso" | "falhou" | "cancelado";
+export type EstadoResultadoCi =
+  | "executando"
+  | "sucesso"
+  | "falhou"
+  | "cancelado"
+  /** O processo do painel caiu no meio do pipeline (reconciliado no boot — T-019). */
+  | "interrompido";
 
 export interface ResultadoEstagio {
   estagio: EstagioCi;
@@ -57,6 +70,61 @@ export function lerResultados(dirDados: string, projeto: string): ArquivoResulta
   } catch {
     return null;
   }
+}
+
+/**
+ * Reconcilia resultados de CI deixados como `executando` por um processo que caiu (T-019).
+ * No boot nada está rodando, então todo `executando` no disco é órfão: sem isto, a aba
+ * CI/CD (T-018) exibiria "executando" para sempre. Devolve quantos foram corrigidos;
+ * nunca lança (boot não pode falhar por causa de arquivo de histórico).
+ */
+export function reconciliarResultadosOrfaos(dirDados: string): number {
+  const dir = dirCi(dirDados);
+  if (!existsSync(dir)) return 0;
+
+  let corrigidos = 0;
+  for (const nome of readdirSync(dir)) {
+    if (!nome.endsWith(".json")) continue;
+    const projeto = nome.slice(0, -".json".length);
+    try {
+      const arquivo = lerResultados(dirDados, projeto);
+      if (arquivo === null) continue;
+
+      let mudou = false;
+      const orfao = (r: ResultadoCi): ResultadoCi => {
+        if (r.estado !== "executando") return r;
+        mudou = true;
+        return {
+          ...r,
+          estado: "interrompido",
+          terminadoEm: r.terminadoEm ?? new Date().toISOString(),
+          estagios: r.estagios.map((e) =>
+            e.estado === "sucesso" || e.estado === "falhou" || e.estado === "pulado"
+              ? e
+              : { ...e, estado: "cancelado" },
+          ),
+        };
+      };
+
+      const atualizado = {
+        ultimo: orfao(arquivo.ultimo),
+        historico: arquivo.historico.map(orfao),
+      };
+      if (!mudou) continue;
+
+      const destino = caminhoResultado(dirDados, projeto);
+      const temporario = `${destino}.tmp`;
+      writeFileSync(temporario, JSON.stringify(atualizado, null, 2), "utf8");
+      renameSync(temporario, destino);
+      corrigidos += 1;
+    } catch (erro) {
+      console.warn(
+        `[ci] Não foi possível reconciliar o histórico de "${projeto}": ` +
+          `${erro instanceof Error ? erro.message : String(erro)}`,
+      );
+    }
+  }
+  return corrigidos;
 }
 
 /** Grava/atualiza o resultado (mesmo jobId reescreve a entrada — usado durante a execução). */

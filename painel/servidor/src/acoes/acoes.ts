@@ -1,5 +1,6 @@
 import { IDS_ACOES, type IdAcao } from "../fabrica/catalogo-acoes.js";
 import type { NovoJob } from "../jobs/fila.js";
+import { guardrailsParaAcao } from "../jobs/robustez/guardrails.js";
 import type { EscopoLock } from "../jobs/tipos.js";
 
 /**
@@ -61,6 +62,10 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
   const args = (pedido.argumentos ?? "").trim();
   const prompt = args === "" ? `/${id}` : `/${id} ${args}`;
 
+  // Guardrail de turnos (T-019): teto por tipo de ação quando o disparo não pediu um
+  // explicitamente — nenhum fluxo sobe mais sem teto nenhum.
+  const maxTurns = pedido.maxTurns ?? guardrailsParaAcao(id).maxTurns;
+
   return {
     tipo: "claude",
     titulo: prompt,
@@ -74,7 +79,7 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
       ...(pedido.agentes && Object.keys(pedido.agentes).length > 0
         ? { agentes: pedido.agentes }
         : {}),
-      ...(pedido.maxTurns !== undefined ? { maxTurns: pedido.maxTurns } : {}),
+      maxTurns,
     },
   };
 }

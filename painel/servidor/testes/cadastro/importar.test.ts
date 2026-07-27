@@ -17,6 +17,7 @@ const ctxFake: ContextoExecucao = {
   emitir: () => {},
   sinal: new AbortController().signal,
   pedirInput: async () => ({}),
+  anotar: () => {},
 };
 
 /** Fábrica falsa com projetos/ e templates mínimos. */

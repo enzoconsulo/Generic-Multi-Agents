@@ -1087,8 +1087,12 @@ a:hover {
   background-color: var(--cor-erro);
 }
 .ci-badge-pulado,
-.ci-badge-cancelado {
+.ci-badge-cancelado,
+.ci-badge-interrompido {
   background-color: #6e7681;
+}
+.ci-badge-executando {
+  background-color: var(--cor-alerta);
 }
 .ci-estagio-meta {
   margin-top: 0.35rem;

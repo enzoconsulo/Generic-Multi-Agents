@@ -36,10 +36,12 @@ type EstadoEstagioUi = "pendente" | EstagioCiAoVivo["estado"];
 const ROTULO_ESTADO_CI: Record<string, string> = {
   pendente: "Pendente",
   rodando: "Rodando",
+  executando: "Rodando",
   sucesso: "OK",
   falhou: "Falhou",
   pulado: "Pulado",
   cancelado: "Cancelado",
+  interrompido: "Interrompido",
 };
 
 function duracaoLegivel(ms: number | null): string {

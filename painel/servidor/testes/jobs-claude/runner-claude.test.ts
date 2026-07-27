@@ -17,12 +17,14 @@ function jobFake(params: Record<string, unknown>): Job {
 
 function contexto(sinal: AbortSignal) {
   const eventos: { tipo: string; dados?: unknown }[] = [];
+  const anotacoes: { sessionId?: string; cwd?: string }[] = [];
   const ctx: ContextoExecucao = {
     emitir: (tipo, dados) => eventos.push({ tipo, dados }),
     sinal,
     pedirInput: async () => ({}),
+    anotar: (dados) => anotacoes.push(dados),
   };
-  return { ctx, eventos };
+  return { ctx, eventos, anotacoes };
 }
 
 const PARAMS = { prompt: "/status", cwd: "C:/fabrica", modelo: "haiku" };
@@ -56,9 +58,13 @@ describe("RunnerClaude — tradução de mensagens do SDK em eventos e resultado
       { type: "rate_limit_event", foo: 1 }, // tipo desconhecido: ignorado sem quebrar
     ];
     const runner = new RunnerClaude(consultaDe(mensagens));
-    const { ctx, eventos } = contexto(new AbortController().signal);
+    const { ctx, eventos, anotacoes } = contexto(new AbortController().signal);
 
     const r = await runner.executar(jobFake(PARAMS), ctx);
+
+    // T-019: sessionId/cwd gravados no job JÁ no `system/init`, não só no fim — é o que
+    // permite retomar à mão um fluxo interrompido no meio.
+    expect(anotacoes).toContainEqual({ sessionId: "sess-1", cwd: PARAMS.cwd });
 
     expect(r.sessionId).toBe("sess-1");
     expect(r.custoUsd).toBeCloseTo(0.0123);

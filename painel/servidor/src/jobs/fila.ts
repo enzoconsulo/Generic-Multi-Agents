@@ -74,6 +74,10 @@ export class GerenciadorJobs {
   private readonly execucoes = new Map<string, Execucao>();
   /** Jobs cujo cancelamento foi pedido enquanto executavam. */
   private readonly cancelamentosPedidos = new Set<string>();
+  /** Jobs cuja INTERRUPÇÃO foi pedida enquanto executavam (id → motivo). T-019. */
+  private readonly interrupcoesPedidas = new Map<string, string>();
+  /** Jobs saneados no boot, aguardando publicação no canal de eventos (T-019). */
+  private readonly saneadosNoBoot: Job[] = [];
   private readonly runners = new Map<string, Runner>();
   /** Pendências de input (T-010): pareamento pergunta↔resposta entre runner e usuário. */
   private readonly inputs = new RegistroInputs();
@@ -95,7 +99,14 @@ export class GerenciadorJobs {
         job.estado = "interrompido";
         job.terminadoEm = agora();
         job.erro = "Processo do painel reiniciou antes de o job terminar";
+        // Pendências de input que ficaram abertas morreram junto com a memória (as
+        // Promises do RegistroInputs não sobrevivem ao processo). Fechá-las aqui evita
+        // que o metadado do job siga dizendo "aguardando resposta" para sempre (T-019).
+        fecharPendenciasAbertas(job);
         this.persistir(job);
+        // Guardado para publicar DEPOIS: no construtor ainda não há listener plugado
+        // (o hub SSE conecta no inicializar.ts), então emitir aqui seria emitir no vácuo.
+        this.saneadosNoBoot.push(job);
       }
       this.jobs.set(job.id, job);
     }
@@ -177,6 +188,44 @@ export class GerenciadorJobs {
     return job;
   }
 
+  /**
+   * Interrompe um job por decisão do SISTEMA (watchdog de inatividade, T-019), não do
+   * usuário — daí terminar em `interrompido` com o motivo, e não em `cancelado`. Mesma
+   * mecânica do `cancelar`; se os dois forem pedidos, o cancelamento do usuário prevalece.
+   */
+  interromper(id: string, motivo: string): Job {
+    const job = this.jobs.get(id);
+    if (!job) throw new ErroJobNaoEncontrado(id);
+    if (!ESTADOS_CANCELAVEIS.has(job.estado)) throw new ErroJobNaoCancelavel(job);
+
+    if (job.estado === "na-fila") {
+      const posicao = this.fila.indexOf(id);
+      if (posicao !== -1) this.fila.splice(posicao, 1);
+      this.mudarEstado(job, "interrompido", { terminadoEm: agora(), erro: motivo });
+      this.agendar();
+      return job;
+    }
+
+    this.interrupcoesPedidas.set(id, motivo);
+    this.inputs.abortarDeJob(id, motivo);
+    this.execucoes.get(id)?.controlador.abort();
+    return job;
+  }
+
+  /**
+   * Publica no canal de eventos as transições do saneamento de boot (jobs que o processo
+   * anterior deixou pendurados). Chamado pelo `inicializar.ts` DEPOIS de o hub SSE
+   * conectar. Idempotente: só publica uma vez. Devolve quantos jobs foram saneados.
+   */
+  publicarSaneamentoDeBoot(): number {
+    const total = this.saneadosNoBoot.length;
+    for (const job of this.saneadosNoBoot) {
+      this.emitirEvento(job.id, "estado", { de: null, para: job.estado, job: { ...job } });
+    }
+    this.saneadosNoBoot.length = 0;
+    return total;
+  }
+
   /** Quantos jobs estão executando agora (diagnóstico/testes). */
   get executandoAgora(): number {
     return this.execucoes.size;
@@ -223,6 +272,16 @@ export class GerenciadorJobs {
       this.inputs.abortarDeJob(job.id, "Job cancelado enquanto aguardava input.");
     }
     return promessa;
+  }
+
+  /**
+   * Grava metadados de retomada manual no job e persiste NA HORA (T-019) — o valor está
+   * justamente em sobreviver a uma queda no meio da execução.
+   */
+  private anotarJob(job: Job, dados: { sessionId?: string; cwd?: string }): void {
+    if (dados.sessionId !== undefined) job.sessionId = dados.sessionId;
+    if (dados.cwd !== undefined) job.cwd = dados.cwd;
+    this.persistir(job);
   }
 
   /** Reflete no metadado do job a pendência respondida (auditoria no histórico). */
@@ -274,6 +333,7 @@ export class GerenciadorJobs {
       emitir: (tipo, dados) => this.emitirEvento(job.id, tipo, dados),
       sinal: controlador.signal,
       pedirInput: (nova) => this.pedirInput(job, controlador.signal, nova),
+      anotar: (dados) => this.anotarJob(job, dados),
     };
 
     // Promise.resolve().then(...) também captura runner que lança sincronamente.
@@ -292,11 +352,20 @@ export class GerenciadorJobs {
       )
       .then(({ falha, resultado }) => {
         const cancelado = this.cancelamentosPedidos.has(job.id);
+        // Cancelamento (usuário) prevalece sobre interrupção (watchdog): se os dois
+        // foram pedidos, o estado final reflete a ação explícita do usuário.
+        const motivoInterrupcao = this.interrupcoesPedidas.get(job.id);
         this.execucoes.delete(job.id);
         this.cancelamentosPedidos.delete(job.id);
+        this.interrupcoesPedidas.delete(job.id);
         try {
           if (cancelado) {
             this.mudarEstado(job, "cancelado", { terminadoEm: agora() });
+          } else if (motivoInterrupcao !== undefined) {
+            this.mudarEstado(job, "interrompido", {
+              terminadoEm: agora(),
+              erro: motivoInterrupcao,
+            });
           } else if (falha !== undefined) {
             this.mudarEstado(job, "falhou", { terminadoEm: agora(), erro: falha });
           } else {
@@ -364,6 +433,21 @@ function validarEscopo(escopo: string): asserts escopo is EscopoLock {
   if (escopo === "global") return;
   if (escopo.startsWith("projeto:") && escopo.length > "projeto:".length) return;
   throw new Error(`Escopo de lock inválido: "${escopo}". Use "global" ou "projeto:<nome>".`);
+}
+
+/**
+ * Fecha, no metadado do job, as pendências de input que ficaram sem resposta (T-019).
+ * Usado no saneamento de boot: as Promises correspondentes morreram com o processo, então
+ * deixá-las "abertas" no histórico seria mentira permanente.
+ */
+function fecharPendenciasAbertas(job: Job): void {
+  for (const pendencia of job.inputs ?? []) {
+    if (pendencia.respondidaEm !== undefined) continue;
+    pendencia.respondidaEm = agora();
+    pendencia.resposta = {
+      mensagem: "Pendência encerrada: o painel reiniciou antes de a resposta chegar.",
+    };
+  }
 }
 
 function mensagemDeErro(falha: unknown): string {

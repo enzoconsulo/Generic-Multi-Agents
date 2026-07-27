@@ -229,7 +229,13 @@ export interface ConfigCi {
 }
 
 export type EstadoEstagioCi = "sucesso" | "falhou" | "pulado" | "cancelado";
-export type EstadoResultadoCi = "executando" | "sucesso" | "falhou" | "cancelado";
+export type EstadoResultadoCi =
+  | "executando"
+  | "sucesso"
+  | "falhou"
+  | "cancelado"
+  /** O painel caiu no meio do pipeline (reconciliado no boot — T-019). */
+  | "interrompido";
 
 export interface ResultadoEstagio {
   estagio: EstagioCi;

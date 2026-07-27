@@ -35,6 +35,7 @@ function ctxFake(sinal: AbortSignal = new AbortController().signal) {
     emitir: (tipo, dados) => eventos.push({ tipo, dados }),
     sinal,
     pedirInput: async () => ({}),
+    anotar: () => {},
   };
   return { ctx, eventos };
 }

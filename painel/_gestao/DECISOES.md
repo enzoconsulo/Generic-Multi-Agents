@@ -8,6 +8,34 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — Robustez (T-019): interromper ≠ cancelar; watchdog conta silêncio, não duração
+**Decisão:** quatro escolhas de desenho na T-019.
+(1) *`interromper` é irmão de `cancelar`, não o mesmo:* estado final `interrompido` com
+motivo, não `cancelado`. Cancelar é ação do USUÁRIO, interromper é decisão do SISTEMA
+(watchdog); colapsar os dois faria a UI mentir sobre quem matou o fluxo. Se ambos forem
+pedidos, o cancelamento do usuário prevalece.
+(2) *Watchdog conta a partir do ÚLTIMO EVENTO, não do início:* um `/trabalhar` legítimo
+dura horas — duração não é sintoma, silêncio é. E `aguardando-input` **não** conta como
+inatividade: o job está esperando um humano, e matar por isso destruiria justamente o
+fluxo da T-010. Jobs não-Claude ficam fora da vigilância: o CI já tem timeout por estágio
+(T-017) e `npm install` silencioso é normal — duas proteções concorrentes gerariam
+interrupção falsa.
+(3) *`sessionId` gravado no `system/init`, não no fim:* antes ele só existia no resultado
+do job CONCLUÍDO, ou seja, nunca nos casos em que a retomada manual importa. Novo
+`ctx.anotar()` grava e persiste na hora.
+(4) *Saneamento de boot publicado separado do construtor:* as transições dos jobs órfãos
+eram emitidas no construtor, antes de o hub SSE conectar — ninguém escutava.
+`publicarSaneamentoDeBoot()` é chamado pelo `inicializar.ts` depois de `hub.conectar`.
+Junto: pendências de input abertas passam a ser FECHADAS no boot (antes o metadado do job
+seguia dizendo "aguardando resposta" para sempre) e resultados de CI deixados como
+`executando` são reconciliados para `interrompido` (achado da revisão anterior).
+**Motivo:** o pior estado do painel é um fluxo travado segurando o lock de um projeto —
+nada mais daquele projeto anda até alguém perceber à mão. Guardrails por ação
+(data-driven, como as estratégias de modelo) garantem que nenhum fluxo suba sem teto de
+turnos; `maxBudgetUsd` fica `null` de propósito (assinatura não cobra por chamada, o
+número é informacional).
+**Quem:** orquestrador (T-019)
+
 ## 2026-07-27 — Revisão do T-016/T-017/T-018 (segunda passada, modelo mais forte)
 **Decisão:** revisão dedicada do que foi construído na sessão, a pedido do usuário. Três
 correções aplicadas, uma delas de bug real:

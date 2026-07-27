@@ -2,13 +2,13 @@
 id: T-019
 titulo: Robustez de execução — watchdog, guardrails e recuperação pós-reinício
 projeto: painel-fabrica
-status: backlog
+status: concluida
 prioridade: media
 dependencias: [T-008, T-010]
 areas: [servidor/src/jobs/robustez/, servidor/test/robustez/]
 tentativas: 0
 criada: 2026-07-21
-atualizada: 2026-07-21
+atualizada: 2026-07-27
 ---
 
 ## Objetivo
@@ -42,23 +42,65 @@ do servidor (jobs órfãos marcados `interrompido`, pendências fechadas).
   automática está fora de escopo).
 
 ## Critérios de aceite
-- [ ] Teste com runner fake que emite um evento e silencia: watchdog (limite encurtado
+- [x] Teste com runner fake que emite um evento e silencia: watchdog (limite encurtado
       no teste) dispara, job termina `interrompido` com motivo de inatividade e o
       abort foi acionado.
-- [ ] Teste de boot: persistir job `executando` e um input pendente, recriar a
+- [x] Teste de boot: persistir job `executando` e um input pendente, recriar a
       instância do servidor → job vira `interrompido` com nota, pendência não aparece
       mais em `GET /api/inputs`, evento SSE de transição emitido.
-- [ ] Builder de options do SDK aplica maxTurns/maxBudgetUsd/watchdog da config por
+- [x] Builder de options do SDK aplica maxTurns/maxBudgetUsd/watchdog da config por
       tipo de ação (teste unitário puro do builder).
-- [ ] `GET /api/jobs/:id` de um job que rodou de verdade (ou fake com metadados
+- [x] `GET /api/jobs/:id` de um job que rodou de verdade (ou fake com metadados
       simulados) inclui `session_id` e `cwd`.
-- [ ] `npm test` passa sem rede/login.
+- [x] `npm test` passa sem rede/login.
 
 ## Notas de execução
+Construída DIRETO pelo orquestrador (Opus), sem pipeline — decisão de custo geral do painel.
 
+**Mudanças cirúrgicas no núcleo** (a tarefa autoriza "se precisar de hook novo, mínima"):
+- `fila.ts` ganhou `interromper(id, motivo)`, irmão de `cancelar` mas terminando em
+  `interrompido` com o motivo — cancelar é ação do USUÁRIO, interromper é decisão do
+  SISTEMA, e misturar os dois na UI apagaria a diferença. Se ambos forem pedidos, o
+  cancelamento do usuário prevalece (testado).
+- `ContextoExecucao` ganhou `anotar({ sessionId, cwd })`, que grava no job e persiste na
+  hora. **Ponto central da tarefa:** antes o `sessionId` só existia no resultado do job
+  CONCLUÍDO — ou seja, nunca nos casos em que retomar à mão importa. Agora o
+  `runner-claude` anota no `system/init`.
+- Saneamento de boot: já marcava job pendurado como `interrompido` (T-007), mas (a) as
+  pendências de input abertas seguiam "aguardando resposta" para sempre no metadado —
+  agora são fechadas com nota; e (b) as transições não eram observáveis, porque o
+  construtor roda ANTES de o hub SSE conectar. Resolvido com `publicarSaneamentoDeBoot()`,
+  que o `inicializar.ts` chama depois de `hub.conectar` (idempotente).
+
+**Módulo novo `src/jobs/robustez/`:**
+- `watchdog.ts` — vigia jobs Claude em execução; conta do ÚLTIMO evento, não do início
+  (fluxo longo é normal; silêncio é que denuncia travamento). Duas decisões deliberadas:
+  `aguardando-input` NÃO conta como inatividade (esperar humano não é travar — mataria
+  justamente o fluxo da T-010), e jobs não-Claude ficam de fora (o CI já tem timeout por
+  estágio, T-017; duas proteções concorrentes só gerariam interrupção falsa). Relógio
+  injetável e `varrer()` público: os testes controlam o tempo, sem timer real.
+- `guardrails.ts` — tabela data-driven por ação (`/trabalhar` 200 turnos e watchdog mais
+  paciente; `/status` 40 e menos paciente; ação desconhecida cai no padrão, isto é, nasce
+  protegida e não ilimitada). `maxBudgetUsd` fica `null` de propósito: a assinatura não
+  cobra por chamada, então é informacional. Plugado no `montarJobAcao` — nenhum fluxo sobe
+  mais sem teto; um `maxTurns` explícito do disparo continua vencendo.
+- Reconciliação do CI órfão (achado da revisão do T-017/T-018):
+  `reconciliarResultadosOrfaos` em `ci/resultados.ts`, chamada no boot. Resultado deixado
+  como `executando` vira `interrompido` (estado novo) e os estágios não terminados viram
+  `cancelado`; os já concluídos são preservados. Refletido na UI (rótulo + cor).
 
 ## Verificação
+`cd painel && npm test`: **servidor 195/195** (+23: `watchdog.test.ts` 6,
+`recuperacao-boot.test.ts` 8, `guardrails.test.ts` 7, `metadados-retomada.test.ts` 2) **+
+web 14/14**. `npm run build` limpo (tsc estrito + vite). Sem rede/login em nenhum teste
+(watchdog com relógio injetado; runner Claude falsificado). Sem verificação formal do
+testador/revisor — decisão de custo já registrada para todo o painel.
 
+Não exercitado ao vivo: o watchdog em produção só dispara após 15–20 min de silêncio real
+de um fluxo pago; a prova é a suíte determinística. A reconciliação de CI no boot também
+não foi vista com o painel de verdade caindo no meio de um pipeline.
 
 ## Revisão
+Pulada (decisão de custo). Auto-revisão: `npx tsc --noEmit` limpo nos dois workspaces; o
+compilador pegou os 3 contextos falsos de teste que precisavam do `anotar` novo.
 

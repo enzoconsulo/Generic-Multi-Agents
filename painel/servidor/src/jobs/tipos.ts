@@ -88,6 +88,14 @@ export interface Job {
   erro?: string;
   /** Histórico de pendências de input (abertas e respondidas) — auditoria (T-010). */
   inputs?: Pendencia[];
+  /**
+   * Metadados de RETOMADA MANUAL (T-019), gravados assim que conhecidos — não só no fim.
+   * É o que permite retomar à mão um fluxo que o processo interrompeu no meio: sem
+   * registrar na hora, o `sessionId` só existiria no resultado do job concluído, ou seja,
+   * justamente nunca nos casos em que a retomada importa.
+   */
+  sessionId?: string;
+  cwd?: string;
 }
 
 /**
@@ -122,6 +130,12 @@ export interface ContextoExecucao {
    * se o job for cancelado enquanto espera (o runner deve deixar o erro propagar).
    */
   pedirInput(pendencia: NovaPendencia): Promise<RespostaInput>;
+  /**
+   * Grava metadados de retomada no job e persiste na hora (T-019). O runner chama assim
+   * que os conhece (ex.: `session_id` no `system/init` do SDK), para que sobrevivam a uma
+   * interrupção — não adianta só devolvê-los no resultado final.
+   */
+  anotar(dados: { sessionId?: string; cwd?: string }): void;
 }
 
 /**

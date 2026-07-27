@@ -137,6 +137,10 @@ export class RunnerClaude implements Runner {
         case "system":
           if (msg.subtype === "init") {
             sessionId = msg.session_id ?? null;
+            // Grava JÁ no job (T-019): se o fluxo for interrompido no meio, é isto que
+            // permite a retomada manual. Esperar o `result` para registrar significaria
+            // ter o dado só quando ele não é mais necessário.
+            ctx.anotar({ cwd: p.cwd, ...(sessionId !== null ? { sessionId } : {}) });
             ctx.emitir("log", {
               nivel: "inicio",
               texto: `Sessão iniciada — modelo ${msg.model ?? p.modelo}`,
