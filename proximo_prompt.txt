@@ -7,7 +7,7 @@ Leia, nesta ordem:
     3. painel/CLAUDE.md                  (seção "Armadilhas conhecidas" — 13 armadilhas
                                           reais, cada uma de um bug que já custou tempo)
 Scan de status (um Grep resolve):
-    ^status: em painel/_gestao/tarefas/*.md          → 23/23 concluida
+    ^status: em painel/_gestao/tarefas/*.md          → 23 concluida + T-024 PRONTA
     ^status: em projetos/*/_gestao/tarefas/*.md      → ia-hibrida-limpa: 1 pronta, 5 backlog
 
 Como rodar:  duplo-clique em INICIAR.bat (raiz) → abre http://127.0.0.1:8765 sozinho.
@@ -22,7 +22,8 @@ Teste pago:  npm run teste:integracao (~US$0,01, valida canUseTool contra o SDK 
 JÁ ESTÁ FEITO — NÃO REFAZER
 =================================================================
 
-O PAINEL ESTÁ COMPLETO: 23/23 tarefas, Fases 1, 2 e 3 com marco registrado.
+O PAINEL (T-001..T-023) ESTÁ COMPLETO, Fases 1-3 com marco. MAS ver o item 1:
+ficou faltando a página de Jobs visual (T-024, criada e pronta para executar).
   - Leitura: panorama, projetos, kanban, plano, decisões, progresso, análise.
   - Execução: as 6 ações da fábrica pela web, escolha de modelo, estimativa de custo,
     log ao vivo (SSE), cancelamento, inputs pela UI (canUseTool VALIDADO em execução paga).
@@ -45,7 +46,34 @@ GENERICIDADE — JÁ PROVADA, não precisa auditar de novo:
 O QUE FAZER — EM ORDEM
 =================================================================
 
-1) EXECUTAR O ia-hibrida-limpa (é o passo natural; nada de código do painel envolvido)
+1) *** T-024 — PÁGINA DE JOBS VISUAL *** (PRIORIDADE MÁXIMA — pedido direto do usuário)
+   Arquivo da tarefa: painel/_gestao/tarefas/T-024-jobs-visual.md (status: pronta)
+
+   POR QUE É A PRIMEIRA: erro de alvo reconhecido. O usuário pediu "detalhe dos jobs e o
+   que está fazendo, assim como cada agente". A T-023 entregou isso na PÁGINA DO PROJETO
+   — que é onde ninguém fica durante uma execução. A página de JOBS, onde de fato se
+   acompanha o trabalho, continuou uma parede de texto com prefixos (▶ ◆ ↳ ⚙ ■).
+   Reação do usuário: "está uma merda e nem dá pra ver diferença nenhuma".
+
+   O que a tela precisa ter (detalhe nos critérios de aceite da tarefa):
+     - cabeçalho ao vivo: qual agente trabalha AGORA, tempo, turnos, custo;
+     - trilha do pipeline (construtor → testador → revisor) com a etapa atual destacada;
+     - linha do tempo AGRUPADA POR AGENTE (blocos colapsáveis, com duração), em vez de
+       linhas soltas de log;
+     - qual tarefa (T-NNN) está em foco;
+     - log cru continua, mas atrás de "ver log técnico";
+     - lista de jobs com progresso visual, não só badge de texto.
+
+   Reaproveite `lib/atividade.ts` (já parseia `Agent → domain`) e `useJobsAoVivo`.
+   NÃO abra segunda conexão SSE (decisão de canal único).
+   Armadilha: o log NÃO sobrevive à sessão (dados/ guarda metadados, não stdout) — job
+   antigo reaberto vem sem linhas; trate isso honestamente na tela.
+
+   >>> VERIFIQUE NO NAVEGADOR ANTES DE DAR POR PRONTA. A T-023 foi entregue sem ninguém
+   ver a tela, e é parte do motivo deste retrabalho. Se você não tiver navegador, peça ao
+   usuário para olhar ANTES de considerar a tarefa concluída.
+
+2) EXECUTAR O ia-hibrida-limpa (é o passo natural; nada de código do painel envolvido)
    Estado: ESPECIFICACAO + PLANO (3 fases) + T-001..T-006 criados; equipe com
    `ia-integracao` e `streamlit-ui`. T-001 `pronta`, resto em `backlog` aguardando a cadeia.
    Feature: geração completa de anúncio (título + descrição orientados a venda, no contexto
@@ -59,13 +87,13 @@ O QUE FAZER — EM ORDEM
    de stack não-Node): se os especialistas certos são despachados, se o testador roda os
    critérios de verdade, e se a tela "equipe ao vivo" reflete quem está trabalhando.
 
-2) VERIFICAÇÃO VISUAL NO NAVEGADOR (a única pendência que sobreviveu ao projeto)
+3) VERIFICAÇÃO VISUAL NO NAVEGADOR (a única pendência que sobreviveu ao projeto)
    Nenhuma tela do painel foi vista renderizada — o ambiente do Claude não tem navegador.
    Toda a lógica é testada, o VISUAL não. Peça ao usuário para olhar, ou verifique você se
    tiver navegador disponível. Vale conferir: aba CI/CD, equipe ao vivo, mapa do plano,
    estado vazio da home, e o seletor de pasta (se a janela abre NA FRENTE do navegador).
 
-3) PENDÊNCIAS CONHECIDAS DO ia-hibrida-limpa (não são bugs do painel)
+4) PENDÊNCIAS CONHECIDAS DO ia-hibrida-limpa (não são bugs do painel)
    a) `Local_AI/` é um repositório git ANINHADO dentro do projeto. O `git add` registrou
       só uma referência quebrada: o conteúdo não entra no histórico e um clone vem vazio
       ali. Decidir com o usuário: apagar `Local_AI/.git` (vira código normal do projeto)
@@ -75,7 +103,7 @@ O QUE FAZER — EM ORDEM
       degrada bem (config em branco editável pela UI), mas se incomodar, a melhoria é
       procurar marcador em subpastas — ver `painel/servidor/src/ci/ecossistemas.ts`.
 
-4) MELHORIAS DO PAINEL JÁ MAPEADAS (só se o usuário pedir — o painel está completo)
+5) MELHORIAS DO PAINEL JÁ MAPEADAS (só se o usuário pedir)
    - Home também poderia ter o "próximo passo sugerido" (hoje só a página do projeto tem).
    - Histórico de execuções por agente ao longo do tempo (hoje a equipe ao vivo mostra só
      o job atual).

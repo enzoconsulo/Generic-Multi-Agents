@@ -98,6 +98,13 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   esperar o `result` significaria ter o dado só quando a retomada não importa mais.
 - **Uma conexão SSE por página.** `Projeto.tsx` chama `useJobsAoVivo()` uma vez e passa o
   estado para baixo (ex.: `SecaoCi`). Abrir uma segunda quebra a decisão de canal único.
+- **UI dada por pronta sem ninguém ver a tela é aposta.** Aconteceu duas vezes seguidas
+  (T-020, T-023): lógica testada + strings no bundle NÃO provam que a tela ficou boa nem
+  que o usuário vê diferença. Antes de marcar uma tarefa de UI como `concluida`, olhe no
+  navegador — ou peça ao usuário para olhar.
+- **Entregue onde o usuário OLHA.** A T-023 pôs a visualização de agentes na página do
+  projeto; o usuário acompanha execução na página de **Jobs**, que ficou como estava. Ao
+  receber um pedido de UI, confirme em QUAL tela ele acontece.
 - **Navegador NÃO dá caminho absoluto de pasta.** `webkitdirectory` e
   `showDirectoryPicker()` entregam os arquivos e escondem onde eles estão. Por isso o
   seletor de pasta da importação roda no BACKEND (`projetos/seletor-pasta.ts`) — só é
