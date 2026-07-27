@@ -8,6 +8,22 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — Marco da Fase 2 aprovado (verificação por orquestrador, sem testador)
+**Decisão:** T-016 era a última tarefa pendente de `Tarefas:` da Fase 2 no PLANO.md (não
+da Fase 3, como o encadeamento do `proximo_prompt.txt` presumia — checado no PLANO.md
+antes de seguir para o T-017). `Marco:` da Fase 2 marcado **aprovado 2026-07-27**, com
+base na evidência cumulativa já registrada tarefa a tarefa (não um novo disparo pago):
+disparo real de `/status` via Haiku com SSE ao vivo (T-008/T-009/T-011), inputs pela UI
+provados com `canUseTool`/pausas reais (T-010), análise real gerando `ANALISE.md`
+(T-012), importação real de pasta com git+`_gestao/` (T-013), cancelamento testado
+(T-007/fila), e o smoke de rede/bundle do T-016. Verificação FORMAL do testador (que só
+opera em `projetos/`) não se aplica ao painel — mesma exceção documentada desde
+"Painel movido para a raiz" (2026-07-21): mantido à mão, fora do pipeline.
+**Motivo:** protocolo pede verificação de marco ao fechar a última tarefa da fase; para
+o painel isso é o próprio orquestrador avaliando a evidência já reunida, não um novo
+gasto — regra de custo do usuário (evitar pipeline caro sem necessidade).
+**Quem:** orquestrador
+
 ## 2026-07-27 — UI de CI/CD (T-018): reusa o único SSE existente, sem aba (T-006 não tem abas)
 **Decisão:** `SecaoCi` (nova, `web/src/paginas/projeto/ci/PainelCi.tsx`) recebe o estado
 ao vivo (`jobs`/`logs`/`estagiosCi`) de `Projeto.tsx` via props, em vez de chamar

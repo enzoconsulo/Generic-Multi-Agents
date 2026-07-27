@@ -18,7 +18,7 @@ Meta: disparar pelas telas os fluxos reais da fábrica com log ao vivo (SSE), fi
 locks de concorrência, inputs pendentes respondidos pela UI, cancelamento,
 cadastro/importação de projetos pela web e análise de ponta a ponta persistida em
 `_gestao/ANALISE.md` do projeto analisado.
-Marco: pendente
+Marco: aprovado 2026-07-27
 Tarefas: T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-015, T-016
 
 ## Fase 3 — CI local, robustez e polimento
