@@ -272,6 +272,35 @@ function ImportarProjeto({
   const [estrategiaId, setEstrategiaId] = useState(estrategiaPadrao);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [escolhendo, setEscolhendo] = useState(false);
+  /** false = esta máquina não tem seletor nativo (não-Windows): só resta digitar. */
+  const [temSeletor, setTemSeletor] = useState(true);
+
+  /**
+   * Abre o seletor NATIVO no backend. Precisa ser no servidor porque o navegador não
+   * revela caminho absoluto de pasta — ver `servidor/src/projetos/seletor-pasta.ts`.
+   */
+  async function escolherPasta() {
+    setEscolhendo(true);
+    setErro(null);
+    try {
+      const { caminho: escolhido } = await api<{ caminho: string | null }>(
+        "/api/projetos/escolher-pasta",
+        { method: "POST" },
+      );
+      // null = usuário cancelou o diálogo: não é erro, não mexe no que ele já digitou.
+      if (escolhido !== null) setCaminho(escolhido);
+    } catch (e) {
+      if (e instanceof ErroApi && e.status === 501) {
+        setTemSeletor(false);
+        setErro("Esta máquina não tem seletor nativo. Cole o caminho da pasta no campo.");
+      } else {
+        setErro(e instanceof ErroApi || e instanceof Error ? e.message : "Falha ao abrir o seletor");
+      }
+    } finally {
+      setEscolhendo(false);
+    }
+  }
 
   async function importar(evento: React.FormEvent) {
     evento.preventDefault();
@@ -310,15 +339,33 @@ function ImportarProjeto({
   return (
     <form className="form-acao importar-projeto" onSubmit={importar}>
       <label className="campo-form">
-        <span>Caminho absoluto da pasta</span>
-        <input
-          type="text"
-          value={caminho}
-          onChange={(e) => setCaminho(e.target.value)}
-          placeholder="C:\Users\voce\meu-projeto"
-          autoFocus
-          required
-        />
+        <span>Pasta do projeto</span>
+        <div className="campo-com-botao">
+          <input
+            type="text"
+            value={caminho}
+            onChange={(e) => setCaminho(e.target.value)}
+            placeholder="C:\Users\voce\meu-projeto"
+            autoFocus
+            required
+          />
+          {temSeletor && (
+            <button
+              type="button"
+              className="botao botao-secundario botao-compacto"
+              onClick={escolherPasta}
+              disabled={escolhendo || enviando}
+              title="Abre o seletor de pastas do Windows"
+            >
+              {escolhendo ? "Escolhendo…" : "Escolher…"}
+            </button>
+          )}
+        </div>
+        <span className="campo-ajuda">
+          {escolhendo
+            ? "O seletor abriu — se não estiver visível, procure a janela atrás do navegador."
+            : "Clique em Escolher para navegar pelo seu PC, ou cole o caminho."}
+        </span>
       </label>
       <label className="campo-form">
         <span>Nome (opcional — derivado da pasta se vazio)</span>

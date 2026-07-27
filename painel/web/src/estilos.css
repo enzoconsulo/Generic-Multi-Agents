@@ -1115,6 +1115,21 @@ a:hover {
   font-size: 0.82rem;
 }
 
+/* Campo de texto com botão colado (ex.: caminho + "Escolher...") */
+.campo-com-botao {
+  display: flex;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+.campo-com-botao input {
+  flex: 1;
+  min-width: 0;
+}
+.campo-com-botao .botao {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
 /* ---------- Estado vazio orientado (T-020) ---------- */
 .vazio-orientado {
   border: 1px dashed var(--cor-borda-forte);

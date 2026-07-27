@@ -15,7 +15,8 @@ pipeline `executor → testador → revisor` (que só opera em `projetos/`) e é
 - **Disparar**: as 6 ações da fábrica (`/novo-projeto`, `/ideia`, `/trabalhar`, `/status`,
   `/encerrar-dia`, `/manutencao`) escolhendo o modelo, com estimativa de custo antes de
   gastar e log ao vivo no console.
-- **Importar** uma pasta de código existente para dentro de `projetos/`.
+- **Importar** uma pasta de código existente para dentro de `projetos/` — com botão
+  **Escolher…**, que abre o seletor de pastas do Windows (não precisa colar caminho).
 - **Analisar** um projeto (gera/atualiza o `_gestao/ANALISE.md` dele).
 - **Responder** ao fluxo quando ele pede aprovação ou faz uma pergunta.
 - **Rodar CI** por projeto: `instalar → lint → testes → build`, com log por estágio. Os

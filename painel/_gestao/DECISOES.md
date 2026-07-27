@@ -8,6 +8,27 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — Seletor de pasta roda no BACKEND (o navegador não dá caminho absoluto)
+**Decisão:** o botão "Escolher…" da importação abre um `FolderBrowserDialog` do Windows
+disparado pelo SERVIDOR (`powershell.exe -STA`), não pelo navegador.
+**Motivo:** o navegador não tem como resolver isso. `<input type="file" webkitdirectory>`
+e `showDirectoryPicker()` entregam os ARQUIVOS mas escondem o caminho absoluto por
+segurança — viria `meu-projeto/src/app.js` sem dizer se está em `C:\dev` ou `D:\trabalho`,
+e a importação (T-013) copia no servidor, então precisa do caminho absoluto. Fazer upload
+de tudo pelo navegador resolveria, mas mudaria o modelo inteiro da importação e seria
+lento em repositório grande. O que destrava é o painel ser LOCAL: o servidor roda na
+própria máquina do usuário (127.0.0.1), então ele pode abrir o diálogo nativo.
+**Segurança avaliada:** página maliciosa consegue disparar o POST e fazer aparecer um
+diálogo (chateação), mas NÃO consegue ler a resposta (sem CORS o navegador bloqueia) e
+nenhum caminho vaza sem o usuário escolher a pasta com as próprias mãos.
+**Armadilhas que custaram atenção:** `-STA` é obrigatório para Windows Forms;
+`-NonInteractive` (que eu tinha posto) é o oposto do que se quer aqui; sem
+`[Console]::OutputEncoding = UTF8` o caminho com acento volta corrompido; sem um Form
+`TopMost` como owner o diálogo nasce ATRÁS do navegador e parece que o clique não fez
+nada; e o cadeado de concorrência tem que liberar em `finally` — no callback de sucesso,
+um diálogo que falha travaria o botão para sempre.
+**Quem:** usuário (pediu) + orquestrador (T-021)
+
 ## 2026-07-27 — Auditoria de genericidade: CI e importação deixam de presumir Node
 **Contexto:** auditoria pedida pelo usuário — "está genérico e age como equipe real para
 QUALQUER tipo de projeto?". O sistema de EQUIPE passou (ver abaixo); o PAINEL não.

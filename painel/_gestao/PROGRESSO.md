@@ -5,6 +5,18 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (T-021 — seletor nativo de pasta)
+**T-021 — escolher a pasta pelo diálogo do Windows na importação (concluída).** Pedido do
+usuário: não querer colar caminho à mão. A parte não-óbvia é que **o navegador não resolve
+isso** — `webkitdirectory` e `showDirectoryPicker()` entregam os arquivos mas escondem o
+caminho absoluto, e a importação copia no servidor. O que destrava é o painel ser LOCAL:
+quem abre o diálogo é o backend (`powershell.exe -STA` + `FolderBrowserDialog`). Botão
+"Escolher…" ao lado do campo, que continua funcionando para colar. Guardas: 409 se já há
+diálogo aberto, 501 fora do Windows (a UI esconde o botão), cadeado liberado em `finally`
+para um diálogo que falha não travar o botão para sempre. Provado ao vivo: o diálogo
+ABRIU de verdade (processo aguardando clique) e a segunda chamada devolveu 409 sobre HTTP.
+Suíte: **servidor 209/209** (+5) **+ web 14/14**.
+
 ## 2026-07-27 (canUseTool validado — pendência de 6 dias fechada)
 **A integração real do `canUseTool` com o SDK, pendente desde 2026-07-21, foi VALIDADA em
 execução paga.** O `teste:integracao` deixou de ser um `echo` placeholder e virou o teste

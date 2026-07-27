@@ -98,6 +98,12 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   esperar o `result` significaria ter o dado só quando a retomada não importa mais.
 - **Uma conexão SSE por página.** `Projeto.tsx` chama `useJobsAoVivo()` uma vez e passa o
   estado para baixo (ex.: `SecaoCi`). Abrir uma segunda quebra a decisão de canal único.
+- **Navegador NÃO dá caminho absoluto de pasta.** `webkitdirectory` e
+  `showDirectoryPicker()` entregam os arquivos e escondem onde eles estão. Por isso o
+  seletor de pasta da importação roda no BACKEND (`projetos/seletor-pasta.ts`) — só é
+  possível porque o painel é local. Ao mexer nele: `-STA` obrigatório, `OutputEncoding`
+  UTF-8 (acento no caminho), Form `TopMost` como owner (senão abre atrás do navegador) e
+  cadeado liberado em `finally`.
 - **A fábrica constrói QUALQUER stack — não presuma Node.** Já aconteceu duas vezes: o CI
   só sabia `npm` (projeto Python/Go/Rust ficava sem pipeline) e a importação só ignorava
   `node_modules` (arrastava `.venv/`, `target/`). Ao tocar em CI/importação, use

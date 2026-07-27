@@ -6,6 +6,11 @@ import {
   montarJobImportar,
   validarImportacao,
 } from "../projetos/importar.js";
+import {
+  ErroSeletorEmUso,
+  ErroSeletorIndisponivel,
+  escolherPasta,
+} from "../projetos/seletor-pasta.js";
 
 /**
  * Cadastro de projetos pela web (T-013). Criar projeto NOVO já é a ação `/novo-projeto`
@@ -17,6 +22,32 @@ import {
 export const prefixo = "/api/projetos";
 
 export const router: Router = Router();
+
+/**
+ * POST /api/projetos/escolher-pasta — abre o seletor NATIVO de pasta na máquina do
+ * usuário e devolve `{ caminho }` (null = cancelou). Existe porque o navegador não
+ * entrega caminho absoluto; ver `projetos/seletor-pasta.ts`. É POST por ter efeito
+ * colateral (abre um modal na tela), não por enviar dados.
+ */
+router.post("/escolher-pasta", async (_req, res) => {
+  try {
+    const caminho = await escolherPasta();
+    res.json({ caminho });
+  } catch (erro) {
+    if (erro instanceof ErroSeletorEmUso) {
+      res.status(409).json({ erro: erro.message });
+      return;
+    }
+    if (erro instanceof ErroSeletorIndisponivel) {
+      // 501: o servidor entendeu, mas esta máquina não oferece o recurso — a UI cai
+      // para o campo de texto manual.
+      res.status(501).json({ erro: erro.message });
+      return;
+    }
+    const mensagem = erro instanceof Error ? erro.message : String(erro);
+    res.status(500).json({ erro: `Falha no seletor de pasta: ${mensagem}` });
+  }
+});
 
 /**
  * POST /api/projetos/importar — corpo { caminho, nome?, estrategia? }. Valida (rápido) e
