@@ -208,4 +208,67 @@ export interface LinhaLog {
   nivel: string;
   texto: string;
   em: string;
+  /** Presente só em jobs de CI (T-017): identifica de qual estágio a linha veio. */
+  estagio?: string;
+  fluxo?: "stdout" | "stderr";
+}
+
+/* ----------------------------------- CI/CD (T-017/T-018) ----------------------------------- */
+
+export const ESTAGIOS_CI = ["instalar", "lint", "testes", "build"] as const;
+export type EstagioCi = (typeof ESTAGIOS_CI)[number];
+
+export interface ConfigEstagioCi {
+  comando: string | null;
+  habilitado: boolean;
+}
+
+export interface ConfigCi {
+  estagios: Record<EstagioCi, ConfigEstagioCi>;
+  timeoutMs: number;
+}
+
+export type EstadoEstagioCi = "sucesso" | "falhou" | "pulado" | "cancelado";
+export type EstadoResultadoCi = "executando" | "sucesso" | "falhou" | "cancelado";
+
+export interface ResultadoEstagio {
+  estagio: EstagioCi;
+  estado: EstadoEstagioCi;
+  comando: string | null;
+  iniciadoEm: string | null;
+  terminadoEm: string | null;
+  duracaoMs: number | null;
+  codigoSaida: number | null;
+  aviso: string | null;
+}
+
+export interface ResultadoCi {
+  jobId: string;
+  projeto: string;
+  estado: EstadoResultadoCi;
+  iniciadoEm: string;
+  terminadoEm: string | null;
+  estagios: ResultadoEstagio[];
+}
+
+/** GET /api/ci/:projeto */
+export interface RespostaCi {
+  ultimo: ResultadoCi | null;
+  historico: ResultadoCi[];
+}
+
+/** GET/PUT /api/ci/:projeto/config */
+export interface RespostaConfigCi {
+  config: ConfigCi;
+}
+
+/** Estágio ao vivo (T-018): estado derivado dos eventos SSE `ci-estagio-inicio`/`ci-estagio`
+ *  ENQUANTO o job ainda está rodando — junta com `ResultadoEstagio` quando o job termina. */
+export interface EstagioCiAoVivo {
+  estagio: EstagioCi;
+  estado: "rodando" | EstadoEstagioCi;
+  comando: string | null;
+  aviso?: string | null;
+  codigoSaida?: number | null;
+  duracaoMs?: number | null;
 }

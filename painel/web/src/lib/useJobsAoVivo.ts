@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type {
+  EstagioCiAoVivo,
   EventoJob,
   Job,
   LinhaLog,
@@ -9,12 +10,14 @@ import type {
   RespostaJobs,
 } from "./tipos";
 
-interface EstadoAoVivo {
+export interface EstadoAoVivo {
   jobs: Job[];
   /** Log acumulado por jobId (a partir dos eventos "log" do SSE). */
   logs: Record<string, LinhaLog[]>;
   /** Inputs pendentes (T-010): fluxos pausados esperando resposta do usuário. */
   pendencias: Pendencia[];
+  /** Estágios de CI ao vivo (T-017/T-018): jobId → estágio → estado em tempo real. */
+  estagiosCi: Record<string, Record<string, EstagioCiAoVivo>>;
   conectado: boolean;
 }
 
@@ -24,6 +27,20 @@ interface DadosTransicao {
 interface DadosLog {
   nivel?: unknown;
   texto?: unknown;
+  estagio?: unknown;
+  fluxo?: unknown;
+}
+interface DadosEstagioInicio {
+  estagio?: unknown;
+  comando?: unknown;
+}
+interface DadosEstagioFim {
+  estagio?: unknown;
+  estado?: unknown;
+  comando?: unknown;
+  aviso?: unknown;
+  codigoSaida?: unknown;
+  duracaoMs?: unknown;
 }
 
 /**
@@ -36,6 +53,7 @@ export function useJobsAoVivo(): EstadoAoVivo {
   const [jobs, setJobs] = useState<Record<string, Job>>({});
   const [logs, setLogs] = useState<Record<string, LinhaLog[]>>({});
   const [pendencias, setPendencias] = useState<Record<string, Pendencia>>({});
+  const [estagiosCi, setEstagiosCi] = useState<Record<string, Record<string, EstagioCiAoVivo>>>({});
   const [conectado, setConectado] = useState(false);
   const jaCarregou = useRef(false);
 
@@ -104,11 +122,43 @@ export function useJobsAoVivo(): EstadoAoVivo {
           nivel: typeof d?.nivel === "string" ? d.nivel : "log",
           texto: typeof d?.texto === "string" ? d.texto : "",
           em: evento.em,
+          ...(typeof d?.estagio === "string" ? { estagio: d.estagio } : {}),
+          ...(d?.fluxo === "stdout" || d?.fluxo === "stderr" ? { fluxo: d.fluxo } : {}),
         };
         setLogs((atual) => ({
           ...atual,
           [evento.jobId]: [...(atual[evento.jobId] ?? []), linha],
         }));
+      } else if (evento.tipo === "ci-estagio-inicio") {
+        const d = evento.dados as DadosEstagioInicio | undefined;
+        if (typeof d?.estagio === "string") {
+          const estagio = d.estagio as EstagioCiAoVivo["estagio"];
+          const comando = typeof d.comando === "string" ? d.comando : null;
+          setEstagiosCi((atual) => ({
+            ...atual,
+            [evento.jobId]: {
+              ...atual[evento.jobId],
+              [estagio]: { estagio, estado: "rodando", comando },
+            },
+          }));
+        }
+      } else if (evento.tipo === "ci-estagio") {
+        const d = evento.dados as DadosEstagioFim | undefined;
+        if (typeof d?.estagio === "string" && typeof d.estado === "string") {
+          const estagio = d.estagio as EstagioCiAoVivo["estagio"];
+          const linha: EstagioCiAoVivo = {
+            estagio,
+            estado: d.estado as EstagioCiAoVivo["estado"],
+            comando: typeof d.comando === "string" ? d.comando : null,
+            aviso: typeof d.aviso === "string" ? d.aviso : null,
+            codigoSaida: typeof d.codigoSaida === "number" ? d.codigoSaida : null,
+            duracaoMs: typeof d.duracaoMs === "number" ? d.duracaoMs : null,
+          };
+          setEstagiosCi((atual) => ({
+            ...atual,
+            [evento.jobId]: { ...atual[evento.jobId], [estagio]: linha },
+          }));
+        }
       }
     });
 
@@ -120,7 +170,7 @@ export function useJobsAoVivo(): EstadoAoVivo {
 
   const lista = Object.values(jobs).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
   const pend = Object.values(pendencias).sort((a, b) => a.criadaEm.localeCompare(b.criadaEm));
-  return { jobs: lista, logs, pendencias: pend, conectado };
+  return { jobs: lista, logs, pendencias: pend, estagiosCi, conectado };
 }
 
 /** Remove uma chave de um Record sem mutar o original. */

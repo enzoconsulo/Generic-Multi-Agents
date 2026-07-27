@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDados } from "../../lib/useDados";
-import { useJobsAoVivo } from "../../lib/useJobsAoVivo";
+import { useJobsAoVivo, type EstadoAoVivo } from "../../lib/useJobsAoVivo";
 import { api, ErroApi } from "../../lib/api";
 import type {
   EquipeProjeto,
@@ -24,6 +24,7 @@ import {
 import { Carregando, MensagemErro } from "../../componentes/Estados";
 import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicadores";
 import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
+import { SecaoCi } from "./ci/PainelCi";
 
 export function Projeto() {
   const { nome } = useParams<{ nome: string }>();
@@ -31,7 +32,8 @@ export function Projeto() {
   const { carregando, dados, erro, recarregar } = useDados<ProjetoDetalhe>(
     `/api/projetos/${encodeURIComponent(alvo)}`,
   );
-  const { jobs } = useJobsAoVivo();
+  const aoVivo = useJobsAoVivo();
+  const { jobs } = aoVivo;
   const jobAtivo = jobAtivoDoProjeto(jobs, alvo);
 
   // Refetch automático (T-016): quando um job com lock NESTE projeto termina — disparado
@@ -66,12 +68,20 @@ export function Projeto() {
       {erro !== null && (
         <MensagemErro erro={erro} dica="Verifique se o nome do projeto existe na fábrica." />
       )}
-      {dados !== null && <DetalheProjeto projeto={dados} jobAtivo={jobAtivo} />}
+      {dados !== null && <DetalheProjeto projeto={dados} jobAtivo={jobAtivo} aoVivo={aoVivo} />}
     </div>
   );
 }
 
-function DetalheProjeto({ projeto, jobAtivo }: { projeto: ProjetoDetalhe; jobAtivo: Job | null }) {
+function DetalheProjeto({
+  projeto,
+  jobAtivo,
+  aoVivo,
+}: {
+  projeto: ProjetoDetalhe;
+  jobAtivo: Job | null;
+  aoVivo: EstadoAoVivo;
+}) {
   return (
     <>
       <header className="projeto-cab">
@@ -98,6 +108,8 @@ function DetalheProjeto({ projeto, jobAtivo }: { projeto: ProjetoDetalhe; jobAti
       </section>
 
       <AcoesProjeto projeto={projeto.nome} jobAtivo={jobAtivo} />
+
+      <SecaoCi projeto={projeto.nome} jobAtivo={jobAtivo} aoVivo={aoVivo} />
 
       <BlocoEquipe equipe={projeto.equipe} />
 

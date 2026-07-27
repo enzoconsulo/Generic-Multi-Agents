@@ -5,6 +5,20 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (continuação 2)
+**T-018 — UI de CI/CD (concluída). Fase 3 completa: T-016, T-017 e T-018 fechados nesta
+sessão.** Nova seção "CI/CD" na página do projeto (não é aba — a T-006 não implementou
+sistema de abas): 4 estágios como cartões com estado visual e duração, log ao vivo por
+estágio enquanto roda (reusa o SSE único da T-016/T-014 — `useJobsAoVivo` ganhou o slice
+`estagiosCi`), destaque vermelho + tail do log em estágio que falha, editor de
+`_gestao/ci.json` (checkbox + comando por estágio, timeout), histórico das últimas
+execuções. Resolvido na raiz um 3º teste flaky por I/O sob OneDrive: `testTimeout: 15000`
+global no vitest do servidor, em vez de caçar teste a teste. Suíte: **servidor 170/171**
+(1 falha pré-existente não-relacionada) **+ web 14/14**. Build limpo. Smoke em
+rede/bundle (sem navegador neste ambiente). Falta na Fase 3: T-019 (robustez — inclui
+recuperar pendências de INPUT após restart, deixado de fora de propósito na T-010) e
+T-020 (polimento + docs).
+
 ## 2026-07-27 (continuação)
 **T-016 — ações por projeto na UI (concluída).** Página do projeto ganhou seção "Ações":
 botões "Trabalhar neste projeto" e "Ver status agora" (mesmo padrão de card-expansível

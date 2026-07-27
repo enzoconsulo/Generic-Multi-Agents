@@ -8,6 +8,39 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — UI de CI/CD (T-018): reusa o único SSE existente, sem aba (T-006 não tem abas)
+**Decisão:** `SecaoCi` (nova, `web/src/paginas/projeto/ci/PainelCi.tsx`) recebe o estado
+ao vivo (`jobs`/`logs`/`estagiosCi`) de `Projeto.tsx` via props, em vez de chamar
+`useJobsAoVivo()` de novo — a página do projeto já abre UMA conexão SSE (T-016); uma
+segunda violaria a decisão "SSE único multiplexado" de 2026-07-21. `useJobsAoVivo.ts`
+ganhou um novo slice de estado `estagiosCi` (jobId→estágio→estado ao vivo), capturando
+os eventos `ci-estagio-inicio`/`ci-estagio` que o hook antes descartava — sem isso não
+dava pra saber que um estágio foi `pulado` antes de o job terminar (estágio pulado não
+gera log nenhum, então só olhar `logs` não distingue "ainda não chegou" de "pulado").
+`LinhaLog` ganhou `estagio`/`fluxo` opcionais pelo mesmo motivo (log inline por
+estágio). Mudança aditiva e retrocompatível — `Jobs.tsx` (T-014) ignora os campos novos.
+A T-018 também constatou que a T-006 não implementou sistema de abas (ficou lista
+vertical de seções) — `SecaoCi` entra como mais uma seção, não uma aba; e que o arquivo
+`lib/sse.ts` citado no contexto da tarefa nunca existiu (o hook real é
+`useJobsAoVivo.ts`, da própria T-014).
+**Motivo:** preservar a arquitetura de canal único; extensão do hook compartilhado é
+mais barata e mais correta que abrir uma segunda conexão ou inferir estado por
+heurística de log.
+**Quem:** orquestrador (T-018)
+
+## 2026-07-27 — `testTimeout` global (15s) no servidor: raiz do 3º teste-de-I/O flaky
+**Decisão:** `servidor/vitest.config.ts` ganhou `testTimeout: 15000` (era o default de
+5s do Vitest). Motivo imediato: um 3º teste pré-existente diferente
+(`cadastro-rota.test.ts`, T-013) estourou o default sob a carga paralela extra dos
+testes de CI/UI — mesma causa dos dois already corrigidos individualmente no T-017
+(OneDrive/antivírus em `Documents\`, achado original do T-007). Revertidos os timeouts
+individuais que tinham acabado de ser cravados nesse teste; os do T-017
+(`importar.test.ts`, `ci-rota.test.ts`) ficaram como estão (não fazem mal redundantes).
+**Motivo:** corrigir teste a teste sempre que a suíte cresce e aumenta a carga paralela
+é fadado a se repetir; a causa é ambiental (I/O sob OneDrive), não do teste — resolver
+na configuração do runner é mais robusto que caçar cada novo caso.
+**Quem:** orquestrador (T-018)
+
 ## 2026-07-27 — Ações por projeto (T-016): job ativo por escopo, refetch por transição vista
 **Decisão:** `AcoesProjeto.tsx` exporta `jobAtivoDoProjeto(jobs, projeto)` — função pura
 que filtra `jobs` (do `useJobsAoVivo`, já existente da T-014) por
