@@ -31,9 +31,9 @@ function lerParams(params: Record<string, unknown>): ParamsCi {
 }
 
 /**
- * Monta o job "ci". Valida a existência do projeto e da config (cria defaults se faltar)
- * ANTES de enfileirar — projeto inexistente ou sem package.json falha na hora, não depois
- * de esperar o lock. Lança `ErroProjetoInexistente` / `ErroSemPackageJson`.
+ * Monta o job "ci". Valida a existência do projeto e da config (cria defaults do
+ * ecossistema se faltar) ANTES de enfileirar — projeto inexistente falha na hora, não
+ * depois de esperar o lock. Lança `ErroProjetoInexistente` se o projeto não existe.
  */
 export async function montarJobCi(
   projeto: string,
@@ -42,7 +42,7 @@ export async function montarJobCi(
 ): Promise<NovoJob> {
   const dir = dirProjeto(fabricaRaiz, projeto);
   if (dir === null) throw new ErroProjetoInexistente(projeto);
-  await lerOuCriarConfig(dir, projeto);
+  await lerOuCriarConfig(dir);
   return {
     tipo: "ci",
     titulo: `CI: ${projeto}`,
@@ -75,7 +75,7 @@ export class RunnerCi implements Runner {
     const dir = dirProjeto(p.fabricaRaiz, p.projeto);
     if (dir === null) throw new ErroProjetoInexistente(p.projeto);
 
-    const cfg = await lerOuCriarConfig(dir, p.projeto);
+    const cfg = await lerOuCriarConfig(dir);
 
     const resultado: ResultadoCi = {
       jobId: job.id,

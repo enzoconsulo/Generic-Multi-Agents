@@ -46,10 +46,11 @@ describe("GET /api/ci/:projeto/config", () => {
     expect(resp.body.config.estagios.build.habilitado).toBe(false);
   }, 15000);
 
-  it("projeto sem package.json: 422 com mensagem clara", async () => {
+  it("projeto sem ecossistema reconhecido: 200 com config vazia e editavel (nao 422)", async () => {
     const resp = await request(await app()).get("/api/ci/semjson/config");
-    expect(resp.status).toBe(422);
-    expect(resp.body.erro).toMatch(/package\.json/i);
+    expect(resp.status).toBe(200);
+    expect(resp.body.config.ecossistema).toBeNull();
+    expect(resp.body.config.estagios.testes.habilitado).toBe(false);
   });
 
   it("projeto inexistente → 404", async () => {
@@ -71,7 +72,9 @@ describe("PUT /api/ci/:projeto/config", () => {
     };
     const resp = await request(await app()).put("/api/ci/comjson/config").send(config);
     expect(resp.status).toBe(200);
-    expect(resp.body.config).toEqual(config);
+    // A validação normaliza o campo opcional `ecossistema` para null quando ausente
+    // (config gravada antes desse campo existir continua válida).
+    expect(resp.body.config).toEqual({ ...config, ecossistema: null });
   }, 15000);
 
   it("config inválida → 400", async () => {
@@ -91,9 +94,9 @@ describe("POST /api/ci/:projeto/rodar", () => {
     expect(resp.body.job.escopo).toBe("projeto:comjson");
   });
 
-  it("projeto sem package.json → 422", async () => {
+  it("projeto sem ecossistema reconhecido ainda cria o job (pipeline todo pulado)", async () => {
     const resp = await request(await app()).post("/api/ci/semjson/rodar");
-    expect(resp.status).toBe(422);
+    expect(resp.status).toBe(201);
   });
 
   it("projeto inexistente → 404", async () => {

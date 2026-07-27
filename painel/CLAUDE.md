@@ -44,7 +44,9 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
   PLANO, ideias, logs) — fonte de dados de tudo. `src/jobs/` é o motor de fila (locks,
   persistência em `dados/`, cancelamento, inputs pendentes) com `claude/` (runner do Agent
   SDK) e `robustez/` (watchdog de inatividade + guardrails por ação). `src/ci/` é o motor
-  de CI local (config `ci.json`, spawn com timeout/kill de árvore, resultados).
+  de CI local: `ecossistemas.ts` detecta a stack por arquivo-marcador (Node, Python, Go,
+  Rust, .NET, Maven, Gradle) e deduz os comandos; `config.ts` grava em `_gestao/ci.json`
+  do projeto; `processo.ts` roda com timeout e kill de árvore.
   `src/acoes/` traduz ação da fábrica → job e guarda o prompt da análise.
 - `web/` — React 18 + Vite (TS estrito). `src/lib/` (helper de fetch, tipos espelhando a
   API, `useDados`, `useJobsAoVivo` = o canal SSE, formatação); `src/componentes/`;
@@ -96,6 +98,10 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   esperar o `result` significaria ter o dado só quando a retomada não importa mais.
 - **Uma conexão SSE por página.** `Projeto.tsx` chama `useJobsAoVivo()` uma vez e passa o
   estado para baixo (ex.: `SecaoCi`). Abrir uma segunda quebra a decisão de canal único.
+- **A fábrica constrói QUALQUER stack — não presuma Node.** Já aconteceu duas vezes: o CI
+  só sabia `npm` (projeto Python/Go/Rust ficava sem pipeline) e a importação só ignorava
+  `node_modules` (arrastava `.venv/`, `target/`). Ao tocar em CI/importação, use
+  `ci/ecossistemas.ts` e `PASTAS_IGNORADAS` em vez de cravar um comando de ecossistema.
 - **Comando "seguro" não testa permissão.** `echo`/`ls` são auto-aprovados pelo
   classificador ANTES de chegar ao `canUseTool` — testar com eles dá falso negativo ("o
   callback está quebrado"). Gatilho confiável: ação genuinamente barrada, como escrever

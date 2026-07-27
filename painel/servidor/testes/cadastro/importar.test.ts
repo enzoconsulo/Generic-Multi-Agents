@@ -143,6 +143,35 @@ describe("executarImportacao", () => {
     15000,
   );
 
+  // A fábrica constrói qualquer tipo de projeto: ignorar só `node_modules` fazia um
+  // projeto Python arrastar o `.venv/` e um Rust o `target/` (gigabytes de build).
+  it("ignora dependências/caches de OUTROS ecossistemas, não só node_modules", async () => {
+    const raiz = fabricaTemp();
+    const origem = mkdtempSync(join(tmpdir(), "imp-poli-"));
+    // Fontes que DEVEM ser copiadas
+    writeFileSync(join(origem, "main.py"), "print('oi')\n");
+    writeFileSync(join(origem, "pyproject.toml"), "[project]\nname='x'\n");
+    // Lixo regenerável que NÃO deve ser copiado
+    for (const lixo of [".venv", "__pycache__", ".pytest_cache", "target", ".gradle"]) {
+      mkdirSync(join(origem, lixo), { recursive: true });
+      writeFileSync(join(origem, lixo, "pesado.bin"), "x".repeat(100));
+    }
+    // `build/` é ambíguo (em muitos projetos é fonte) — tem que ser PRESERVADO
+    mkdirSync(join(origem, "build"), { recursive: true });
+    writeFileSync(join(origem, "build", "script.py"), "# fonte de verdade\n");
+
+    const destino = join(raiz, "projetos", "poliglota");
+    await executarImportacao(origem, destino, raiz, "poliglota", ctxFake);
+
+    expect(existsSync(join(destino, "main.py"))).toBe(true);
+    expect(existsSync(join(destino, "pyproject.toml"))).toBe(true);
+    for (const lixo of [".venv", "__pycache__", ".pytest_cache", "target", ".gradle"]) {
+      expect(existsSync(join(destino, lixo)), `${lixo} deveria ser ignorado`).toBe(false);
+    }
+    // Nunca descartar o que pode ser fonte:
+    expect(existsSync(join(destino, "build", "script.py"))).toBe(true);
+  });
+
   it("não sobrescreve arquivos de _gestao que já vieram na origem", async () => {
     const raiz = fabricaTemp();
     const origem = origemTemp({ gestaoCustom: true });

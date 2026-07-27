@@ -8,6 +8,40 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — Auditoria de genericidade: CI e importação deixam de presumir Node
+**Contexto:** auditoria pedida pelo usuário — "está genérico e age como equipe real para
+QUALQUER tipo de projeto?". O sistema de EQUIPE passou (ver abaixo); o PAINEL não.
+**Dois furos corrigidos:**
+1. **CI era 100% npm.** `deduzirDefaults` lia só `package.json` e um projeto sem ele
+   recebia `422 — nenhum pipeline aplicável`. Ou seja: Python, Go, Rust, .NET e Java
+   simplesmente NÃO tinham CI, contradizendo a premissa da fábrica. Criado
+   `ci/ecossistemas.ts`: detecção por arquivo-marcador (`package.json`, `pyproject.toml`/
+   `requirements.txt`/`setup.py`, `go.mod`, `Cargo.toml`, `.csproj`/`.sln`, `pom.xml`,
+   `build.gradle`), cada um com os comandos da própria toolchain. Regra de habilitação:
+   só nasce LIGADO o que a toolchain garante (`go test`, `cargo test`, `dotnet test`…);
+   ferramenta de terceiro que pode não estar instalada (ruff, clippy, golangci-lint) vem
+   com o comando PREENCHIDO e DESLIGADO — o usuário liga num clique, em vez de tomar
+   falha de CI na primeira execução por binário ausente. Node mantém a detecção fina por
+   script (`npm run <x>` falha se o script não existe).
+   **Ecossistema desconhecido deixou de ser erro:** devolve config vazia e editável, com
+   `ecossistema: null` e uma dica na UI. Dead-end virou ponto de partida.
+2. **Importação ignorava só `node_modules`.** Um projeto Python arrastava o `.venv/`
+   inteiro; um Rust, o `target/` (gigabytes). Criada `PASTAS_IGNORADAS` cobrindo os
+   caches/deps dos ecossistemas suportados. **Critério explícito:** só entra o que é
+   INEQUIVOCAMENTE regenerável pelo gerenciador de pacotes — por isso `build/`, `dist/`,
+   `bin/` e `obj/` NÃO entram (em muitos projetos são fonte de verdade, e perder fonte na
+   cópia é pior que copiar artefato à toa). `target/` é exceção justificada: só existe por
+   causa do Cargo e costuma ser o maior diretório do repo. Coberto por teste que verifica
+   as duas metades (lixo ignorado E `build/` preservado).
+**O que a auditoria APROVOU sem mudanças:** o sistema de agentes sob demanda. `lerEquipe`
+é tolerante (arquivo ausente é normal, malformado não derruba, ids/prompts validados),
+`agentesValidos` filtra os quebrados, `agentesParaAcao` injeta em `options.agents` só no
+`/trabalhar <projeto>`, e o planejador manda criar 2–5 especialistas "genéricos ao TIPO de
+projeto (web, CLI, pipeline, lib…)" com testador/revisor fixos fora da equipe. Isso já
+tinha sido provado ao vivo em 2026-07-22 (especialistas `domain` e `cli-core` despachados
+corretamente num CLI Node).
+**Quem:** orquestrador
+
 ## 2026-07-27 — `canUseTool` VALIDADO em execução paga; `echo` não serve de gatilho
 **Decisão:** a integração real do `canUseTool` (T-010), pendente desde 2026-07-21, foi
 validada com o SDK de verdade — e o `teste:integracao`, que era um `echo` placeholder,

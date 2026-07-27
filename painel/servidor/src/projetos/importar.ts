@@ -18,6 +18,40 @@ import type { ContextoExecucao } from "../jobs/tipos.js";
  * valida e cria o job.
  */
 
+/**
+ * Pastas de DEPENDÊNCIA e CACHE que não são copiadas na importação — a fábrica constrói
+ * qualquer tipo de projeto, então ignorar só `node_modules` deixaria um projeto Python
+ * arrastar o `.venv/` inteiro (e um Rust, o `target/`, com gigabytes de build).
+ *
+ * Critério para entrar nesta lista: a pasta tem que ser INEQUIVOCAMENTE regenerável pelo
+ * gerenciador de pacotes. Por isso `build/`, `dist/`, `bin/` e `obj/` NÃO estão aqui:
+ * em muitos projetos são código-fonte de verdade, e perder fonte na cópia é pior do que
+ * copiar artefato à toa. (`target/` de Rust é exceção justificada: só existe por causa do
+ * Cargo e costuma ser o maior diretório do repositório.)
+ */
+export const PASTAS_IGNORADAS: ReadonlySet<string> = new Set([
+  // Node
+  "node_modules",
+  ".next",
+  ".nuxt",
+  ".turbo",
+  ".parcel-cache",
+  // Python
+  ".venv",
+  "venv",
+  "__pycache__",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".tox",
+  // Rust
+  "target",
+  // Java
+  ".gradle",
+  // Geral
+  ".terraform",
+]);
+
 /** Erro de importação com status HTTP para a rota mapear (400 validação, 409 conflito). */
 export class ErroImportacao extends Error {
   constructor(
@@ -150,11 +184,14 @@ export async function executarImportacao(
 ): Promise<void> {
   ctx.emitir("log", { nivel: "inicio", texto: `Importando "${nome}" de ${origem}` });
 
-  ctx.emitir("log", { nivel: "assistente", texto: "Copiando arquivos (ignorando node_modules)…" });
+  ctx.emitir("log", {
+    nivel: "assistente",
+    texto: `Copiando arquivos (ignorando dependências e caches: ${[...PASTAS_IGNORADAS].slice(0, 4).join(", ")}…)`,
+  });
   await cp(origem, destino, {
     recursive: true,
-    // basename === node_modules pula a subárvore inteira (contrato do filter do fs.cp).
-    filter: (src) => basename(src) !== "node_modules",
+    // basename na lista pula a subárvore inteira (contrato do filter do fs.cp).
+    filter: (src) => !PASTAS_IGNORADAS.has(basename(src)),
   });
 
   ctx.emitir("log", { nivel: "assistente", texto: "Garantindo _gestao/ mínimo…" });

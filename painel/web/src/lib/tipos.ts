@@ -226,6 +226,8 @@ export interface ConfigEstagioCi {
 export interface ConfigCi {
   estagios: Record<EstagioCi, ConfigEstagioCi>;
   timeoutMs: number;
+  /** Ecossistema detectado (`node`, `python`, `go`…); null = nada reconhecido. */
+  ecossistema?: string | null;
 }
 
 export type EstadoEstagioCi = "sucesso" | "falhou" | "pulado" | "cancelado";

@@ -18,7 +18,10 @@ pipeline `executor → testador → revisor` (que só opera em `projetos/`) e é
 - **Importar** uma pasta de código existente para dentro de `projetos/`.
 - **Analisar** um projeto (gera/atualiza o `_gestao/ANALISE.md` dele).
 - **Responder** ao fluxo quando ele pede aprovação ou faz uma pergunta.
-- **Rodar CI** por projeto: `instalar → lint → testes → build`, com log por estágio.
+- **Rodar CI** por projeto: `instalar → lint → testes → build`, com log por estágio. Os
+  comandos são deduzidos do **ecossistema detectado** — Node/npm, Python, Go, Rust, .NET,
+  Maven ou Gradle — e ficam editáveis pela tela. Projeto de stack não reconhecida não fica
+  de fora: recebe uma configuração em branco para você preencher.
 
 ## Requisitos
 

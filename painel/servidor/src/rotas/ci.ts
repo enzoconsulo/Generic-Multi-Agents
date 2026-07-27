@@ -1,12 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { dirProjeto } from "../acoes/analise.js";
 import { config } from "../config.js";
-import {
-  ErroConfigCiInvalida,
-  ErroSemPackageJson,
-  lerOuCriarConfig,
-  salvarConfig,
-} from "../ci/config.js";
+import { ErroConfigCiInvalida, lerOuCriarConfig, salvarConfig } from "../ci/config.js";
 import { lerResultados } from "../ci/resultados.js";
 import { montarJobCi } from "../ci/runner-ci.js";
 import { obterGerenciador } from "../jobs/instancia.js";
@@ -43,10 +38,6 @@ router.post("/:projeto/rodar", async (req, res) => {
     const job = obterGerenciador().criarJob(novo);
     res.status(201).json({ job });
   } catch (erro) {
-    if (erro instanceof ErroSemPackageJson) {
-      res.status(422).json({ erro: erro.message });
-      return;
-    }
     const mensagem = erro instanceof Error ? erro.message : String(erro);
     if (mensagem.includes("Tipo de job desconhecido")) {
       res.status(503).json({ erro: "CI indisponível: runner de CI não registrado no servidor." });
@@ -63,18 +54,14 @@ router.get("/:projeto", (req, res) => {
   res.json({ ultimo: dados?.ultimo ?? null, historico: dados?.historico ?? [] });
 });
 
-/** GET /api/ci/:projeto/config — config (cria defaults deduzidos do package.json se faltar). */
+/** GET /api/ci/:projeto/config — config (deduz do ecossistema do projeto se faltar). */
 router.get("/:projeto/config", async (req, res) => {
   const dir = resolverProjetoOu404(req, res);
   if (dir === null) return;
   try {
-    const cfg = await lerOuCriarConfig(dir, req.params.projeto);
+    const cfg = await lerOuCriarConfig(dir);
     res.json({ config: cfg });
   } catch (erro) {
-    if (erro instanceof ErroSemPackageJson) {
-      res.status(422).json({ erro: erro.message });
-      return;
-    }
     const mensagem = erro instanceof Error ? erro.message : String(erro);
     res.status(500).json({ erro: `Não foi possível ler a config de CI: ${mensagem}` });
   }

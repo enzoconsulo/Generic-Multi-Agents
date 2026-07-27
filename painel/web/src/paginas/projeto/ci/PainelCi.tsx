@@ -324,6 +324,19 @@ function EditorConfigCi({ projeto }: { projeto: string }) {
 
   return (
     <form className="form-acao" onSubmit={salvar}>
+      {rascunho.ecossistema ? (
+        <p className="texto-suave ci-estagio-meta">
+          Comandos deduzidos do ecossistema <strong>{rascunho.ecossistema}</strong> detectado no
+          projeto. Ajuste à vontade — o que estiver desligado roda como “pulado”.
+        </p>
+      ) : (
+        <p className="texto-suave ci-estagio-meta">
+          Nenhum ecossistema reconhecido automaticamente neste projeto (procuramos
+          <code> package.json</code>, <code>pyproject.toml</code>, <code>go.mod</code>,{" "}
+          <code>Cargo.toml</code>, <code>.csproj</code>, <code>pom.xml</code>…). Escreva os
+          comandos do seu pipeline abaixo e ligue os estágios que quiser.
+        </p>
+      )}
       {ESTAGIOS_CI.map((nome) => {
         const e = rascunho.estagios[nome];
         return (
