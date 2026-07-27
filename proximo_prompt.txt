@@ -1,80 +1,108 @@
-Continuar o trabalho no painel-fabrica (o cockpit web da fábrica de software).
-O painel vive em `painel/` na RAIZ da fábrica (ferramenta de sistema, versionada no repo da
-raiz, mantida À MÃO — fora do pipeline executor/testador/revisor, que só opera em projetos/).
+Continuar o trabalho na fábrica Gerador_de_projetos.
 
-=== SITUE-SE PRIMEIRO (ritual de início de sessão) ===
+=== SITUE-SE PRIMEIRO (ritual de início) ===
 Leia, nesta ordem:
-    1. _sistema/logs/2026-07-22.md        (log mais recente — resume a última sessão)
-    2. painel/_gestao/PROGRESSO.md         (histórico do projeto; topo = mais recente)
-    3. painel/_gestao/DECISOES.md          (decisões de arquitetura, só-adição)
-Depois faça um scan de status:
-    Grep '^status:' em painel/_gestao/tarefas/*.md   → 15 concluídas, 5 em backlog (Fase 3).
+    1. _sistema/logs/2026-07-27.md      (a sessão anterior INTEIRA — comece por aqui)
+    2. painel/_gestao/PROGRESSO.md       (histórico do painel; topo = mais recente)
+    3. painel/CLAUDE.md                  (seção "Armadilhas conhecidas" — 13 armadilhas
+                                          reais, cada uma de um bug que já custou tempo)
+Scan de status (um Grep resolve):
+    ^status: em painel/_gestao/tarefas/*.md          → 23/23 concluida
+    ^status: em projetos/*/_gestao/tarefas/*.md      → ia-hibrida-limpa: 1 pronta, 5 backlog
 
-Como rodar:  cd painel && npm run build && npm start  → http://127.0.0.1:8765
-             (ou `npm run dev` para desenvolver com recarga).
-Testes:      cd painel && npm test   → hoje 135 no servidor + 7 na web, todos verdes.
-             (Testes que exigem login real do Claude ficam em `npm run teste:integracao`.)
+Como rodar:  duplo-clique em INICIAR.bat (raiz) → abre http://127.0.0.1:8765 sozinho.
+             Ou: cd painel && npm run build && npm start
+Testes:      cd painel && npm test  → 209 (servidor) + 33 (web), todos verdes.
+             ATENÇÃO: FECHE o painel antes de testar. Painel no ar compete por recursos e
+             derruba o worker do vitest com ERR_IPC_CHANNEL_CLOSED — parece bug, não é.
+Teste pago:  npm run teste:integracao (~US$0,01, valida canUseTool contra o SDK real).
 
-=== JÁ FEITO (não refazer) ===
-- Leitura completa (home/projetos/kanban/plano), disparo de ações via web com log ao vivo (SSE),
-  estratégias de modelo Fable→Opus + estimativa de custo.
-- AGENTES DINÂMICOS validados de verdade no Haiku: o /trabalhar despacha por especialista
-  (equipe.json → options.agents). Bug corrigido: o trabalhar.md agora escolhe o especialista
-  de forma determinística lendo equipe.json (antes tentava adivinhar "se roda pelo painel").
-  O painel loga QUAL especialista trabalha (a ferramenta de despacho aqui é `Agent`, não `Task`).
-- T-012 (ANÁLISE por projeto): POST /api/acoes/analisar gera/atualiza _gestao/ANALISE.md;
-  botão "Analisar/Reanalisar" na página do projeto. Provado ao vivo.
-- T-013 (IMPORTAÇÃO pela web): POST /api/projetos/importar copia uma pasta para projetos/,
-  ignora node_modules, git init/preserva .git, cria _gestao/ mínimo e enfileira a análise;
-  form "Importar pasta existente" na home. Criar projeto novo continua sendo a ação /novo-projeto.
-- T-010 (INPUTS pela UI): fluxo pausa em aguardando-input, painel "⏸ Aguardando você" na página
-  de Jobs pergunta/aprova; POST /api/inputs/:id/resposta destrava. Autonomia preservada
-  (bypass é o padrão; permissionMode:"default" liga as aprovações pela UI).
 
-=== REGRA DE CUSTO (MUITO IMPORTANTE — não esquecer) ===
-Já queimei R$550 numa noite rodando o pipeline multi-agente no Fable/xhigh. Então:
-- Construa DIRETO você mesmo (orquestrador, no Opus), SEM despachar o pipeline caro de agentes,
-  a menos que eu peça.
-- Qualquer execução REAL de fluxo da fábrica (planejador, /trabalhar, análise, CI): use modelo
-  BARATO (Haiku ou Sonnet), NUNCA Fable/xhigh.
-- Antes de qualquer coisa que gaste de verdade, me diga a estimativa de custo.
+=================================================================
+JÁ ESTÁ FEITO — NÃO REFAZER
+=================================================================
 
-=== O QUE FALTA (nesta ordem) ===
+O PAINEL ESTÁ COMPLETO: 23/23 tarefas, Fases 1, 2 e 3 com marco registrado.
+  - Leitura: panorama, projetos, kanban, plano, decisões, progresso, análise.
+  - Execução: as 6 ações da fábrica pela web, escolha de modelo, estimativa de custo,
+    log ao vivo (SSE), cancelamento, inputs pela UI (canUseTool VALIDADO em execução paga).
+  - Importação de pasta com SELETOR NATIVO de pasta (botão "Escolher…", roda no backend
+    porque o navegador não entrega caminho absoluto).
+  - CI local por projeto, genérico por ecossistema (Node, Python, Go, Rust, .NET, Maven,
+    Gradle) — stack não reconhecida recebe config em branco editável, não erro.
+  - Robustez: watchdog de inatividade, guardrails de turnos por ação, recuperação
+    pós-reinício (jobs órfãos, pendências de input, histórico de CI travado).
+  - Visualização: equipe ao vivo (quem trabalha agora), mapa do planejamento (fases com
+    progresso, tarefas como blocos clicáveis) e página /como-funciona.
+  - Repositório no GitHub (enzoconsulo/Generic-Multi-Agents), clonável, com INICIAR.bat.
 
-1) FASE 3 — CI/CD por projeto (é o grande item que resta). Cada tarefa: construa direto,
-   teste com build + testes + smoke ao vivo, commite e me apresente ao final. Ordem:
+GENERICIDADE — JÁ PROVADA, não precisa auditar de novo:
+  O planejador criou equipe coerente para PYTHON/STREAMLIT no ia-hibrida-limpa
+  (`ia-integracao` + `streamlit-ui`). Antes disso só havia prova num CLI Node.
 
-   a) T-017 — MOTOR DE CI local: estágios instalar → lint → testes → build por projeto, como
-      jobs NÃO-Claude (usaClaude:false, lock projeto:<nome>), com log ao vivo pelo SSE. Config
-      por projeto em _gestao/ci.json (defaults deduzidos do package.json); resultados em
-      dados/ci/ do painel. (Ver a decisão "Análise/CI" em painel/_gestao/DECISOES.md 2026-07-21.)
-      Dica: espelhe o padrão do runner de importação (T-013) — job não-Claude que roda comandos
-      e emite progresso (jobs/inputs e projetos/runner-importar são bons modelos).
 
-   b) T-018 — UI do PIPELINE: aba CI/CD na página do projeto com os estágios, log ao vivo e a
-      config (ci.json) editável pela tela.
+=================================================================
+O QUE FAZER — EM ORDEM
+=================================================================
 
-   c) T-019 — ROBUSTEZ: watchdog, guardrails e recuperação pós-reinício. IMPORTANTE aqui:
-      recuperar pendências de INPUT abertas após reinício (a T-010 deixou isso de fora de
-      propósito — hoje uma pendência aberta não sobrevive a um restart do processo).
+1) EXECUTAR O ia-hibrida-limpa (é o passo natural; nada de código do painel envolvido)
+   Estado: ESPECIFICACAO + PLANO (3 fases) + T-001..T-006 criados; equipe com
+   `ia-integracao` e `streamlit-ui`. T-001 `pronta`, resto em `backlog` aguardando a cadeia.
+   Feature: geração completa de anúncio (título + descrição orientados a venda, no contexto
+   da foto) na aba de criar imagens do estudio_shopee.
 
-   d) T-020 — POLIMENTO final de UX + documentação (README/CLAUDE.md do painel).
+   Como: painel → projeto ia-hibrida-limpa → "Trabalhar neste projeto".
+   CUSTO: é o fluxo mais caro que existe (pipeline completo). USE HAIKU OU SONNET.
+   NUNCA Fable/xhigh. Avise a estimativa ao usuário ANTES de disparar.
 
-2) VALIDAÇÃO PENDENTE (rápida, quando quiser): a integração REAL do canUseTool (T-010) com o
-   SDK nunca rodou paga. Para provar ponta a ponta: dispare um fluxo Claude com
-   permissionMode:"default" e um comando fora do allowlist → deve criar uma pendência em
-   GET /api/inputs → aprove pela UI/API → o job conclui. Barato no Haiku; me avise o custo antes.
-   (A rota de disparo /api/acoes/:id ainda não expõe permissionMode — talvez precise de um
-   pequeno ajuste para esse teste, ou faça via um disparo direto.)
+   O que observar (é a primeira execução multi-agente de ponta a ponta num projeto real
+   de stack não-Node): se os especialistas certos são despachados, se o testador roda os
+   critérios de verdade, e se a tela "equipe ao vivo" reflete quem está trabalhando.
 
-=== NOTAS OPERACIONAIS ===
-- Projetos de TESTE deixados no disco (descartáveis, pode apagar): projetos/teste-todo-cli
-  (tem ANALISE.md gerado — serve de demo) e projetos/importado-teste (demo da importação).
-- projetos/cockpit é casca abandonada (com um equipe.json de exemplo) — pode sanear/apagar.
-- Pode haver um servidor do painel ainda no ar em http://127.0.0.1:8765 de sessões anteriores;
-  se for reiniciar, derrube o processo Node na porta 8765 antes.
-- Achado e corrigido nesta sessão: o .gitignore da raiz usava `projetos/` (amplo demais) e
-  escondia código/fixtures do painel; agora é `/projetos/` (ancorado). Se criar pastas
-  chamadas "projetos" dentro do painel, elas são versionadas normalmente.
+2) VERIFICAÇÃO VISUAL NO NAVEGADOR (a única pendência que sobreviveu ao projeto)
+   Nenhuma tela do painel foi vista renderizada — o ambiente do Claude não tem navegador.
+   Toda a lógica é testada, o VISUAL não. Peça ao usuário para olhar, ou verifique você se
+   tiver navegador disponível. Vale conferir: aba CI/CD, equipe ao vivo, mapa do plano,
+   estado vazio da home, e o seletor de pasta (se a janela abre NA FRENTE do navegador).
+
+3) PENDÊNCIAS CONHECIDAS DO ia-hibrida-limpa (não são bugs do painel)
+   a) `Local_AI/` é um repositório git ANINHADO dentro do projeto. O `git add` registrou
+      só uma referência quebrada: o conteúdo não entra no histórico e um clone vem vazio
+      ali. Decidir com o usuário: apagar `Local_AI/.git` (vira código normal do projeto)
+      ou transformar em submódulo de verdade.
+   b) O CI não vai detectar ecossistema: o `requirements.txt` está em
+      `Local_AI/analista_dados_shopee/`, e a detecção só olha a RAIZ do projeto. Isso
+      degrada bem (config em branco editável pela UI), mas se incomodar, a melhoria é
+      procurar marcador em subpastas — ver `painel/servidor/src/ci/ecossistemas.ts`.
+
+4) MELHORIAS DO PAINEL JÁ MAPEADAS (só se o usuário pedir — o painel está completo)
+   - Home também poderia ter o "próximo passo sugerido" (hoje só a página do projeto tem).
+   - Histórico de execuções por agente ao longo do tempo (hoje a equipe ao vivo mostra só
+     o job atual).
+   - O log do job não sobrevive à sessão: `dados/` guarda metadados, não o stdout. Se for
+     necessário rever log de execução antiga, precisa persistir as linhas.
+
+
+=================================================================
+REGRAS QUE NÃO PODEM SER ESQUECIDAS
+=================================================================
+
+CUSTO: já foram queimados R$550 numa noite em Fable/xhigh.
+  - Construa DIRETO você mesmo (orquestrador), SEM despachar o pipeline caro de agentes,
+    a menos que o usuário peça.
+  - Execução real de fluxo (planejador, /trabalhar, análise, CI): Haiku ou Sonnet.
+  - SEMPRE diga a estimativa ANTES de gastar. E lembre: no painel não existe disparo "a
+    seco" — `POST /api/acoes/:id` já executa de verdade.
+
+DISCIPLINA DE VERIFICAÇÃO (as três lições que mais custaram tempo nesta sessão):
+  - Corrigir o teste até passar ESCONDE o bug. Se um teste falha, pergunte primeiro se ele
+    está certo e o código errado. (Um ENOENT/500 real ficou mascarado assim.)
+  - Falha que se repete em TODA execução NÃO é flaky. Abra o teste antes de rotular.
+  - Documentação que mente é pior que documentação ausente — a próxima sessão decide em
+    cima dela.
+
+O PAINEL É MANTIDO À MÃO pelo orquestrador: fica fora do pipeline
+executor/testador/revisor (que só opera em projetos/). Mudou o painel? Rode
+`cd painel && npm test` antes de commitar, e commite na raiz da fábrica.
 
 Trabalhe com autonomia máxima (decida e registre nos arquivos), respeitando a regra de custo.
