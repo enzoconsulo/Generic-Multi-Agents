@@ -5,6 +5,20 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27
+**T-017 — motor de CI local (concluída).** Pipeline `instalar→lint→testes→build` por
+projeto, rodando como job NÃO-Claude (`usaClaude:false`, escopo `projeto:<nome>` — nunca
+roda junto com um fluxo Claude do mesmo projeto): `_gestao/ci.json` do projeto (defaults
+deduzidos do `package.json`, script ausente = estágio `pulado` com aviso, nunca erro),
+log ao vivo por estágio no SSE existente, resultado persistido em
+`dados/ci/<projeto>.json` (último + histórico). Spawn próprio com timeout por estágio e
+encerramento de árvore (`taskkill /T` no Windows) — sem dependência nova. Rotas
+`POST /api/ci/:projeto/rodar`, `GET /api/ci/:projeto`, `GET/PUT /api/ci/:projeto/config`.
+Nova env `DADOS_DIR` (mesmo padrão da `FABRICA_RAIZ`) isola os testes do `dados/` real.
+Suíte: **servidor 170/171** (+36; a 1 falha é pré-existente, corrida de timing
+não-relacionada) **+ web 7/7**. Retomando a Fase 3 (CI/CD): a instrução de continuação
+pulava o T-016, mas o T-018 depende dele — intercalado antes do T-018 (ver DECISOES.md).
+
 ## 2026-07-22
 **Agentes dinâmicos validados ponta a ponta com modelo real (Haiku), pelo painel.** Criado
 projeto-teste descartável (`projetos/teste-todo-cli`, CLI Node), rodado o planejador de

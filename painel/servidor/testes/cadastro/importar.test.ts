@@ -123,18 +123,24 @@ describe("executarImportacao", () => {
     expect(log).toContain("importado pelo painel-fabrica");
   });
 
-  it("preserva o .git da origem quando existe (sem novo commit do painel)", async () => {
-    const raiz = fabricaTemp();
-    const origem = origemTemp({ git: true });
-    const destino = join(raiz, "projetos", "comgit");
+  // Timeout generoso: chamadas reais de `git`/cópia sob OneDrive podem espicaçar quando
+  // a suíte roda vários testes com processos filhos em paralelo (DECISOES.md 2026-07-21).
+  it(
+    "preserva o .git da origem quando existe (sem novo commit do painel)",
+    async () => {
+      const raiz = fabricaTemp();
+      const origem = origemTemp({ git: true });
+      const destino = join(raiz, "projetos", "comgit");
 
-    await executarImportacao(origem, destino, raiz, "comgit", ctxFake);
+      await executarImportacao(origem, destino, raiz, "comgit", ctxFake);
 
-    expect(existsSync(join(destino, ".git"))).toBe(true);
-    const log = execFileSync("git", ["log", "--oneline"], { cwd: destino }).toString();
-    expect(log).toContain("commit-de-origem"); // história preservada
-    expect(log).not.toContain("importado pelo painel-fabrica");
-  });
+      expect(existsSync(join(destino, ".git"))).toBe(true);
+      const log = execFileSync("git", ["log", "--oneline"], { cwd: destino }).toString();
+      expect(log).toContain("commit-de-origem"); // história preservada
+      expect(log).not.toContain("importado pelo painel-fabrica");
+    },
+    15000,
+  );
 
   it("não sobrescreve arquivos de _gestao que já vieram na origem", async () => {
     const raiz = fabricaTemp();
@@ -152,29 +158,33 @@ describe("executarImportacao", () => {
 });
 
 describe("RunnerImportar enfileira a análise", () => {
-  it("após copiar, cria um job de análise do projeto importado", async () => {
-    const raiz = fabricaTemp();
-    const origem = origemTemp();
-    reiniciarGerenciador({ dirJobs: mkdtempSync(join(tmpdir(), "imp-jobs-")), tetoClaude: 2 });
-    const runnerClaudeFake: Runner = { async executar() { return { ok: true }; } };
-    obterGerenciador().registrarRunner("claude", runnerClaudeFake);
+  it(
+    "após copiar, cria um job de análise do projeto importado",
+    async () => {
+      const raiz = fabricaTemp();
+      const origem = origemTemp();
+      reiniciarGerenciador({ dirJobs: mkdtempSync(join(tmpdir(), "imp-jobs-")), tetoClaude: 2 });
+      const runnerClaudeFake: Runner = { async executar() { return { ok: true }; } };
+      obterGerenciador().registrarRunner("claude", runnerClaudeFake);
 
-    const job: Job = {
-      id: "imp1",
-      tipo: "importar",
-      titulo: "Importar app2",
-      escopo: "projeto:app2",
-      usaClaude: false,
-      params: { origem, nome: "app2", fabricaRaiz: raiz, modeloAnalise: "haiku" },
-      estado: "executando",
-      criadoEm: new Date().toISOString(),
-    };
-    await new RunnerImportar().executar(job, ctxFake);
+      const job: Job = {
+        id: "imp1",
+        tipo: "importar",
+        titulo: "Importar app2",
+        escopo: "projeto:app2",
+        usaClaude: false,
+        params: { origem, nome: "app2", fabricaRaiz: raiz, modeloAnalise: "haiku" },
+        estado: "executando",
+        criadoEm: new Date().toISOString(),
+      };
+      await new RunnerImportar().executar(job, ctxFake);
 
-    const jobsAnalise = obterGerenciador()
-      .listar()
-      .filter((j) => j.tipo === "claude" && j.titulo.includes("app2"));
-    expect(jobsAnalise.length).toBe(1);
-    expect(jobsAnalise[0]?.escopo).toBe("projeto:app2");
-  });
+      const jobsAnalise = obterGerenciador()
+        .listar()
+        .filter((j) => j.tipo === "claude" && j.titulo.includes("app2"));
+      expect(jobsAnalise.length).toBe(1);
+      expect(jobsAnalise[0]?.escopo).toBe("projeto:app2");
+    },
+    15000,
+  );
 });

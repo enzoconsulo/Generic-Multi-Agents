@@ -1,3 +1,4 @@
+import { RunnerCi } from "./ci/runner-ci.js";
 import { hub } from "./eventos/hub.js";
 import { RunnerClaude } from "./jobs/claude/runner-claude.js";
 import { obterGerenciador } from "./jobs/instancia.js";
@@ -12,5 +13,6 @@ export function inicializarPainel(): void {
   const gerenciador = obterGerenciador();
   gerenciador.registrarRunner("claude", new RunnerClaude());
   gerenciador.registrarRunner("importar", new RunnerImportar());
+  gerenciador.registrarRunner("ci", new RunnerCi());
   hub.conectar(gerenciador.emissor);
 }

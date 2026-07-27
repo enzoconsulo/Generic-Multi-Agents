@@ -8,6 +8,38 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — Ordem da Fase 3 corrigida: T-016 antes do T-018 (dependência esquecida)
+**Decisão:** ao retomar a Fase 3 (CI/CD), o T-018 (UI de CI/CD) declara `dependencias:
+[T-016, T-017]` no frontmatter, mas o T-016 (ações por projeto) ainda estava em
+`backlog` — a instrução de retomada da sessão anterior (`proximo_prompt.txt`) listava
+só T-017→T-018→T-019→T-020, pulando o T-016. Intercalei o T-016 entre o T-017 e o T-018
+para respeitar a regra de ouro nº 6 (só promove `pronta` com dependências concluídas).
+**Motivo:** dependência real no frontmatter das tarefas, não uma preferência de
+sequenciamento — sem o T-016 pronto, a aba de CI da T-018 não teria onde encaixar na
+página do projeto.
+**Quem:** orquestrador
+
+## 2026-07-27 — Motor de CI (T-017): config no projeto, resultado no painel, spawn+kill próprios
+**Decisão:** `_gestao/ci.json` (estágios `instalar→lint→testes→build`, comando +
+habilitado por estágio, timeout) vive no PROJETO; resultado da execução
+(`dados/ci/<projeto>.json`, último + histórico capado em 20) vive no PAINEL — já
+decidido em 2026-07-21, implementação confirma o desenho. Defaults deduzidos do
+`package.json`: `instalar` sempre ligado, os demais só quando o script homônimo existe
+(senão nascem desabilitados = rodam `pulado`, nunca erro). Spawn próprio
+(`node:child_process`, sem `tree-kill` nem outra lib nova) com `shell:true` — Windows
+exige (`npm` é `npm.cmd`) — e encerramento de árvore via `taskkill /PID <pid> /T /F` no
+Windows / `kill(-pid)` de grupo no POSIX; nunca `child.kill()` sozinho, que deixaria o
+`node.exe` filho do `npm.cmd` órfão. Job tipo `"ci"`, `usaClaude:false`, escopo
+`projeto:<nome>` — mesmo lock que o job Claude e o de importação, então CI nunca roda
+junto com um fluxo do mesmo projeto (fila da T-007 já garante, sem lógica nova).
+**Motivo:** artefato que descreve o projeto pertence ao projeto (git, visível aos
+agentes); resultado de execução é operacional (painel). `taskkill /T` em vez de
+`tree-kill`: comando nativo do Windows já resolve a árvore, dependência nova seria
+redundante (mesmo princípio do SQLite descartado em 2026-07-21). Nova env `DADOS_DIR`
+(mesmo padrão da `FABRICA_RAIZ`) para os testes não escreverem no `dados/` real do
+painel.
+**Quem:** orquestrador (T-017)
+
 ## 2026-07-22 — Runner loga o especialista despachado; ferramenta de despacho é `Agent`
 **Decisão:** o runner (`servidor/src/jobs/claude/runner-claude.ts`) passa a extrair o
 `subagent_type` do input das ferramentas de despacho e a incluí-lo no log

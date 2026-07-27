@@ -13,6 +13,12 @@ const fabricaRaiz = process.env.FABRICA_RAIZ
   ? resolve(process.env.FABRICA_RAIZ)
   : resolve(raizPainel, "..");
 
+// Dados operacionais do painel: sobrescrevível pela env DADOS_DIR (mesmo motivo da
+// FABRICA_RAIZ — testes usam pastas temporárias em vez do `dados/` real do painel).
+function dirDadosDaEnv(): string {
+  return process.env.DADOS_DIR ? resolve(process.env.DADOS_DIR) : resolve(raizPainel, "dados");
+}
+
 // Porta da env validada na subida: valor inválido falha com mensagem clara,
 // em vez de app.listen(NaN) estourar com RangeError críptico.
 function portaDaEnv(): number {
@@ -123,7 +129,7 @@ export const config = {
   /** Build da SPA servido em produção local. */
   webDist: resolve(raizPainel, "web", "dist"),
   /** Dados operacionais do painel (jobs, logs, CI) — pasta descartável, fora do git. */
-  dirDados: resolve(raizPainel, "dados"),
+  dirDados: dirDadosDaEnv(),
   /** Máximo de jobs que usam Claude executando ao mesmo tempo. */
   tetoJobsClaude: tetoJobsClaudeDaEnv(),
   /** Estratégias de modelo que a UI oferece (data-driven). */
