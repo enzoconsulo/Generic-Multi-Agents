@@ -32,6 +32,12 @@ Node é necessário se você for usar o `painel/`, o cockpit web opcional).
    ```
    git clone <url-do-repositorio> Gerador_de_projetos
    ```
+
+> **Atalho:** se você só quer abrir o painel web (o cockpit), dê **duplo-clique em
+> `INICIAR.bat`** na raiz — ele confere os pré-requisitos, prepara a estrutura, instala,
+> compila e abre o navegador sozinho. Equivale a `.\iniciar.ps1` (use `-Dev` para modo
+> desenvolvimento, `-SemBuild` para subir mais rápido). O resto desta seção é para usar a
+> fábrica pelo terminal, com o Claude Code.
 1. Abra o terminal e entre na pasta onde clonou a fábrica:
    ```
    cd <caminho-onde-voce-clonou>\Gerador_de_projetos
@@ -258,6 +264,7 @@ A raiz da fábrica é um repositório git que versiona só o sistema — `projet
 ```
 CLAUDE.md                          regras do orquestrador          edita: você/orquestrador
 README.md                          este manual                     edita: você/orquestrador
+INICIAR.bat / iniciar.ps1          sobe o painel web (duplo-clique) edita: você
 .gitignore                         raiz ignora projetos/ e afins   edita: você
 .claude/settings.json              permissões pré-aprovadas        edita: você (§6.3)
 .claude/agents/*.md                definição dos 6 agentes         edita: você (§6.1)
