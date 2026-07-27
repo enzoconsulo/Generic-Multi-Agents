@@ -7,14 +7,17 @@ import { describe, expect, it } from "vitest";
 import type { Runner } from "../../src/jobs/tipos.js";
 
 // Fábrica falsa fixa (com projetos/) — FABRICA_RAIZ tem que valer ANTES de o config carregar.
+// De propósito SEM criar `_gestao/`: um diretório sob projetos/ que nunca passou pelo
+// /novo-projeto (pasta clonada à mão) é um projeto válido para o leitor, e a config de CI
+// tem que funcionar nele — regressão de ENOENT→500 coberta também em config.test.ts.
 const FABRICA = mkdtempSync(join(tmpdir(), "ci-rota-fab-"));
-mkdirSync(join(FABRICA, "projetos", "comjson", "_gestao"), { recursive: true });
+mkdirSync(join(FABRICA, "projetos", "comjson"), { recursive: true });
 writeFileSync(
   join(FABRICA, "projetos", "comjson", "package.json"),
   JSON.stringify({ scripts: { test: "node t.js" } }),
   "utf8",
 );
-mkdirSync(join(FABRICA, "projetos", "semjson", "_gestao"), { recursive: true });
+mkdirSync(join(FABRICA, "projetos", "semjson"), { recursive: true });
 process.env.FABRICA_RAIZ = FABRICA;
 process.env.DADOS_DIR = mkdtempSync(join(tmpdir(), "ci-rota-dados-"));
 const { criarApp } = await import("../../src/app.js");

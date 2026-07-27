@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 /**
  * Configuração de CI por projeto (T-017): `_gestao/ci.json` do PROJETO (não do painel —
@@ -109,7 +109,13 @@ export async function salvarConfig(dirProjeto: string, bruto: unknown): Promise<
 }
 
 async function escrever(dirProjeto: string, config: ConfigCi): Promise<void> {
-  await writeFile(caminhoConfig(dirProjeto), `${JSON.stringify(config, null, 2)}\n`, "utf8");
+  const caminho = caminhoConfig(dirProjeto);
+  // `_gestao/` pode não existir: nem todo diretório sob `projetos/` passou pelo
+  // /novo-projeto ou pela importação (T-013) — uma pasta clonada à mão é um projeto
+  // válido para o leitor (`dirProjeto` só exige que o diretório exista). Sem este
+  // mkdir, ler a config de um projeto assim estourava ENOENT → 500.
+  await mkdir(dirname(caminho), { recursive: true });
+  await writeFile(caminho, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }
 
 /** Validação estrutural estrita — usada tanto na leitura do disco quanto no PUT da UI. */

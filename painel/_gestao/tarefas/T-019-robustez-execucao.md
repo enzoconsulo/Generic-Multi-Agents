@@ -30,6 +30,13 @@ do servidor (jobs órfãos marcados `interrompido`, pendências fechadas).
 - Recuperação no boot: jobs persistidos como `executando`/`aguardando-input` sem
   processo vivo (qualquer um, após restart) → `interrompido` com nota "servidor
   reiniciou durante a execução"; inputs pendentes do job fechados; evento SSE emitido.
+- **Achado da revisão do T-017/T-018 (2026-07-27) — incluir no escopo:** o saneador de
+  boot do gerenciador conserta o estado dos JOBS, mas não o resultado de CI persistido.
+  `dados/ci/<projeto>.json` é gravado com `estado: "executando"` no início do pipeline e
+  só reescrito ao fim; se o processo cair no meio, o arquivo fica dizendo "executando"
+  para sempre e a aba CI/CD (T-018) exibe esse estado velho. O boot deve reconciliar:
+  resultado de CI não-terminal cujo `jobId` não está executando → `cancelado`/
+  `interrompido` com nota.
 - Expor no metadado do job (`GET /api/jobs/:id`): `session_id` e `cwd` quando
   existirem — instrução de retomada MANUAL documentada na resposta/README (retomada
   automática está fora de escopo).

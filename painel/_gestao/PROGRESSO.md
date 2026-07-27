@@ -5,6 +5,21 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (revisão)
+**Revisão dedicada do T-016/T-017/T-018 (a pedido do usuário, modelo mais forte).** Achou
+e corrigiu 1 bug real, 1 regressão de UX, 1 fragilidade e 1 teste quebrado:
+(1) `ci/config.ts` gravava `_gestao/ci.json` sem garantir a pasta → **ENOENT/500** em
+projeto sem `_gestao/` (pasta clonada à mão); o teste original tinha sido "consertado"
+criando a pasta no fixture, **mascarando o bug** — agora há `mkdir` recursivo, fixture
+sem `_gestao/` e teste de regressão. (2) `useDados` zerava os dados em toda recarga: o
+refetch automático fazia a página inteira piscar "Carregando…" e desmontava filhos
+(perdia o editor de `ci.json` aberto) — agora só a troca de caminho zera. (3)
+`recarregar` estabilizada com `useCallback` (entrava em deps de efeito e disparava a cada
+evento SSE). (4) O teste de cancelamento tido como "flaky pré-existente" a sessão inteira
+era um teste mal escrito (runner fake de ~2ms perdendo corrida com o HTTP do supertest) —
+trocado para o runner manual. Marcos das Fases 1 e 2 registrados no PLANO.md.
+**Suíte: 172/172 servidor + 14/14 web — verde de ponta a ponta pela primeira vez.**
+
 ## 2026-07-27 (continuação 2)
 **T-018 — UI de CI/CD (concluída). Fase 3 completa: T-016, T-017 e T-018 fechados nesta
 sessão.** Nova seção "CI/CD" na página do projeto (não é aba — a T-006 não implementou

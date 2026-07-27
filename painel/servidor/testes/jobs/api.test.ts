@@ -97,13 +97,13 @@ describe("API /api/jobs", () => {
     expect(manual.iniciados).toEqual([executando.id]); // o cancelado nunca executou
   });
 
+  // Runner MANUAL (não o fake): o fake termina em ~2ms (2 passos × 1ms) e a ida-e-volta
+  // HTTP do supertest demora bem mais, então o job já estava `concluido` quando o POST
+  // chegava e a rota respondia 409 — o teste perdia essa corrida sempre. O manual fica
+  // pendurado até o teste mandar, e ainda rejeita no abort, que é justamente o caminho
+  // que este teste quer exercitar.
   it("POST /api/jobs/:id/cancelar em job executando aborta e termina cancelado (202)", async () => {
-    const job = ger.criarJob({
-      tipo: "fake",
-      titulo: "Fake em execução",
-      escopo: "projeto:alfa",
-      usaClaude: true,
-    });
+    const job = criarJobManual("alfa");
     await aguardarEstado(ger, job.id, "executando");
 
     const resposta = await request(app).post(`/api/jobs/${job.id}/cancelar`);

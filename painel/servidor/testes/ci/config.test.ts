@@ -11,9 +11,9 @@ import {
   validarConfig,
 } from "../../src/ci/config.js";
 
-function projetoTemp(pkg?: Record<string, unknown>): string {
+function projetoTemp(pkg?: Record<string, unknown>, opcoes: { comGestao?: boolean } = {}): string {
   const dir = mkdtempSync(join(tmpdir(), "ci-cfg-"));
-  mkdirSync(join(dir, "_gestao"), { recursive: true });
+  if (opcoes.comGestao !== false) mkdirSync(join(dir, "_gestao"), { recursive: true });
   if (pkg !== undefined) writeFileSync(join(dir, "package.json"), JSON.stringify(pkg), "utf8");
   return dir;
 }
@@ -50,6 +50,18 @@ describe("lerOuCriarConfig", () => {
     expect(existsSync(join(dir, "_gestao", "ci.json"))).toBe(true);
     const noDisco = JSON.parse(readFileSync(join(dir, "_gestao", "ci.json"), "utf8"));
     expect(noDisco).toEqual(cfg);
+  });
+
+  // Regressão: projeto sob projetos/ sem a pasta `_gestao/` (pasta clonada à mão, nunca
+  // passou pelo /novo-projeto nem pela importação) estourava ENOENT → 500 na rota.
+  it("projeto SEM a pasta _gestao/: cria a pasta em vez de estourar ENOENT", async () => {
+    const dir = projetoTemp({ scripts: { test: "node t.js" } }, { comGestao: false });
+    expect(existsSync(join(dir, "_gestao"))).toBe(false);
+
+    const cfg = await lerOuCriarConfig(dir, "sem-gestao");
+
+    expect(cfg.estagios.testes.habilitado).toBe(true);
+    expect(existsSync(join(dir, "_gestao", "ci.json"))).toBe(true);
   });
 
   it("com ci.json já existente: lê do disco (não deduz de novo)", async () => {

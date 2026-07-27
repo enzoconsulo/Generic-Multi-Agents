@@ -8,6 +8,55 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — Revisão do T-016/T-017/T-018 (segunda passada, modelo mais forte)
+**Decisão:** revisão dedicada do que foi construído na sessão, a pedido do usuário. Três
+correções aplicadas, uma delas de bug real:
+1. **Bug (corrigido):** `ci/config.ts` gravava `_gestao/ci.json` sem garantir que a pasta
+   `_gestao/` existisse → **ENOENT/500** em qualquer projeto sob `projetos/` que não
+   tenha passado pelo `/novo-projeto` ou pela importação (pasta clonada à mão, que o
+   leitor aceita como projeto válido). Pior: na construção original o teste de rota foi
+   "consertado" criando `_gestao/` no fixture, o que MASCAROU o bug em vez de expô-lo.
+   Agora `escrever()` faz `mkdir` recursivo, o fixture da rota voltou a NÃO ter
+   `_gestao/` (exercita o caso real) e há teste de regressão dedicado em `config.test.ts`.
+2. **UX (corrigido):** `useDados` zerava `dados` em TODA recarga, então o refetch
+   automático da T-016/T-018 fazia a página inteira piscar "Carregando…" a cada job que
+   terminava — e desmontava os filhos, perdendo estado local (ex.: editor de `ci.json`
+   aberto com alterações não salvas). Agora só a troca de `caminho` zera; recarga
+   preserva o que está na tela.
+3. **Correção de fragilidade:** `recarregar` era recriada a cada render, e entra em array
+   de dependências de efeito na T-016/T-018 — os efeitos rodavam em toda renderização
+   (a cada evento SSE) em vez de só quando os jobs mudam. Estabilizada com `useCallback`.
+   Também trocado o tipo hand-rolled de `resolverProjetoOu404` (`rotas/ci.ts`) pelos
+   tipos `Request`/`Response` do Express.
+4. **Teste quebrado (corrigido) — o "flaky pré-existente" não era flaky:** durante toda a
+   sessão o teste `POST /api/jobs/:id/cancelar em job executando … (202)` foi dispensado
+   como "corrida de timing pré-existente e não-relacionada". Investigado agora: ele usava
+   o runner FAKE (`passos: 2, delayMs: 1` → ~2ms de vida) e a ida-e-volta HTTP do
+   supertest demora muito mais, então o job já estava `concluido` quando o POST chegava e
+   a rota respondia 409. O teste perdia essa corrida SEMPRE — não era intermitente, era
+   um teste mal escrito. Trocado para o runner MANUAL (fica pendurado até o teste mandar
+   e rejeita no abort — exatamente o caminho que o teste quer exercitar). **Suíte agora
+   172/172 + 14/14, verde de ponta a ponta pela primeira vez.**
+**Lição registrada:** rotular uma falha recorrente como "flaky/pré-existente" sem abrir o
+teste escondeu por horas um defeito de 3 linhas. Falha que se repete em toda execução não
+é flaky.
+**Motivo:** o usuário pediu conferência por ter construído num modelo mais fraco. O
+achado nº 1 confirma que a desconfiança era justificada — "corrigir o teste até passar"
+é exatamente o modo de falha a vigiar.
+**Quem:** orquestrador
+
+## 2026-07-27 — Marco da Fase 1 registrado retroativamente
+**Decisão:** `Marco:` da Fase 1 estava `pendente` desde 2026-07-21 embora T-001..T-006
+estejam todas `concluida` — a linha nunca foi preenchida ao fechar a fase. Registrado
+**aprovado 2026-07-27 (retroativo)**. Sem isso, o leitor da fábrica (`faseAtual` = a
+primeira fase com marco `pendente`) reportaria a Fase 1 como a fase corrente do painel,
+com a Fase 2 já aprovada logo abaixo — estado impossível.
+**Motivo:** a meta da Fase 1 (painel somente-leitura rodando sobre os arquivos reais +
+spike do SDK) está comprovada pelo próprio painel em uso desde então; o que faltava era
+o registro. Marcado como retroativo em vez de datar 2026-07-21 para não fingir que a
+verificação aconteceu na época.
+**Quem:** orquestrador
+
 ## 2026-07-27 — Marco da Fase 2 aprovado (verificação por orquestrador, sem testador)
 **Decisão:** T-016 era a última tarefa pendente de `Tarefas:` da Fase 2 no PLANO.md (não
 da Fase 3, como o encadeamento do `proximo_prompt.txt` presumia — checado no PLANO.md

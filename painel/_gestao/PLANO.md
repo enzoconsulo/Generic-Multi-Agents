@@ -10,7 +10,7 @@ Meta: servidor + SPA rodando localmente; home com as 6 ações da fábrica descr
 lista real de projetos; página de projeto com kanban de tarefas, plano/marcos, decisões
 e progresso — tudo lido dos arquivos da fábrica, sem executar nada. Spike do SDK
 validado (autenticação por assinatura + streaming + cancelamento).
-Marco: pendente
+Marco: aprovado 2026-07-27 (retroativo — fase concluída em 2026-07-21)
 Tarefas: T-001, T-002, T-003, T-004, T-005, T-006
 
 ## Fase 2 — Execução de fluxos (jobs, agentes e cadastro)

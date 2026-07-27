@@ -64,7 +64,7 @@ export function Projeto() {
         <Link to="/">← Todos os projetos</Link>
       </div>
 
-      {carregando && <Carregando texto={`Carregando ${alvo}…`} />}
+      {carregando && dados === null && <Carregando texto={`Carregando ${alvo}…`} />}
       {erro !== null && (
         <MensagemErro erro={erro} dica="Verifique se o nome do projeto existe na fábrica." />
       )}

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { dirProjeto } from "../acoes/analise.js";
 import { config } from "../config.js";
 import {
@@ -20,7 +20,11 @@ export const prefixo = "/api/ci";
 
 export const router: Router = Router();
 
-function resolverProjetoOu404(req: { params: { projeto: string } }, res: { status: (n: number) => { json: (b: unknown) => void } }): string | null {
+/**
+ * Resolve o diretório do projeto (barrando travessia de caminho, via `dirProjeto`) ou
+ * responde 404 e devolve null — o chamador só precisa fazer `if (dir === null) return;`.
+ */
+function resolverProjetoOu404(req: Request<{ projeto: string }>, res: Response): string | null {
   const dir = dirProjeto(config.fabricaRaiz, req.params.projeto);
   if (dir === null) {
     res.status(404).json({ erro: `Projeto "${req.params.projeto}" não encontrado` });
