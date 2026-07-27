@@ -19,6 +19,14 @@ export interface EstadoAoVivo {
   /** Estágios de CI ao vivo (T-017/T-018): jobId → estágio → estado em tempo real. */
   estagiosCi: Record<string, Record<string, EstagioCiAoVivo>>;
   conectado: boolean;
+  /** Carga inicial da lista ainda em andamento. */
+  carregando: boolean;
+  /**
+   * Falha na carga inicial (T-020): sem isto a tela de Jobs mostrava "nenhuma execução
+   * ainda" com o backend fora do ar — mentira que faz o usuário procurar o problema no
+   * lugar errado.
+   */
+  erro: string | null;
 }
 
 interface DadosTransicao {
@@ -55,6 +63,8 @@ export function useJobsAoVivo(): EstadoAoVivo {
   const [pendencias, setPendencias] = useState<Record<string, Pendencia>>({});
   const [estagiosCi, setEstagiosCi] = useState<Record<string, Record<string, EstagioCiAoVivo>>>({});
   const [conectado, setConectado] = useState(false);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
   const jaCarregou = useRef(false);
 
   useEffect(() => {
@@ -65,14 +75,19 @@ export function useJobsAoVivo(): EstadoAoVivo {
       api<RespostaJobs>("/api/jobs")
         .then((r) => {
           if (!ativo) return;
+          setErro(null);
           setJobs((atual) => {
             const mapa = { ...atual };
             for (const job of r.jobs) mapa[job.id] = job;
             return mapa;
           });
         })
-        .catch(() => {
-          /* a lista inicial pode falhar; o SSE ainda popula ao vivo */
+        .catch((e: unknown) => {
+          if (!ativo) return;
+          setErro(e instanceof Error ? e.message : "Falha ao carregar as execuções");
+        })
+        .finally(() => {
+          if (ativo) setCarregando(false);
         });
 
       api<RespostaInputs>("/api/inputs")
@@ -170,7 +185,7 @@ export function useJobsAoVivo(): EstadoAoVivo {
 
   const lista = Object.values(jobs).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
   const pend = Object.values(pendencias).sort((a, b) => a.criadaEm.localeCompare(b.criadaEm));
-  return { jobs: lista, logs, pendencias: pend, estagiosCi, conectado };
+  return { jobs: lista, logs, pendencias: pend, estagiosCi, conectado, carregando, erro };
 }
 
 /** Remove uma chave de um Record sem mutar o original. */

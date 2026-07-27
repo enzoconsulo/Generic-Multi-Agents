@@ -5,6 +5,22 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (T-020 — projeto completo)
+**T-020 — polimento e documentação (concluída). As 20 tarefas do painel estão fechadas;
+Fase 3 aprovada.** Achado real de UX: a tela de Jobs não tinha estado de erro — com o
+backend fora ela dizia "Nenhuma execução ainda", mandando o usuário procurar o problema
+no lugar errado; o hook SSE passou a expor `carregando`/`erro`. Estado vazio da home
+trocado por orientação com os dois caminhos de primeiro passo. Documentação: o CLAUDE.md
+afirmava que os jobs "ainda não estão ligados à UI" (falso desde a Fase 2) e que os testes
+com login real ficam em `teste:integracao` — que **é um placeholder que não roda nada**;
+corrigido nos dois arquivos. README do painel tinha 3 linhas: reescrito com requisitos,
+como rodar/testar, envs, arquitetura e avisos operacionais (inclusive retomada manual via
+`sessionId` + `cwd`). "Armadilhas conhecidas" saiu do placeholder para 10 armadilhas
+reais, cada uma de um bug que custou tempo. Zero literais em inglês na UI.
+Suíte: **servidor 195/195 + web 14/14**, build limpo. Guardrail da T-019 provado ao vivo
+(`/status` sai com `maxTurns: 40`). **Pendências que sobrevivem ao projeto:** verificação
+visual em navegador (não há navegador no ambiente) e a validação PAGA do `canUseTool`.
+
 ## 2026-07-27 (T-019)
 **T-019 — robustez de execução (concluída).** Módulo novo `servidor/src/jobs/robustez/`:
 **watchdog** de inatividade que interrompe fluxo Claude travado (conta do último evento,

@@ -4,9 +4,10 @@ import { api, ErroApi } from "../../lib/api";
 import { useJobsAoVivo } from "../../lib/useJobsAoVivo";
 import type { Job, LinhaLog, Pendencia } from "../../lib/tipos";
 import { classeEstadoJob, jobCancelavel, rotuloEstadoJob } from "../../lib/formato";
+import { Carregando, MensagemErro } from "../../componentes/Estados";
 
 export function Jobs() {
-  const { jobs, logs, pendencias, conectado } = useJobsAoVivo();
+  const { jobs, logs, pendencias, conectado, carregando, erro } = useJobsAoVivo();
   const [params, setParams] = useSearchParams();
   const idSelecionado = params.get("job");
   const selecionado = jobs.find((j) => j.id === idSelecionado) ?? null;
@@ -31,13 +32,24 @@ export function Jobs() {
         </p>
       </section>
 
+      {erro !== null && (
+        <MensagemErro
+          erro={erro}
+          dica="O servidor do painel está no ar? Rode `npm start` (ou `npm run dev`) na pasta do painel."
+        />
+      )}
+
       <PainelInputs pendencias={pendencias} />
 
       <div className="jobs-layout">
         <aside className="jobs-lista">
-          {jobs.length === 0 ? (
+          {carregando ? (
+            <Carregando texto="Carregando execuções…" />
+          ) : jobs.length === 0 ? (
             <p className="texto-suave">
-              Nenhuma execução ainda. Dispare uma ação na página inicial.
+              {erro !== null
+                ? "Não foi possível carregar as execuções."
+                : "Nenhuma execução ainda. Dispare uma ação na página inicial."}
             </p>
           ) : (
             jobs.map((job) => (

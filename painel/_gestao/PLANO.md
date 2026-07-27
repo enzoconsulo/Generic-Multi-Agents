@@ -25,7 +25,8 @@ Tarefas: T-007, T-008, T-009, T-010, T-011, T-012, T-013, T-014, T-015, T-016
 Meta: pipeline instalar → lint → testes → build por projeto com log ao vivo e config
 editável pela UI; watchdog, guardrails e recuperação pós-reinício; UX final consistente
 e documentação completa (README + CLAUDE.md do projeto).
-Marco: pendente
+Marco: aprovado 2026-07-27 (ressalva: verificação visual em navegador não feita — sem
+navegador no ambiente; ver Verificação da T-020)
 Tarefas: T-017, T-018, T-019, T-020
 
 <!-- Linha "Marco:": o orquestrador registra ali o resultado da verificação de fase —

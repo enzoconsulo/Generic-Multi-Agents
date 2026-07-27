@@ -10,7 +10,7 @@ import type {
   RespostaFabrica,
   RespostaProjetos,
 } from "../../lib/tipos";
-import { Carregando, MensagemErro, Vazio } from "../../componentes/Estados";
+import { Carregando, MensagemErro } from "../../componentes/Estados";
 import { BadgeMarco, ResumoStatus } from "../../componentes/Indicadores";
 import { estimarCusto, rotuloPeso } from "../../lib/formato";
 
@@ -86,7 +86,7 @@ export function Inicio() {
         {projetos.erro !== null && <MensagemErro erro={projetos.erro} />}
         {projetos.dados !== null &&
           (projetos.dados.projetos.length === 0 ? (
-            <Vazio texto="Nenhum projeto na fábrica ainda. Use a ação /novo-projeto para criar o primeiro." />
+            <PrimeiroProjeto />
           ) : (
             <div className="grade-cards">
               {projetos.dados.projetos.map((p) => (
@@ -95,6 +95,34 @@ export function Inicio() {
             </div>
           ))}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Estado vazio da fábrica (T-020): em vez de uma linha cinza dizendo que não há nada,
+ * mostra os DOIS caminhos concretos de primeiro passo — que é a dúvida real de quem
+ * abre o painel pela primeira vez.
+ */
+function PrimeiroProjeto() {
+  return (
+    <div className="vazio-orientado">
+      <p className="vazio-titulo">Sua fábrica ainda não tem projetos.</p>
+      <p className="texto-suave">Dois caminhos para o primeiro:</p>
+      <ol className="vazio-passos">
+        <li>
+          <strong>Começar do zero</strong> — no cartão{" "}
+          <span className="mono">/novo-projeto</span> acima, clique em{" "}
+          <strong>Executar</strong> e descreva a ideia (o que é · para quem · o que precisa
+          ter na v1 · o que NÃO entra). A fábrica escreve especificação, plano e tarefas.
+        </li>
+        <li>
+          <strong>Trazer código que já existe</strong> — use{" "}
+          <strong>Importar pasta existente</strong> logo acima: o painel copia a pasta para{" "}
+          <span className="mono">projetos/</span>, inicializa o git se faltar e roda uma
+          análise do código automaticamente.
+        </li>
+      </ol>
     </div>
   );
 }

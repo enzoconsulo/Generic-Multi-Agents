@@ -1115,6 +1115,28 @@ a:hover {
   font-size: 0.82rem;
 }
 
+/* ---------- Estado vazio orientado (T-020) ---------- */
+.vazio-orientado {
+  border: 1px dashed var(--cor-borda-forte);
+  border-radius: var(--raio);
+  padding: 1.1rem 1.25rem;
+  background-color: var(--cor-superficie);
+}
+.vazio-titulo {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+}
+.vazio-passos {
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.6rem;
+  line-height: 1.55;
+}
+.vazio-passos li::marker {
+  color: var(--cor-acento);
+}
+
 /* ---------- Responsivo ---------- */
 @media (max-width: 40rem) {
   .jobs-layout {

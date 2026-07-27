@@ -18,8 +18,9 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
   ver `_gestao/pesquisas/2026-07-21-claude-code-headless.md` e DECISOES.md.
 - Frontend: React 18 + Vite + TS, react-router; CSS puro com variáveis, dark mode
   padrão, tudo em PT-BR.
-- Testes: Vitest (+ supertest); testes que exigem login real do Claude ficam no script
-  separado `teste:integracao` (nunca no `npm test`).
+- Testes: Vitest (+ supertest). `npm test` NUNCA usa rede nem login (SDK falsificado,
+  relógio injetado no watchdog). `teste:integracao` está reservado para o que exigir login
+  real — hoje é só um placeholder que não roda nada.
 
 ## Como rodar
 - Instalar dependências (uma vez): `npm install` na raiz do projeto.
@@ -29,20 +30,26 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
   `npm start` → abrir **http://127.0.0.1:8765**.
 
 ## Como testar
-- Suíte completa: `npm test` (Vitest no servidor + na web).
-- Testes que exigem login real do Claude: `npm run teste:integracao` (fora do `npm test`).
+- Suíte completa: `npm test` (tsc estrito + Vitest no servidor e na web). Sem rede/login.
+- `npm run teste:integracao`: placeholder (não roda nada) — reservado para o que exigir
+  login real do Claude. A integração real do `canUseTool` com o SDK segue NÃO validada
+  em execução paga.
 
 ## Arquitetura em 1 minuto
 - `servidor/` — Express 5 (TS estrito, ESM). `src/config.ts` resolve a raiz da fábrica
-  (`../../`); `src/agregador-rotas.ts` carrega cada arquivo de `src/rotas/` que exporta
+  (`../`, sobrescrevível por `FABRICA_RAIZ`) e o `dados/` (`DADOS_DIR`);
+  `src/agregador-rotas.ts` carrega cada arquivo de `src/rotas/` que exporta
   `{ prefixo, router }`. `src/fabrica/` é o LEITOR somente-leitura (frontmatter de tarefas,
-  PLANO, ideias, logs) — fonte de dados de tudo. `src/jobs/` é o motor de fila (locks de
-  concorrência, persistência em `dados/`, cancelamento) — pronto, mas o disparo real dos
-  fluxos ainda não está ligado à UI.
+  PLANO, ideias, logs) — fonte de dados de tudo. `src/jobs/` é o motor de fila (locks,
+  persistência em `dados/`, cancelamento, inputs pendentes) com `claude/` (runner do Agent
+  SDK) e `robustez/` (watchdog de inatividade + guardrails por ação). `src/ci/` é o motor
+  de CI local (config `ci.json`, spawn com timeout/kill de árvore, resultados).
+  `src/acoes/` traduz ação da fábrica → job e guarda o prompt da análise.
 - `web/` — React 18 + Vite (TS estrito). `src/lib/` (helper de fetch, tipos espelhando a
-  API, hook `useDados`, formatação); `src/componentes/` (indicadores reusáveis);
-  `src/paginas/inicio` (panorama + ações + projetos) e `src/paginas/projeto` (kanban,
-  plano, análise, decisões, progresso). Tema dark em `src/estilos.css`.
+  API, `useDados`, `useJobsAoVivo` = o canal SSE, formatação); `src/componentes/`;
+  `src/paginas/inicio` (panorama + ações + projetos), `src/paginas/projeto` (ações, CI/CD,
+  kanban, plano, análise, decisões, progresso) e `src/paginas/jobs` (console ao vivo).
+  Tema dark em `src/estilos.css`.
 - Estado é sempre derivado dos arquivos da fábrica na hora da consulta; `dados/` guarda só
   histórico operacional (descartável, fora do git).
 
@@ -60,4 +67,33 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
 - Textos de UI e mensagens de erro sempre em PT-BR.
 
 ## Armadilhas conhecidas
-<coisas que já causaram problema e como evitar>
+Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para descobrir.
+
+- **`gray-matter` sem options envenena o cache.** Chame SEMPRE `matter(texto, {})`: sem o
+  objeto de options ele cacheia ANTES do parse, e um YAML inválido faz as chamadas
+  seguintes com o mesmo conteúdo retornarem "sucesso" com `data` vazio.
+- **`_gestao/` pode não existir.** Nem todo diretório sob `projetos/` passou pelo
+  `/novo-projeto` ou pela importação — pasta clonada à mão é projeto válido para o leitor.
+  Quem escreve em `_gestao/` precisa de `mkdir` recursivo antes (isso já derrubou a config
+  de CI com ENOENT/500).
+- **Corrigir o teste até passar esconde o bug.** O ENOENT acima ficou mascarado porque o
+  fixture do teste foi "consertado" criando a pasta, em vez de o código ser corrigido. Se
+  um teste falha, primeiro pergunte se ele está certo e o código errado.
+- **Falha que se repete em TODA execução não é flaky.** Um teste de cancelamento foi
+  dispensado como "flaky pré-existente" por horas; na verdade usava um runner fake de ~2ms
+  e perdia sempre a corrida com o HTTP do supertest. Abra o teste antes de rotular.
+- **I/O sob OneDrive é lento e intermitente** (o repo vive em `Documents\`). Já causou
+  EBUSY/EPERM na persistência e timeouts em cascata na suíte. Por isso `testTimeout` global
+  de 15s no `servidor/vitest.config.ts` e persistência não-fatal na fila.
+- **Windows: `npm` é `npm.cmd`.** Spawn precisa de `shell: true`, e matar o processo não
+  basta — o `node.exe` filho fica órfão. Use `taskkill /PID <pid> /T /F` (é o que
+  `ci/processo.ts` faz).
+- **Eventos emitidos no construtor do gerenciador se perdem**: o hub SSE só conecta depois
+  (`inicializar.ts`). Por isso o saneamento de boot é publicado por
+  `publicarSaneamentoDeBoot()`, chamado APÓS `hub.conectar`.
+- **`sessionId` só no fim é inútil.** Ele é gravado no `system/init` via `ctx.anotar` —
+  esperar o `result` significaria ter o dado só quando a retomada não importa mais.
+- **Uma conexão SSE por página.** `Projeto.tsx` chama `useJobsAoVivo()` uma vez e passa o
+  estado para baixo (ex.: `SecaoCi`). Abrir uma segunda quebra a decisão de canal único.
+- **Um `/trabalhar` no chat e outro no painel se atropelam.** Os locks do painel não
+  enxergam sessões interativas do terminal.

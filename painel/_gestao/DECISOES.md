@@ -8,6 +8,19 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — Marco da Fase 3 aprovado COM ressalva; documentação passa a admitir o que falta
+**Decisão:** as 20 tarefas estão `concluida` e o `Marco:` da Fase 3 foi registrado como
+**aprovado 2026-07-27, com ressalva explícita**: a verificação visual em navegador (parte
+do critério 1 da T-020) não foi feita, porque não há navegador neste ambiente
+(sem Playwright/chromium-cli). Aprovar sem a ressalva seria registrar como verificado algo
+que ninguém olhou. Junto: a documentação passou a declarar que `teste:integracao` é um
+placeholder vazio e que o `canUseTool` NUNCA rodou pago — antes o CLAUDE.md afirmava o
+contrário, o que faria a próxima sessão confiar numa cobertura inexistente.
+**Motivo:** documentação que mente é pior que documentação ausente — a próxima sessão
+(ou o próximo agente) toma decisão em cima dela. O mesmo vale para marco de fase: o valor
+da linha `Marco:` é dizer à sessão seguinte o que de fato foi verificado.
+**Quem:** orquestrador (T-020)
+
 ## 2026-07-27 — Robustez (T-019): interromper ≠ cancelar; watchdog conta silêncio, não duração
 **Decisão:** quatro escolhas de desenho na T-019.
 (1) *`interromper` é irmão de `cancelar`, não o mesmo:* estado final `interrompido` com
