@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, isAbsolute, join, resolve, sep } from "node:path";
 import type { NovoJob } from "../jobs/fila.js";
@@ -205,6 +205,22 @@ export async function executarImportacao(
       texto: "Sem git na origem — inicializando repositório e commit inicial…",
     });
     execFileSync("git", ["init", "-q"], { cwd: destino });
+
+    // Repositório git DENTRO da pasta importada (comum em projetos que carregam um
+    // sub-projeto): `git add -A` o registraria como gitlink, criando uma referência de
+    // submódulo quebrada — o conteúdo não é versionado e um clone vem vazio ali. Avisar
+    // é melhor que "consertar" sozinho: apagar o .git de alguém é destrutivo.
+    const aninhados = repositoriosAninhados(destino);
+    for (const rel of aninhados) {
+      ctx.emitir("log", {
+        nivel: "erro",
+        texto:
+          `Atenção: "${rel}" já é um repositório git. Ele NÃO será versionado junto ` +
+          `(o git registra só uma referência quebrada). Se quiser o conteúdo no histórico ` +
+          `do projeto, apague "${rel}/.git"; se for proposital, transforme em submódulo.`,
+      });
+    }
+
     execFileSync("git", ["add", "-A"], { cwd: destino });
     execFileSync("git", ["commit", "-q", "-m", "chore: importado pelo painel-fabrica"], {
       cwd: destino,
@@ -212,6 +228,33 @@ export async function executarImportacao(
   }
 
   ctx.emitir("log", { nivel: "resultado", texto: `Cópia concluída em projetos/${nome}.` });
+}
+
+/**
+ * Procura repositórios git ANINHADOS (um `.git` em subpasta) até 3 níveis — profundidade
+ * suficiente para os casos reais sem varrer a árvore inteira de um repo grande.
+ * Devolve caminhos relativos.
+ */
+function repositoriosAninhados(raiz: string, prefixo = "", nivel = 0): string[] {
+  if (nivel > 2) return [];
+  let entradas: import("node:fs").Dirent[];
+  try {
+    entradas = readdirSync(join(raiz, prefixo), { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const achados: string[] = [];
+  for (const entrada of entradas) {
+    if (!entrada.isDirectory() || entrada.name === ".git") continue;
+    const rel = prefixo === "" ? entrada.name : `${prefixo}/${entrada.name}`;
+    if (existsSync(join(raiz, rel, ".git"))) {
+      achados.push(rel);
+      continue; // não desce mais: o repo aninhado é o achado
+    }
+    achados.push(...repositoriosAninhados(raiz, rel, nivel + 1));
+  }
+  return achados;
 }
 
 /** Cria as pastas e arquivos de `_gestao/` que faltarem, sem sobrescrever nada existente. */

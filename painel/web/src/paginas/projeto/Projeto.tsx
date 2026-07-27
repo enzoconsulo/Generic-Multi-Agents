@@ -107,7 +107,7 @@ function DetalheProjeto({
         <ResumoStatus contagem={projeto.contagemPorStatus} />
       </section>
 
-      <AcoesProjeto projeto={projeto.nome} jobAtivo={jobAtivo} />
+      <AcoesProjeto projeto={projeto} jobAtivo={jobAtivo} />
 
       <SecaoCi projeto={projeto.nome} jobAtivo={jobAtivo} aoVivo={aoVivo} />
 

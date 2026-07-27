@@ -5,6 +5,22 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (primeiro uso real — 2 bugs e o beco sem saída)
+**Feedback do primeiro uso de verdade.** Achados e corrigidos:
+- **Bug:** passávamos `canUseTool` mesmo sob `bypassPermissions`, modo em que o SDK
+  auto-aprova tudo antes de consultar o callback — o próprio SDK avisava isso no console a
+  cada job (`CLAUDE_SDK_CAN_USE_TOOL_SHADOWED`). Agora só mandamos o callback quando o
+  modo realmente pede aprovação.
+- **Bug:** projeto importado contendo um repositório git ANINHADO (`Local_AI/.git`) era
+  registrado como gitlink quebrado pelo `git add -A` — conteúdo fora do histórico, clone
+  vazio ali. A importação agora AVISA (apagar o `.git` de alguém seria destrutivo).
+- **Furo de produto (T-022):** importar analisa mas NÃO planeja; sem tarefas o
+  `/trabalhar` não tinha o que fazer e a tela não explicava. Página do projeto ganhou
+  **"Pedir funcionalidade"** (`/ideia`, com campo de texto) e o bloco **"O que fazer
+  agora"**, que lê o estado real e diz o próximo passo. Isso torna explícito o modelo que
+  faltava: a autonomia é na EXECUÇÃO, não na decisão do que fazer.
+Suíte: **servidor 209/209 + web 23/23** (+9).
+
 ## 2026-07-27 (T-021 — seletor nativo de pasta)
 **T-021 — escolher a pasta pelo diálogo do Windows na importação (concluída).** Pedido do
 usuário: não querer colar caminho à mão. A parte não-óbvia é que **o navegador não resolve

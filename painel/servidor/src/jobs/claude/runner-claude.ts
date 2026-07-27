@@ -107,6 +107,13 @@ export class RunnerClaude implements Runner {
       };
     };
 
+    // Sob `bypassPermissions` o SDK auto-aprova tudo ANTES de consultar o callback — e
+    // avisa isso no console a cada job (CLAUDE_SDK_CAN_USE_TOOL_SHADOWED). Passar o
+    // callback nesse modo é mentira de intenção e vira ruído: só mandamos quando o modo
+    // realmente pede aprovação.
+    const permissionMode = p.permissionMode ?? "bypassPermissions";
+    const aprovaPelaUI = permissionMode !== "bypassPermissions";
+
     const consulta = this.consulta({
       prompt: p.prompt,
       options: {
@@ -117,8 +124,8 @@ export class RunnerClaude implements Runner {
         ...(p.fallback !== undefined ? { fallbackModel: p.fallback } : {}),
         // Especialistas do projeto injetados como subagentes (options.agents do SDK).
         ...(p.agentes !== undefined ? { agents: p.agentes } : {}),
-        permissionMode: p.permissionMode ?? "bypassPermissions",
-        canUseTool,
+        permissionMode,
+        ...(aprovaPelaUI ? { canUseTool } : {}),
         abortController: controlador,
         ...(p.maxTurns !== undefined ? { maxTurns: p.maxTurns } : {}),
       },

@@ -1115,6 +1115,59 @@ a:hover {
   font-size: 0.82rem;
 }
 
+/* ---------- Próximo passo sugerido (T-022) ---------- */
+.passo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  border: 1px solid var(--cor-borda-forte);
+  border-left-width: 4px;
+  border-radius: var(--raio);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1rem;
+  background-color: var(--cor-superficie);
+}
+.passo-acao {
+  border-left-color: var(--cor-acento);
+}
+.passo-atencao {
+  border-left-color: var(--cor-alerta);
+}
+.passo-ok {
+  border-left-color: var(--cor-sucesso);
+}
+.passo-texto {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+.passo-titulo {
+  display: block;
+  font-size: 1rem;
+}
+.passo-detalhe {
+  margin: 0.3rem 0 0;
+  color: var(--cor-texto-suave);
+  line-height: 1.5;
+}
+.form-acao textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--raio-sm);
+  border: 1px solid var(--cor-borda-forte);
+  background-color: var(--cor-fundo);
+  color: var(--cor-texto);
+}
+.form-acao textarea:focus {
+  outline: 2px solid var(--cor-acento);
+  outline-offset: 1px;
+}
+
 /* Campo de texto com botão colado (ex.: caminho + "Escolher...") */
 .campo-com-botao {
   display: flex;
