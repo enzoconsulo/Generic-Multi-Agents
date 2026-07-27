@@ -24,9 +24,17 @@ reconstrói o estado lendo os arquivos.
 
 ## 2. Primeira vez (preparação, ~3 minutos)
 
-1. Abra o terminal e entre na fábrica:
+**Pré-requisitos na máquina nova:** [Claude Code](https://claude.com/claude-code) instalado
+e logado (assinatura Claude — não precisa de `ANTHROPIC_API_KEY`), git e Node.js 22+ (só o
+Node é necessário se você for usar o `painel/`, o cockpit web opcional).
+
+0. Clone o repositório:
    ```
-   cd C:\Users\enzoconsulo\Documents\Gerador_de_projetos
+   git clone <url-do-repositorio> Gerador_de_projetos
+   ```
+1. Abra o terminal e entre na pasta onde clonou a fábrica:
+   ```
+   cd <caminho-onde-voce-clonou>\Gerador_de_projetos
    claude
    ```
 2. Confirme o modelo com `/model`. Os agentes **herdam o modelo da sessão** — Fable
@@ -259,6 +267,8 @@ _sistema/ARQUITETURA.md            desenho e racional do sistema   raramente mud
 _sistema/templates/                modelos de documentos           raramente muda
 _sistema/ideias/                   caixa de entrada                escreve: /ideia
 _sistema/logs/AAAA-MM-DD.md        memória diária da fábrica       escreve: orquestrador
+painel/                            cockpit web (opcional, Node 22+) edita: você/orquestrador
+  CLAUDE.md                        stack e como rodar/testar       ver painel/CLAUDE.md
 projetos/<nome>/                   um projeto = um repositório git
   CLAUDE.md                        contexto do projeto             escreve: documentador
   _gestao/ESPECIFICACAO.md         o que o projeto é               escreve: planejador
