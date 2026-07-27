@@ -8,6 +8,23 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — Ações por projeto (T-016): job ativo por escopo, refetch por transição vista
+**Decisão:** `AcoesProjeto.tsx` exporta `jobAtivoDoProjeto(jobs, projeto)` — função pura
+que filtra `jobs` (do `useJobsAoVivo`, já existente da T-014) por
+`escopo === "projeto:<nome>"` e estado não-terminal, priorizando o que já está
+executando/aguardando-input sobre os que só esperam na fila. O refetch automático do
+detalhe do projeto (kanban/plano/análise) usa um `useRef<Map<jobId, estadoVisto>>` para
+comparar o estado de cada job do escopo do projeto contra o que foi visto na renderização
+anterior; só dispara `recarregar()` numa transição real não-terminal→terminal — cobre
+job disparado por fora (CLI) sem duplicar refetch a cada evento SSE não-relacionado.
+O alerta especial "painel-fabrica" foi implementado mesmo sabendo que a página nunca é
+alcançável hoje (o painel não é mais um projeto sob `projetos/`, decisão de 2026-07-21)
+— defensivo e sem custo, cobre se um dia existir um projeto de verdade com esse nome.
+**Motivo:** reaproveitar o hook SSE já existente (T-014) em vez de abrir uma segunda
+conexão/mecanismo; padrão de card-expansível idêntico ao da T-015 (`CartaoAcao`) para
+consistência visual e de UX em toda a SPA.
+**Quem:** orquestrador (T-016)
+
 ## 2026-07-27 — Ordem da Fase 3 corrigida: T-016 antes do T-018 (dependência esquecida)
 **Decisão:** ao retomar a Fase 3 (CI/CD), o T-018 (UI de CI/CD) declara `dependencias:
 [T-016, T-017]` no frontmatter, mas o T-016 (ações por projeto) ainda estava em

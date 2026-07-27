@@ -75,10 +75,22 @@ export function classeEstadoJob(estado: string): string {
   return `job-${estado}`;
 }
 
-const ESTADOS_JOB_CANCELAVEIS = new Set(["na-fila", "executando", "aguardando-input"]);
+/** Estados não-terminais: job ainda ocupa o lock do escopo dele (T-016 usa para "job ativo"). */
+export const ESTADOS_JOB_ATIVOS: ReadonlySet<string> = new Set([
+  "na-fila",
+  "executando",
+  "aguardando-input",
+]);
 export function jobCancelavel(estado: string): boolean {
-  return ESTADOS_JOB_CANCELAVEIS.has(estado);
+  return ESTADOS_JOB_ATIVOS.has(estado);
 }
+
+export const ESTADOS_JOB_TERMINAIS: ReadonlySet<string> = new Set([
+  "concluido",
+  "falhou",
+  "cancelado",
+  "interrompido",
+]);
 
 /* ----------------------------- Peso e custo ----------------------------- */
 

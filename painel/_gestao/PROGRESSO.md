@@ -5,6 +5,16 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (continuação)
+**T-016 — ações por projeto na UI (concluída).** Página do projeto ganhou seção "Ações":
+botões "Trabalhar neste projeto" e "Ver status agora" (mesmo padrão de card-expansível
+da T-015), lock ao vivo (`jobAtivoDoProjeto`, via o SSE já existente da T-014) que
+desabilita Trabalhar/Status/Analisar enquanto um job do projeto está ativo, com aviso
+"Projeto ocupado por…" e link para `/jobs`. Refetch automático do kanban/plano/análise
+quando um job do projeto termina, sem F5. Suíte: **web 14/14** (+7) + servidor
+inalterado. Build limpo. Smoke feito por rede/bundle (sem navegador disponível neste
+ambiente — ver nota na tarefa). Próximo: T-018 (UI de CI/CD), agora desbloqueada.
+
 ## 2026-07-27
 **T-017 — motor de CI local (concluída).** Pipeline `instalar→lint→testes→build` por
 projeto, rodando como job NÃO-Claude (`usaClaude:false`, escopo `projeto:<nome>` — nunca

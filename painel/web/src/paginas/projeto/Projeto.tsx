@@ -1,17 +1,20 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDados } from "../../lib/useDados";
+import { useJobsAoVivo } from "../../lib/useJobsAoVivo";
 import { api, ErroApi } from "../../lib/api";
 import type {
   EquipeProjeto,
   EstrategiaModelo,
   FasePlano,
+  Job,
   ProjetoDetalhe,
   RespostaAcao,
   RespostaFabrica,
   TarefaCompleta,
 } from "../../lib/tipos";
 import {
+  ESTADOS_JOB_TERMINAIS,
   ORDEM_STATUS,
   classePrioridade,
   estimarCusto,
@@ -20,13 +23,38 @@ import {
 } from "../../lib/formato";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
 import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicadores";
+import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
 
 export function Projeto() {
   const { nome } = useParams<{ nome: string }>();
   const alvo = nome ?? "";
-  const { carregando, dados, erro } = useDados<ProjetoDetalhe>(
+  const { carregando, dados, erro, recarregar } = useDados<ProjetoDetalhe>(
     `/api/projetos/${encodeURIComponent(alvo)}`,
   );
+  const { jobs } = useJobsAoVivo();
+  const jobAtivo = jobAtivoDoProjeto(jobs, alvo);
+
+  // Refetch automático (T-016): quando um job com lock NESTE projeto termina — disparado
+  // por este navegador ou não —, o detalhe (kanban/plano/análise) se atualiza sozinho, sem
+  // precisar de F5. `vistos` evita reagir a jobs que já chegaram terminais (histórico
+  // carregado no mount) e a re-disparar refetch repetido pela mesma transição.
+  const vistos = useRef<Map<string, string>>(new Map());
+  useEffect(() => {
+    let mudou = false;
+    for (const job of jobs) {
+      if (job.escopo !== `projeto:${alvo}`) continue;
+      const anterior = vistos.current.get(job.id);
+      vistos.current.set(job.id, job.estado);
+      if (
+        anterior !== undefined &&
+        !ESTADOS_JOB_TERMINAIS.has(anterior) &&
+        ESTADOS_JOB_TERMINAIS.has(job.estado)
+      ) {
+        mudou = true;
+      }
+    }
+    if (mudou) recarregar();
+  }, [jobs, alvo, recarregar]);
 
   return (
     <div className="pagina">
@@ -38,12 +66,12 @@ export function Projeto() {
       {erro !== null && (
         <MensagemErro erro={erro} dica="Verifique se o nome do projeto existe na fábrica." />
       )}
-      {dados !== null && <DetalheProjeto projeto={dados} />}
+      {dados !== null && <DetalheProjeto projeto={dados} jobAtivo={jobAtivo} />}
     </div>
   );
 }
 
-function DetalheProjeto({ projeto }: { projeto: ProjetoDetalhe }) {
+function DetalheProjeto({ projeto, jobAtivo }: { projeto: ProjetoDetalhe; jobAtivo: Job | null }) {
   return (
     <>
       <header className="projeto-cab">
@@ -69,13 +97,15 @@ function DetalheProjeto({ projeto }: { projeto: ProjetoDetalhe }) {
         <ResumoStatus contagem={projeto.contagemPorStatus} />
       </section>
 
+      <AcoesProjeto projeto={projeto.nome} jobAtivo={jobAtivo} />
+
       <BlocoEquipe equipe={projeto.equipe} />
 
       <QuadroTarefas tarefas={projeto.tarefas} />
 
       {projeto.plano !== null && <BlocoPlano fases={projeto.plano.fases} />}
 
-      <SecaoAnalise projeto={projeto.nome} analise={projeto.analise} />
+      <SecaoAnalise projeto={projeto.nome} analise={projeto.analise} bloqueado={jobAtivo !== null} />
 
       <SecaoTexto titulo="Decisões" texto={projeto.decisoes} vazio="Sem DECISOES.md." />
       <SecaoTexto titulo="Progresso" texto={projeto.progresso} vazio="Sem PROGRESSO.md." />
@@ -300,7 +330,15 @@ function BlocoPlano({ fases }: { fases: FasePlano[] }) {
  * ação de análise (T-012), que lê o projeto de ponta a ponta e gera/atualiza o arquivo.
  * As estratégias de modelo vêm de /api/fabrica (mesmas da home).
  */
-function SecaoAnalise({ projeto, analise }: { projeto: string; analise: string | null }) {
+function SecaoAnalise({
+  projeto,
+  analise,
+  bloqueado,
+}: {
+  projeto: string;
+  analise: string | null;
+  bloqueado: boolean;
+}) {
   const fabrica = useDados<RespostaFabrica>("/api/fabrica");
   const temAnalise = analise !== null && analise.trim() !== "";
 
@@ -314,6 +352,7 @@ function SecaoAnalise({ projeto, analise }: { projeto: string; analise: string |
             estrategias={fabrica.dados.estrategias}
             estrategiaPadrao={fabrica.dados.estrategiaPadrao}
             temAnalise={temAnalise}
+            bloqueado={bloqueado}
           />
         )}
       </div>
@@ -335,11 +374,13 @@ function ControleAnalise({
   estrategias,
   estrategiaPadrao,
   temAnalise,
+  bloqueado,
 }: {
   projeto: string;
   estrategias: EstrategiaModelo[];
   estrategiaPadrao: string;
   temAnalise: boolean;
+  bloqueado: boolean;
 }) {
   const navegar = useNavigate();
   const [aberto, setAberto] = useState(false);
@@ -373,6 +414,8 @@ function ControleAnalise({
         type="button"
         className="botao botao-acao botao-compacto"
         onClick={() => setAberto(true)}
+        disabled={bloqueado}
+        title={bloqueado ? "Projeto ocupado por outro job — aguarde terminar." : undefined}
       >
         {temAnalise ? "Reanalisar" : "Analisar"}
       </button>
