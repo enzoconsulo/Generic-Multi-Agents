@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.build.json",
-    "test": "tsc --noEmit && vitest run"
+    "test": "tsc --noEmit && vitest run",
+    "teste:integracao": "tsx integracao/canusetool.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.217",

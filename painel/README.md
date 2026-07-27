@@ -70,10 +70,16 @@ npm run dev
 npm test          # tsc estrito + Vitest (servidor e web). Não usa rede nem login.
 ```
 
-> `npm run teste:integracao` existe mas **hoje é só um placeholder** (criado na T-002):
-> imprime um aviso e não roda nada. Nenhum teste que exija login real do Claude foi
-> escrito ainda — a integração real do `canUseTool` com o SDK continua **não validada em
-> execução paga**. Está registrado como pendência no `_gestao/PROGRESSO.md`.
+```powershell
+npm run teste:integracao   # GASTA a assinatura (~US$0,01 no Haiku). Exige login.
+```
+
+> O teste de integração valida o **`canUseTool` contra o SDK real**: dispara um fluxo com
+> `permissionMode: "default"` que tenta escrever fora do diretório de trabalho, confirma
+> que o job pausa em `aguardando-input` com a pendência criada, responde "aprovado" e
+> verifica que o fluxo destrava e conclui. Fica fora de `testes/` de propósito, para nunca
+> ser arrastado pelo `npm test`. Se nenhuma pendência aparecer, ele reporta
+> **INCONCLUSIVO** em vez de fingir sucesso.
 
 ## Arquitetura em 10 linhas
 

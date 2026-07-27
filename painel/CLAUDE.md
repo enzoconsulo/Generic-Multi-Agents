@@ -19,8 +19,8 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
 - Frontend: React 18 + Vite + TS, react-router; CSS puro com variáveis, dark mode
   padrão, tudo em PT-BR.
 - Testes: Vitest (+ supertest). `npm test` NUNCA usa rede nem login (SDK falsificado,
-  relógio injetado no watchdog). `teste:integracao` está reservado para o que exigir login
-  real — hoje é só um placeholder que não roda nada.
+  relógio injetado no watchdog). `teste:integracao` roda o teste PAGO do `canUseTool`
+  contra o SDK real (`servidor/integracao/`, fora de `testes/` para não cair no `npm test`).
 
 ## Como rodar
 - Instalar dependências (uma vez): `npm install` na raiz do projeto.
@@ -31,9 +31,10 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
 
 ## Como testar
 - Suíte completa: `npm test` (tsc estrito + Vitest no servidor e na web). Sem rede/login.
-- `npm run teste:integracao`: placeholder (não roda nada) — reservado para o que exigir
-  login real do Claude. A integração real do `canUseTool` com o SDK segue NÃO validada
-  em execução paga.
+- `npm run teste:integracao`: **gasta a assinatura de verdade** (~US$0,01 no Haiku) e
+  exige Claude Code logado. Valida o `canUseTool` ponta a ponta contra o SDK real:
+  pendência criada → job pausa → resposta destrava → fluxo conclui. Validado em
+  2026-07-27.
 
 ## Arquitetura em 1 minuto
 - `servidor/` — Express 5 (TS estrito, ESM). `src/config.ts` resolve a raiz da fábrica
@@ -95,5 +96,9 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   esperar o `result` significaria ter o dado só quando a retomada não importa mais.
 - **Uma conexão SSE por página.** `Projeto.tsx` chama `useJobsAoVivo()` uma vez e passa o
   estado para baixo (ex.: `SecaoCi`). Abrir uma segunda quebra a decisão de canal único.
+- **Comando "seguro" não testa permissão.** `echo`/`ls` são auto-aprovados pelo
+  classificador ANTES de chegar ao `canUseTool` — testar com eles dá falso negativo ("o
+  callback está quebrado"). Gatilho confiável: ação genuinamente barrada, como escrever
+  num caminho FORA do cwd (o SDK documenta isso em `blockedPath`).
 - **Um `/trabalhar` no chat e outro no painel se atropelam.** Os locks do painel não
   enxergam sessões interativas do terminal.

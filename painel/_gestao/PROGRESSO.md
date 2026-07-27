@@ -5,6 +5,19 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (canUseTool validado — pendência de 6 dias fechada)
+**A integração real do `canUseTool` com o SDK, pendente desde 2026-07-21, foi VALIDADA em
+execução paga.** O `teste:integracao` deixou de ser um `echo` placeholder e virou o teste
+de verdade (`servidor/integracao/canusetool.ts`, fora de `testes/`). Provado ponta a
+ponta: `permissionMode: "default"` → SDK chama o callback → runner cria a pendência → job
+pausa em `aguardando-input` → resposta "aprovado" destrava → fluxo conclui e o arquivo é
+escrito. **Armadilha que custou uma rodada:** a 1ª tentativa usava `echo` via Bash e saiu
+INCONCLUSIVA — comando trivialmente seguro é auto-aprovado pelo classificador antes de
+chegar ao `canUseTool`. O gatilho confiável é escrever FORA do cwd (o SDK documenta em
+`blockedPath`). Registrado em DECISOES.md e nas armadilhas do CLAUDE.md, porque quem for
+escrever o próximo teste de permissão vai instintivamente usar `echo` e concluir errado
+que o callback está quebrado. **Custo real: US$ 0,048 (~R$ 0,27) nas duas rodadas.**
+
 ## 2026-07-27 (T-020 — projeto completo)
 **T-020 — polimento e documentação (concluída). As 20 tarefas do painel estão fechadas;
 Fase 3 aprovada.** Achado real de UX: a tela de Jobs não tinha estado de erro — com o

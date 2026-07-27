@@ -8,6 +8,28 @@ Formato de cada entrada:
 **Motivo:** <por quê; qual alternativa foi descartada e por quê>
 **Quem:** <planejador | executor (T-NNN) | orquestrador | usuário>
 
+## 2026-07-27 — `canUseTool` VALIDADO em execução paga; `echo` não serve de gatilho
+**Decisão:** a integração real do `canUseTool` (T-010), pendente desde 2026-07-21, foi
+validada com o SDK de verdade — e o `teste:integracao`, que era um `echo` placeholder,
+virou esse teste (`servidor/integracao/canusetool.ts`, fora de `testes/` para nunca cair
+no `npm test`). **Provado ponta a ponta:** com `permissionMode: "default"`, o SDK chama o
+callback → o runner cria a pendência → o job pausa em `aguardando-input` → responder
+destrava → o fluxo conclui e a ferramenta aprovada roda de fato.
+**Armadilha achada no caminho (custou uma rodada paga):** a 1ª tentativa pedia
+`echo CANUSETOOL_OK` via Bash e saiu **INCONCLUSIVA** — o comando rodou, mas o callback
+NUNCA foi chamado. Comando trivialmente seguro é auto-aprovado pelo classificador de
+permissões antes de chegar ao `canUseTool`. O gatilho confiável é uma ação genuinamente
+barrada: escrever num caminho FORA do diretório de trabalho — que o próprio SDK documenta
+no campo `blockedPath` do `CanUseTool` ("quando um comando tenta acessar caminho fora dos
+diretórios permitidos"). Com `Write` num diretório externo, a pendência apareceu na hora.
+**Motivo do registro:** quem for escrever o próximo teste de permissão vai instintivamente
+usar `echo`/`ls` (parecem inofensivos, logo "seguros para testar") e vai concluir
+erradamente que o `canUseTool` está quebrado. O script imprime INCONCLUSIVO em vez de
+falso sucesso justamente para esse caso.
+**Custo real:** US$ 0,037 (rodada inconclusiva) + US$ 0,011 (rodada que provou) =
+**US$ 0,048 (~R$ 0,27)**, no Haiku.
+**Quem:** orquestrador + usuário (autorizou o gasto)
+
 ## 2026-07-27 — Marco da Fase 3 aprovado COM ressalva; documentação passa a admitir o que falta
 **Decisão:** as 20 tarefas estão `concluida` e o `Marco:` da Fase 3 foi registrado como
 **aprovado 2026-07-27, com ressalva explícita**: a verificação visual em navegador (parte
