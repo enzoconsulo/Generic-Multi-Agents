@@ -24,6 +24,8 @@ import {
 import { Carregando, MensagemErro } from "../../componentes/Estados";
 import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicadores";
 import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
+import { EquipeAoVivo } from "./EquipeAoVivo";
+import { MapaPlano } from "./MapaPlano";
 import { SecaoCi } from "./ci/PainelCi";
 
 export function Projeto() {
@@ -82,6 +84,11 @@ function DetalheProjeto({
   jobAtivo: Job | null;
   aoVivo: EstadoAoVivo;
 }) {
+  // Seleção de tarefa sobe para cá: o mapa do plano e o quadro apontam para a MESMA
+  // tarefa, então clicar num bloco do mapa abre o detalhe no quadro.
+  const [selecionada, setSelecionada] = useState<string | null>(null);
+  const refQuadro = useRef<HTMLDivElement>(null);
+
   return (
     <>
       <header className="projeto-cab">
@@ -109,13 +116,31 @@ function DetalheProjeto({
 
       <AcoesProjeto projeto={projeto} jobAtivo={jobAtivo} />
 
+      <EquipeAoVivo
+        equipe={projeto.equipe}
+        tarefas={projeto.tarefas}
+        logs={jobAtivo !== null ? (aoVivo.logs[jobAtivo.id] ?? []) : []}
+        jobAtivo={jobAtivo}
+      />
+
+      <MapaPlano
+        plano={projeto.plano}
+        tarefas={projeto.tarefas}
+        aoSelecionar={(arquivo) => {
+          setSelecionada(arquivo);
+          refQuadro.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      />
+
+      <div ref={refQuadro}>
+        <QuadroTarefas
+          tarefas={projeto.tarefas}
+          selecionada={selecionada}
+          aoSelecionar={setSelecionada}
+        />
+      </div>
+
       <SecaoCi projeto={projeto.nome} jobAtivo={jobAtivo} aoVivo={aoVivo} />
-
-      <BlocoEquipe equipe={projeto.equipe} />
-
-      <QuadroTarefas tarefas={projeto.tarefas} />
-
-      {projeto.plano !== null && <BlocoPlano fases={projeto.plano.fases} />}
 
       <SecaoAnalise projeto={projeto.nome} analise={projeto.analise} bloqueado={jobAtivo !== null} />
 
@@ -126,8 +151,16 @@ function DetalheProjeto({
 }
 
 /** Kanban por status + painel de detalhe da tarefa selecionada. */
-function QuadroTarefas({ tarefas }: { tarefas: TarefaCompleta[] }) {
-  const [selecionada, setSelecionada] = useState<string | null>(null);
+function QuadroTarefas({
+  tarefas,
+  selecionada,
+  aoSelecionar,
+}: {
+  tarefas: TarefaCompleta[];
+  selecionada: string | null;
+  aoSelecionar: (arquivo: string | null) => void;
+}) {
+  const setSelecionada = (f: (atual: string | null) => string | null) => aoSelecionar(f(selecionada));
   const colunas = ORDEM_STATUS.filter((s) => tarefas.some((t) => t.status === s));
   const tarefaSel = tarefas.find((t) => t.arquivo === selecionada) ?? null;
 
@@ -187,7 +220,7 @@ function QuadroTarefas({ tarefas }: { tarefas: TarefaCompleta[] }) {
           </div>
 
           {tarefaSel !== null && (
-            <DetalheTarefa tarefa={tarefaSel} aoFechar={() => setSelecionada(null)} />
+            <DetalheTarefa tarefa={tarefaSel} aoFechar={() => aoSelecionar(null)} />
           )}
         </>
       )}
@@ -269,71 +302,6 @@ function CampoSecao({ rot, texto }: { rot: string; texto: string }) {
         <pre className="bloco-texto">{conteudo}</pre>
       )}
     </div>
-  );
-}
-
-function BlocoEquipe({ equipe }: { equipe: EquipeProjeto }) {
-  return (
-    <section className="secao">
-      <h3 className="secao-titulo">Equipe de especialistas</h3>
-      {equipe.erros.length > 0 && (
-        <div className="aviso aviso-erro">{equipe.erros.join(" · ")}</div>
-      )}
-      {equipe.agentes.length === 0 ? (
-        <p className="texto-suave">
-          Sem equipe definida. Os especialistas são criados pelo planejador a partir da ideia
-          do projeto (em <code>_gestao/equipe.json</code>); enquanto não houver, o{" "}
-          <span className="mono">/trabalhar</span> usa o executor genérico.
-        </p>
-      ) : (
-        <div className="grade-cards">
-          {equipe.agentes.map((a) => (
-            <article key={a.id} className="card">
-              <div className="card-cab">
-                <h4 className="card-titulo">{a.nome}</h4>
-                <span className="badge badge-suave mono">{a.id}</span>
-              </div>
-              {a.descricao !== "" && <p className="card-desc">{a.descricao}</p>}
-              {a.ferramentas !== null && a.ferramentas.length > 0 && (
-                <p className="card-args">
-                  <span className="card-args-rot">Ferramentas</span>
-                  <code>{a.ferramentas.join(", ")}</code>
-                </p>
-              )}
-              {a.erros.length > 0 && (
-                <span className="badge badge-alerta">{a.erros.join(" · ")}</span>
-              )}
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function BlocoPlano({ fases }: { fases: FasePlano[] }) {
-  return (
-    <section className="secao">
-      <h3 className="secao-titulo">Plano</h3>
-      {fases.length === 0 ? (
-        <p className="texto-suave">Plano sem fases.</p>
-      ) : (
-        <div className="fases">
-          {fases.map((fase, i) => (
-            <article key={i} className="fase">
-              <div className="fase-cab">
-                <h4 className="fase-nome">{fase.nome}</h4>
-                {fase.marco !== null && <BadgeMarco marco={fase.marco} />}
-              </div>
-              {fase.meta !== "" && <p className="fase-meta">{fase.meta}</p>}
-              {fase.tarefas.length > 0 && (
-                <p className="fase-tarefas mono">{fase.tarefas.join(" · ")}</p>
-              )}
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
   );
 }
 

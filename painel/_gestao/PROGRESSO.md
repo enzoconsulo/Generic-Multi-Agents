@@ -5,6 +5,26 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (T-023 — a fábrica ficou visível)
+**T-023 — equipe ao vivo, mapa do planejamento e "como funciona" (concluída).** Resposta ao
+pedido de ver o funcionamento de forma VISUAL, sem ler arquivo nem log:
+- **Equipe ao vivo:** cards com quem está trabalhando AGORA (pulso verde), quantas vezes
+  cada um foi despachado e as tarefas de cada especialista. Junta três fontes que só
+  existiam separadas: `equipe.json`, o campo `agente:` das tarefas e o log de despacho.
+  Testador/revisor entram como "papel fixo" quando atuam — não estão no equipe.json, mas
+  omiti-los faria a visão mentir sobre quem trabalhou.
+- **Mapa do planejamento:** fases com barra de progresso e tarefas como blocos coloridos
+  (clicáveis, abrem o detalhe). Honesto de propósito: id citado no plano sem arquivo não
+  entra no total (plano desatualizado fica visível em vez de inflar o percentual) e tarefa
+  órfã aparece em "Fora do plano".
+- **Página "Como funciona"** (`/como-funciona`): o ciclo em 6 passos com cor separando o
+  que é SEU do que é da fábrica, quem é quem, e os dois modos de uso.
+Lógica extraída para `lib/atividade.ts` — puro e testado (10 testes), porque o regex do
+despacho é contrato com o formato que o runner emite.
+**Achado de ambiente:** a suíte abortou com `ERR_IPC_CHANNEL_CLOSED`; causa era o painel do
+usuário ainda no ar competindo por recursos, não bug. Suíte: **servidor 209/209 + web
+33/33**.
+
 ## 2026-07-27 (primeiro uso real — 2 bugs e o beco sem saída)
 **Feedback do primeiro uso de verdade.** Achados e corrigidos:
 - **Bug:** passávamos `canUseTool` mesmo sob `bypassPermissions`, modo em que o SDK

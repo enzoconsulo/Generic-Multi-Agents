@@ -1115,6 +1115,274 @@ a:hover {
   font-size: 0.82rem;
 }
 
+/* ---------- Equipe ao vivo (T-023) ---------- */
+.grade-equipe {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+.membro {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 0.85rem;
+  background-color: var(--cor-superficie);
+}
+.membro-ativo {
+  border-color: var(--cor-sucesso);
+  box-shadow: 0 0 0 1px var(--cor-sucesso) inset;
+}
+.membro-cab {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.membro-avatar {
+  flex: 0 0 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background-color: var(--cor-superficie-2);
+  border: 1px solid var(--cor-borda-forte);
+  color: var(--cor-acento);
+}
+.membro-id {
+  flex: 1;
+  min-width: 0;
+}
+.membro-nome {
+  display: block;
+  line-height: 1.2;
+}
+.membro-papel {
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+}
+.membro-estado {
+  flex: 0 0 auto;
+}
+.membro-trabalhando {
+  background-color: var(--cor-sucesso);
+  color: #06121f;
+  border-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pulso {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: #06121f;
+  animation: pulsar 1.2s ease-in-out infinite;
+}
+@keyframes pulsar {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulso { animation: none; }
+}
+.membro-desc {
+  margin: 0.55rem 0 0;
+  font-size: 0.84rem;
+  color: var(--cor-texto-suave);
+  line-height: 1.45;
+}
+.membro-tarefas {
+  margin-top: 0.6rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 0.78rem;
+}
+.membro-tarefas-rot {
+  color: var(--cor-texto-suave);
+}
+.membro-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+.chip-tarefa {
+  font-family: var(--fonte-mono);
+  font-size: 0.7rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--raio-sm);
+  background-color: var(--st, var(--cor-superficie-2));
+  color: #06121f;
+  font-weight: 600;
+}
+
+/* ---------- Mapa do planejamento (T-023) ---------- */
+.mapa-visao {
+  margin: 0 0 0.9rem;
+  color: var(--cor-texto-suave);
+  line-height: 1.5;
+}
+.mapa-fases {
+  display: grid;
+  gap: 0.75rem;
+}
+.mapa-fase {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 0.85rem 1rem;
+  background-color: var(--cor-superficie);
+}
+.mapa-fase-completa {
+  border-color: color-mix(in srgb, var(--cor-sucesso) 45%, var(--cor-borda));
+}
+.mapa-fase-orfas {
+  margin-top: 0.75rem;
+  border-style: dashed;
+}
+.mapa-fase-cab {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+.mapa-fase-num {
+  flex: 0 0 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background-color: var(--cor-superficie-2);
+  border: 1px solid var(--cor-borda-forte);
+}
+.mapa-fase-nome {
+  flex: 1;
+  min-width: 0;
+}
+.mapa-fase-prog {
+  font-family: var(--fonte-mono);
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+.mapa-fase-meta {
+  margin: 0.45rem 0 0.6rem;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  line-height: 1.45;
+}
+.barra {
+  height: 0.4rem;
+  border-radius: 999px;
+  background-color: var(--cor-superficie-2);
+  overflow: hidden;
+}
+.barra-preenchida {
+  height: 100%;
+  background-color: var(--cor-sucesso);
+  transition: width 0.3s ease;
+}
+.mapa-blocos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+.bloco {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: var(--raio-sm);
+  border: none;
+  cursor: pointer;
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+  line-height: 1.15;
+  background-color: var(--st, var(--cor-superficie-2));
+  color: #06121f;
+  font-weight: 600;
+}
+.bloco:hover {
+  outline: 2px solid var(--cor-acento);
+  outline-offset: 1px;
+}
+.bloco-agente {
+  font-size: 0.62rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+.bloco-ausente {
+  background-color: transparent;
+  border: 1px dashed var(--cor-erro);
+  color: var(--cor-erro);
+  cursor: help;
+}
+.mapa-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+  font-size: 0.74rem;
+  color: var(--cor-texto-suave);
+}
+.mapa-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* ---------- Como funciona (T-023) ---------- */
+.fluxo {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.fluxo-passo {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  border: 1px solid var(--cor-borda);
+  border-left-width: 4px;
+  border-radius: var(--raio);
+  padding: 0.75rem 0.9rem;
+  background-color: var(--cor-superficie);
+}
+.fluxo-voce {
+  border-left-color: var(--cor-acento);
+}
+.fluxo-agente {
+  border-left-color: var(--cor-sucesso);
+}
+.fluxo-num {
+  flex: 0 0 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  background-color: var(--cor-superficie-2);
+  border: 1px solid var(--cor-borda-forte);
+}
+.fluxo-corpo {
+  flex: 1;
+  min-width: 0;
+}
+.fluxo-cab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.fluxo-texto {
+  margin: 0.25rem 0 0;
+  color: var(--cor-texto-suave);
+  line-height: 1.5;
+}
+
 /* ---------- Próximo passo sugerido (T-022) ---------- */
 .passo {
   display: flex;

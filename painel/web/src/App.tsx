@@ -1,4 +1,5 @@
 import { NavLink, Route, Routes } from "react-router-dom";
+import { ComoFunciona } from "./paginas/como-funciona/ComoFunciona";
 import { Inicio } from "./paginas/inicio/Inicio";
 import { Jobs } from "./paginas/jobs/Jobs";
 import { Projeto } from "./paginas/projeto/Projeto";
@@ -13,6 +14,7 @@ export function App() {
             Início
           </NavLink>
           <NavLink to="/jobs">Jobs</NavLink>
+          <NavLink to="/como-funciona">Como funciona</NavLink>
         </nav>
       </header>
       <main className="conteudo">
@@ -20,6 +22,7 @@ export function App() {
           <Route path="/" element={<Inicio />} />
           <Route path="/projeto/:nome" element={<Projeto />} />
           <Route path="/jobs" element={<Jobs />} />
+          <Route path="/como-funciona" element={<ComoFunciona />} />
           <Route path="*" element={<PaginaNaoEncontrada />} />
         </Routes>
       </main>
