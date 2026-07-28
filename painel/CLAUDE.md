@@ -107,6 +107,15 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
     fetches e sai "Carregando…" em toda seção. E `--virtual-time-budget`, que existiria
     para isso, DERRUBA o navegador nesta máquina (testado). Por isso o script usa CDP.
   - Suba o painel antes (`npm start`) e derrube depois — painel no ar atrapalha a suíte.
+  - **Tela que só existe depois de um clique: use `--js`** (T-029). `--js="<expressão>"`
+    roda na página antes do retrato e `--pos-espera=<ms>` dá tempo de pintar. Sem isso só
+    se vê o estado inicial — caixa fechada, painel não aberto, formulário não expandido.
+    Truque que vale ouro: para MEDIR (não só olhar), injete o resultado na própria página
+    (`document.body.appendChild(...)`) e ele aparece no PNG — foi assim que se provou que
+    o resumão passou a entrar na tela (`scrollY 0 → 1632`).
+  - **Página longa sai ilegível na captura**: o PNG inteiro é reduzido para caber, e
+    detalhe de 0.7rem some. Para inspecionar de perto, remova as outras seções pelo `--js`
+    antes do retrato — a página encurta e a fidelidade sobe.
 - **UI dada por pronta sem ninguém ver a tela é aposta.** Aconteceu duas vezes seguidas
   (T-020, T-023): lógica testada + strings no bundle NÃO provam que a tela ficou boa nem
   que o usuário vê diferença. Hoje não há desculpa — veja o item acima.

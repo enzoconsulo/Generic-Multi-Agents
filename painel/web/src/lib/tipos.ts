@@ -306,3 +306,30 @@ export interface HistoricoGit {
   truncado: boolean;
   aviso: string | null;
 }
+
+export interface ArquivoAlterado {
+  caminho: string;
+  adicoes: number;
+  remocoes: number;
+  binario: boolean;
+}
+
+/** GET /api/git/:projeto/commit/:hash — o "resumão" de um commit. */
+export interface DetalheCommit {
+  hash: string;
+  arquivos: ArquivoAlterado[];
+  adicoes: number;
+  remocoes: number;
+  corpo: string;
+}
+
+export interface AlteracaoPendente {
+  caminho: string;
+  codigo: string;
+  situacao: string;
+}
+
+/** GET /api/git/:projeto/alteracoes. */
+export interface AlteracoesPendentes {
+  alteracoes: AlteracaoPendente[];
+}

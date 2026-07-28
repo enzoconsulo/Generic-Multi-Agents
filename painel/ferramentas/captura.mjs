@@ -12,6 +12,12 @@
  *
  * Uso:
  *   node ferramentas/captura.mjs <url> <arquivo.png> [--espera=2500] [--altura=1200]
+ *                                [--js="<expressão>"] [--pos-espera=1200]
+ *
+ * `--js` roda uma expressão na página ANTES de capturar (e `--pos-espera` dá tempo do
+ * resultado pintar). É o que permite conferir tela que só existe depois de um clique —
+ * caixa que abre, item que expande. Sem isso só se vê o estado inicial.
+ *   --js="[...document.querySelectorAll('.caixa-cab')].at(-1).click()"
  */
 
 import { spawn } from "node:child_process";
@@ -34,7 +40,14 @@ const arg = (nome, padrao) => {
   const achado = process.argv.find((a) => a.startsWith(`--${nome}=`));
   return achado ? Number(achado.split("=")[1]) : padrao;
 };
+/** Argumento de texto (`--js=...`): pode conter `=`, então só o primeiro separa. */
+const argTexto = (nome) => {
+  const achado = process.argv.find((a) => a.startsWith(`--${nome}=`));
+  return achado ? achado.slice(nome.length + 3) : null;
+};
 const espera = arg("espera", 2500);
+const js = argTexto("js");
+const posEspera = arg("pos-espera", 1200);
 const altura = arg("altura", 1200);
 const largura = arg("largura", 1400);
 const porta = arg("porta", 9333);
@@ -111,6 +124,23 @@ try {
   // Respiro para o React resolver os fetches e pintar — é exatamente o que falta no
   // `--screenshot` simples.
   await dorme(espera);
+
+  // Interação opcional: clique/scroll/preenchimento antes do retrato.
+  if (js !== null) {
+    // Teto obrigatório: com `awaitPromise`, uma promessa que nunca resolve — caso
+    // clássico, exceção DENTRO de um setTimeout, que o `exceptionDetails` não pega —
+    // deixaria a captura pendurada para sempre. Melhor fotografar o que deu e avisar.
+    const r = await Promise.race([
+      cmd("Runtime.evaluate", { expression: js, awaitPromise: true, returnByValue: true }),
+      dorme(15000).then(() => "estourou"),
+    ]);
+    if (r === "estourou") {
+      console.error("aviso: --js não terminou em 15s; capturando o estado atual");
+    } else if (r?.exceptionDetails) {
+      throw new Error(`--js falhou: ${r.exceptionDetails.text ?? "erro na expressão"}`);
+    }
+    await dorme(posEspera);
+  }
 
   const { data } = await cmd("Page.captureScreenshot", {
     format: "png",
