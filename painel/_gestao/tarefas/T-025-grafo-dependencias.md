@@ -2,7 +2,7 @@
 id: T-025
 titulo: Grafo de dependências no mapa — ordem de execução e paralelismo real
 projeto: painel-fabrica
-status: em-teste
+status: concluida
 prioridade: media
 dependencias: [T-023]
 areas: [web/src/lib/atividade.ts, web/src/paginas/projeto/MapaPlano.tsx]
@@ -64,4 +64,5 @@ paralelismo" e conferir se aparecem 5 degraus, com T-003 e T-005 marcadas como p
 no 3º.
 
 ## Revisão
-Pendente da verificação acima.
+Verificação visual feita pelo USUÁRIO em 2026-07-28, junto com a T-024. Aprovada.
+Refinamentos que saíram DESTA verificação foram para a T-026.

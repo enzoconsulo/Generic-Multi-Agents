@@ -92,6 +92,34 @@ export const ESTADOS_JOB_TERMINAIS: ReadonlySet<string> = new Set([
   "interrompido",
 ]);
 
+/* --------------------------------- Tempo --------------------------------- */
+
+/**
+ * Duração legível a partir de milissegundos. Escala a unidade para caber em pouco espaço
+ * (5s / 2min 13s / 1h 04min) — "há quanto tempo isto está rodando" é a pergunta que a
+ * pessoa faz olhando uma execução ao vivo.
+ */
+export function duracaoLegivel(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "—";
+  const seg = Math.floor(ms / 1000);
+  if (seg < 60) return `${seg}s`;
+  const min = Math.floor(seg / 60);
+  if (min < 60) return `${min}min ${String(seg % 60).padStart(2, "0")}s`;
+  const h = Math.floor(min / 60);
+  return `${h}h ${String(min % 60).padStart(2, "0")}min`;
+}
+
+/**
+ * Tempo decorrido entre duas marcas ISO (ou até `agora`). Devolve null quando a marca de
+ * início não é utilizável — o chamador decide o que mostrar, em vez de receber "NaN".
+ */
+export function decorrido(inicioIso: string | undefined, fimMs: number): string | null {
+  if (inicioIso === undefined) return null;
+  const inicio = Date.parse(inicioIso);
+  if (Number.isNaN(inicio)) return null;
+  return duracaoLegivel(fimMs - inicio);
+}
+
 /* ----------------------------- Peso e custo ----------------------------- */
 
 export const ROTULO_PESO: Record<string, string> = {

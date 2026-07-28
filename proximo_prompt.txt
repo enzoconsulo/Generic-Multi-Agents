@@ -7,7 +7,7 @@ Leia, nesta ordem:
     3. painel/CLAUDE.md                  (seção "Armadilhas conhecidas" — 13 armadilhas
                                           reais, cada uma de um bug que já custou tempo)
 Scan de status (um Grep resolve):
-    ^status: em painel/_gestao/tarefas/*.md          → 23 concluida + T-024/T-025 em-teste
+    ^status: em painel/_gestao/tarefas/*.md          → 25 concluida + T-026 em-teste
     ^status: em projetos/*/_gestao/tarefas/*.md      → ia-hibrida-limpa: 1 pronta, 5 backlog
 
 Como rodar:  duplo-clique em INICIAR.bat (raiz) → abre http://127.0.0.1:8765 sozinho.
@@ -46,26 +46,16 @@ GENERICIDADE — JÁ PROVADA, não precisa auditar de novo:
 O QUE FAZER — EM ORDEM
 =================================================================
 
-1) *** T-024 CONSTRUÍDA — AGUARDANDO A VERIFICAÇÃO VISUAL DO USUÁRIO ***
-   Arquivo: painel/_gestao/tarefas/T-024-jobs-visual.md (status: em-teste)
+1) T-026 — REFINO VISUAL (em-teste, aguardando sua conferida)
+   T-024 (Jobs visual) e T-025 (grafo de dependências) foram APROVADAS pelo usuário.
+   O refino que veio depois está em `em-teste`: cronômetro ao vivo na execução, selo de
+   atividade no menu, e `.pagina` ganhou layout (largura máxima + ritmo vertical).
 
-   A página /jobs foi reescrita: bloco "quem trabalha agora" (avatar, pulso, tarefa em
-   foco), trilha do pipeline (Construir → Testar → Revisar) com a etapa destacada, e
-   trechos por agente colapsáveis com duração. Log cru mantido atrás de "ver log técnico".
-
-   ESTÁ EM `em-teste` DE PROPÓSITO, não em `concluida`: os critérios exigem ver a tela e o
-   orquestrador não tem navegador. Entregar UI sem ninguém olhar foi o erro que gerou esta
-   tarefa — não repita.
-   AÇÃO: peça ao usuário para abrir /jobs, disparar um fluxo e dizer se ficou bom.
-     - ficou bom  → marque `concluida` e siga para o item 2;
-     - não ficou  → anote o que ele apontou na seção Verificação e corrija ANTES do resto.
-
-   NA MESMA LEVA, TAMBÉM `em-teste`: T-025 (grafo de dependências no mapa do plano).
-   Nova seção "Ordem de execução e paralelismo" na página do projeto: degraus de
-   dependência, contorno nas tarefas que rodam simultaneamente, selo de paralelismo
-   máximo, e denúncia de ciclo/dependência quebrada. Verificar junto: abrir
-   ia-hibrida-limpa → expandir a seção → devem aparecer 5 degraus, com T-003 e T-005
-   marcadas como paralelas no 3º.
+   AÇÃO: peça ao usuário para conferir 3 coisas e então marque `concluida`:
+     - o cronômetro ANDANDO durante uma execução ("há 2min 13s");
+     - o selo verde no menu Jobs enquanto algo roda;
+     - o espaçamento das páginas após o `.pagina` ganhar layout — é a mudança com maior
+       chance de efeito colateral visual.
 
 2) EXECUTAR O ia-hibrida-limpa (é o passo natural; nada de código do painel envolvido)
    Estado: ESPECIFICACAO + PLANO (3 fases) + T-001..T-006 criados; equipe com

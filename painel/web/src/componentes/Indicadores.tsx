@@ -21,7 +21,7 @@ export function ChipStatus({ status }: { status: string }) {
 /** Estado do marco de uma fase (pendente/aprovado/reprovado) com data, se houver. */
 export function BadgeMarco({ marco }: { marco: MarcoFase }) {
   return (
-    <span className={`badge marco ${classeMarco(marco.estado)}`}>
+    <span className={`badge ${classeMarco(marco.estado)}`}>
       {rotuloMarco(marco.estado)}
       {marco.data !== null && ` · ${marco.data}`}
     </span>

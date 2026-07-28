@@ -156,7 +156,7 @@ function OrdemDeExecucao({
                           : "\nsem dependências"
                       }${t.areas.length > 0 ? `\nmexe em: ${t.areas.join(", ")}` : ""}`}
                     >
-                      <span className="bloco-id">{t.id}</span>
+                      <span>{t.id}</span>
                       {t.agente !== null && <span className="bloco-agente">{t.agente}</span>}
                     </button>
                   ))}
@@ -240,7 +240,7 @@ function Bloco({
         tarefa.agente !== null ? ` · ${tarefa.agente}` : ""
       }`}
     >
-      <span className="bloco-id">{tarefa.id}</span>
+      <span>{tarefa.id}</span>
       {tarefa.agente !== null && <span className="bloco-agente">{tarefa.agente}</span>}
     </button>
   );

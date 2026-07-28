@@ -2,7 +2,7 @@
 id: T-024
 titulo: Página de Jobs visual — linha do tempo da execução, agente atual e progresso
 projeto: painel-fabrica
-status: em-teste
+status: concluida
 prioridade: alta
 dependencias: [T-023]
 areas: [web/src/paginas/jobs/]
@@ -93,4 +93,5 @@ gerou esta tarefa. **Quem verifica é o usuário**: abrir `/jobs`, disparar um f
 conferir se aparece quem trabalha, a trilha e os trechos por agente. Só então `concluida`.
 
 ## Revisão
-Pendente da verificação acima.
+Verificação visual feita pelo USUÁRIO em 2026-07-28 ("acho que ficou bom"). Aprovada.
+Refinamentos que saíram DESTA verificação foram para a T-026.

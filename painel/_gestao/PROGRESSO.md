@@ -5,6 +5,21 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-28 (T-026 — refino visual; T-024 e T-025 aprovadas pelo usuário)
+**Usuário aprovou as telas ("acho que ficou bom") — T-024 e T-025 fechadas.** Pediu então
+um refino de integridade visual. Auditoria feita SEM navegador, cruzando classes usadas
+nos `.tsx` com as definidas no CSS — pega bug invisível.
+- **Furo próprio corrigido:** "há quanto tempo o job roda" era critério de aceite da T-024
+  e NÃO tinha sido implementado. Era o dado mais vivo da tela de execução. Agora o
+  cronômetro ANDA segundo a segundo (e desliga quando o job termina).
+- **Selo de atividade no menu**: a fábrica trabalhando fica visível de qualquer tela —
+  antes o painel parecia parado a menos que você estivesse na aba certa.
+- **3 classes eram aplicadas sem existir no CSS**: `.pagina` (que envolve TODAS as telas e
+  não tinha estilo nenhum), `.marco` e `.bloco-id`. `.pagina` ganhou largura máxima e
+  ritmo vertical; as outras duas eram markup morto e saíram. Auditoria re-executada:
+  **zero classes órfãs**.
+Suíte: **servidor 209/209 + web 53/53** (+5). Em `em-teste`: falta a conferida visual.
+
 ## 2026-07-27 (T-025 — grafo de dependências, em-teste)
 **T-025 — o painel passou a mostrar o que pode rodar ao mesmo tempo.** Nasceu de uma
 pergunta do usuário ("a alocação de agentes é eficiente? por que só 2 especialistas?") que

@@ -10,7 +10,14 @@ import {
   type SegmentoAgente,
 } from "../../lib/atividade";
 import type { Job, LinhaLog, Pendencia } from "../../lib/tipos";
-import { classeEstadoJob, jobCancelavel, rotuloEstadoJob } from "../../lib/formato";
+import {
+  classeEstadoJob,
+  decorrido,
+  duracaoLegivel,
+  jobCancelavel,
+  rotuloEstadoJob,
+} from "../../lib/formato";
+import { useAgora } from "../../lib/useAgora";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
 
 /**
@@ -129,6 +136,10 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
   const [verLogCru, setVerLogCru] = useState(false);
 
   const rodando = jobCancelavel(job.estado);
+  // Relógio só corre enquanto o job está vivo; terminado tem duração fixa.
+  const agora = useAgora(rodando);
+  const fim = rodando ? agora : Date.parse(job.terminadoEm ?? job.criadoEm);
+  const tempo = decorrido(job.iniciadoEm ?? job.criadoEm, fim);
   const agente = rodando ? agenteAtivo(linhas) : null;
   const segmentos = segmentarPorAgente(linhas);
   const tarefa = tarefaEmFoco(linhas);
@@ -177,6 +188,7 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
             <span className="agora-sub">
               {agente !== null ? "trabalhando agora" : "organizando o trabalho"}
               {tarefa !== null && ` · tarefa ${tarefa}`}
+              {tempo !== null && ` · há ${tempo}`}
             </span>
           </div>
         </div>
@@ -187,6 +199,7 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
       <dl className="job-campos">
         <Campo rot="Modelo" valor={modelo} />
         <Campo rot="Escopo" valor={job.escopo} />
+        {tempo !== null && <Campo rot={rodando ? "Rodando há" : "Durou"} valor={tempo} />}
         {resultado?.numTurnos != null && <Campo rot="Turnos" valor={String(resultado.numTurnos)} />}
         {resultado?.custoUsd != null && (
           <Campo rot="Custo real" valor={`~$${resultado.custoUsd.toFixed(4)}`} />
@@ -281,7 +294,7 @@ function Trecho({ segmento, aberto }: { segmento: SegmentoAgente; aberto: boolea
         {segmento.etapa !== null && <span className="badge badge-suave">{segmento.etapa}</span>}
         <span className="trecho-meta">
           {ferramentas > 0 && `${ferramentas} ferramenta(s)`}
-          {segmento.duracaoMs > 0 && ` · ${duracao(segmento.duracaoMs)}`}
+          {segmento.duracaoMs > 0 && ` · ${duracaoLegivel(segmento.duracaoMs)}`}
         </span>
       </button>
 
@@ -463,13 +476,6 @@ const ROTULO_NIVEL: Record<string, string> = {
 };
 function rotuloNivel(nivel: string): string {
   return ROTULO_NIVEL[nivel] ?? "·";
-}
-
-function duracao(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s}s`;
-  return `${Math.floor(s / 60)}min ${s % 60}s`;
 }
 
 function horaCurta(iso: string): string {

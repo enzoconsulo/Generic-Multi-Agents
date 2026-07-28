@@ -1115,6 +1115,37 @@ a:hover {
   font-size: 0.82rem;
 }
 
+/* Selo de atividade no menu: a fábrica trabalhando fica visível de qualquer tela. */
+.selo-vivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background-color: var(--cor-sucesso);
+  color: #06121f;
+}
+
+/* ---------- Layout de página (T-026) ----------
+   `.pagina` envolve TODAS as telas e não tinha estilo nenhum: cada página herdava só o
+   padding do .conteudo, e o ritmo vertical entre seções ficava por conta de cada uma.
+   Centralizar aqui dá consistência de largura e respiro em todas de uma vez. */
+.pagina {
+  max-width: 78rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+/* As seções já trazem margem própria; dentro do flex, zerar evita espaço dobrado. */
+.pagina > .secao,
+.pagina > .intro {
+  margin: 0;
+}
+
 /* ---------- Jobs visual (T-024) ---------- */
 .job-item-agente {
   display: inline-flex;
