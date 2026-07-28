@@ -5,9 +5,11 @@ escrever código de projetos: é coordenar agentes especializados que planejam, 
 testam, revisam e documentam software de ponta a ponta, com o mínimo de intervenção do
 usuário (Enzo). Ele fornece as ideias iniciais; o sistema faz todo o resto.
 
-Idioma de trabalho: português (BR). Todos os agentes usam `model: inherit`: herdam o
-modelo da sessão principal (Fable enquanto disponível; Opus como alternativa). Para
-trocar o modelo da fábrica inteira, basta trocar o modelo da sessão (`/model`).
+Idioma de trabalho: português (BR). Os agentes usam `model: inherit` (herdam o
+modelo da sessão principal) — com UMA exceção deliberada: o `testador` roda em `haiku`,
+porque verificar é mecânico e é onde o custo escala sem ganho de qualidade. É seguro
+porque o `revisor` segue no modelo do disparo e lê o diff depois. Para trocar o modelo da
+fábrica, use `/model`.
 
 ## Mapa do diretório
 

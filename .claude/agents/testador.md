@@ -2,8 +2,20 @@
 name: testador
 description: Verifica uma tarefa em em-teste executando cada criterio de aceite de verdade (rodando o software). Aprova para revisao ou reprova de volta para execucao com relatorio de reproducao. Nao corrige codigo.
 tools: Read, Glob, Grep, Edit, Write, Bash, PowerShell
-model: inherit
+model: haiku
 ---
+
+<!--
+  ÚNICA exceção à regra "model: inherit" da fábrica, e é deliberada (2026-07-28).
+  Verificar é MECÂNICO: rodar os comandos dos critérios de aceite e comparar a saída com o
+  que a tarefa pede. Não exige a capacidade de quem CONSTRÓI. Testador e revisor somam boa
+  parte dos turnos de cada tarefa, então é aqui que o custo escala sem ganho.
+  É seguro porque o REVISOR continua no modelo do disparo e lê o diff depois: uma aprovação
+  frouxa do testador ainda esbarra nele. O caminho inverso (revisor barato) NÃO é seguro —
+  bug que passa custa mais tarde do que se economiza agora.
+  Para voltar atrás, troque para `inherit`.
+-->
+
 
 Você é o TESTADOR da fábrica de software: cético profissional. Sua missão é tentar
 provar que a tarefa NÃO funciona. Você recebe o caminho absoluto do projeto e o ID da

@@ -181,7 +181,7 @@ O sistema nunca apaga projetos sozinho.
      expostos, validacao de entrada). Usar antes de concluir projetos com login,
      pagamento ou dados sensiveis. Nao corrige codigo.
    tools: Read, Glob, Grep, Edit, Bash, PowerShell   # omita a linha = todas as ferramentas
-   model: inherit                   # SEMPRE inherit — nunca fixe modelo
+   model: inherit                   # regra: inherit (só o testador foge — ver §6.4)
    ---
 
    Você é o AGENTE DE SEGURANÇA da fábrica... (papel, sequência obrigatória,
@@ -216,8 +216,24 @@ O sistema nunca apaga projetos sozinho.
 
 ### 6.4 Trocar o modelo
 
-`/model` na sessão principal — e nada mais. Todos os agentes usam `model: inherit`.
-Nunca fixe modelo no frontmatter de um agente.
+`/model` na sessão principal — e nada mais. Os agentes usam `model: inherit`.
+
+**Uma exceção deliberada (2026-07-28): o `testador` roda em `haiku`.** Verificar é
+mecânico — rodar os comandos dos critérios de aceite e comparar a saída. Testador e
+revisor somam boa parte dos turnos de cada tarefa, então é aí que o custo escala sem
+ganho. É seguro porque o **revisor continua no modelo do disparo** e lê o diff depois:
+uma aprovação frouxa do testador ainda esbarra nele. O inverso (revisor barato) NÃO é
+seguro — bug que passa custa mais depois do que se economiza agora. Para reverter,
+troque `model:` para `inherit` em `.claude/agents/testador.md`.
+
+**Onde o dinheiro realmente vaza** (medido em execuções reais):
+- **Retrabalho**, não o modelo. Cada ciclo reprovado repete executor + testador + revisor
+  (~$1–2). Modelo barato demais CONSTRUINDO gera mais ciclos e sai mais caro no total.
+- **Análise/status em modelo caro.** Analisar um projeto no Opus custou US$3,86; a mesma
+  classe de tarefa em Haiku ficou abaixo de US$0,15. São tarefas de ler e resumir —
+  escolha Haiku no disparo.
+- O custo que o painel mostra durante a execução é **cumulativo** da sessão: a última
+  linha é o total, não some as anteriores.
 
 ## 7. Ajustes finos de desempenho
 
