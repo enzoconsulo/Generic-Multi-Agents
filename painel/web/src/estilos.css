@@ -1115,6 +1115,101 @@ a:hover {
   font-size: 0.82rem;
 }
 
+/* ---------- Markdown renderizado (T-026) ----------
+   Os documentos da fábrica eram despejados crus numa <pre>: uma parede de #, ** e -.
+   Agora viram conteúdo formatado. */
+.md {
+  line-height: 1.6;
+}
+.md > *:first-child {
+  margin-top: 0;
+}
+.md-titulo {
+  margin: 1.1rem 0 0.45rem;
+  line-height: 1.3;
+  font-weight: 600;
+}
+.md-h1 {
+  font-size: 1.12rem;
+  color: var(--cor-texto);
+  border-bottom: 1px solid var(--cor-borda);
+  padding-bottom: 0.3rem;
+}
+.md-h2 {
+  font-size: 1rem;
+  color: var(--cor-acento-forte);
+}
+.md-h3,
+.md-h4,
+.md-h5,
+.md-h6 {
+  font-size: 0.92rem;
+  color: var(--cor-texto);
+}
+.md-p {
+  margin: 0.5rem 0;
+}
+.md-lista {
+  margin: 0.5rem 0;
+  padding-left: 1.3rem;
+  display: grid;
+  gap: 0.28rem;
+}
+.md-lista li::marker {
+  color: var(--cor-acento);
+}
+.md-cod-inline {
+  font-family: var(--fonte-mono);
+  font-size: 0.85em;
+  padding: 0.08rem 0.28rem;
+  border-radius: 4px;
+  background-color: var(--cor-superficie-2);
+  border: 1px solid var(--cor-borda);
+}
+.md-codigo {
+  margin: 0.6rem 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--raio-sm);
+  background-color: #0b0d12;
+  border: 1px solid var(--cor-borda);
+  font-family: var(--fonte-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+.md-citacao {
+  margin: 0.6rem 0;
+  padding: 0.15rem 0 0.15rem 0.75rem;
+  border-left: 3px solid var(--cor-borda-forte);
+  color: var(--cor-texto-suave);
+}
+.md-regua {
+  border: none;
+  border-top: 1px solid var(--cor-borda);
+  margin: 1rem 0;
+}
+
+/* Documento longo: mostra o começo e some com o resto atrás de um clique. */
+.texto-longo {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+}
+.texto-longo-cortado {
+  position: relative;
+  max-height: 22rem;
+  overflow: hidden;
+}
+/* Esmaecer a borda deixa óbvio que há mais texto — corte seco parece fim de conteúdo. */
+.texto-longo-cortado::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 4rem;
+  background: linear-gradient(to bottom, transparent, var(--cor-fundo));
+  pointer-events: none;
+}
+
 /* Selo de atividade no menu: a fábrica trabalhando fica visível de qualquer tela. */
 .selo-vivo {
   display: inline-flex;

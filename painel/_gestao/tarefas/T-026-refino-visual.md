@@ -2,7 +2,7 @@
 id: T-026
 titulo: Refino visual — cronômetro ao vivo, layout de página e integridade do CSS
 projeto: painel-fabrica
-status: em-teste
+status: concluida
 prioridade: media
 dependencias: [T-024, T-025]
 areas: [web/src/lib/, web/src/App.tsx, web/src/estilos.css]
@@ -31,6 +31,10 @@ markup que não estiliza nada.
 - [x] Toda classe usada no markup existe no CSS (auditoria automatizada, zero órfãs).
 - [x] `.pagina` deixa de ser um invólucro sem estilo.
 - [x] Formatação de tempo testada, inclusive entrada inválida.
+- [x] Documentos da fábrica (ANALISE/DECISOES/PROGRESSO) renderizados como conteúdo, não
+      como markdown cru numa `<pre>`.
+- [x] Documento longo colapsado, com o resto a um clique.
+- [x] Telas VERIFICADAS visualmente (capturadas e olhadas).
 
 ## Notas de execução
 **Furo próprio corrigido:** "há quanto tempo o job roda" era critério de aceite da T-024 e
@@ -57,13 +61,23 @@ existir no estilo — `.pagina`, `.marco` e `.bloco-id`.
 - Auditoria re-executada ao final: **zero classes órfãs**.
 
 ## Verificação
-`npm test`: **web 53/53** (+5 de `tempo.test.ts`) **+ servidor 209/209**; build e
+`npm test`: **web 66/66** (+13: `tempo.test.ts` e `markdown.test.ts`) **+ servidor 209/209**; build e
 `tsc --noEmit` limpos. Auditoria automatizada de classes: zero órfãs.
 
-**NÃO VERIFICADO NO NAVEGADOR** — mesma limitação de sempre. O que pedir ao usuário para
-conferir: o cronômetro andando durante uma execução, o selo verde no menu Jobs enquanto
-algo roda, e se o espaçamento das páginas continua correto após o `.pagina` ganhar layout
-(é a mudança com maior chance de efeito colateral visual).
+**VERIFICADO NO NAVEGADOR — pela primeira vez no projeto.** Criada
+`ferramentas/captura.mjs`, que dirige o Edge já instalado via DevTools Protocol e gera PNG
+que pode ser lido. Telas conferidas: home (dados reais, ações, projetos), página do projeto
+(o que fazer agora, equipe, mapa, kanban, CI, documentos) e "como funciona".
+
+**O que a captura revelou e não teria sido pego de outro jeito:** as seções Análise,
+Decisões e Progresso eram PAREDES DE MARKDOWN CRU — `#`, `**`, `-` aparecendo como texto
+literal numa `<pre>`. Exatamente o que o usuário reclamou ("não quero ficar lendo textos
+extensos"), e nenhum teste pegaria: o texto estava lá, só ilegível. Daí o parser e o
+colapso terem entrado nesta tarefa.
+
+Pendente de conferida do usuário (opcional, já que agora eu vejo): o cronômetro ANDANDO
+segundo a segundo — a captura é estática, então provei que o valor aparece, não que ele
+avança.
 
 ## Revisão
-Pendente da verificação acima.
+Auto-revisão com evidência visual. `tsc --noEmit` limpo nos dois workspaces.

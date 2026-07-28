@@ -5,6 +5,20 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-28 (VERIFICAÇÃO VISUAL DESTRAVADA — a maior lacuna do projeto)
+**O painel passou a ser verificável visualmente.** Até aqui NENHUMA tela tinha sido vista
+renderizada — todas as tarefas de UI foram entregues com ressalva. Descoberto que Edge e
+Chrome já estão instalados no Windows: `ferramentas/captura.mjs` dirige o navegador via
+DevTools Protocol (sem instalar nada) e gera PNG que pode ser lido.
+Detalhe que custou tentativas: `--screenshot` direto captura ANTES de o React resolver os
+fetches (sai "Carregando…" em tudo), e `--virtual-time-budget`, que existiria para isso,
+DERRUBA os dois navegadores nesta máquina. Por isso CDP com espera explícita.
+**O que a primeira captura revelou — e nenhum teste pegaria:** as seções Análise, Decisões
+e Progresso eram PAREDES DE MARKDOWN CRU (`#`, `**`, `-` como texto literal numa `<pre>`).
+Exatamente a reclamação do usuário sobre "textos extensos": o conteúdo estava lá, só
+ilegível. Corrigido com parser próprio (~100 linhas, sem dependência, gerando elementos
+React — zero risco de injeção) + colapso com "Mostrar tudo (N linhas)".
+
 ## 2026-07-28 (T-026 — refino visual; T-024 e T-025 aprovadas pelo usuário)
 **Usuário aprovou as telas ("acho que ficou bom") — T-024 e T-025 fechadas.** Pediu então
 um refino de integridade visual. Auditoria feita SEM navegador, cruzando classes usadas

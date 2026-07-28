@@ -98,10 +98,18 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   esperar o `result` significaria ter o dado só quando a retomada não importa mais.
 - **Uma conexão SSE por página.** `Projeto.tsx` chama `useJobsAoVivo()` uma vez e passa o
   estado para baixo (ex.: `SecaoCi`). Abrir uma segunda quebra a decisão de canal único.
+- **DÁ para ver a tela: use `ferramentas/captura.mjs`.** Isso resolveu a maior lacuna do
+  projeto (nenhuma tela tinha sido vista renderizada até 2026-07-28).
+  `node ferramentas/captura.mjs <url> <arquivo.png> --espera=3000` dirige o Edge/Chrome
+  já instalado no Windows via DevTools Protocol — sem instalar nada — e o PNG pode ser
+  LIDO. Antes de marcar tarefa de UI como `concluida`, capture e olhe.
+  - Não use `--screenshot` direto do navegador: captura antes de o React resolver os
+    fetches e sai "Carregando…" em toda seção. E `--virtual-time-budget`, que existiria
+    para isso, DERRUBA o navegador nesta máquina (testado). Por isso o script usa CDP.
+  - Suba o painel antes (`npm start`) e derrube depois — painel no ar atrapalha a suíte.
 - **UI dada por pronta sem ninguém ver a tela é aposta.** Aconteceu duas vezes seguidas
   (T-020, T-023): lógica testada + strings no bundle NÃO provam que a tela ficou boa nem
-  que o usuário vê diferença. Antes de marcar uma tarefa de UI como `concluida`, olhe no
-  navegador — ou peça ao usuário para olhar.
+  que o usuário vê diferença. Hoje não há desculpa — veja o item acima.
 - **Entregue onde o usuário OLHA.** A T-023 pôs a visualização de agentes na página do
   projeto; o usuário acompanha execução na página de **Jobs**, que ficou como estava. Ao
   receber um pedido de UI, confirme em QUAL tela ele acontece.

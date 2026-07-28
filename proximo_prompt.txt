@@ -7,7 +7,7 @@ Leia, nesta ordem:
     3. painel/CLAUDE.md                  (seção "Armadilhas conhecidas" — 13 armadilhas
                                           reais, cada uma de um bug que já custou tempo)
 Scan de status (um Grep resolve):
-    ^status: em painel/_gestao/tarefas/*.md          → 25 concluida + T-026 em-teste
+    ^status: em painel/_gestao/tarefas/*.md          → 26/26 concluida
     ^status: em projetos/*/_gestao/tarefas/*.md      → ia-hibrida-limpa: 1 pronta, 5 backlog
 
 Como rodar:  duplo-clique em INICIAR.bat (raiz) → abre http://127.0.0.1:8765 sozinho.
@@ -46,16 +46,17 @@ GENERICIDADE — JÁ PROVADA, não precisa auditar de novo:
 O QUE FAZER — EM ORDEM
 =================================================================
 
-1) T-026 — REFINO VISUAL (em-teste, aguardando sua conferida)
-   T-024 (Jobs visual) e T-025 (grafo de dependências) foram APROVADAS pelo usuário.
-   O refino que veio depois está em `em-teste`: cronômetro ao vivo na execução, selo de
-   atividade no menu, e `.pagina` ganhou layout (largura máxima + ritmo vertical).
+1) VOCÊ CONSEGUE VER A TELA — use isso (novidade de 2026-07-28)
+   `cd painel && npm start` e depois:
+     node ferramentas/captura.mjs http://127.0.0.1:8765/projeto/<nome> saida.png --espera=3000
+   Dirige o Edge/Chrome já instalado via DevTools Protocol, sem instalar nada, e o PNG
+   pode ser LIDO com a ferramenta Read. Foi o que destravou a maior lacuna do projeto:
+   até 27/07 nenhuma tela tinha sido vista renderizada.
+   NÃO use `--screenshot` direto do navegador (captura antes do React pintar) nem
+   `--virtual-time-budget` (derruba o navegador nesta máquina — testado).
+   Derrube o painel antes de rodar `npm test`: painel no ar quebra o worker do vitest.
 
-   AÇÃO: peça ao usuário para conferir 3 coisas e então marque `concluida`:
-     - o cronômetro ANDANDO durante uma execução ("há 2min 13s");
-     - o selo verde no menu Jobs enquanto algo roda;
-     - o espaçamento das páginas após o `.pagina` ganhar layout — é a mudança com maior
-       chance de efeito colateral visual.
+   >>> A partir de agora, tarefa de UI só vai para `concluida` DEPOIS de capturar e olhar.
 
 2) EXECUTAR O ia-hibrida-limpa (é o passo natural; nada de código do painel envolvido)
    Estado: ESPECIFICACAO + PLANO (3 fases) + T-001..T-006 criados; equipe com

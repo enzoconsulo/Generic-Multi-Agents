@@ -22,6 +22,8 @@ import {
   rotuloStatus,
 } from "../../lib/formato";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
+import { Markdown } from "../../componentes/Markdown";
+import { TextoLongo } from "../../componentes/TextoLongo";
 import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicadores";
 import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
 import { EquipeAoVivo } from "./EquipeAoVivo";
@@ -299,7 +301,9 @@ function CampoSecao({ rot, texto }: { rot: string; texto: string }) {
       {conteudo === "" ? (
         <p className="texto-suave secao-tarefa-vazia">(vazio)</p>
       ) : (
-        <pre className="bloco-texto">{conteudo}</pre>
+        <div className="bloco-texto">
+          <Markdown texto={conteudo} />
+        </div>
       )}
     </div>
   );
@@ -337,7 +341,7 @@ function SecaoAnalise({
         )}
       </div>
       {temAnalise ? (
-        <pre className="bloco-texto bloco-texto-grande">{(analise as string).trim()}</pre>
+        <TextoLongo texto={(analise as string).trim()} />
       ) : (
         <p className="texto-suave">
           Análise ainda não gerada. Clique em <strong>Analisar</strong> — o painel lê o código
@@ -456,7 +460,7 @@ function SecaoTexto({
       {texto === null || texto.trim() === "" ? (
         <p className="texto-suave">{vazio}</p>
       ) : (
-        <pre className="bloco-texto bloco-texto-grande">{texto.trim()}</pre>
+        <TextoLongo texto={texto.trim()} />
       )}
     </section>
   );
