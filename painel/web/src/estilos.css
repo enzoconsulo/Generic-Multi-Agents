@@ -1910,3 +1910,89 @@ a:hover {
   align-items: stretch;
   gap: 0.5rem;
 }
+
+/* ---------- Grafo de commits (T-028) ----------
+   O painel mostrava o plano e as tarefas; faltava o que ACONTECEU no código. Como a
+   fábrica commita uma vez por tarefa, o histórico é a prova do trabalho. */
+.grafo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  overflow-x: auto;
+}
+.grafo-svg {
+  flex: 0 0 auto;
+}
+.grafo-linha {
+  stroke: var(--cor-faixa, var(--cor-acento));
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.grafo-no {
+  fill: var(--cor-fundo);
+  stroke: var(--cor-faixa, var(--cor-acento));
+  stroke-width: 2.5;
+}
+.grafo-merge {
+  fill: var(--cor-faixa, var(--cor-acento));
+}
+/* Paleta ciclada por faixa: cores distinguíveis entre si no fundo escuro. */
+.cor-0 { --cor-faixa: #5da9ff; }
+.cor-1 { --cor-faixa: #56d364; }
+.cor-2 { --cor-faixa: #e3b341; }
+.cor-3 { --cor-faixa: #bc8cff; }
+.cor-4 { --cor-faixa: #39c5cf; }
+.cor-5 { --cor-faixa: #ff7b72; }
+.cor-6 { --cor-faixa: #ffa657; }
+.cor-7 { --cor-faixa: #d2a8ff; }
+
+.grafo-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-width: 0;
+}
+.grafo-item {
+  height: 30px; /* casado com ALTURA no GrafoGit.tsx — desalinhar quebra o desenho */
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 0.5rem;
+  border-radius: var(--raio-sm);
+}
+.grafo-item:hover {
+  background-color: var(--cor-superficie);
+}
+.grafo-assunto {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+.grafo-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+  font-size: 0.74rem;
+}
+.grafo-ref {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background-color: var(--cor-superficie-2);
+  border: 1px solid var(--cor-acento);
+  color: var(--cor-acento);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.grafo-tag {
+  border-color: var(--cor-alerta);
+  color: var(--cor-alerta);
+}
+.grafo-hash {
+  font-family: var(--fonte-mono);
+  color: var(--cor-texto-suave);
+}

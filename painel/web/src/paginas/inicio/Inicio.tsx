@@ -11,6 +11,7 @@ import type {
   RespostaProjetos,
 } from "../../lib/tipos";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
+import { GrafoGit } from "../../componentes/GrafoGit";
 import { BadgeMarco, ResumoStatus } from "../../componentes/Indicadores";
 import { estimarCusto, rotuloPeso } from "../../lib/formato";
 
@@ -72,6 +73,8 @@ export function Inicio() {
           </div>
         )}
       </section>
+
+      <GrafoGit repo="_fabrica" titulo="Histórico da fábrica" />
 
       <section className="secao">
         <h3 className="secao-titulo">Projetos</h3>

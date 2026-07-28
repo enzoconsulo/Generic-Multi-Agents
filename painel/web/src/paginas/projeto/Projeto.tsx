@@ -22,6 +22,7 @@ import {
   rotuloStatus,
 } from "../../lib/formato";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
+import { GrafoGit } from "../../componentes/GrafoGit";
 import { Markdown } from "../../componentes/Markdown";
 import { TextoLongo } from "../../componentes/TextoLongo";
 import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicadores";
@@ -141,6 +142,8 @@ function DetalheProjeto({
           aoSelecionar={setSelecionada}
         />
       </div>
+
+      <GrafoGit repo={projeto.nome} titulo="Histórico do código" />
 
       <SecaoCi projeto={projeto.nome} jobAtivo={jobAtivo} aoVivo={aoVivo} />
 

@@ -5,6 +5,21 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-28 (T-028 — grafo de commits + submódulo + suíte determinística)
+**Grafo de commits estilo Git Graph**, na página do projeto e na home (repositório da
+própria fábrica). O painel mostrava o PLANO e as TAREFAS; faltava o que ACONTECEU no
+código — e como a fábrica commita uma vez por tarefa, o histórico é a prova do trabalho.
+Backend só-leitura (`git log --all --date-order`), layout em função PURA com 8 testes
+(faixas, merge, raiz, pai fora do trecho), SVG sem biblioteca.
+**`Local_AI` virou submódulo de verdade**: era um gitlink SOLTO — o repo apontava para um
+commit sem dizer de onde buscá-lo, então um clone vinha com a pasta vazia e sem conserto.
+Ressalva registrada: o ponteiro está em `9d0d08c`, que ainda NÃO existe no remoto; enquanto
+os commits locais não forem enviados, um clone novo não resolve o submódulo.
+**Suíte determinística:** `fileParallelism: false` no servidor. O pool paralelo saturava o
+IPC (a suíte sobe muitos processos filhos) e morria com `ERR_IPC_CHANNEL_CLOSED` — 3 vezes,
+parecendo bug do código. Em série: 209/209. Custo de ~24s, e vale.
+Suíte: **servidor 209/209 + web 77/77** (+8).
+
 ## 2026-07-28 (T-027 — interface revisada OLHANDO, e cronômetro provado)
 **Cronômetro PROVADO** com duas capturas espaçadas: "Rodando há 11s" → "Durou 30s". A
 prova usou o motor de CI (gratuito, roda processo local) num projeto temporário, já

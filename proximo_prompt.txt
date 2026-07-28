@@ -7,14 +7,15 @@ Leia, nesta ordem:
     3. painel/CLAUDE.md                  (seção "Armadilhas conhecidas" — 13 armadilhas
                                           reais, cada uma de um bug que já custou tempo)
 Scan de status (um Grep resolve):
-    ^status: em painel/_gestao/tarefas/*.md          → 27/27 concluida
+    ^status: em painel/_gestao/tarefas/*.md          → 27 concluida + T-028 em-teste
     ^status: em projetos/*/_gestao/tarefas/*.md      → ia-hibrida-limpa: 1 pronta, 5 backlog
 
 Como rodar:  duplo-clique em INICIAR.bat (raiz) → abre http://127.0.0.1:8765 sozinho.
              Ou: cd painel && npm run build && npm start
 Testes:      cd painel && npm test  → 209 (servidor) + 33 (web), todos verdes.
-             ATENÇÃO: FECHE o painel antes de testar. Painel no ar compete por recursos e
-             derruba o worker do vitest com ERR_IPC_CHANNEL_CLOSED — parece bug, não é.
+             O servidor roda em SÉRIE (fileParallelism: false) porque o pool paralelo
+             saturava o IPC e morria com ERR_IPC_CHANNEL_CLOSED — parecia bug do código.
+             Ainda assim, feche o painel antes de testar.
 Teste pago:  npm run teste:integracao (~US$0,01, valida canUseTool contra o SDK real).
 
 

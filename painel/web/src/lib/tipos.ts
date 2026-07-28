@@ -283,3 +283,26 @@ export interface EstagioCiAoVivo {
   codigoSaida?: number | null;
   duracaoMs?: number | null;
 }
+
+/* ------------------------------ Git (T-028) ------------------------------ */
+
+export interface CommitGit {
+  hash: string;
+  curto: string;
+  /** Hashes dos pais: 0 = raiz, 2+ = merge. */
+  pais: string[];
+  autor: string;
+  data: string;
+  assunto: string;
+  /** Branches/tags apontando para este commit. */
+  refs: string[];
+}
+
+/** GET /api/git/:projeto (use `_fabrica` para o repositório da raiz). */
+export interface HistoricoGit {
+  ehRepo: boolean;
+  branch: string;
+  commits: CommitGit[];
+  truncado: boolean;
+  aviso: string | null;
+}
