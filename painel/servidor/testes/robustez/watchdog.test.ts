@@ -146,3 +146,97 @@ describe("watchdog de inatividade", () => {
     expect(final.estado).toBe("cancelado");
   });
 });
+
+/**
+ * Limite POR AÇÃO (T-037). Achado numa execução real: a ação `pesquisar` foi cortada com
+ * "mais de 15 min" apesar de estar configurada com 20 — o watchdog era construído uma vez
+ * com o padrão e nunca consultava a tabela, deixando a coluna `watchdogMs` morta.
+ *
+ * A transição é ASSÍNCRONA (o abort viaja até o runner), então estes testes esperam o
+ * estado como os de cima — checar logo após `varrer()` lê o estado velho.
+ */
+describe("watchdog respeita o limite que o job carrega", () => {
+  let dir: string;
+  let ger: GerenciadorJobs;
+  let manual: RunnerManual;
+  let relogio: number;
+  let watchdog: Watchdog;
+
+  const PADRAO = 60_000;
+
+  beforeEach(() => {
+    dir = dirTemporario();
+    ger = new GerenciadorJobs({ dirJobs: dir, tetoClaude: 4 });
+    manual = criarRunnerManual();
+    ger.registrarRunner("manual", manual.runner);
+    relogio = 1_000_000;
+    watchdog = new Watchdog(ger, { limiteMs: PADRAO, agora: () => relogio });
+    watchdog.iniciar();
+  });
+
+  afterEach(() => {
+    watchdog.parar();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function jobCom(params: Record<string, unknown>, projeto: string) {
+    return ger.criarJob({
+      tipo: "manual",
+      titulo: `Job de ${projeto}`,
+      escopo: `projeto:${projeto}`,
+      usaClaude: true,
+      params,
+    });
+  }
+
+  it("job paciente sobrevive à varredura que mata o job de limite padrão", async () => {
+    // O teste que falharia com o comportamento antigo: com um limite global, os DOIS
+    // morreriam na mesma varredura.
+    const padrao = jobCom({}, "alfa");
+    const paciente = jobCom({ watchdogMs: PADRAO * 5 }, "beta");
+    await aguardarEstado(ger, padrao.id, "executando");
+    await aguardarEstado(ger, paciente.id, "executando");
+
+    relogio += PADRAO + 1_000;
+    watchdog.varrer();
+
+    await aguardarEstado(ger, padrao.id, "interrompido");
+    expect(ger.obter(paciente.id)?.estado).toBe("executando");
+    expect(watchdog.vigiados).toContain(paciente.id);
+  });
+
+  it("o job paciente também é cortado quando passa do SEU limite", async () => {
+    const paciente = jobCom({ watchdogMs: PADRAO * 5 }, "beta");
+    await aguardarEstado(ger, paciente.id, "executando");
+
+    relogio += PADRAO * 5 + 1_000;
+    watchdog.varrer();
+    await aguardarEstado(ger, paciente.id, "interrompido");
+  });
+
+  it("a mensagem informa o limite que valeu para AQUELE job", async () => {
+    // Dizer "1 min" onde valeram 5 é a mesma família da tela que mente.
+    const paciente = jobCom({ watchdogMs: 5 * 60_000 }, "beta");
+    await aguardarEstado(ger, paciente.id, "executando");
+
+    relogio += 5 * 60_000 + 1_000;
+    watchdog.varrer();
+    const final = await aguardarEstado(ger, paciente.id, "interrompido");
+    expect(final.erro).toContain("5 min");
+  });
+
+  it("watchdogMs inválido cai no padrão em vez de desligar a vigilância", async () => {
+    // Zero/negativo/texto não podem virar "nunca interrompe" — seria pior que o bug.
+    const ruins: unknown[] = [0, -5, "vinte", null];
+    const jobs = ruins.map((ruim, i) => jobCom({ watchdogMs: ruim }, `p${i}`));
+    for (const j of jobs) await aguardarEstado(ger, j.id, "executando");
+
+    relogio += PADRAO + 1_000;
+    watchdog.varrer();
+
+    for (const [i, j] of jobs.entries()) {
+      const final = await aguardarEstado(ger, j.id, "interrompido");
+      expect(final.erro, `watchdogMs=${String(ruins[i])}`).toMatch(/watchdog/i);
+    }
+  });
+});

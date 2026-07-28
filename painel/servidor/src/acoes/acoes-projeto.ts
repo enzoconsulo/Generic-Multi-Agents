@@ -231,7 +231,10 @@ export async function montarJobAcaoProjeto(
   const modelo = await lerPromptProjeto(idAcao);
   const prompt = montarDespacho(modelo, { projeto, dirProjeto: dir, entrada: opcoes.entrada ?? "" });
 
-  const maxTurns = opcoes.maxTurns ?? guardrailsParaAcao(`projeto:${idAcao}`).maxTurns;
+  // Guardrails resolvidos AQUI e gravados no job: o watchdog lê o limite de silêncio de
+  // `params`, em vez de tentar deduzir de que ação o job veio (T-037).
+  const guardrails = guardrailsParaAcao(`projeto:${idAcao}`);
+  const maxTurns = opcoes.maxTurns ?? guardrails.maxTurns;
 
   return {
     tipo: "claude",
@@ -245,6 +248,7 @@ export async function montarJobAcaoProjeto(
       modelo: opcoes.modelo,
       ...(opcoes.fallback ? { fallback: opcoes.fallback } : {}),
       maxTurns,
+      watchdogMs: guardrails.watchdogMs,
     },
   };
 }

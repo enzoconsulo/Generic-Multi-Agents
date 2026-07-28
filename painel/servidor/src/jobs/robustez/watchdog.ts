@@ -22,7 +22,7 @@ import type { DadosTransicao, EventoJob, Job } from "../tipos.js";
  */
 
 export interface OpcoesWatchdog {
-  /** Silêncio tolerado antes de interromper (ms). */
+  /** Silêncio tolerado antes de interromper (ms) — usado quando o job não traz o seu. */
   limiteMs: number;
   /** Período da varredura (ms). Default: 1/4 do limite, no mínimo 1s. */
   intervaloMs?: number;
@@ -30,8 +30,16 @@ export interface OpcoesWatchdog {
   agora?: () => number;
 }
 
+/** O que o watchdog guarda de cada job vigiado. */
+interface Vigiado {
+  /** Instante do último sinal de vida. */
+  ultimo: number;
+  /** Silêncio tolerado POR ESTE job (ms) — vem de `params.watchdogMs`. */
+  limiteMs: number;
+}
+
 export class Watchdog {
-  private readonly ultimoEvento = new Map<string, number>();
+  private readonly ultimoEvento = new Map<string, Vigiado>();
   private temporizador: ReturnType<typeof setInterval> | undefined;
   private readonly agora: () => number;
   private readonly intervaloMs: number;
@@ -69,7 +77,12 @@ export class Watchdog {
       const { para, job } = (evento.dados ?? {}) as Partial<DadosTransicao>;
       if (para === undefined || job === undefined) return;
       if (para === "executando" && this.deveVigiar(job)) {
-        this.ultimoEvento.set(evento.jobId, this.agora());
+        // O limite é resolvido na ENTRADA da vigilância e congelado: mudar de limite no
+        // meio do silêncio faria o job saltar de "quase cortado" para "recém-visto".
+        this.ultimoEvento.set(evento.jobId, {
+          ultimo: this.agora(),
+          limiteMs: limiteDoJob(job) ?? this.opcoes.limiteMs,
+        });
       } else {
         // Terminal ou `aguardando-input`: sai da vigilância (ver decisão 2 acima).
         this.ultimoEvento.delete(evento.jobId);
@@ -77,9 +90,8 @@ export class Watchdog {
       return;
     }
     // Qualquer outro evento (log, ferramenta, estágio…) é sinal de vida.
-    if (this.ultimoEvento.has(evento.jobId)) {
-      this.ultimoEvento.set(evento.jobId, this.agora());
-    }
+    const vigiado = this.ultimoEvento.get(evento.jobId);
+    if (vigiado !== undefined) vigiado.ultimo = this.agora();
   };
 
   private deveVigiar(job: Job): boolean {
@@ -92,17 +104,33 @@ export class Watchdog {
    */
   varrer(): void {
     const agora = this.agora();
-    for (const [id, ultimo] of [...this.ultimoEvento]) {
-      if (agora - ultimo <= this.opcoes.limiteMs) continue;
+    for (const [id, vigiado] of [...this.ultimoEvento]) {
+      if (agora - vigiado.ultimo <= vigiado.limiteMs) continue;
       this.ultimoEvento.delete(id);
       try {
-        this.gerenciador.interromper(id, motivoInatividade(this.opcoes.limiteMs));
+        // A mensagem informa o limite que valeu PARA ESTE job — dizer "15 min" onde
+        // valeram 20 é a mesma família de erro que a tela que mente.
+        this.gerenciador.interromper(id, motivoInatividade(vigiado.limiteMs));
       } catch {
         // O job pode ter assentado entre a varredura e a interrupção — nesse caso
         // `interromper` lança (estado não-cancelável) e não há nada a fazer.
       }
     }
   }
+}
+
+/**
+ * Limite de silêncio que o próprio job carrega (`params.watchdogMs`, gravado por quem
+ * montou o job a partir da tabela de guardrails). `null` quando o job não traz um válido
+ * — aí vale o padrão do watchdog.
+ *
+ * O job carrega o valor em vez de o watchdog deduzir a ação a partir do título/prompt:
+ * deduzir acoplaria o vigia ao texto dos comandos, que é justamente o que a tabela
+ * data-driven existe para evitar.
+ */
+function limiteDoJob(job: Job): number | null {
+  const bruto = (job.params ?? {})["watchdogMs"];
+  return typeof bruto === "number" && Number.isFinite(bruto) && bruto > 0 ? bruto : null;
 }
 
 export function motivoInatividade(limiteMs: number): string {

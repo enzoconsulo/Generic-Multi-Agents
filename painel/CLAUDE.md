@@ -177,6 +177,15 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   problema em vez de contê-lo.
 - **`credential.helper` no Windows vem do gitconfig do SISTEMA.** Lê-lo com `--global`
   devolve vazio e faz a UI dizer "não conectado" numa máquina que publica normalmente.
+- **Configuração que ninguém lê é pior que configuração ausente.** A coluna `watchdogMs`
+  da tabela de guardrails existia desde a T-019 e NUNCA foi consultada: o watchdog era
+  construído uma vez com o padrão. `/trabalhar` pedia 20 min e recebia 15, e ninguém
+  percebeu porque a tabela *parecia* estar no ar. Só apareceu quando uma execução real foi
+  cortada com um limite que não era o configurado. Ao acrescentar campo em tabela
+  data-driven, confira quem o CONSOME.
+- **A interrupção do watchdog é ASSÍNCRONA.** Checar o estado logo depois de `varrer()` lê
+  o estado velho e faz parecer que o watchdog não funciona — use `await aguardarEstado(…)`,
+  como os testes antigos já faziam.
 - **Teste de rota que sobrescreve `FABRICA_RAIZ` só aceita import DINÂMICO.** `config.ts`
   lê a env na CARGA do módulo, e `import` estático é içado: basta um import estático de
   qualquer módulo que importe `config.js` para a raiz apontar para a fábrica real em vez

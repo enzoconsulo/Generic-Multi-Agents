@@ -62,9 +62,11 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
   const args = (pedido.argumentos ?? "").trim();
   const prompt = args === "" ? `/${id}` : `/${id} ${args}`;
 
-  // Guardrail de turnos (T-019): teto por tipo de ação quando o disparo não pediu um
-  // explicitamente — nenhum fluxo sobe mais sem teto nenhum.
-  const maxTurns = pedido.maxTurns ?? guardrailsParaAcao(id).maxTurns;
+  // Guardrails por tipo de ação (T-019): teto de turnos quando o disparo não pediu um
+  // explicitamente — nenhum fluxo sobe mais sem teto nenhum — e o limite de silêncio que
+  // o watchdog vai respeitar para ESTE job (T-037).
+  const guardrails = guardrailsParaAcao(id);
+  const maxTurns = pedido.maxTurns ?? guardrails.maxTurns;
 
   return {
     tipo: "claude",
@@ -80,6 +82,7 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
         ? { agentes: pedido.agentes }
         : {}),
       maxTurns,
+      watchdogMs: guardrails.watchdogMs,
     },
   };
 }
