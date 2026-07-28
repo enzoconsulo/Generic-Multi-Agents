@@ -108,7 +108,9 @@ export function EquipeAoVivo({
 
   return (
     <section className="secao">
-      <h3 className="secao-titulo">Equipe</h3>
+      {/* "ao vivo" no título para não confundir com a seção "Equipe de especialistas"
+          (T-035), logo acima: aquela é o elenco cadastrado, esta é quem TRABALHOU. */}
+      <h3 className="secao-titulo">Equipe ao vivo</h3>
 
       {equipe.erros.length > 0 && (
         <div className="aviso aviso-erro aviso-compacto">{equipe.erros.join(" · ")}</div>
