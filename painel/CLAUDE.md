@@ -51,8 +51,13 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
 - `web/` — React 18 + Vite (TS estrito). `src/lib/` (helper de fetch, tipos espelhando a
   API, `useDados`, `useJobsAoVivo` = o canal SSE, formatação); `src/componentes/`;
   `src/paginas/inicio` (panorama + ações + projetos), `src/paginas/projeto` (ações, CI/CD,
-  kanban, plano, análise, decisões, progresso) e `src/paginas/jobs` (console ao vivo).
-  Tema dark em `src/estilos.css`.
+  kanban, plano, análise, decisões, progresso), `src/paginas/jobs` (console ao vivo) e
+  `src/paginas/git` (repositórios: endereço na nuvem, commit e push). Tema dark em
+  `src/estilos.css`.
+- **Git é uma bifurcação, não um repositório só** (T-030): a raiz versiona sistema +
+  painel; cada `projetos/<nome>` é repositório INDEPENDENTE com remoto próprio (a raiz
+  ignora `projetos/`). `fabrica/git.ts` cuida do repositório local (histórico, commit) e
+  `fabrica/publicacao.ts` de tudo que atravessa a rede (remoto, push).
 - Estado é sempre derivado dos arquivos da fábrica na hora da consulta; `dados/` guarda só
   histórico operacional (descartável, fora do git).
 
@@ -138,3 +143,11 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   num caminho FORA do cwd (o SDK documenta isso em `blockedPath`).
 - **Um `/trabalhar` no chat e outro no painel se atropelam.** Os locks do painel não
   enxergam sessões interativas do terminal.
+- **Comando de rede sem `GIT_TERMINAL_PROMPT=0` PENDURA o servidor.** Um `git push` que
+  precise de senha fica esperando uma resposta que nunca chega, e o painel inteiro trava
+  junto. `publicacao.ts` também zera `GIT_ASKPASS` e usa `ssh -o BatchMode=yes`, mais
+  teto de tempo. Vale para qualquer comando externo que possa perguntar algo.
+- **URL de remoto é lista de PERMISSÃO (https/git@/ssh), nunca lista de proibições.**
+  `ext::<comando>` é uma URL que o git aceita e que faz ele EXECUTAR o comando — é
+  execução remota disfarçada de endereço. Mesma família do hash de commit que precisa ser
+  hexadecimal: argumento não validado vira flag ou vira código.

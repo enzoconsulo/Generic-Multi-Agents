@@ -269,7 +269,7 @@ export async function commitar(dirRepo: string, mensagem: string): Promise<strin
   }
 }
 
-async function lerBranch(dirRepo: string): Promise<string> {
+export async function lerBranch(dirRepo: string): Promise<string> {
   try {
     const { stdout } = await exec("git", ["branch", "--show-current"], {
       cwd: dirRepo,

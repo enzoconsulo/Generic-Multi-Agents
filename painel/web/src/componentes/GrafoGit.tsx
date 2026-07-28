@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { api, ErroApi } from "../lib/api";
 import { useDados } from "../lib/useDados";
 import { montarGrafo } from "../lib/grafo-git";
-import type {
-  AlteracoesPendentes,
-  CommitGit,
-  DetalheCommit,
-  HistoricoGit,
-} from "../lib/tipos";
+import type { CommitGit, DetalheCommit, HistoricoGit } from "../lib/tipos";
 import { Carregando, MensagemErro } from "./Estados";
+import { PainelCommit } from "./PainelCommit";
 
 /**
  * Grafo de commits estilo Git Graph (T-028) dentro de uma caixa que abre ao clicar
@@ -57,15 +52,7 @@ function ConteudoGit({ repo }: { repo: string }) {
   const historico = useDados<HistoricoGit>(
     `/api/git/${encodeURIComponent(repo)}?limite=${limite}`,
   );
-  const pendentes = useDados<AlteracoesPendentes>(
-    `/api/git/${encodeURIComponent(repo)}/alteracoes`,
-  );
   const { carregando, dados, erro } = historico;
-
-  const aposCommit = () => {
-    historico.recarregar();
-    pendentes.recarregar();
-  };
 
   return (
     <div className="caixa-corpo">
@@ -76,12 +63,7 @@ function ConteudoGit({ repo }: { repo: string }) {
       )}
 
       {dados?.ehRepo === true && (
-        <PainelCommit
-          repo={repo}
-          alteracoes={pendentes.dados?.alteracoes ?? []}
-          carregando={pendentes.carregando && pendentes.dados === null}
-          aoCommitar={aposCommit}
-        />
+        <PainelCommit repo={repo} aoCommitar={historico.recarregar} />
       )}
 
       {carregando && dados === null && <Carregando texto="Lendo o histórico…" />}
@@ -108,135 +90,6 @@ function ConteudoGit({ repo }: { repo: string }) {
       )}
     </div>
   );
-}
-
-/* ----------------------------- Commitar pelo app ----------------------------- */
-
-function PainelCommit({
-  repo,
-  alteracoes,
-  carregando,
-  aoCommitar,
-}: {
-  repo: string;
-  alteracoes: AlteracoesPendentes["alteracoes"];
-  carregando: boolean;
-  aoCommitar: () => void;
-}) {
-  const [aberto, setAberto] = useState(false);
-  const [mensagem, setMensagem] = useState("");
-  const [enviando, setEnviando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [feito, setFeito] = useState<string | null>(null);
-
-  if (carregando) return <p className="texto-suave">Vendo o que mudou…</p>;
-
-  if (alteracoes.length === 0) {
-    return (
-      <p className="commit-limpo">
-        <span className="commit-ok" aria-hidden="true">
-          ✓
-        </span>{" "}
-        Tudo commitado — nenhuma alteração pendente.
-        {feito !== null && (
-          <>
-            {" "}
-            Último commit pelo painel: <code className="grafo-hash">{feito}</code>.
-          </>
-        )}
-      </p>
-    );
-  }
-
-  const enviar = async () => {
-    setEnviando(true);
-    setErro(null);
-    try {
-      const r = await api<{ curto: string }>(
-        `/api/git/${encodeURIComponent(repo)}/commit`,
-        { method: "POST", body: JSON.stringify({ mensagem }) },
-      );
-      setFeito(r.curto);
-      setMensagem("");
-      setAberto(false);
-      aoCommitar();
-    } catch (e) {
-      setErro(e instanceof ErroApi || e instanceof Error ? e.message : "Falha ao commitar");
-    } finally {
-      setEnviando(false);
-    }
-  };
-
-  return (
-    <div className="commit-caixa">
-      <div className="commit-cab">
-        <span className="commit-contagem">
-          {alteracoes.length} {alteracoes.length === 1 ? "alteração" : "alterações"} sem
-          commit
-        </span>
-        <button
-          type="button"
-          className="botao botao-compacto"
-          onClick={() => setAberto((a) => !a)}
-        >
-          {aberto ? "Cancelar" : "Commitar…"}
-        </button>
-      </div>
-
-      {aberto && (
-        <div className="commit-form">
-          <ul className="commit-arquivos">
-            {alteracoes.map((a) => (
-              <li key={a.caminho} title={`código do git: "${a.codigo}"`}>
-                <span className={`commit-situacao sit-${slugSituacao(a.situacao)}`}>
-                  {a.situacao}
-                </span>
-                <code>{a.caminho}</code>
-              </li>
-            ))}
-          </ul>
-
-          <label className="commit-campo">
-            <span className="commit-rotulo">Mensagem do commit</span>
-            <textarea
-              className="commit-entrada"
-              rows={2}
-              value={mensagem}
-              placeholder="ex.: ajusta o layout da página de jobs"
-              onChange={(e) => setMensagem(e.target.value)}
-            />
-          </label>
-
-          <p className="texto-suave commit-aviso">
-            Commita <strong>tudo</strong> que está listado acima (<code>git add -A</code>),
-            só no repositório local. O painel <strong>não faz push</strong>.
-          </p>
-
-          {erro !== null && <MensagemErro erro={erro} />}
-
-          <button
-            type="button"
-            className="botao"
-            disabled={enviando || mensagem.trim() === ""}
-            onClick={() => void enviar()}
-          >
-            {enviando ? "Commitando…" : `Commitar ${alteracoes.length} arquivo(s)`}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * Situação → sufixo de classe conhecido. Códigos exóticos do porcelain (`UU`, `!!`)
- * caem em "outro" em vez de virar nome de classe inventado.
- */
-function slugSituacao(situacao: string): string {
-  const primeira = situacao.split(" ")[0] ?? "";
-  return ["novo", "apagado", "renomeado", "adicionado", "modificado"].includes(primeira)
-    ? primeira
-    : "outro";
 }
 
 /* -------------------------------- O desenho -------------------------------- */

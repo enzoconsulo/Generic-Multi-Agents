@@ -333,3 +333,34 @@ export interface AlteracaoPendente {
 export interface AlteracoesPendentes {
   alteracoes: AlteracaoPendente[];
 }
+
+/* ---------- Publicação: link na nuvem e push (T-030) ---------- */
+
+/** Um repositório da fábrica: a raiz (`_fabrica`) ou um subprojeto. */
+export interface RepoResumo {
+  id: string;
+  rotulo: string;
+  ehFabrica: boolean;
+  ehRepo: boolean;
+  branch: string;
+  remoto: string | null;
+  pendentes: number;
+  /** Commits locais não publicados. `null` = branch sem upstream. */
+  aFrente: number | null;
+  atras: number | null;
+  temUpstream: boolean;
+  totalLocal: number;
+}
+
+/** GET /api/repos */
+export interface ListaRepos {
+  repos: RepoResumo[];
+}
+
+/** POST /api/repos/:id/push */
+export interface ResultadoPush {
+  branch: string;
+  publicados: number;
+  criouUpstream: boolean;
+  saida: string;
+}

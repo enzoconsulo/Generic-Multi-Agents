@@ -3,6 +3,12 @@ export class ErroApi extends Error {
   constructor(
     public readonly status: number,
     mensagem: string,
+    /**
+     * Texto cru que o backend anexou ao erro (campo `detalhe`), quando existe — hoje é a
+     * saída do git num push que falhou. Fica separado da mensagem porque a mensagem é
+     * para o usuário e isto é para diagnóstico.
+     */
+    public readonly detalhe: string | null = null,
   ) {
     super(mensagem);
     this.name = "ErroApi";
@@ -45,15 +51,19 @@ export async function api<T>(caminho: string, init?: RequestInit): Promise<T> {
 
   if (!resposta.ok) {
     let mensagem = `Erro ${resposta.status} ao chamar ${caminho}`;
+    let detalhe: string | null = null;
     try {
-      const corpo = (await resposta.json()) as { erro?: unknown };
+      const corpo = (await resposta.json()) as { erro?: unknown; detalhe?: unknown };
       if (typeof corpo.erro === "string" && corpo.erro.length > 0) {
         mensagem = corpo.erro;
+      }
+      if (typeof corpo.detalhe === "string" && corpo.detalhe.length > 0) {
+        detalhe = corpo.detalhe;
       }
     } catch {
       // Corpo não-JSON: mantém a mensagem padrão.
     }
-    throw new ErroApi(resposta.status, mensagem);
+    throw new ErroApi(resposta.status, mensagem, detalhe);
   }
 
   return (await resposta.json()) as T;

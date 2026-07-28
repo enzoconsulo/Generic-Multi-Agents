@@ -2267,3 +2267,143 @@ a:hover {
   font-family: var(--fonte-mono);
   font-size: 0.74rem;
 }
+
+/* ---------- Aba Git: repositórios, link na nuvem e push (T-030) ---------- */
+.repos {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.repo-cartao {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md, 8px);
+  background-color: var(--cor-superficie);
+}
+.repo-cab {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+.repo-identidade {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.repo-nome {
+  margin: 0;
+  font-size: 1rem;
+}
+.repo-nome a {
+  color: inherit;
+}
+.badge-acento {
+  border-color: var(--cor-acento);
+  color: var(--cor-acento);
+}
+/* O selo responde "falta publicar?" sem abrir nada — por isso fica no cabeçalho. */
+.repo-selo {
+  margin-left: auto;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.selo-ok {
+  background-color: rgba(86, 211, 100, 0.12);
+  color: var(--cor-sucesso);
+}
+.selo-atencao {
+  background-color: rgba(227, 179, 65, 0.12);
+  color: var(--cor-alerta);
+}
+.selo-neutro {
+  background-color: var(--cor-superficie-2);
+  color: var(--cor-texto-suave);
+}
+
+.repo-remoto {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cor-borda);
+}
+.repo-remoto-linha {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.repo-rotulo {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+/* URL longa não pode empurrar o botão para fora do cartão. */
+.repo-url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--cor-acento);
+}
+.repo-remoto-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.repo-remoto-form > .botao {
+  align-self: flex-start;
+}
+
+.repo-publicar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cor-borda);
+}
+.repo-publicar-nota {
+  font-size: 0.76rem;
+}
+.repo-ok {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--cor-sucesso);
+}
+/* Saída crua do git numa falha de push: diagnóstico, não mensagem — fica contida. */
+.repo-detalhe {
+  flex-basis: 100%;
+  margin: 0;
+  max-height: 10rem;
+  overflow: auto;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-fundo);
+  color: var(--cor-texto-suave);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+}
+
+/* Ação desabilitada precisa PARECER desabilitada. Só `opacity: .55` deixa o azul ainda
+   azul: os botões "Publicar" saíam com cara de clicáveis sem sê-lo — engano puro.
+   Vale para todo botão de ação do painel, não só os da aba Git. */
+.botao-acao:disabled {
+  background-color: var(--cor-superficie-2);
+  color: var(--cor-texto-suave);
+  border-color: var(--cor-borda);
+  opacity: 1;
+}
+/* `.botao-acao` traz margem de topo para uso em coluna; aqui ele é item de uma linha. */
+.repo-publicar > .botao-acao {
+  margin-top: 0;
+}
