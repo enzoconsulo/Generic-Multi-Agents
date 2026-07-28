@@ -46,32 +46,19 @@ GENERICIDADE — JÁ PROVADA, não precisa auditar de novo:
 O QUE FAZER — EM ORDEM
 =================================================================
 
-1) *** T-024 — PÁGINA DE JOBS VISUAL *** (PRIORIDADE MÁXIMA — pedido direto do usuário)
-   Arquivo da tarefa: painel/_gestao/tarefas/T-024-jobs-visual.md (status: pronta)
+1) *** T-024 CONSTRUÍDA — AGUARDANDO A VERIFICAÇÃO VISUAL DO USUÁRIO ***
+   Arquivo: painel/_gestao/tarefas/T-024-jobs-visual.md (status: em-teste)
 
-   POR QUE É A PRIMEIRA: erro de alvo reconhecido. O usuário pediu "detalhe dos jobs e o
-   que está fazendo, assim como cada agente". A T-023 entregou isso na PÁGINA DO PROJETO
-   — que é onde ninguém fica durante uma execução. A página de JOBS, onde de fato se
-   acompanha o trabalho, continuou uma parede de texto com prefixos (▶ ◆ ↳ ⚙ ■).
-   Reação do usuário: "está uma merda e nem dá pra ver diferença nenhuma".
+   A página /jobs foi reescrita: bloco "quem trabalha agora" (avatar, pulso, tarefa em
+   foco), trilha do pipeline (Construir → Testar → Revisar) com a etapa destacada, e
+   trechos por agente colapsáveis com duração. Log cru mantido atrás de "ver log técnico".
 
-   O que a tela precisa ter (detalhe nos critérios de aceite da tarefa):
-     - cabeçalho ao vivo: qual agente trabalha AGORA, tempo, turnos, custo;
-     - trilha do pipeline (construtor → testador → revisor) com a etapa atual destacada;
-     - linha do tempo AGRUPADA POR AGENTE (blocos colapsáveis, com duração), em vez de
-       linhas soltas de log;
-     - qual tarefa (T-NNN) está em foco;
-     - log cru continua, mas atrás de "ver log técnico";
-     - lista de jobs com progresso visual, não só badge de texto.
-
-   Reaproveite `lib/atividade.ts` (já parseia `Agent → domain`) e `useJobsAoVivo`.
-   NÃO abra segunda conexão SSE (decisão de canal único).
-   Armadilha: o log NÃO sobrevive à sessão (dados/ guarda metadados, não stdout) — job
-   antigo reaberto vem sem linhas; trate isso honestamente na tela.
-
-   >>> VERIFIQUE NO NAVEGADOR ANTES DE DAR POR PRONTA. A T-023 foi entregue sem ninguém
-   ver a tela, e é parte do motivo deste retrabalho. Se você não tiver navegador, peça ao
-   usuário para olhar ANTES de considerar a tarefa concluída.
+   ESTÁ EM `em-teste` DE PROPÓSITO, não em `concluida`: os critérios exigem ver a tela e o
+   orquestrador não tem navegador. Entregar UI sem ninguém olhar foi o erro que gerou esta
+   tarefa — não repita.
+   AÇÃO: peça ao usuário para abrir /jobs, disparar um fluxo e dizer se ficou bom.
+     - ficou bom  → marque `concluida` e siga para o item 2;
+     - não ficou  → anote o que ele apontou na seção Verificação e corrija ANTES do resto.
 
 2) EXECUTAR O ia-hibrida-limpa (é o passo natural; nada de código do painel envolvido)
    Estado: ESPECIFICACAO + PLANO (3 fases) + T-001..T-006 criados; equipe com

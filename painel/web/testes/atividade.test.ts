@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { agenteAtivo, atividadePorAgente, montarMapaPlano } from "../src/lib/atividade";
+import {
+  agenteAtivo,
+  atividadePorAgente,
+  etapaDoAgente,
+  montarMapaPlano,
+  segmentarPorAgente,
+  tarefaEmFoco,
+} from "../src/lib/atividade";
 import type { LinhaLog, Plano, TarefaCompleta } from "../src/lib/tipos";
 
 function log(nivel: string, texto: string, em = "2026-07-27T10:00:00Z"): LinhaLog {
@@ -77,6 +84,75 @@ describe("agenteAtivo / atividadePorAgente", () => {
   it("log vazio não quebra", () => {
     expect(agenteAtivo([])).toBeNull();
     expect(atividadePorAgente([])).toEqual([]);
+  });
+});
+
+describe("segmentarPorAgente", () => {
+  it("agrupa o log em trechos, um por despacho", () => {
+    const linhas = [
+      log("inicio", "Sessão iniciada", "2026-07-27T10:00:00Z"),
+      log("ferramenta", "Agent → domain", "2026-07-27T10:00:10Z"),
+      log("subagente", "implementando…", "2026-07-27T10:00:20Z"),
+      log("ferramenta", "Agent → testador", "2026-07-27T10:01:00Z"),
+      log("subagente", "rodando testes", "2026-07-27T10:01:30Z"),
+    ];
+    const s = segmentarPorAgente(linhas);
+    expect(s.map((x) => x.agente)).toEqual([null, "domain", "testador"]);
+    expect(s[0]?.linhas).toHaveLength(1); // o que veio antes do 1º despacho
+    expect(s[1]?.etapa).toBe("construtor");
+    expect(s[2]?.etapa).toBe("testador");
+  });
+
+  it("a linha do despacho é cabeçalho do trecho, não conteúdo dele", () => {
+    const linhas = [
+      log("ferramenta", "Agent → domain", "2026-07-27T10:00:00Z"),
+      log("assistente", "oi", "2026-07-27T10:00:05Z"),
+    ];
+    const s = segmentarPorAgente(linhas);
+    expect(s).toHaveLength(1);
+    expect(s[0]?.linhas.map((l) => l.texto)).toEqual(["oi"]);
+  });
+
+  it("calcula a duração do trecho pelo primeiro e último evento", () => {
+    const linhas = [
+      log("ferramenta", "Agent → domain", "2026-07-27T10:00:00Z"),
+      log("assistente", "a", "2026-07-27T10:00:05Z"),
+      log("assistente", "b", "2026-07-27T10:00:35Z"),
+    ];
+    expect(segmentarPorAgente(linhas)[0]?.duracaoMs).toBe(35000);
+  });
+
+  it("log sem despacho nenhum vira um único trecho do orquestrador", () => {
+    const s = segmentarPorAgente([log("assistente", "pensando")]);
+    expect(s).toHaveLength(1);
+    expect(s[0]?.agente).toBeNull();
+    expect(s[0]?.etapa).toBeNull();
+  });
+
+  it("log vazio não gera trecho", () => {
+    expect(segmentarPorAgente([])).toEqual([]);
+  });
+});
+
+describe("etapaDoAgente / tarefaEmFoco", () => {
+  it("testador e revisor são etapas próprias; o resto é construtor", () => {
+    expect(etapaDoAgente("testador")).toBe("testador");
+    expect(etapaDoAgente("revisor")).toBe("revisor");
+    expect(etapaDoAgente("domain")).toBe("construtor");
+    expect(etapaDoAgente("executor")).toBe("construtor");
+    expect(etapaDoAgente(null)).toBeNull();
+  });
+
+  it("pega a ÚLTIMA tarefa citada no log", () => {
+    const linhas = [
+      log("assistente", "começando a T-001"),
+      log("assistente", "agora a T-014 depende dela"),
+    ];
+    expect(tarefaEmFoco(linhas)).toBe("T-014");
+  });
+
+  it("sem tarefa citada devolve null", () => {
+    expect(tarefaEmFoco([log("assistente", "sem id aqui")])).toBeNull();
   });
 });
 

@@ -165,6 +165,9 @@ export interface Job {
   terminadoEm?: string;
   resultado?: unknown;
   erro?: string;
+  /** Metadados de retomada manual (T-019), gravados assim que conhecidos. */
+  sessionId?: string;
+  cwd?: string;
 }
 
 /** GET /api/jobs */

@@ -5,6 +5,19 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (T-024 — página de Jobs visual, em-teste)
+**T-024 — a tela onde se acompanha a execução deixou de ser log cru.** Corrige o erro de
+alvo da T-023: o pedido era "detalhe dos JOBS", e a T-023 entregou na página do projeto.
+Agora `/jobs` tem: bloco **"quem trabalha agora"** (avatar, pulso, tarefa em foco),
+**trilha do pipeline** (Construir → Testar → Revisar) com a etapa atual destacada, e
+**trechos por agente** colapsáveis com duração — em vez de linhas soltas. Log cru
+preservado atrás de "ver log técnico". `segmentarPorAgente` é puro e testado.
+Achado: o `tipos.ts` do frontend estava desatualizado (sem `sessionId`/`cwd` da T-019) —
+o compilador pegou. Suíte: **servidor 209/209 + web 41/41** (+8).
+**Deixada em `em-teste`, NÃO concluída:** os critérios exigem ver a tela e o orquestrador
+não tem navegador. Entregar UI sem ninguém olhar foi o erro que gerou esta tarefa —
+quem verifica é o usuário.
+
 ## 2026-07-27 (T-023 — a fábrica ficou visível)
 **T-023 — equipe ao vivo, mapa do planejamento e "como funciona" (concluída).** Resposta ao
 pedido de ver o funcionamento de forma VISUAL, sem ler arquivo nem log:

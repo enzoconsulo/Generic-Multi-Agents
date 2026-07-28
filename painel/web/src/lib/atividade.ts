@@ -52,6 +52,84 @@ export function atividadePorAgente(linhas: readonly LinhaLog[]): AtividadeAgente
   return [...porId.values()].sort((a, b) => b.ultimoEm.localeCompare(a.ultimoEm));
 }
 
+/* ------------------------- Linha do tempo do job ------------------------- */
+
+/** Etapa do pipeline da fábrica, deduzida de QUEM está trabalhando. */
+export type EtapaPipeline = "construtor" | "testador" | "revisor";
+
+/** Testador e revisor são fixos; qualquer outro agente é um construtor. */
+export function etapaDoAgente(agente: string | null): EtapaPipeline | null {
+  if (agente === null) return null;
+  if (agente === "testador") return "testador";
+  if (agente === "revisor") return "revisor";
+  return "construtor";
+}
+
+export interface SegmentoAgente {
+  /** Agente do trecho; null = orquestrador (antes do primeiro despacho). */
+  agente: string | null;
+  etapa: EtapaPipeline | null;
+  inicio: string;
+  /** Último evento do trecho (o trecho corrente usa o último que chegou). */
+  fim: string;
+  linhas: LinhaLog[];
+  duracaoMs: number;
+}
+
+/**
+ * Agrupa o log em TRECHOS POR AGENTE (T-024): cada despacho `Agent → X` abre um trecho, e
+ * tudo que vem depois pertence a ele até o próximo despacho.
+ *
+ * É o que troca "parede de linhas soltas" por "blocos do que cada agente fez" — a mesma
+ * informação, na unidade em que a pessoa raciocina.
+ */
+export function segmentarPorAgente(linhas: readonly LinhaLog[]): SegmentoAgente[] {
+  const segmentos: SegmentoAgente[] = [];
+
+  const abrir = (agente: string | null, em: string): SegmentoAgente => {
+    const s: SegmentoAgente = {
+      agente,
+      etapa: etapaDoAgente(agente),
+      inicio: em,
+      fim: em,
+      linhas: [],
+      duracaoMs: 0,
+    };
+    segmentos.push(s);
+    return s;
+  };
+
+  let atual: SegmentoAgente | null = null;
+
+  for (const linha of linhas) {
+    const despachado = linha.nivel === "ferramenta" ? DESPACHO.exec(linha.texto)?.[1] : undefined;
+
+    if (despachado !== undefined) {
+      atual = abrir(despachado, linha.em);
+      continue; // a linha do despacho é o cabeçalho do trecho, não conteúdo dele
+    }
+    if (atual === null) atual = abrir(null, linha.em);
+
+    atual.linhas.push(linha);
+    atual.fim = linha.em;
+    const ms = Date.parse(atual.fim) - Date.parse(atual.inicio);
+    atual.duracaoMs = Number.isFinite(ms) && ms > 0 ? ms : 0;
+  }
+
+  // Trecho de orquestrador vazio no fim (despacho sem nada depois ainda) não é ruído:
+  // é justamente "acabou de despachar, aguardando" — mantido de propósito.
+  return segmentos;
+}
+
+/** Última tarefa (T-NNN) citada no log — o orquestrador cita o id ao despachar. */
+export function tarefaEmFoco(linhas: readonly LinhaLog[]): string | null {
+  for (let i = linhas.length - 1; i >= 0; i--) {
+    const casou = /\bT-\d{3,}\b/.exec(linhas[i]?.texto ?? "");
+    if (casou !== null) return casou[0];
+  }
+  return null;
+}
+
 /* --------------------------------- Plano --------------------------------- */
 
 export interface FaseComProgresso {

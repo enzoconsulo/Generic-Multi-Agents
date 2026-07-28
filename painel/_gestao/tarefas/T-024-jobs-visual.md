@@ -2,7 +2,7 @@
 id: T-024
 titulo: Página de Jobs visual — linha do tempo da execução, agente atual e progresso
 projeto: painel-fabrica
-status: pronta
+status: em-teste
 prioridade: alta
 dependencias: [T-023]
 areas: [web/src/paginas/jobs/]
@@ -58,9 +58,39 @@ O que JÁ existe e pode ser reaproveitado:
   ninguém ver a tela, e é parte do motivo deste retrabalho.
 
 ## Notas de execução
+Construída direto pelo orquestrador (Opus), sem pipeline.
 
+- `lib/atividade.ts` ganhou `segmentarPorAgente` (puro, testado): cada despacho
+  `Agent → X` abre um TRECHO, e tudo que vem depois pertence a ele até o próximo
+  despacho. É o que troca "parede de linhas soltas" por "blocos do que cada agente fez" —
+  a mesma informação, na unidade em que a pessoa raciocina. Junto: `etapaDoAgente`
+  (testador/revisor são etapas próprias, o resto é construtor) e `tarefaEmFoco`.
+- `Jobs.tsx` reescrito. Visão principal agora é:
+  1. **"Quem trabalha agora"** — bloco grande com avatar, nome do agente, pulso e a
+     tarefa em foco. É a informação nº 1 e estava enterrada no log.
+  2. **Trilha do pipeline** (Construir → Testar → Revisar) com a etapa atual destacada e
+     as já cumpridas marcadas.
+  3. **Trechos por agente**, colapsáveis, com duração e nº de ferramentas; o último abre
+     por padrão. Cor da borda por etapa.
+  4. Metadados (modelo, escopo, turnos, custo real, sessão) — `sessionId` agora aparece,
+     que é o que permite retomar à mão um fluxo interrompido (T-019).
+  5. **Log cru preservado** atrás de "ver log técnico" — não foi removido, só deixou de
+     ser a visão principal.
+- Lista de jobs à esquerda mostra o agente ativo com pulso, não só o badge de estado.
+- `tipos.ts` do frontend estava DESATUALIZADO: não tinha `sessionId`/`cwd`, adicionados no
+  servidor pela T-019. O compilador pegou ao usar o campo.
+- Job sem log em memória (reaberto depois de reinício) recebe texto explicando que o
+  painel guarda metadados, não o stdout — em vez de parecer vazio/quebrado.
 
 ## Verificação
+`npm test`: **web 41/41** (+8 de `segmentarPorAgente`/`etapaDoAgente`/`tarefaEmFoco`) **+
+servidor 209/209**; `npm run build` limpo; `tsc --noEmit` limpo nos dois workspaces.
 
+**NÃO VERIFICADO NO NAVEGADOR** — e é por isso que esta tarefa está `em-teste`, não
+`concluida`. Os critérios de aceite exigem explicitamente ver a tela, o ambiente do
+orquestrador não tem navegador, e entregar UI sem ninguém olhar foi exatamente o erro que
+gerou esta tarefa. **Quem verifica é o usuário**: abrir `/jobs`, disparar um fluxo e
+conferir se aparece quem trabalha, a trilha e os trechos por agente. Só então `concluida`.
 
 ## Revisão
+Pendente da verificação acima.
