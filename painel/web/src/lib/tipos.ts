@@ -39,6 +39,28 @@ export interface AcaoFabrica {
   disponivel: boolean;
 }
 
+/**
+ * Ação de agente por projeto (T-033) — espelha `AcaoProjeto` do servidor. Diferente de
+ * `AcaoFabrica`: não é um slash-command, e sim o despacho de UM especialista sobre UM
+ * projeto, por isso tem `agente` e não tem `nome`/`argumentos`.
+ */
+export type GrupoAcaoProjeto = "especialista" | "cuidado";
+
+export interface AcaoProjetoCatalogo {
+  id: string;
+  grupo: GrupoAcaoProjeto;
+  rotulo: string;
+  resumo: string;
+  agente: string;
+  peso: PesoAcao;
+  /** Quando presente, a UI pede um texto livre antes de disparar. */
+  entrada: { rotulo: string; placeholder: string; obrigatoria: boolean } | null;
+}
+
+export interface RespostaAcoesProjeto {
+  acoes: AcaoProjetoCatalogo[];
+}
+
 export interface MarcoFase {
   bruto: string;
   estado: "pendente" | "aprovado" | "reprovado" | "desconhecido";

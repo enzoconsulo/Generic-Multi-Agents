@@ -38,6 +38,21 @@ const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
   status: { maxTurns: 40, watchdogMs: 10 * MINUTO },
   /** Análise não é um dos 6 comandos, mas é um fluxo Claude e também merece teto. */
   analisar: { maxTurns: 100 },
+
+  /**
+   * Ações de agente por projeto (T-033), com a chave prefixada `projeto:<id>` para não
+   * colidir com um comando de mesmo nome. Tetos menores que os dos comandos globais de
+   * propósito: cada uma despacha UM especialista para UM projeto, então um fluxo que
+   * passa de ~80 turnos aí não está trabalhando, está girando.
+   */
+  "projeto:documentar": { maxTurns: 80 },
+  "projeto:pesquisar": { maxTurns: 60, watchdogMs: 20 * MINUTO }, // espera de rede é normal aqui
+  "projeto:revisar": { maxTurns: 80 },
+  "projeto:testar": { maxTurns: 80, watchdogMs: 20 * MINUTO }, // suíte longa é silêncio legítimo
+  "projeto:replanejar": { maxTurns: 120 }, // reescreve plano e tarefas: mais fôlego
+  /** T-034 — escopo de um projeto, então bem abaixo dos comandos globais equivalentes. */
+  "projeto:conferir": { maxTurns: 80 },
+  "projeto:progresso": { maxTurns: 60 },
 };
 
 /** Guardrails efetivos de uma ação (padrão + ajustes da tabela). */

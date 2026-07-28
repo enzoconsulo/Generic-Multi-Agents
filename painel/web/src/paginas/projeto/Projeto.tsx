@@ -30,6 +30,7 @@ import { Markdown } from "../../componentes/Markdown";
 import { TextoLongo } from "../../componentes/TextoLongo";
 import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicadores";
 import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
+import { EspecialistasProjeto } from "./EspecialistasProjeto";
 import { EquipeAoVivo } from "./EquipeAoVivo";
 import { MapaPlano } from "./MapaPlano";
 import { SecaoCi } from "./ci/PainelCi";
@@ -121,6 +122,8 @@ function DetalheProjeto({
       </section>
 
       <AcoesProjeto projeto={projeto} jobAtivo={jobAtivo} />
+
+      <EspecialistasProjeto projeto={projeto.nome} jobAtivo={jobAtivo} />
 
       <EquipeAoVivo
         equipe={projeto.equipe}
