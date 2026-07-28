@@ -2580,3 +2580,68 @@ a:hover {
   padding: 0.9rem;
   margin: 0 0 0.75rem;
 }
+
+/* Gestão do projeto (T-036) — bloqueios, dependências e histórico local. */
+.bloco-gestao {
+  margin-bottom: 1.1rem;
+}
+.bloco-gestao-titulo {
+  margin: 0 0 0.2rem;
+  font-size: 0.92rem;
+}
+.bloco-gestao-ajuda {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+}
+.lista-gestao {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.linha-gestao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 0.5rem 0.7rem;
+}
+/* Botão que se comporta como link: o alvo clicável é o texto da tarefa. */
+.linha-gestao-alvo {
+  flex: 1 1 18rem;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--cor-link);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.linha-gestao-alvo:hover {
+  text-decoration: underline;
+}
+.linha-gestao-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+.dep-info {
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+/* Quantas tarefas estão atrás desta: é o custo de ela não sair. */
+.dep-trava {
+  border-color: var(--cor-alerta, var(--cor-borda-forte));
+}

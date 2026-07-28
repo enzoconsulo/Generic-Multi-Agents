@@ -32,6 +32,7 @@ import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicado
 import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
 import { EspecialistasProjeto } from "./EspecialistasProjeto";
 import { SecaoEquipe } from "./SecaoEquipe";
+import { SecaoGestao } from "./SecaoGestao";
 import { EquipeAoVivo } from "./EquipeAoVivo";
 import { MapaPlano } from "./MapaPlano";
 import { SecaoCi } from "./ci/PainelCi";
@@ -135,6 +136,16 @@ function DetalheProjeto({
       <AcoesProjeto projeto={projeto} jobAtivo={jobAtivo} />
 
       <EspecialistasProjeto projeto={projeto.nome} jobAtivo={jobAtivo} />
+
+      <SecaoGestao
+        projeto={projeto.nome}
+        tarefas={projeto.tarefas}
+        jobs={aoVivo.jobs}
+        aoSelecionar={(arquivo) => {
+          setSelecionada(arquivo);
+          refQuadro.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      />
 
       <SecaoEquipe
         projeto={projeto.nome}

@@ -70,6 +70,11 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
   pelo orquestrador) e `equipe`. **O `cwd` é a RAIZ da fábrica, não a pasta do projeto** —
   ao contrário da análise —, porque os `.claude/agents/` só carregam de lá; em troca, o
   confinamento é explícito no texto do prompt.
+- `lib/gestao.ts` + `SecaoGestao` (T-036): cruza as `dependencias` das tarefas (que sempre
+  vieram na API e não apareciam) para mostrar o que trava o quê, o que já dá para promover
+  e o histórico + custo real DESTE projeto. Dependência **inexistente** é separada de
+  dependência **não concluída**: a primeira é erro de frontmatter que nunca fecha sozinho
+  e bloqueia a promoção; a segunda é o plano funcionando.
 - Estado é sempre derivado dos arquivos da fábrica na hora da consulta; `dados/` guarda só
   histórico operacional (descartável, fora do git).
 
