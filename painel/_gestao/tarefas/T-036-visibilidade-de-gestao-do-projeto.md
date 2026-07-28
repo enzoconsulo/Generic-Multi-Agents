@@ -2,7 +2,7 @@
 id: T-036
 titulo: Visibilidade de gestão do projeto — histórico, bloqueios e dependências
 projeto: painel-fabrica
-status: backlog
+status: pronta
 prioridade: media
 dependencias: [T-033]
 areas: [web/src/paginas/projeto/SecaoGestao.tsx, web/src/paginas/projeto/Projeto.tsx]

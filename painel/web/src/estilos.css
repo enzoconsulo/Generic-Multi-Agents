@@ -2524,3 +2524,59 @@ a:hover {
   background-color: var(--cor-superficie-2);
   font-size: 0.8rem;
 }
+
+/* Equipe de especialistas do projeto (T-035) — elenco parado e seu editor. */
+.lista-equipe {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  list-style: none;
+}
+.membro-equipe {
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+  padding: 0.75rem 0.9rem;
+}
+/* Agente inválido é IGNORADO na execução: a borda vermelha diz isso sem precisar ler. */
+.membro-quebrado {
+  border-left-color: var(--cor-erro);
+}
+.membro-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.membro-nome {
+  font-size: 0.95rem;
+  /* min-width:0 deixa o nome longo QUEBRAR em vez de espremer o id ao lado dele. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* O id é o que as tarefas citam no campo `agente:` — não pode ser cortado. */
+.membro-id {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+.membro-desc {
+  margin: 0 0 0.35rem;
+  font-size: 0.86rem;
+  color: var(--cor-texto-suave);
+}
+.membro-ferramentas {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+.fieldset-agente {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 0.9rem;
+  margin: 0 0 0.75rem;
+}

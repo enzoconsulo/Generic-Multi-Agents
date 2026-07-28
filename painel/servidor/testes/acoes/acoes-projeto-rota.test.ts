@@ -15,6 +15,9 @@ const FIXTURE = resolve(aqui, "..", "fixtures", "fabrica-falsa");
 process.env.FABRICA_RAIZ = FIXTURE;
 const { criarApp } = await import("../../src/app.js");
 const { obterGerenciador, reiniciarGerenciador } = await import("../../src/jobs/instancia.js");
+// Também dinâmico: import estático é IÇADO e carregaria `config.js` antes da linha
+// FABRICA_RAIZ acima, fazendo a raiz apontar para a fábrica real em vez da fixture.
+const { ACOES_PROJETO } = await import("../../src/acoes/acoes-projeto.js");
 
 const runnerFake: Runner = {
   async executar() {
@@ -35,7 +38,9 @@ describe("GET /api/acoes-projeto", () => {
     const resp = await request(app).get("/api/acoes-projeto");
     expect(resp.status).toBe(200);
     expect(Array.isArray(resp.body.acoes)).toBe(true);
-    expect(resp.body.acoes).toHaveLength(7);
+    // Comparado ao catálogo, não a um número fixo: aqui o contrato é "a rota expõe o
+    // catálogo inteiro". Quem trava a composição exata é o teste do catálogo.
+    expect(resp.body.acoes).toHaveLength(ACOES_PROJETO.length);
     for (const acao of resp.body.acoes) {
       expect(typeof acao.id).toBe("string");
       expect(typeof acao.rotulo).toBe("string");

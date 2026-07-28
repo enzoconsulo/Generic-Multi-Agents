@@ -34,7 +34,7 @@ export type PesoAcao = "leve" | "medio" | "pesado";
  * `especialista` = um agente da fábrica faz um serviço; `cuidado` = zeladoria do próprio
  * projeto, feita pelo orquestrador (o que antes só existia para a fábrica inteira).
  */
-export type GrupoAcaoProjeto = "especialista" | "cuidado";
+export type GrupoAcaoProjeto = "especialista" | "cuidado" | "equipe";
 
 export interface AcaoProjeto {
   id: string;
@@ -150,6 +150,28 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
     agente: "orquestrador",
     peso: "medio",
     entrada: null,
+  },
+
+  /**
+   * T-035 — é o que fecha o ciclo de auto-estruturação: o planejador sintetiza os
+   * especialistas a partir do que o projeto virou, e o `/trabalhar` passa a injetá-los.
+   * Grupo próprio para a UI poder renderizar dentro da seção Equipe, onde a ação faz
+   * sentido, em vez de solta numa lista de botões longe do que ela altera.
+   */
+  {
+    id: "recriar-equipe",
+    grupo: "equipe",
+    rotulo: "Recriar equipe",
+    resumo:
+      "O planejador redesenha os especialistas a partir do estado atual do projeto e regrava o equipe.json.",
+    agente: "planejador",
+    peso: "medio",
+    entrada: {
+      rotulo: "Alguma orientação para a equipe? (opcional)",
+      placeholder:
+        "Ex.: precisa de alguém focado em acessibilidade; o projeto virou mobile; junte os dois de backend num só",
+      obrigatoria: false,
+    },
   },
 ] as const;
 

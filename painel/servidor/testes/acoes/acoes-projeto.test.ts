@@ -37,6 +37,7 @@ describe("catálogo de ações por projeto (T-033)", () => {
       "testar",
       "conferir",
       "progresso",
+      "recriar-equipe",
     ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -69,12 +70,14 @@ describe("catálogo de ações por projeto (T-033)", () => {
   });
 
   it("separa especialistas de zeladoria, e só a zeladoria é do orquestrador", () => {
-    // A UI monta duas seções a partir deste campo. Se uma ação de `orquestrador` caísse
-    // no grupo `especialista`, o título da seção mentiria sobre o conteúdo dela.
+    // A UI monta as seções a partir deste campo. Se uma ação de `orquestrador` caísse no
+    // grupo `especialista`, o título da seção mentiria sobre o conteúdo dela.
     const especialistas = ACOES_PROJETO.filter((a) => a.grupo === "especialista");
     const cuidado = ACOES_PROJETO.filter((a) => a.grupo === "cuidado");
+    const equipe = ACOES_PROJETO.filter((a) => a.grupo === "equipe");
     expect(especialistas).toHaveLength(5);
     expect(cuidado.map((a) => a.id)).toEqual(["conferir", "progresso"]);
+    expect(equipe.map((a) => a.id)).toEqual(["recriar-equipe"]);
 
     for (const a of especialistas) {
       expect(a.agente, `${a.id} deveria despachar um especialista`).not.toBe("orquestrador");
@@ -82,8 +85,8 @@ describe("catálogo de ações por projeto (T-033)", () => {
     for (const a of cuidado) {
       expect(a.agente, `${a.id} é zeladoria do próprio fluxo`).toBe("orquestrador");
     }
-    // Toda ação pertence a um dos dois grupos — nenhuma fica órfã e some da tela.
-    expect(especialistas.length + cuidado.length).toBe(ACOES_PROJETO.length);
+    // Toda ação pertence a um dos grupos — nenhuma fica órfã e some da tela.
+    expect(especialistas.length + cuidado.length + equipe.length).toBe(ACOES_PROJETO.length);
   });
 
   it("só `pesquisar` exige a entrada; o recorte do `replanejar` é opcional", () => {

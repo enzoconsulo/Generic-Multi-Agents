@@ -63,6 +63,13 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
 - `fabrica/ajustes.ts` + aba Ajustes (T-032): estado das contas Claude/GitHub. Só
   DIAGNOSTICA (existência de credencial, meio de autenticação) — não existe "conectar
   conta" no painel, porque os dois logins são fluxos interativos fora dele.
+- **Ações POR PROJETO** (T-033/T-034/T-035): `acoes/acoes-projeto.ts` é o catálogo
+  data-driven (ação = uma entrada + um prompt em `prompts/projeto/<id>.md`), com rota
+  própria e lock `projeto:<nome>`. Três grupos, que a UI usa para montar as seções:
+  `especialista` (despacha um agente da fábrica), `cuidado` (zeladoria do projeto, feita
+  pelo orquestrador) e `equipe`. **O `cwd` é a RAIZ da fábrica, não a pasta do projeto** —
+  ao contrário da análise —, porque os `.claude/agents/` só carregam de lá; em troca, o
+  confinamento é explícito no texto do prompt.
 - Estado é sempre derivado dos arquivos da fábrica na hora da consulta; `dados/` guarda só
   histórico operacional (descartável, fora do git).
 
@@ -76,7 +83,8 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
   por env `FABRICA_RAIZ` (testes usam fábricas falsas em pastas temporárias).
 - O painel NUNCA escreve status de tarefa/projeto: quem escreve nos arquivos da fábrica
   são os fluxos Claude disparados; exceções deliberadas: `_gestao/ANALISE.md` (via job de
-  análise), `_gestao/ci.json` (editor de CI) e a importação de projetos.
+  análise), `_gestao/ci.json` (editor de CI), `_gestao/equipe.json` (editor de equipe,
+  T-035) e a importação de projetos.
 - Textos de UI e mensagens de erro sempre em PT-BR.
 
 ## Armadilhas conhecidas
@@ -164,6 +172,11 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   problema em vez de contê-lo.
 - **`credential.helper` no Windows vem do gitconfig do SISTEMA.** Lê-lo com `--global`
   devolve vazio e faz a UI dizer "não conectado" numa máquina que publica normalmente.
+- **Teste de rota que sobrescreve `FABRICA_RAIZ` só aceita import DINÂMICO.** `config.ts`
+  lê a env na CARGA do módulo, e `import` estático é içado: basta um import estático de
+  qualquer módulo que importe `config.js` para a raiz apontar para a fábrica real em vez
+  da fixture, e os testes quebrarem sem motivo aparente. Já aconteceu ao "melhorar" um
+  teste trocando um número fixo por `ACOES_PROJETO.length` — 5 testes caíram de uma vez.
 - **Caractere de controle em regex: escreva o ESCAPE, nunca o caractere cru.** A validação
   de URL de remoto em `publicacao.ts` nasceu com os controles (U+0000 a U+001F) literais
   no fonte. A regex funcionava — o estrago era outro: um byte NUL faz o git classificar o

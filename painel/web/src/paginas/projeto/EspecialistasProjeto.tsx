@@ -77,6 +77,43 @@ export function EspecialistasProjeto({
   );
 }
 
+/**
+ * Só os cards de um grupo, sem moldura de seção — para quem quer embutir as ações dentro
+ * de outra seção (a de Equipe usa isto para pôr "Recriar equipe" junto do que ela altera,
+ * em vez de solta numa lista de botões longe do efeito).
+ */
+export function AcoesDoGrupo({
+  grupo,
+  projeto,
+  jobAtivo,
+}: {
+  grupo: AcaoProjetoCatalogo["grupo"];
+  projeto: string;
+  jobAtivo: Job | null;
+}) {
+  const catalogo = useDados<RespostaAcoesProjeto>("/api/acoes-projeto");
+  const fabrica = useDados<RespostaFabrica>("/api/fabrica");
+
+  if (catalogo.dados === null || fabrica.dados === null) return null;
+  const acoes = catalogo.dados.acoes.filter((a) => a.grupo === grupo);
+  if (acoes.length === 0) return null;
+
+  return (
+    <div className="grade-cards">
+      {acoes.map((acao) => (
+        <CartaoEspecialista
+          key={acao.id}
+          acao={acao}
+          projeto={projeto}
+          estrategias={fabrica.dados!.estrategias}
+          estrategiaPadrao={fabrica.dados!.estrategiaPadrao}
+          bloqueado={jobAtivo !== null}
+        />
+      ))}
+    </div>
+  );
+}
+
 function GrupoAcoes({
   titulo,
   descricao,

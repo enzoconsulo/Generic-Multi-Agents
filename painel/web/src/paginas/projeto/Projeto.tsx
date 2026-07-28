@@ -31,6 +31,7 @@ import { TextoLongo } from "../../componentes/TextoLongo";
 import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicadores";
 import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
 import { EspecialistasProjeto } from "./EspecialistasProjeto";
+import { SecaoEquipe } from "./SecaoEquipe";
 import { EquipeAoVivo } from "./EquipeAoVivo";
 import { MapaPlano } from "./MapaPlano";
 import { SecaoCi } from "./ci/PainelCi";
@@ -77,7 +78,14 @@ export function Projeto() {
       {erro !== null && (
         <MensagemErro erro={erro} dica="Verifique se o nome do projeto existe na fábrica." />
       )}
-      {dados !== null && <DetalheProjeto projeto={dados} jobAtivo={jobAtivo} aoVivo={aoVivo} />}
+      {dados !== null && (
+        <DetalheProjeto
+          projeto={dados}
+          jobAtivo={jobAtivo}
+          aoVivo={aoVivo}
+          aoRecarregar={recarregar}
+        />
+      )}
     </div>
   );
 }
@@ -86,10 +94,13 @@ function DetalheProjeto({
   projeto,
   jobAtivo,
   aoVivo,
+  aoRecarregar,
 }: {
   projeto: ProjetoDetalhe;
   jobAtivo: Job | null;
   aoVivo: EstadoAoVivo;
+  /** Refetch do detalhe — a equipe gravada precisa aparecer sem F5. */
+  aoRecarregar: () => void;
 }) {
   // Seleção de tarefa sobe para cá: o mapa do plano e o quadro apontam para a MESMA
   // tarefa, então clicar num bloco do mapa abre o detalhe no quadro.
@@ -124,6 +135,13 @@ function DetalheProjeto({
       <AcoesProjeto projeto={projeto} jobAtivo={jobAtivo} />
 
       <EspecialistasProjeto projeto={projeto.nome} jobAtivo={jobAtivo} />
+
+      <SecaoEquipe
+        projeto={projeto.nome}
+        equipe={projeto.equipe}
+        jobAtivo={jobAtivo}
+        aoGravar={aoRecarregar}
+      />
 
       <EquipeAoVivo
         equipe={projeto.equipe}

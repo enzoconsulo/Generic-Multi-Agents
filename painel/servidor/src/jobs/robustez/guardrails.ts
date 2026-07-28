@@ -53,6 +53,8 @@ const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
   /** T-034 — escopo de um projeto, então bem abaixo dos comandos globais equivalentes. */
   "projeto:conferir": { maxTurns: 80 },
   "projeto:progresso": { maxTurns: 60 },
+  /** T-035 — ler o projeto e sintetizar os especialistas. */
+  "projeto:recriar-equipe": { maxTurns: 80 },
 };
 
 /** Guardrails efetivos de uma ação (padrão + ajustes da tabela). */

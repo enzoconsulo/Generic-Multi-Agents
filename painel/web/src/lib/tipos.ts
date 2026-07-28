@@ -44,7 +44,7 @@ export interface AcaoFabrica {
  * `AcaoFabrica`: não é um slash-command, e sim o despacho de UM especialista sobre UM
  * projeto, por isso tem `agente` e não tem `nome`/`argumentos`.
  */
-export type GrupoAcaoProjeto = "especialista" | "cuidado";
+export type GrupoAcaoProjeto = "especialista" | "cuidado" | "equipe";
 
 export interface AcaoProjetoCatalogo {
   id: string;

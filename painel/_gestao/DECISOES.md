@@ -532,3 +532,27 @@ arriscar a estabilidade da verificação. File-based (equipe.json versionado) e 
 (`options.agents`). Alternativa descartada: agentes de arquivo em projetos/<nome>/.claude/
 (não carregam com cwd na raiz da fábrica).
 **Quem:** usuário + orquestrador
+
+## 2026-07-28 — Ações por projeto e a 4ª exceção à regra de escrita (T-033/T-034/T-035)
+**Decisão:** a página de um projeto ganhou 8 ações em três grupos — cinco de especialista
+(documentar, pesquisar, revisar, replanejar, testar), duas de zeladoria com escopo do
+projeto (conferir integridade, atualizar progresso) e uma de equipe (recriar equipe).
+Motor data-driven em `acoes/acoes-projeto.ts`: ação nova = uma entrada na tabela + um
+prompt versionado em `prompts/projeto/<id>.md`. Rota própria, guardrail por ação e lock
+`projeto:<nome>`.
+
+O `cwd` desses fluxos é a **raiz da fábrica**, não a pasta do projeto — o oposto da
+análise (T-012). Os `.claude/agents/` só carregam a partir da raiz (é a mesma constatação
+que já tinha descartado `projetos/<nome>/.claude/` na decisão de 2026-07-21), então é de
+lá que dá para despachar o agente REAL. O preço é que o confinamento deixa de vir de
+graça pelo `cwd` e passa a ser explícito no texto do despacho.
+
+Editar `_gestao/equipe.json` pela web é a **quarta exceção deliberada** à regra "o painel
+nunca escreve nos arquivos da fábrica", junto de `ANALISE.md`, `ci.json` e a importação de
+projetos. A validação da escrita reusa as regras da leitura (`fabrica/equipe.ts`), com
+teste que grava e relê para provar que não divergiram.
+**Motivo:** pedido do usuário — dar visibilidade e gestão fina por projeto, mantendo a
+auto-estruturação pela equipe de especialistas. Antes só existiam os dois extremos
+(/ideia planeja tudo, /trabalhar executa tudo) e os agentes eram inalcançáveis
+isoladamente; `/manutencao` e `/encerrar-dia` nem aceitavam projeto.
+**Quem:** usuário + orquestrador
