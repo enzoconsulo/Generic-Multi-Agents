@@ -130,6 +130,116 @@ export function tarefaEmFoco(linhas: readonly LinhaLog[]): string | null {
   return null;
 }
 
+/* --------------------- Grafo de execução / paralelismo -------------------- */
+
+/** Teto de construtores em paralelo no mesmo projeto (regra de ouro do CLAUDE.md raiz). */
+export const TETO_PARALELO = 3;
+
+export interface NivelExecucao {
+  /** 0 = pode começar já; 1 = só depois que tudo do nível 0 concluir; e assim por diante. */
+  nivel: number;
+  tarefas: TarefaCompleta[];
+  /**
+   * Ids que a fábrica consegue rodar SIMULTANEAMENTE dentro deste nível. Não basta não
+   * ter dependência: os agentes compartilham a MESMA árvore de arquivos, então duas
+   * tarefas que tocam a mesma `area` se atropelariam. Teto de 3.
+   */
+  loteParalelo: string[];
+}
+
+export interface GrafoExecucao {
+  niveis: NivelExecucao[];
+  /** Tarefas presas em ciclo de dependência — nunca executáveis (erro de plano). */
+  ciclos: string[];
+  /** Dependência apontando para tarefa inexistente (plano desatualizado). */
+  quebradas: { tarefa: string; falta: string }[];
+  /** Maior lote paralelo do plano inteiro: o teto real de velocidade. */
+  paralelismoMaximo: number;
+}
+
+/** Duas tarefas colidem se tocam qualquer `area` em comum. */
+function colide(a: TarefaCompleta, b: TarefaCompleta): boolean {
+  return a.areas.some((x) => b.areas.includes(x));
+}
+
+/**
+ * Monta a ordem de execução a partir das `dependencias` (T-025).
+ *
+ * Responde a pergunta que o painel não sabia responder: **o que pode rodar ao mesmo
+ * tempo?** Tarefas do mesmo nível não dependem umas das outras; dentro do nível, o
+ * `loteParalelo` é o que de fato roda junto respeitando `areas` disjuntas e o teto de 3.
+ *
+ * Robusto a plano quebrado: dependência para id inexistente é ignorada no cálculo mas
+ * REPORTADA, e ciclo é detectado em vez de travar em laço infinito.
+ */
+export function montarGrafoExecucao(tarefas: readonly TarefaCompleta[]): GrafoExecucao {
+  const porId = new Map(tarefas.map((t) => [t.id, t]));
+  const quebradas: { tarefa: string; falta: string }[] = [];
+
+  // Só dependências que existem entram no cálculo — as demais viram aviso.
+  const deps = new Map<string, string[]>();
+  for (const t of tarefas) {
+    const validas: string[] = [];
+    for (const d of t.dependencias) {
+      if (porId.has(d)) validas.push(d);
+      else quebradas.push({ tarefa: t.id, falta: d });
+    }
+    deps.set(t.id, validas);
+  }
+
+  // Nivelamento: uma tarefa entra quando TODAS as dependências dela já têm nível.
+  const nivelDe = new Map<string, number>();
+  let avancou = true;
+  while (avancou) {
+    avancou = false;
+    for (const t of tarefas) {
+      if (nivelDe.has(t.id)) continue;
+      const minhas = deps.get(t.id) ?? [];
+      if (!minhas.every((d) => nivelDe.has(d))) continue;
+      const nivel = minhas.reduce((max, d) => Math.max(max, (nivelDe.get(d) ?? 0) + 1), 0);
+      nivelDe.set(t.id, nivel);
+      avancou = true;
+    }
+  }
+
+  // Quem sobrou sem nível está num ciclo (A depende de B que depende de A).
+  const ciclos = tarefas.filter((t) => !nivelDe.has(t.id)).map((t) => t.id);
+
+  const porNivel = new Map<number, TarefaCompleta[]>();
+  for (const t of tarefas) {
+    const n = nivelDe.get(t.id);
+    if (n === undefined) continue;
+    porNivel.set(n, [...(porNivel.get(n) ?? []), t]);
+  }
+
+  const niveis: NivelExecucao[] = [...porNivel.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([nivel, doNivel]) => ({ nivel, tarefas: doNivel, loteParalelo: montarLote(doNivel) }));
+
+  return {
+    niveis,
+    ciclos,
+    quebradas,
+    paralelismoMaximo: niveis.reduce((max, n) => Math.max(max, n.loteParalelo.length), 0),
+  };
+}
+
+/**
+ * Maior lote que roda junto, por varredura gulosa: entra quem não colide em `areas` com
+ * ninguém já no lote. Guloso e não ótimo de propósito — o objetivo é mostrar um lote
+ * REAL e alcançável, não resolver conjunto independente máximo.
+ */
+function montarLote(doNivel: readonly TarefaCompleta[]): string[] {
+  const lote: TarefaCompleta[] = [];
+  for (const t of doNivel) {
+    if (lote.length >= TETO_PARALELO) break;
+    if (t.status === "concluida" || t.status === "cancelada") continue;
+    if (lote.some((j) => colide(j, t))) continue;
+    lote.push(t);
+  }
+  return lote.map((t) => t.id);
+}
+
 /* --------------------------------- Plano --------------------------------- */
 
 export interface FaseComProgresso {

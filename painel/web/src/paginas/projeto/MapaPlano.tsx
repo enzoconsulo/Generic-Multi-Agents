@@ -1,4 +1,9 @@
-import { montarMapaPlano, type FaseComProgresso } from "../../lib/atividade";
+import { useState } from "react";
+import {
+  montarGrafoExecucao,
+  montarMapaPlano,
+  type FaseComProgresso,
+} from "../../lib/atividade";
 import { rotuloStatus } from "../../lib/formato";
 import { BadgeMarco } from "../../componentes/Indicadores";
 import type { Plano, TarefaCompleta } from "../../lib/tipos";
@@ -66,9 +71,102 @@ export function MapaPlano({
           )}
 
           <Legenda />
+          <OrdemDeExecucao tarefas={tarefas} aoSelecionar={aoSelecionar} />
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * Ordem de execução e paralelismo (T-025). Responde "o que pode rodar ao mesmo tempo?",
+ * pergunta que o painel não sabia responder — o usuário teve que perguntar no chat.
+ *
+ * Cada NÍVEL é um degrau de dependência: o nível 0 pode começar já; o 1 só depois que o 0
+ * concluir. Dentro do nível, o LOTE é o que a fábrica de fato roda junto (áreas disjuntas,
+ * teto de 3) — não basta não ter dependência, porque os agentes dividem a mesma árvore
+ * de arquivos.
+ */
+function OrdemDeExecucao({
+  tarefas,
+  aoSelecionar,
+}: {
+  tarefas: TarefaCompleta[];
+  aoSelecionar: (arquivo: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const grafo = montarGrafoExecucao(tarefas);
+  if (grafo.niveis.length === 0 && grafo.ciclos.length === 0) return null;
+
+  return (
+    <div className="ordem">
+      <button type="button" className="ordem-toggle" onClick={() => setAberto((v) => !v)}>
+        <span aria-hidden="true">{aberto ? "▾" : "▸"}</span> Ordem de execução e paralelismo
+        <span className="badge badge-suave">
+          até {grafo.paralelismoMaximo} em paralelo
+        </span>
+      </button>
+
+      {aberto && (
+        <>
+          <p className="texto-suave ordem-ajuda">
+            Cada degrau só começa quando o anterior termina. Dentro do degrau, as tarefas
+            marcadas com <span className="marca-paralelo">∥</span> rodam{" "}
+            <strong>ao mesmo tempo</strong> — as demais esperam porque mexem nos mesmos
+            arquivos (os agentes dividem a mesma árvore) ou porque o teto é 3 por vez.
+          </p>
+
+          {grafo.ciclos.length > 0 && (
+            <div className="aviso aviso-erro aviso-compacto">
+              Ciclo de dependência entre {grafo.ciclos.join(", ")} — essas tarefas nunca
+              vão executar. Corrija o campo `dependencias` delas.
+            </div>
+          )}
+          {grafo.quebradas.length > 0 && (
+            <div className="aviso aviso-info aviso-compacto">
+              {grafo.quebradas.map((q) => `${q.tarefa} depende de ${q.falta}, que não existe`).join(" · ")}
+            </div>
+          )}
+
+          <ol className="degraus">
+            {grafo.niveis.map((n) => (
+              <li key={n.nivel} className="degrau">
+                <div className="degrau-num">
+                  <span className="degrau-rot">{n.nivel + 1}º</span>
+                  {n.loteParalelo.length > 1 && (
+                    <span className="degrau-par" title="Tarefas que rodam simultaneamente">
+                      ∥ {n.loteParalelo.length}
+                    </span>
+                  )}
+                </div>
+                <div className="degrau-blocos">
+                  {n.tarefas.map((t) => (
+                    <button
+                      key={t.arquivo}
+                      type="button"
+                      className={`bloco st-${t.status} ${
+                        n.loteParalelo.includes(t.id) && n.loteParalelo.length > 1
+                          ? "bloco-paralelo"
+                          : ""
+                      }`}
+                      onClick={() => aoSelecionar(t.arquivo)}
+                      title={`${t.id} — ${t.titulo}${
+                        t.dependencias.length > 0
+                          ? `\ndepende de: ${t.dependencias.join(", ")}`
+                          : "\nsem dependências"
+                      }${t.areas.length > 0 ? `\nmexe em: ${t.areas.join(", ")}` : ""}`}
+                    >
+                      <span className="bloco-id">{t.id}</span>
+                      {t.agente !== null && <span className="bloco-agente">{t.agente}</span>}
+                    </button>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+    </div>
   );
 }
 

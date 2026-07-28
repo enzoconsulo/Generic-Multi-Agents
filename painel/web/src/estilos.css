@@ -1512,6 +1512,84 @@ a:hover {
   gap: 0.3rem;
 }
 
+/* ---------- Ordem de execução / paralelismo (T-025) ---------- */
+.ordem {
+  margin-top: 1rem;
+  border-top: 1px solid var(--cor-borda);
+  padding-top: 0.75rem;
+}
+.ordem-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--cor-texto);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.ordem-toggle:hover {
+  color: var(--cor-acento);
+}
+.ordem-ajuda {
+  margin: 0.6rem 0 0.8rem;
+  line-height: 1.55;
+  font-size: 0.84rem;
+}
+.marca-paralelo {
+  font-family: var(--fonte-mono);
+  color: var(--cor-acento);
+  font-weight: 700;
+}
+.degraus {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.degrau {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+}
+.degrau-num {
+  flex: 0 0 3.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+.degrau-rot {
+  font-family: var(--fonte-mono);
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+.degrau-par {
+  font-family: var(--fonte-mono);
+  font-size: 0.68rem;
+  color: var(--cor-acento);
+  font-weight: 700;
+}
+.degrau-blocos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex: 1;
+}
+/* Tarefas que de fato rodam juntas ganham contorno — é a resposta visual a
+   "o que pode ir ao mesmo tempo?". */
+.bloco-paralelo {
+  outline: 2px dashed var(--cor-acento);
+  outline-offset: 2px;
+}
+
 /* ---------- Como funciona (T-023) ---------- */
 .fluxo {
   list-style: none;

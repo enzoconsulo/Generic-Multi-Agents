@@ -3,6 +3,7 @@ import {
   agenteAtivo,
   atividadePorAgente,
   etapaDoAgente,
+  montarGrafoExecucao,
   montarMapaPlano,
   segmentarPorAgente,
   tarefaEmFoco,
@@ -153,6 +154,85 @@ describe("etapaDoAgente / tarefaEmFoco", () => {
 
   it("sem tarefa citada devolve null", () => {
     expect(tarefaEmFoco([log("assistente", "sem id aqui")])).toBeNull();
+  });
+});
+
+describe("montarGrafoExecucao", () => {
+  /** tarefa com dependências e áreas, para exercitar o grafo. */
+  function tg(id: string, deps: string[], areas: string[], status = "backlog"): TarefaCompleta {
+    return { ...tarefa(id, status), dependencias: deps, areas };
+  }
+
+  // Espelha o caso REAL do ia-hibrida-limpa, que motivou esta visualização.
+  it("nivela um plano com bifurcação e acha o paralelismo real", () => {
+    const g = montarGrafoExecucao([
+      tg("T-001", [], ["gerador.py"]),
+      tg("T-002", ["T-001"], ["gerador.py"]),
+      tg("T-003", ["T-002"], ["app.py"]),
+      tg("T-004", ["T-003"], ["app.py"]),
+      tg("T-005", ["T-002"], ["tests/"]),
+      tg("T-006", ["T-004", "T-005"], ["docs.md"]),
+    ]);
+
+    expect(g.niveis.map((n) => n.tarefas.map((t) => t.id))).toEqual([
+      ["T-001"],
+      ["T-002"],
+      ["T-003", "T-005"], // o ramo que pode ir em paralelo
+      ["T-004"],
+      ["T-006"],
+    ]);
+    // T-003 e T-005 tocam arquivos diferentes → rodam juntas.
+    expect(g.niveis[2]?.loteParalelo).toEqual(["T-003", "T-005"]);
+    expect(g.paralelismoMaximo).toBe(2);
+    expect(g.ciclos).toEqual([]);
+  });
+
+  it("mesmo nível mas MESMA área: não paraleliza (agentes dividem a árvore de arquivos)", () => {
+    const g = montarGrafoExecucao([
+      tg("T-001", [], ["app.py"]),
+      tg("T-002", [], ["app.py"]),
+      tg("T-003", [], ["outro.py"]),
+    ]);
+    expect(g.niveis[0]?.tarefas).toHaveLength(3);
+    expect(g.niveis[0]?.loteParalelo).toEqual(["T-001", "T-003"]); // T-002 colide com T-001
+  });
+
+  it("respeita o teto de 3 construtores em paralelo", () => {
+    const g = montarGrafoExecucao(
+      ["a", "b", "c", "d", "e"].map((x, i) => tg(`T-00${i + 1}`, [], [`${x}.py`])),
+    );
+    expect(g.niveis[0]?.loteParalelo).toHaveLength(3);
+  });
+
+  it("tarefa concluída/cancelada não ocupa vaga no lote", () => {
+    const g = montarGrafoExecucao([
+      tg("T-001", [], ["a.py"], "concluida"),
+      tg("T-002", [], ["b.py"], "cancelada"),
+      tg("T-003", [], ["c.py"], "pronta"),
+    ]);
+    expect(g.niveis[0]?.loteParalelo).toEqual(["T-003"]);
+  });
+
+  it("CICLO é detectado em vez de travar em laço infinito", () => {
+    const g = montarGrafoExecucao([
+      tg("T-001", ["T-002"], ["a"]),
+      tg("T-002", ["T-001"], ["b"]),
+      tg("T-003", [], ["c"]),
+    ]);
+    expect(g.ciclos.sort()).toEqual(["T-001", "T-002"]);
+    expect(g.niveis[0]?.tarefas.map((t) => t.id)).toEqual(["T-003"]); // o resto segue
+  });
+
+  it("dependência para tarefa inexistente é reportada e ignorada no cálculo", () => {
+    const g = montarGrafoExecucao([tg("T-001", ["T-999"], ["a"])]);
+    expect(g.quebradas).toEqual([{ tarefa: "T-001", falta: "T-999" }]);
+    expect(g.niveis[0]?.tarefas.map((t) => t.id)).toEqual(["T-001"]); // não trava
+  });
+
+  it("sem tarefas: grafo vazio, sem paralelismo", () => {
+    const g = montarGrafoExecucao([]);
+    expect(g.niveis).toEqual([]);
+    expect(g.paralelismoMaximo).toBe(0);
   });
 });
 

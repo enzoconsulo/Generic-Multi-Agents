@@ -7,7 +7,7 @@ Leia, nesta ordem:
     3. painel/CLAUDE.md                  (seção "Armadilhas conhecidas" — 13 armadilhas
                                           reais, cada uma de um bug que já custou tempo)
 Scan de status (um Grep resolve):
-    ^status: em painel/_gestao/tarefas/*.md          → 23 concluida + T-024 PRONTA
+    ^status: em painel/_gestao/tarefas/*.md          → 23 concluida + T-024/T-025 em-teste
     ^status: em projetos/*/_gestao/tarefas/*.md      → ia-hibrida-limpa: 1 pronta, 5 backlog
 
 Como rodar:  duplo-clique em INICIAR.bat (raiz) → abre http://127.0.0.1:8765 sozinho.
@@ -59,6 +59,13 @@ O QUE FAZER — EM ORDEM
    AÇÃO: peça ao usuário para abrir /jobs, disparar um fluxo e dizer se ficou bom.
      - ficou bom  → marque `concluida` e siga para o item 2;
      - não ficou  → anote o que ele apontou na seção Verificação e corrija ANTES do resto.
+
+   NA MESMA LEVA, TAMBÉM `em-teste`: T-025 (grafo de dependências no mapa do plano).
+   Nova seção "Ordem de execução e paralelismo" na página do projeto: degraus de
+   dependência, contorno nas tarefas que rodam simultaneamente, selo de paralelismo
+   máximo, e denúncia de ciclo/dependência quebrada. Verificar junto: abrir
+   ia-hibrida-limpa → expandir a seção → devem aparecer 5 degraus, com T-003 e T-005
+   marcadas como paralelas no 3º.
 
 2) EXECUTAR O ia-hibrida-limpa (é o passo natural; nada de código do painel envolvido)
    Estado: ESPECIFICACAO + PLANO (3 fases) + T-001..T-006 criados; equipe com

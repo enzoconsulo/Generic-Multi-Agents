@@ -5,6 +5,19 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-27 (T-025 — grafo de dependências, em-teste)
+**T-025 — o painel passou a mostrar o que pode rodar ao mesmo tempo.** Nasceu de uma
+pergunta do usuário ("a alocação de agentes é eficiente? por que só 2 especialistas?") que
+**só existiu porque a tela não mostrava**: a resposta estava nas `dependencias`/`areas` das
+tarefas. Nova seção "Ordem de execução e paralelismo" no mapa: tarefas agrupadas por
+DEGRAU de dependência, com contorno nas que de fato rodam simultaneamente (áreas disjuntas
++ teto de 3) e selo do paralelismo máximo. Detecta CICLO (que congelaria a página se o
+nivelamento não parasse) e dependência para tarefa inexistente. Escolha de desenho:
+degraus em vez de setas — um DAG desenhado exigiria layout topológico e ainda assim não
+responderia direto "o que roda junto". `montarGrafoExecucao` puro, 7 testes, um deles
+espelhando o grafo real do ia-hibrida-limpa. Suíte: **servidor 209/209 + web 48/48**.
+Em `em-teste`: falta a verificação visual do usuário.
+
 ## 2026-07-27 (T-024 — página de Jobs visual, em-teste)
 **T-024 — a tela onde se acompanha a execução deixou de ser log cru.** Corrige o erro de
 alvo da T-023: o pedido era "detalhe dos JOBS", e a T-023 entregou na página do projeto.
