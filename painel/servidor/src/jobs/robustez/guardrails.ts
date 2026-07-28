@@ -52,6 +52,8 @@ const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
   "projeto:replanejar": { maxTurns: 120 }, // reescreve plano e tarefas: mais fôlego
   /** T-034 — escopo de um projeto, então bem abaixo dos comandos globais equivalentes. */
   "projeto:conferir": { maxTurns: 80 },
+  /** Marco roda software de verdade e ainda promove tarefas: silêncio longo é legítimo. */
+  "projeto:marco": { maxTurns: 100, watchdogMs: 20 * MINUTO },
   "projeto:progresso": { maxTurns: 60 },
   /** T-035 — ler o projeto e sintetizar os especialistas. */
   "projeto:recriar-equipe": { maxTurns: 80 },

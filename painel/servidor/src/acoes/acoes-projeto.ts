@@ -141,6 +141,26 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
     peso: "medio",
     entrada: null,
   },
+  /**
+   * T-038 — era a única etapa do protocolo que ainda precisava ser despachada por fora do
+   * painel. Fica em `cuidado` (é zeladoria de fase, não um serviço avulso) mesmo o agente
+   * sendo o `testador`: o título da seção não promete que quem executa é o orquestrador.
+   */
+  {
+    id: "marco",
+    grupo: "cuidado",
+    rotulo: "Verificar marco de fase",
+    resumo:
+      "Julga se a META de uma fase concluída está de pé, rodando o software. Aprovado, promove as tarefas que destravaram.",
+    agente: "testador",
+    peso: "medio",
+    entrada: {
+      rotulo: "Qual fase? (opcional)",
+      placeholder:
+        "Ex.: fase 2; deixe vazio para verificar a fase concluída que ainda está com o marco pendente",
+      obrigatoria: false,
+    },
+  },
   {
     id: "progresso",
     grupo: "cuidado",

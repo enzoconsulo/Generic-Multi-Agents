@@ -66,8 +66,10 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
 - **Ações POR PROJETO** (T-033/T-034/T-035): `acoes/acoes-projeto.ts` é o catálogo
   data-driven (ação = uma entrada + um prompt em `prompts/projeto/<id>.md`), com rota
   própria e lock `projeto:<nome>`. Três grupos, que a UI usa para montar as seções:
-  `especialista` (despacha um agente da fábrica), `cuidado` (zeladoria do projeto, feita
-  pelo orquestrador) e `equipe`. **O `cwd` é a RAIZ da fábrica, não a pasta do projeto** —
+  `especialista` (despacha um agente da fábrica), `cuidado` (zeladoria do projeto:
+  integridade, marco de fase e progresso) e `equipe`. A invariante vale numa direção só —
+  ação de `especialista` NUNCA tem agente `orquestrador` (o título da seção mentiria); a
+  inversa não, porque `marco` é zeladoria executada pelo `testador`. **O `cwd` é a RAIZ da fábrica, não a pasta do projeto** —
   ao contrário da análise —, porque os `.claude/agents/` só carregam de lá; em troca, o
   confinamento é explícito no texto do prompt.
 - `lib/gestao.ts` + `SecaoGestao` (T-036): cruza as `dependencias` das tarefas (que sempre

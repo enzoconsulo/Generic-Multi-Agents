@@ -36,6 +36,7 @@ describe("catálogo de ações por projeto (T-033)", () => {
       "replanejar",
       "testar",
       "conferir",
+      "marco",
       "progresso",
       "recriar-equipe",
     ]);
@@ -69,21 +70,28 @@ describe("catálogo de ações por projeto (T-033)", () => {
     expect(acaoProjetoPorId("apagar-tudo")).toBeNull();
   });
 
-  it("separa especialistas de zeladoria, e só a zeladoria é do orquestrador", () => {
-    // A UI monta as seções a partir deste campo. Se uma ação de `orquestrador` caísse no
-    // grupo `especialista`, o título da seção mentiria sobre o conteúdo dela.
+  it("nenhuma ação de `especialista` é do orquestrador, e nenhuma fica órfã de grupo", () => {
+    // A UI monta as seções a partir deste campo. A invariante que importa é UMA direção:
+    // ação de `orquestrador` sob o título "Chamar um especialista" faria o título mentir.
+    // A inversa NÃO vale — `marco` (T-038) é zeladoria de fase executada pelo `testador`,
+    // e "Cuidar deste projeto" não promete que quem executa é o orquestrador. A guarda
+    // contra membro entrando no grupo errado sem querer é a lista explícita de ids.
     const especialistas = ACOES_PROJETO.filter((a) => a.grupo === "especialista");
     const cuidado = ACOES_PROJETO.filter((a) => a.grupo === "cuidado");
     const equipe = ACOES_PROJETO.filter((a) => a.grupo === "equipe");
-    expect(especialistas).toHaveLength(5);
-    expect(cuidado.map((a) => a.id)).toEqual(["conferir", "progresso"]);
+
+    expect(especialistas.map((a) => a.id)).toEqual([
+      "documentar",
+      "pesquisar",
+      "revisar",
+      "replanejar",
+      "testar",
+    ]);
+    expect(cuidado.map((a) => a.id)).toEqual(["conferir", "marco", "progresso"]);
     expect(equipe.map((a) => a.id)).toEqual(["recriar-equipe"]);
 
     for (const a of especialistas) {
       expect(a.agente, `${a.id} deveria despachar um especialista`).not.toBe("orquestrador");
-    }
-    for (const a of cuidado) {
-      expect(a.agente, `${a.id} é zeladoria do próprio fluxo`).toBe("orquestrador");
     }
     // Toda ação pertence a um dos grupos — nenhuma fica órfã e some da tela.
     expect(especialistas.length + cuidado.length + equipe.length).toBe(ACOES_PROJETO.length);
@@ -109,6 +117,17 @@ describe("catálogo de ações por projeto (T-033)", () => {
     const conferir = await lerPromptProjeto("conferir");
     expect(conferir).toContain("$DIR_PROJETO");
     expect(conferir.toLowerCase()).toContain("apenas reporte");
+  });
+
+  it("o prompt do marco carrega as duas regras que dão sentido a ele", async () => {
+    // Aprendidas rodando o marco da Fase 1 de verdade: sem elas, o fluxo vira ou uma
+    // repetição cara da verificação de tarefa, ou opinião sobre o que seria bom ter.
+    const marco = await lerPromptProjeto("marco");
+    expect(marco.toLowerCase()).toContain("não é re-rodar os critérios");
+    expect(marco.toLowerCase()).toContain("não mova a trave");
+    // A linha Marco: é o que diz às próximas sessões que já rodou — o fluxo tem que gravá-la.
+    expect(marco).toContain("Marco:");
+    expect(marco).toContain("PLANO.md");
   });
 });
 
