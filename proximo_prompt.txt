@@ -7,7 +7,7 @@ Leia, nesta ordem:
     3. painel/CLAUDE.md                  (seção "Armadilhas conhecidas" — 13 armadilhas
                                           reais, cada uma de um bug que já custou tempo)
 Scan de status (um Grep resolve):
-    ^status: em painel/_gestao/tarefas/*.md          → 26/26 concluida
+    ^status: em painel/_gestao/tarefas/*.md          → 27/27 concluida
     ^status: em projetos/*/_gestao/tarefas/*.md      → ia-hibrida-limpa: 1 pronta, 5 backlog
 
 Como rodar:  duplo-clique em INICIAR.bat (raiz) → abre http://127.0.0.1:8765 sozinho.
@@ -57,6 +57,14 @@ O QUE FAZER — EM ORDEM
    Derrube o painel antes de rodar `npm test`: painel no ar quebra o worker do vitest.
 
    >>> A partir de agora, tarefa de UI só vai para `concluida` DEPOIS de capturar e olhar.
+   Já rendeu 7 defeitos numa única passada (T-027), sendo dois deles INFORMAÇÃO FALSA na
+   tela com a suíte inteira verde.
+
+   Para provar comportamento ao vivo (cronômetro, pulso, progresso) SEM gastar assinatura:
+   crie um projeto temporário em projetos/ com um `_gestao/ci.json` cujo estágio rode um
+   script lento (`node -e "setInterval(...)"`), dispare POST /api/ci/<nome>/rodar e capture
+   duas vezes com intervalo. Job de CI é gratuito — roda processo local, não usa Claude.
+   Apague o projeto de teste ao terminar.
 
 2) EXECUTAR O ia-hibrida-limpa (é o passo natural; nada de código do painel envolvido)
    Estado: ESPECIFICACAO + PLANO (3 fases) + T-001..T-006 criados; equipe com

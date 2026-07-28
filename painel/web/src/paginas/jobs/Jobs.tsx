@@ -5,6 +5,7 @@ import { useJobsAoVivo } from "../../lib/useJobsAoVivo";
 import {
   agenteAtivo,
   segmentarPorAgente,
+  segmentarPorEstagio,
   tarefaEmFoco,
   type EtapaPipeline,
   type SegmentoAgente,
@@ -113,7 +114,12 @@ function ItemJob({
 }) {
   const rodando = jobCancelavel(job.estado);
   return (
-    <button type="button" className={`job-item ${ativo ? "ativo" : ""}`} onClick={aoClicar}>
+    <button
+      type="button"
+      className={`job-item ${ativo ? "ativo" : ""}`}
+      onClick={aoClicar}
+      title={job.titulo}
+    >
       <span className="job-item-topo">
         <span className={`badge job-estado ${classeEstadoJob(job.estado)}`}>
           {rotuloEstadoJob(job.estado)}
@@ -141,7 +147,8 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
   const fim = rodando ? agora : Date.parse(job.terminadoEm ?? job.criadoEm);
   const tempo = decorrido(job.iniciadoEm ?? job.criadoEm, fim);
   const agente = rodando ? agenteAtivo(linhas) : null;
-  const segmentos = segmentarPorAgente(linhas);
+  // Job Claude segmenta por AGENTE; job de CI por ESTÁGIO — ele não tem agentes.
+  const segmentos = job.usaClaude ? segmentarPorAgente(linhas) : segmentarPorEstagio(linhas);
   const tarefa = tarefaEmFoco(linhas);
   const modelo = typeof job.params["modelo"] === "string" ? job.params["modelo"] : "—";
   const resultado = job.resultado as { custoUsd?: number | null; numTurnos?: number | null } | null;
@@ -178,15 +185,19 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
       {rodando && (
         <div className="agora">
           <span className="agora-avatar" aria-hidden="true">
-            {(agente ?? "??").slice(0, 2).toUpperCase()}
+            {(agente ?? "orq").slice(0, 2).toUpperCase()}
           </span>
           <div className="agora-texto">
             <strong className="agora-nome">
-              {agente !== null ? agente : "orquestrador"}
+              {agente ?? (job.usaClaude ? "orquestrador" : "CI")}
               <span className="pulso" aria-hidden="true" />
             </strong>
             <span className="agora-sub">
-              {agente !== null ? "trabalhando agora" : "organizando o trabalho"}
+              {!job.usaClaude
+                ? "executando o pipeline"
+                : agente !== null
+                  ? "trabalhando agora"
+                  : "organizando o trabalho"}
               {tarefa !== null && ` · tarefa ${tarefa}`}
               {tempo !== null && ` · há ${tempo}`}
             </span>
@@ -194,7 +205,9 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
         </div>
       )}
 
-      <TrilhaPipeline etapa={agente !== null ? etapaDe(agente) : null} segmentos={segmentos} />
+      {job.usaClaude && (
+        <TrilhaPipeline etapa={agente !== null ? etapaDe(agente) : null} segmentos={segmentos} />
+      )}
 
       <dl className="job-campos">
         <Campo rot="Modelo" valor={modelo} />
@@ -210,7 +223,9 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
 
       {erroCancel !== null && <div className="aviso aviso-erro">{erroCancel}</div>}
 
-      <h4 className="secao-tarefa-rot">O que cada agente fez</h4>
+      <h4 className="secao-tarefa-rot">
+        {job.usaClaude ? "O que cada agente fez" : "Passo a passo"}
+      </h4>
       {linhas.length === 0 ? (
         <p className="texto-suave">
           {rodando
@@ -221,7 +236,12 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
       ) : (
         <ol className="trechos">
           {segmentos.map((s, i) => (
-            <Trecho key={i} segmento={s} aberto={i === segmentos.length - 1} />
+            <Trecho
+              key={i}
+              segmento={s}
+              aberto={i === segmentos.length - 1}
+              rotuloSemAgente={job.usaClaude ? "orquestrador" : "pipeline"}
+            />
           ))}
         </ol>
       )}
@@ -278,11 +298,24 @@ function TrilhaPipeline({
   );
 }
 
-function Trecho({ segmento, aberto }: { segmento: SegmentoAgente; aberto: boolean }) {
+function Trecho({
+  segmento,
+  aberto,
+  rotuloSemAgente,
+}: {
+  segmento: SegmentoAgente;
+  aberto: boolean;
+  /** Como chamar o trecho sem agente: "orquestrador" (Claude) ou "pipeline" (CI). */
+  rotuloSemAgente: string;
+}) {
   const [expandido, setExpandido] = useState(aberto);
-  const nome = segmento.agente ?? "orquestrador";
+  const nome = segmento.agente ?? rotuloSemAgente;
   const ferramentas = segmento.linhas.filter((l) => l.nivel === "ferramenta").length;
-  const textos = segmento.linhas.filter((l) => l.nivel === "assistente" || l.nivel === "subagente");
+  // Inclui `log` e `resultado`: é o nível que o runner de CI emite (stdout dos estágios).
+  // Filtrar só assistente/subagente fazia um job de CI dizer "sem texto produzido" com o
+  // processo despejando saída — mentira visível na tela.
+  const NIVEIS_TEXTO = new Set(["assistente", "subagente", "log", "resultado", "erro"]);
+  const textos = segmento.linhas.filter((l) => NIVEIS_TEXTO.has(l.nivel) && l.texto.trim() !== "");
 
   return (
     <li className={`trecho trecho-${segmento.etapa ?? "orquestrador"}`}>

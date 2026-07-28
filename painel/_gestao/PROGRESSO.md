@@ -5,6 +5,17 @@ Diário do projeto, entradas mais recentes NO TOPO. Formato:
 ## AAAA-MM-DD
 <o que avançou, estado atual, próximos passos visíveis — 3–6 linhas>
 
+## 2026-07-28 (T-027 — interface revisada OLHANDO, e cronômetro provado)
+**Cronômetro PROVADO** com duas capturas espaçadas: "Rodando há 11s" → "Durou 30s". A
+prova usou o motor de CI (gratuito, roda processo local) num projeto temporário, já
+apagado — um job Claude custaria dinheiro para provar um relógio.
+**7 defeitos que nenhum teste pegaria**, achados capturando página a página: lista de jobs
+sem teto (página de 2000px), título do /ideia ocupando 10 linhas (é o prompt inteiro),
+trilha do pipeline Claude aparecendo em job de CI, avatar "??", **"sem texto produzido" num
+CI que estava logando** (filtro de nível), **job de CI rotulado "orquestrador"** (agora
+segmenta por estágio) e 404 sem saída. Os dois em negrito eram INFORMAÇÃO FALSA na tela
+com a suíte inteira verde. Suíte: **servidor 209/209 + web 69/69**.
+
 ## 2026-07-28 (VERIFICAÇÃO VISUAL DESTRAVADA — a maior lacuna do projeto)
 **O painel passou a ser verificável visualmente.** Até aqui NENHUMA tela tinha sido vista
 renderizada — todas as tarefas de UI foram entregues com ressalva. Descoberto que Edge e

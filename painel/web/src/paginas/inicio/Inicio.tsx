@@ -39,14 +39,13 @@ export function Inicio() {
         )}
         {fabrica.dados !== null && (
           <>
-            <div className="tiles">
+            <div className="panorama">
               <div className="tile tile-destaque">
                 <span className="tile-num">{fabrica.dados.resumo.projetos}</span>
                 <span className="tile-rot">Projetos</span>
               </div>
+              <ResumoStatus contagem={fabrica.dados.resumo.tarefasPorStatus} />
             </div>
-            <div className="espaco-sm" />
-            <ResumoStatus contagem={fabrica.dados.resumo.tarefasPorStatus} />
           </>
         )}
       </section>

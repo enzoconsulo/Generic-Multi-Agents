@@ -121,6 +121,36 @@ export function segmentarPorAgente(linhas: readonly LinhaLog[]): SegmentoAgente[
   return segmentos;
 }
 
+/**
+ * Segmenta o log de um job de CI por ESTÁGIO (T-026). Um pipeline de CI não tem agentes —
+ * rotular o trecho de "orquestrador" seria mentira. As linhas do runner de CI já carregam
+ * `estagio`, então é só agrupar por ele.
+ */
+export function segmentarPorEstagio(linhas: readonly LinhaLog[]): SegmentoAgente[] {
+  const segmentos: SegmentoAgente[] = [];
+  let atual: SegmentoAgente | null = null;
+
+  for (const linha of linhas) {
+    const nome = linha.estagio ?? null;
+    if (atual === null || atual.agente !== nome) {
+      atual = {
+        agente: nome,
+        etapa: null, // as etapas construir/testar/revisar são do pipeline Claude
+        inicio: linha.em,
+        fim: linha.em,
+        linhas: [],
+        duracaoMs: 0,
+      };
+      segmentos.push(atual);
+    }
+    atual.linhas.push(linha);
+    atual.fim = linha.em;
+    const ms = Date.parse(atual.fim) - Date.parse(atual.inicio);
+    atual.duracaoMs = Number.isFinite(ms) && ms > 0 ? ms : 0;
+  }
+  return segmentos;
+}
+
 /** Última tarefa (T-NNN) citada no log — o orquestrador cita o id ao despachar. */
 export function tarefaEmFoco(linhas: readonly LinhaLog[]): string | null {
   for (let i = linhas.length - 1; i >= 0; i--) {

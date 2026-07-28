@@ -6,6 +6,7 @@ import {
   montarGrafoExecucao,
   montarMapaPlano,
   segmentarPorAgente,
+  segmentarPorEstagio,
   tarefaEmFoco,
 } from "../src/lib/atividade";
 import type { LinhaLog, Plano, TarefaCompleta } from "../src/lib/tipos";
@@ -132,6 +133,36 @@ describe("segmentarPorAgente", () => {
 
   it("log vazio não gera trecho", () => {
     expect(segmentarPorAgente([])).toEqual([]);
+  });
+});
+
+describe("segmentarPorEstagio (jobs de CI, que não têm agentes)", () => {
+  const comEstagio = (estagio: string, texto: string, em: string): LinhaLog => ({
+    nivel: "log",
+    texto,
+    em,
+    estagio,
+  });
+
+  it("agrupa por estágio, não por agente", () => {
+    const s = segmentarPorEstagio([
+      comEstagio("instalar", "baixando", "2026-07-27T10:00:00Z"),
+      comEstagio("instalar", "pronto", "2026-07-27T10:00:20Z"),
+      comEstagio("testes", "rodando", "2026-07-27T10:00:30Z"),
+    ]);
+    expect(s.map((x) => x.agente)).toEqual(["instalar", "testes"]);
+    expect(s[0]?.linhas).toHaveLength(2);
+    expect(s[0]?.duracaoMs).toBe(20000);
+  });
+
+  it("não atribui etapa do pipeline Claude a estágio de CI", () => {
+    const s = segmentarPorEstagio([comEstagio("build", "x", "2026-07-27T10:00:00Z")]);
+    expect(s[0]?.etapa).toBeNull();
+  });
+
+  it("linha sem estágio vira trecho de agente null (o chamador rotula)", () => {
+    const s = segmentarPorEstagio([{ nivel: "log", texto: "solta", em: "2026-07-27T10:00:00Z" }]);
+    expect(s[0]?.agente).toBeNull();
   });
 });
 

@@ -883,10 +883,24 @@ a:hover {
   gap: 1rem;
   align-items: start;
 }
+/* Rolagem própria: o histórico cresce sem parar e, sem teto, empurrava a página para
+   milhares de pixels — o detalhe do job ficava perdido ao lado de uma coluna gigante. */
 .jobs-lista {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  max-height: calc(100vh - 12rem);
+  overflow-y: auto;
+  padding-right: 0.3rem;
+  position: sticky;
+  top: 5rem;
+}
+.jobs-lista::-webkit-scrollbar {
+  width: 8px;
+}
+.jobs-lista::-webkit-scrollbar-thumb {
+  background-color: var(--cor-borda-forte);
+  border-radius: 4px;
 }
 .job-item {
   display: flex;
@@ -919,9 +933,18 @@ a:hover {
   font-size: 0.72rem;
   color: var(--cor-texto-suave);
 }
+/* O título de um job de /ideia é o PROMPT INTEIRO: sem corte, um único item ocupava
+   dez linhas e engolia a lista. Duas linhas + reticências; o texto completo fica no
+   `title` do botão. */
 .job-item-titulo {
   font-size: 0.82rem;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: left;
 }
 
 .jobs-detalhe {
@@ -1877,4 +1900,13 @@ a:hover {
   .campo dt {
     min-width: 0;
   }
+}
+
+/* Panorama numa linha: o total de projetos e a contagem por status são a MESMA
+   informação de topo — separá-los em duas faixas só criava degrau visual. */
+.panorama {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
 }

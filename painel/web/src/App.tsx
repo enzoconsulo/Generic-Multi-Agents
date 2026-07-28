@@ -1,4 +1,4 @@
-import { NavLink, Route, Routes } from "react-router-dom";
+import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { useJobsAoVivo } from "./lib/useJobsAoVivo";
 import { ESTADOS_JOB_ATIVOS } from "./lib/formato";
 import { ComoFunciona } from "./paginas/como-funciona/ComoFunciona";
@@ -47,9 +47,19 @@ export function App() {
 
 function PaginaNaoEncontrada() {
   return (
-    <section>
-      <h2>Página não encontrada</h2>
-      <p>O endereço acessado não existe no painel.</p>
-    </section>
+    <div className="pagina">
+      <section className="intro">
+        <h2 className="intro-titulo">Página não encontrada</h2>
+        <p className="intro-sub">
+          O endereço acessado não existe no painel. Talvez o projeto tenha sido renomeado
+          ou removido.
+        </p>
+      </section>
+      <div>
+        <Link className="botao botao-acao" to="/">
+          Voltar ao início
+        </Link>
+      </div>
+    </div>
   );
 }
