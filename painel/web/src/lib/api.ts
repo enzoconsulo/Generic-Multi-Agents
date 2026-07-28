@@ -9,6 +9,12 @@ export class ErroApi extends Error {
      * para o usuário e isto é para diagnóstico.
      */
     public readonly detalhe: string | null = null,
+    /**
+     * Corpo JSON inteiro da resposta de erro, para quando o backend anexa dado
+     * estruturado (ex.: o relatório de segurança que barrou um push). Fica `unknown`
+     * de propósito: quem usa sabe o formato que espera, o helper não.
+     */
+    public readonly corpo: unknown = null,
   ) {
     super(mensagem);
     this.name = "ErroApi";
@@ -52,8 +58,10 @@ export async function api<T>(caminho: string, init?: RequestInit): Promise<T> {
   if (!resposta.ok) {
     let mensagem = `Erro ${resposta.status} ao chamar ${caminho}`;
     let detalhe: string | null = null;
+    let corpoJson: unknown = null;
     try {
       const corpo = (await resposta.json()) as { erro?: unknown; detalhe?: unknown };
+      corpoJson = corpo;
       if (typeof corpo.erro === "string" && corpo.erro.length > 0) {
         mensagem = corpo.erro;
       }
@@ -63,7 +71,7 @@ export async function api<T>(caminho: string, init?: RequestInit): Promise<T> {
     } catch {
       // Corpo não-JSON: mantém a mensagem padrão.
     }
-    throw new ErroApi(resposta.status, mensagem, detalhe);
+    throw new ErroApi(resposta.status, mensagem, detalhe, corpoJson);
   }
 
   return (await resposta.json()) as T;

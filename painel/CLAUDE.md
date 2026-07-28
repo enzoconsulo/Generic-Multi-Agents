@@ -54,10 +54,15 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
   kanban, plano, análise, decisões, progresso), `src/paginas/jobs` (console ao vivo) e
   `src/paginas/git` (repositórios: endereço na nuvem, commit e push). Tema dark em
   `src/estilos.css`.
-- **Git é uma bifurcação, não um repositório só** (T-030): a raiz versiona sistema +
-  painel; cada `projetos/<nome>` é repositório INDEPENDENTE com remoto próprio (a raiz
-  ignora `projetos/`). `fabrica/git.ts` cuida do repositório local (histórico, commit) e
-  `fabrica/publicacao.ts` de tudo que atravessa a rede (remoto, push).
+- **Git é uma bifurcação, não um repositório só** (T-030/T-031): a raiz versiona sistema
+  + painel; cada `projetos/<nome>` é repositório INDEPENDENTE com remoto próprio (a raiz
+  ignora `projetos/`). `fabrica/git.ts` cuida do repositório local (histórico, commit),
+  `fabrica/publicacao.ts` de tudo que atravessa a rede (remoto, push, `git init`,
+  `.gitignore`) e `fabrica/seguranca.ts` da conferência pré-publicação. O ciclo
+  (commitar → conferir → publicar) aparece na aba Git E na página de cada projeto.
+- `fabrica/ajustes.ts` + aba Ajustes (T-032): estado das contas Claude/GitHub. Só
+  DIAGNOSTICA (existência de credencial, meio de autenticação) — não existe "conectar
+  conta" no painel, porque os dois logins são fluxos interativos fora dele.
 - Estado é sempre derivado dos arquivos da fábrica na hora da consulta; `dados/` guarda só
   histórico operacional (descartável, fora do git).
 
@@ -151,3 +156,18 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   `ext::<comando>` é uma URL que o git aceita e que faz ele EXECUTAR o comando — é
   execução remota disfarçada de endereço. Mesma família do hash de commit que precisa ser
   hexadecimal: argumento não validado vira flag ou vira código.
+- **A guarda de segurança mora na OPERAÇÃO, não na rota nem na UI.** `publicar()` chama a
+  varredura sozinho; se dependesse de a tela lembrar de conferir antes, bastaria um
+  caminho novo de código para publicar sem checagem. Vale para toda ação irreversível.
+- **Relatório de segurança nunca repete o segredo encontrado** — só o arquivo e a linha.
+  Relatório vira captura de tela, log e print no chat; repetir o valor espalha o
+  problema em vez de contê-lo.
+- **`credential.helper` no Windows vem do gitconfig do SISTEMA.** Lê-lo com `--global`
+  devolve vazio e faz a UI dizer "não conectado" numa máquina que publica normalmente.
+- **Caractere de controle em regex: escreva o ESCAPE, nunca o caractere cru.** A validação
+  de URL de remoto em `publicacao.ts` nasceu com os controles (U+0000 a U+001F) literais
+  no fonte. A regex funcionava — o estrago era outro: um byte NUL faz o git classificar o
+  arquivo como **binário**, e o diff de `publicacao.ts` (tudo que atravessa a rede) parou
+  de ser revisável, `Bin 13061 -> 16842 bytes` no lugar das linhas. Passou despercebido um
+  commit inteiro. Ao editar, confira que o arquivo não ganhou controle cru: ferramenta de
+  edição grava o caractere de verdade quando você quer a grafia dele.

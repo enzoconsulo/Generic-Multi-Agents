@@ -2407,3 +2407,120 @@ a:hover {
 .repo-publicar > .botao-acao {
   margin-top: 0;
 }
+
+/* ---------- Conferência de segurança pré-publicação (T-031) ---------- */
+.conferencia {
+  flex-basis: 100%;
+  margin-top: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-fundo);
+}
+/* Barrado é decisão, não decoração: a borda vermelha diz que algo PAROU. */
+.conferencia-barrada {
+  border-color: var(--cor-erro);
+}
+.conferencia-cab {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.55rem;
+  font-size: 0.85rem;
+}
+.conferencia-lista {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+.conferencia-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: 0.8rem;
+}
+.conferencia-item:last-child {
+  border-bottom: none;
+}
+.conferencia-nivel {
+  flex: 0 0 3.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.nivel-alto .conferencia-nivel {
+  color: var(--cor-erro);
+}
+.nivel-medio .conferencia-nivel {
+  color: var(--cor-alerta);
+}
+.conferencia-corpo {
+  min-width: 0;
+}
+.conferencia-caminho {
+  overflow-wrap: anywhere;
+  color: var(--cor-texto);
+}
+.conferencia-onde {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+}
+/* Já versionado é o caso mais grave: está no histórico, não basta apagar o arquivo. */
+.onde-grave {
+  color: var(--cor-erro);
+}
+.conferencia-acao {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+}
+.conferencia-decisao {
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--cor-borda);
+}
+.conferencia-decisao p {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* ---------- Aba Ajustes (T-032) ---------- */
+.ajustes-campos {
+  display: grid;
+  grid-template-columns: minmax(10rem, max-content) 1fr;
+  gap: 0.3rem 1rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+}
+.ajustes-campos dt {
+  color: var(--cor-texto-suave);
+}
+.ajustes-campos dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ajustes-nota {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+}
+/* O que fazer para resolver — precisa saltar, é a única ação possível quando falta algo. */
+.ajustes-resolver {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border-left: 3px solid var(--cor-alerta);
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-superficie-2);
+  font-size: 0.8rem;
+}

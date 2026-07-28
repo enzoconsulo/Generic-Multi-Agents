@@ -23,6 +23,9 @@ import {
 } from "../../lib/formato";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
 import { GrafoGit } from "../../componentes/GrafoGit";
+import { PublicacaoRepo } from "../../componentes/PublicacaoRepo";
+import { EstadoPublicacao } from "../git/Git";
+import type { ListaRepos } from "../../lib/tipos";
 import { Markdown } from "../../componentes/Markdown";
 import { TextoLongo } from "../../componentes/TextoLongo";
 import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicadores";
@@ -145,6 +148,8 @@ function DetalheProjeto({
 
       <GrafoGit repo={projeto.nome} titulo="Histórico do código" />
 
+      <SecaoPublicacao projeto={projeto.nome} />
+
       <SecaoCi projeto={projeto.nome} jobAtivo={jobAtivo} aoVivo={aoVivo} />
 
       <SecaoAnalise projeto={projeto.nome} analise={projeto.analise} bloqueado={jobAtivo !== null} />
@@ -152,6 +157,28 @@ function DetalheProjeto({
       <SecaoTexto titulo="Decisões" texto={projeto.decisoes} vazio="Sem DECISOES.md." />
       <SecaoTexto titulo="Progresso" texto={projeto.progresso} vazio="Sem PROGRESSO.md." />
     </>
+  );
+}
+
+/**
+ * Publicação DESTE projeto (T-031). Cada projeto é um repositório próprio, com endereço
+ * próprio na nuvem — e é aqui, na página dele, que se olha o projeto. Obrigar a ir até a
+ * aba Git para publicar seria o mesmo erro da T-023: entregar longe de onde se olha.
+ */
+function SecaoPublicacao({ projeto }: { projeto: string }) {
+  const { dados, erro, recarregar } = useDados<ListaRepos>("/api/repos");
+  const repo = dados?.repos.find((r) => r.id === projeto) ?? null;
+
+  return (
+    <section className="secao">
+      <div className="secao-cab-acao">
+        <h3 className="secao-titulo">Publicação</h3>
+        {repo !== null && <EstadoPublicacao repo={repo} />}
+      </div>
+      {erro !== null && <MensagemErro erro={erro} />}
+      {repo === null && erro === null && <p className="texto-suave">Lendo o repositório…</p>}
+      {repo !== null && <PublicacaoRepo repo={repo} aoMudar={recarregar} />}
+    </section>
   );
 }
 

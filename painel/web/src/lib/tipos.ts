@@ -364,3 +364,60 @@ export interface ResultadoPush {
   criouUpstream: boolean;
   saida: string;
 }
+
+/* ---------- Conferência de segurança pré-publicação (T-031) ---------- */
+
+export interface AchadoSeguranca {
+  nivel: "alto" | "medio";
+  tipo: "segredo" | "arquivo-sensivel" | "sem-gitignore";
+  caminho: string;
+  detalhe: string;
+  /** Já está no histórico (grave) ou entraria no próximo commit? */
+  versionado: boolean;
+  linha: number | null;
+}
+
+export interface RelatorioSeguranca {
+  achados: AchadoSeguranca[];
+  arquivosVarridos: number;
+  truncado: boolean;
+  temGitignore: boolean;
+  /** Há achado alto — publicar exige decisão explícita. */
+  bloqueia: boolean;
+}
+
+/* ---------- Ajustes e contas (T-032) ---------- */
+
+export interface ContaGitHub {
+  meio: "https" | "ssh" | "nenhum";
+  conectado: boolean;
+  identidadeNome: string | null;
+  identidadeEmail: string | null;
+  credentialHelper: string | null;
+  chavesSsh: string[];
+  ghInstalado: boolean;
+  ghConta: string | null;
+  comoResolver: string | null;
+}
+
+export interface ContaClaude {
+  conectado: boolean;
+  cliInstalado: boolean;
+  versao: string | null;
+  temCredenciais: boolean;
+  comoResolver: string | null;
+}
+
+export interface AjustesPainel {
+  porta: number;
+  fabricaRaiz: string;
+  dirDados: string;
+  tetoJobsClaude: number;
+  estrategias: string[];
+}
+
+export interface Ajustes {
+  github: ContaGitHub;
+  claude: ContaClaude;
+  painel: AjustesPainel;
+}

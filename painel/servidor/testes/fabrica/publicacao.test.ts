@@ -67,6 +67,16 @@ describe("validarUrlRemoto", () => {
     expect(validarUrlRemoto("--upload-pack=rm")).not.toBeNull();
     expect(validarUrlRemoto("http://github.com/u/r.git")).not.toBeNull(); // sem TLS
   });
+
+  it("recusa caractere de controle que NÃO é espaço em branco", () => {
+    // A metade do range que `\s` NÃO cobre. Um controle no meio da URL some no
+    // terminal e esconde o que vem depois — o mesmo risco do espaço.
+    // Escritos como ESCAPE de propósito: controle CRU no fonte faz o git tratar o
+    // arquivo como binário, e aí o diff desta própria validação deixa de ser revisável.
+    expect(validarUrlRemoto("https://github.com/u/r.git\u0001")).not.toBeNull();
+    expect(validarUrlRemoto("https://github.com/u\u001B[2K/r.git")).not.toBeNull();
+    expect(validarUrlRemoto("https://github.com/u/r.git\u0000algo")).not.toBeNull();
+  });
 });
 
 describe("dirDoRepo", () => {

@@ -1,6 +1,7 @@
 import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { useJobsAoVivo } from "./lib/useJobsAoVivo";
 import { ESTADOS_JOB_ATIVOS } from "./lib/formato";
+import { Ajustes } from "./paginas/ajustes/Ajustes";
 import { ComoFunciona } from "./paginas/como-funciona/ComoFunciona";
 import { Git } from "./paginas/git/Git";
 import { Inicio } from "./paginas/inicio/Inicio";
@@ -32,6 +33,7 @@ export function App() {
           </NavLink>
           <NavLink to="/git">Git</NavLink>
           <NavLink to="/como-funciona">Como funciona</NavLink>
+          <NavLink to="/ajustes">Ajustes</NavLink>
         </nav>
       </header>
       <main className="conteudo">
@@ -40,6 +42,7 @@ export function App() {
           <Route path="/projeto/:nome" element={<Projeto />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/git" element={<Git />} />
+          <Route path="/ajustes" element={<Ajustes />} />
           <Route path="/como-funciona" element={<ComoFunciona />} />
           <Route path="*" element={<PaginaNaoEncontrada />} />
         </Routes>
