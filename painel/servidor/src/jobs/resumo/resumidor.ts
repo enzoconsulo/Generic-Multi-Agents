@@ -136,7 +136,18 @@ export async function resumirTrecho(
         maxTurns: 1,
         // Resumir é uma pergunta, não uma tarefa agêntica: sem ferramentas, o modelo não
         // tem como sair lendo arquivo nem gastar turno à toa.
+        //
+        // `tools: []` é o que REMOVE as ferramentas — `allowedTools: []` só diz que
+        // nenhuma é auto-aprovada, e as definições continuam ocupando o contexto (as do
+        // Claude Code são grandes). Confundir os dois foi o que manteve o resumo caro
+        // depois da primeira rodada de corte.
+        tools: [],
         allowedTools: [],
+        // Thinking é ligado por padrão e aqui é gasto puro: medido, respondia com ~549
+        // tokens de saída para um JSON que cabe em ~160. Resumir texto que já existe é
+        // mecânico — não há o que raciocinar. Cortou o custo pela metade sem mudar a
+        // qualidade do resumo (conferido em job real).
+        thinking: { type: "disabled" },
         // As DUAS linhas abaixo são o que torna o resumo barato — sem elas, cada resumo
         // custava ~US$0,05 (medido), mais que o dobro do que a tarefa inteira deveria
         // gastar em resumos. O SDK monta um agente de codificação por padrão:

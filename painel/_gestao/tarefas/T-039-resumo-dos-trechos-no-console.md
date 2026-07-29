@@ -63,8 +63,29 @@ o resumo continua saindo, só que caro:
   arrasta os `CLAUDE.md` (fábrica + painel, inteiros) para resumir duas linhas.
 - `systemPrompt` próprio e curto — omitido, usa o preset do Claude Code.
 
-Medido depois: **US$ 0,0157** (~3,6x mais barato). Honestamente: não é desprezível. Num job
-com 10 trechos são ~US$ 0,16, e vale outra rodada de ajuste se incomodar.
+Medido depois: US$ 0,0157 (~3,6x). Ainda caro, e a segunda rodada achou por quê — com
+medição de TOKENS, não só de preço, que é o que finalmente apontou a causa:
+
+| opção | entrada | saída | custo |
+|---|---|---|---|
+| `allowedTools: []` só | **15.893 tok** | 310 | US$ 0,0088 |
+| `tools: []` | **322 tok** | 549 | US$ 0,0037 |
+| `tools: []` + thinking off | 292 tok | **161** | **US$ 0,0019** |
+
+Dois enganos meus, ambos silenciosos:
+1. **`allowedTools: []` não remove ferramenta nenhuma** — só diz que nenhuma é
+   auto-aprovada. A doc do SDK é explícita: *"To restrict which tools are available, use
+   the `tools` option instead"*. As definições do Claude Code continuavam no contexto:
+   15.893 tokens de entrada para resumir um parágrafo.
+2. **Thinking vem ligado por padrão** e aqui é gasto puro — resumir texto que já existe é
+   mecânico, não há o que raciocinar. Dobrava a saída.
+
+**Total: US$ 0,057 → US$ 0,0019 no banco de teste, US$ 0,0035 num job real (16x).** Num job
+de US$ 0,70 com 10 trechos, o resumo passa a ser ~5% do custo.
+
+Qualidade conferida DEPOIS do corte, que era a condição do usuário: o resumo do job real
+seguiu correto e específico, e a calibragem melhorou junto ("Fase 1 marco aprovado" saiu
+como ✓, não mais ⚠).
 
 **Defeito de desenho que só a captura pegou — e era o pior possível para o pedido.** O
 cartão só aparecia dentro do `Trecho`, que depende do log; o log é EFÊMERO (só trafega pelo

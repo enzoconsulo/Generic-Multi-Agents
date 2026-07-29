@@ -118,6 +118,11 @@ describe("resumirTrecho", () => {
     expect(o["model"]).toBe(MODELO_RESUMO);
     expect(o["maxTurns"]).toBe(1);
     expect(o["allowedTools"]).toEqual([]);
+    // `tools: []` é o que remove as definições do contexto; `allowedTools` sozinho só
+    // desliga a auto-aprovação e deixa o custo lá.
+    expect(o["tools"]).toEqual([]);
+    // Thinking ligado dobrava a saída para um JSON que não precisa de raciocínio.
+    expect(o["thinking"]).toEqual({ type: "disabled" });
   });
 
   it("não carrega CLAUDE.md nem o system prompt do Claude Code", async () => {

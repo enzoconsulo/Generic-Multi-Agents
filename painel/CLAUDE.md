@@ -188,11 +188,18 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
 - **A interrupção do watchdog é ASSÍNCRONA.** Checar o estado logo depois de `varrer()` lê
   o estado velho e faz parecer que o watchdog não funciona — use `await aguardarEstado(…)`,
   como os testes antigos já faziam.
-- **Chamada barata pelo Agent SDK precisa de `settingSources: []` e `systemPrompt` próprio.**
-  Por padrão o SDK monta um agente de codificação: sem `settingSources`, ele carrega os
-  settings do disco e o do projeto arrasta os `CLAUDE.md` INTEIROS; sem `systemPrompt`, usa
-  o preset do Claude Code. No resumidor (T-039) isso custava **US$ 0,057 por resumo de duas
-  linhas**; com as duas opções, US$ 0,0157. Nada quebra sem elas — só fica caro em silêncio.
+- **Chamada barata pelo Agent SDK precisa de QUATRO opções.** Por padrão o SDK monta um
+  agente de codificação completo, e nada disso quebra se faltar — só fica caro em silêncio.
+  No resumidor (T-039) a conta caiu de **US$ 0,057 para US$ 0,0019** por resumo:
+  - `tools: []` — remove as definições das ferramentas. **`allowedTools: []` NÃO faz isso**:
+    ele só diz que nenhuma é auto-aprovada, e as definições seguem no contexto. Confundir os
+    dois custou 15.893 tokens de ENTRADA para resumir um parágrafo (medido).
+  - `settingSources: []` — sem isso, carrega os settings do disco, e o do projeto arrasta os
+    `CLAUDE.md` inteiros.
+  - `systemPrompt` próprio e curto — sem isso, usa o preset do Claude Code.
+  - `thinking: { type: "disabled" }` — vem ligado por padrão; em tarefa mecânica é gasto
+    puro (dobrava a saída).
+  Ao investigar custo, meça **tokens**, não só preço: foi o que apontou a causa.
 - **Resumo de trecho chega ASSÍNCRONO.** Conferir `job.resumos` logo após o job terminar dá
   zero e parece bug; a chamada do resumidor leva alguns segundos depois do `result`.
 - **Teste de rota que sobrescreve `FABRICA_RAIZ` só aceita import DINÂMICO.** `config.ts`
