@@ -4,6 +4,7 @@ import {
   mapaDependencias,
   tarefasBloqueadas,
   tarefasPromoviveis,
+  ultimoCustoDaAcao,
 } from "../src/lib/gestao";
 import type { Job, TarefaCompleta } from "../src/lib/tipos";
 
@@ -141,5 +142,50 @@ describe("jobsDoProjeto", () => {
       job({ id: "nunca-iniciou", escopo: "projeto:meu", estado: "falhou", criadoEm: "2026-07-28T11:00:00.000Z" }),
     ];
     expect(jobsDoProjeto(jobs, "meu")[0]?.id).toBe("nunca-iniciou");
+  });
+});
+
+describe("ultimoCustoDaAcao (T-040)", () => {
+  function jobDe(titulo: string, custoUsd: number | null, estado: Job["estado"] = "concluido") {
+    return job({
+      id: titulo + estado + String(custoUsd),
+      escopo: "projeto:meu",
+      estado,
+      titulo,
+      iniciadoEm: "2026-07-28T10:00:00.000Z",
+      ...(custoUsd === null ? {} : { resultado: { custoUsd } }),
+    });
+  }
+
+  it("acha o custo da última execução daquela ação naquele projeto", () => {
+    const jobs = [
+      jobDe("Documentar — meu", 0.42),
+      jobDe("Testar — meu", 0.71),
+    ];
+    expect(ultimoCustoDaAcao(jobs, "meu", "Documentar")).toBe(0.42);
+    expect(ultimoCustoDaAcao(jobs, "meu", "Testar")).toBe(0.71);
+  });
+
+  it("nunca executada aqui → null (a UI cai na estimativa)", () => {
+    expect(ultimoCustoDaAcao([jobDe("Documentar — meu", 0.42)], "meu", "Pesquisar")).toBeNull();
+  });
+
+  it("não confunde a mesma ação em OUTRO projeto", () => {
+    const jobs = [job({ id: "x", escopo: "projeto:outro", estado: "concluido", titulo: "Documentar — outro", resultado: { custoUsd: 9 } })];
+    expect(ultimoCustoDaAcao(jobs, "meu", "Documentar")).toBeNull();
+  });
+
+  it("ignora execução que não terminou — custo parcial não é o preço da ação", () => {
+    const jobs = [
+      jobDe("Documentar — meu", 0.05, "cancelado"),
+      jobDe("Documentar — meu", 0.42, "concluido"),
+    ];
+    expect(ultimoCustoDaAcao(jobs, "meu", "Documentar")).toBe(0.42);
+  });
+
+  it("prefixo não casa com rótulo mais longo que comece igual", () => {
+    // "Testar" não pode capturar "Testar tudo — meu" — o separador " — " garante isso.
+    const jobs = [jobDe("Testar tudo — meu", 3.0)];
+    expect(ultimoCustoDaAcao(jobs, "meu", "Testar")).toBeNull();
   });
 });

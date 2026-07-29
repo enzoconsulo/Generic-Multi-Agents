@@ -65,6 +65,16 @@ describe("catálogo de ações por projeto (T-033)", () => {
     }
   });
 
+  it("toda ação declara o que ESCREVE — e só as de leitura têm a lista vazia", () => {
+    // É o dado que decide o clique: "isso altera meu projeto?". Ação nova que esquecer
+    // o campo cairia em "só lê" por omissão, que é a mentira mais perigosa aqui.
+    for (const acao of ACOES_PROJETO) {
+      expect(Array.isArray(acao.escreve), `sem escreve: ${acao.id}`).toBe(true);
+    }
+    const soLeem = ACOES_PROJETO.filter((a) => a.escreve.length === 0).map((a) => a.id);
+    expect(soLeem).toEqual(["revisar", "testar"]);
+  });
+
   it("acaoProjetoPorId devolve null para id fora do catálogo", () => {
     expect(acaoProjetoPorId("documentar")?.agente).toBe("documentador");
     expect(acaoProjetoPorId("apagar-tudo")).toBeNull();

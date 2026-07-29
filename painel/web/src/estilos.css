@@ -2702,3 +2702,69 @@ a:hover {
   color: var(--cor-texto);
   text-decoration: underline;
 }
+
+/* "O que isso faz?" — explicação por ação antes do clique (T-040). */
+.explica {
+  margin: 0.15rem 0 0.6rem;
+}
+.explica-gatilho {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.explica-gatilho:hover {
+  color: var(--cor-texto);
+  text-decoration: underline;
+}
+.explica-caixa {
+  margin-top: 0.4rem;
+  padding: 0.6rem 0.7rem;
+  background-color: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+  font-size: 0.82rem;
+}
+.explica-linha {
+  margin: 0 0 0.5rem;
+  color: var(--cor-texto-suave);
+}
+.explica-campo {
+  margin-bottom: 0.45rem;
+}
+.explica-campo:last-child {
+  margin-bottom: 0;
+}
+.explica-rot {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-texto-suave);
+  margin-bottom: 0.15rem;
+}
+.explica-lista {
+  margin: 0;
+  padding-left: 1rem;
+}
+.explica-lista code {
+  font-size: 0.76rem;
+}
+.explica-so-le {
+  color: var(--cor-sucesso);
+}
+.explica-custo {
+  font-weight: 600;
+}
+/* Responde "isso altera meu projeto?" — a pergunta que decide o clique. */
+.selo-le {
+  color: var(--cor-sucesso);
+  border-color: var(--cor-sucesso);
+}
+.selo-escreve {
+  color: var(--cor-alerta);
+  border-color: var(--cor-alerta);
+}

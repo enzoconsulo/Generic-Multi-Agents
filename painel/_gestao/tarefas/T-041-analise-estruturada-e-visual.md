@@ -2,7 +2,7 @@
 id: T-041
 titulo: Análise do projeto em painel visual — sair do .md corrido
 projeto: painel-fabrica
-status: backlog
+status: pronta
 prioridade: media
 dependencias: []
 areas: [servidor/src/acoes/prompts/analise.md, servidor/src/fabrica/analise-estruturada.ts, web/src/paginas/projeto/PainelAnalise.tsx]

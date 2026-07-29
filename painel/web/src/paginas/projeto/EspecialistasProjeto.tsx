@@ -11,6 +11,8 @@ import type {
   RespostaFabrica,
 } from "../../lib/tipos";
 import { estimarCusto, rotuloEstadoJob, rotuloPeso } from "../../lib/formato";
+import { ultimoCustoDaAcao } from "../../lib/gestao";
+import { ExplicaAcao, SeloEscrita } from "../../componentes/ExplicaAcao";
 
 /**
  * Chamar UM especialista para UM projeto (T-033).
@@ -26,9 +28,12 @@ import { estimarCusto, rotuloEstadoJob, rotuloPeso } from "../../lib/formato";
 export function EspecialistasProjeto({
   projeto,
   jobAtivo,
+  jobs,
 }: {
   projeto: string;
   jobAtivo: Job | null;
+  /** Histórico — de onde sai o custo REAL da última execução de cada ação (T-040). */
+  jobs: Job[];
 }) {
   const catalogo = useDados<RespostaAcoesProjeto>("/api/acoes-projeto");
   const fabrica = useDados<RespostaFabrica>("/api/fabrica");
@@ -57,6 +62,7 @@ export function EspecialistasProjeto({
         estrategias={estrategias}
         estrategiaPadrao={estrategiaPadrao}
         jobAtivo={jobAtivo}
+        jobs={jobs}
       />
 
       <GrupoAcoes
@@ -72,6 +78,7 @@ export function EspecialistasProjeto({
         estrategias={estrategias}
         estrategiaPadrao={estrategiaPadrao}
         jobAtivo={jobAtivo}
+        jobs={jobs}
       />
     </>
   );
@@ -86,10 +93,12 @@ export function AcoesDoGrupo({
   grupo,
   projeto,
   jobAtivo,
+  jobs = [],
 }: {
   grupo: AcaoProjetoCatalogo["grupo"];
   projeto: string;
   jobAtivo: Job | null;
+  jobs?: Job[];
 }) {
   const catalogo = useDados<RespostaAcoesProjeto>("/api/acoes-projeto");
   const fabrica = useDados<RespostaFabrica>("/api/fabrica");
@@ -108,6 +117,7 @@ export function AcoesDoGrupo({
           estrategias={fabrica.dados!.estrategias}
           estrategiaPadrao={fabrica.dados!.estrategiaPadrao}
           bloqueado={jobAtivo !== null}
+          custoReal={ultimoCustoDaAcao(jobs, projeto, acao.rotulo)}
         />
       ))}
     </div>
@@ -122,6 +132,7 @@ function GrupoAcoes({
   estrategias,
   estrategiaPadrao,
   jobAtivo,
+  jobs,
 }: {
   titulo: string;
   descricao: React.ReactNode;
@@ -130,6 +141,7 @@ function GrupoAcoes({
   estrategias: EstrategiaModelo[];
   estrategiaPadrao: string;
   jobAtivo: Job | null;
+  jobs: Job[];
 }) {
   if (acoes.length === 0) return null;
 
@@ -154,6 +166,7 @@ function GrupoAcoes({
             estrategias={estrategias}
             estrategiaPadrao={estrategiaPadrao}
             bloqueado={jobAtivo !== null}
+            custoReal={ultimoCustoDaAcao(jobs, projeto, acao.rotulo)}
           />
         ))}
       </div>
@@ -167,12 +180,15 @@ function CartaoEspecialista({
   estrategias,
   estrategiaPadrao,
   bloqueado,
+  custoReal,
 }: {
   acao: AcaoProjetoCatalogo;
   projeto: string;
   estrategias: EstrategiaModelo[];
   estrategiaPadrao: string;
   bloqueado: boolean;
+  /** Custo da última execução desta ação neste projeto; null = nunca rodou aqui. */
+  custoReal: number | null;
 }) {
   const navegar = useNavigate();
   const [aberto, setAberto] = useState(false);
@@ -214,15 +230,21 @@ function CartaoEspecialista({
     <article className={`card card-acao ${aberto ? "aberto" : ""}`}>
       <div className="card-cab">
         <h4 className="card-titulo">{acao.rotulo}</h4>
-        <span className={`badge peso-${acao.peso}`} title="Peso típico do fluxo">
-          {rotuloPeso(acao.peso)}
-        </span>
+        {/* O selo agora responde "isso altera meu projeto?" — o peso do fluxo é
+            detalhe interno e migrou para dentro da explicação. */}
+        <SeloEscrita acao={acao} />
       </div>
       <p className="card-desc">{acao.resumo}</p>
       <p className="card-args">
         <span className="card-args-rot">Agente</span>
         <code>{acao.agente}</code>
       </p>
+
+      <ExplicaAcao
+        acao={acao}
+        custoReal={custoReal}
+        custoEstimado={estimativa?.rotulo ?? rotuloPeso(acao.peso)}
+      />
 
       {!aberto ? (
         <button

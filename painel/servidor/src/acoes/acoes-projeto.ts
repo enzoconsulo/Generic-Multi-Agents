@@ -50,6 +50,15 @@ export interface AcaoProjeto {
   agente: string;
   peso: PesoAcao;
   /**
+   * O que a ação ESCREVE no disco, em caminhos que o usuário reconhece. Lista vazia = a
+   * ação só lê e relata.
+   *
+   * Isto existe porque "leve/médio/pesado" não responde a pergunta que importa antes de
+   * clicar: *isso vai mexer no meu projeto?* Sem a resposta, toda ação parece igualmente
+   * arriscada e o usuário hesita nas seguras tanto quanto nas que alteram tarefas.
+   */
+  escreve: string[];
+  /**
    * Quando definido, a UI pede um texto e ele entra no prompt como `$ENTRADA`.
    * `obrigatoria` mora AQUI, e não numa comparação por id espalhada pela rota e pela UI:
    * regra duplicada em dois lugares é regra que diverge no próximo ajuste.
@@ -65,6 +74,11 @@ export interface AcaoProjeto {
 export const ACOES_PROJETO: readonly AcaoProjeto[] = [
   {
     id: "documentar",
+    escreve: [
+      "README.md",
+      "CLAUDE.md do projeto",
+      "_gestao/PROGRESSO.md",
+    ],
     grupo: "especialista",
     rotulo: "Documentar",
     resumo:
@@ -75,6 +89,9 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
   },
   {
     id: "pesquisar",
+    escreve: [
+      "_gestao/pesquisas/AAAA-MM-DD-assunto.md",
+    ],
     grupo: "especialista",
     rotulo: "Pesquisar",
     resumo:
@@ -91,6 +108,7 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
   },
   {
     id: "revisar",
+    escreve: [],
     grupo: "especialista",
     rotulo: "Revisar código",
     resumo:
@@ -101,6 +119,11 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
   },
   {
     id: "replanejar",
+    escreve: [
+      "_gestao/tarefas/*.md",
+      "_gestao/PLANO.md",
+      "_gestao/DECISOES.md",
+    ],
     grupo: "especialista",
     rotulo: "Replanejar",
     resumo:
@@ -117,6 +140,7 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
   },
   {
     id: "testar",
+    escreve: [],
     grupo: "especialista",
     rotulo: "Testar",
     resumo:
@@ -133,6 +157,10 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
    */
   {
     id: "conferir",
+    escreve: [
+      "_gestao/tarefas/*.md (só correções mecânicas)",
+      "commit de resgate, quando há o que persistir",
+    ],
     grupo: "cuidado",
     rotulo: "Conferir integridade",
     resumo:
@@ -148,6 +176,10 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
    */
   {
     id: "marco",
+    escreve: [
+      "_gestao/PLANO.md (linha Marco:)",
+      "_gestao/tarefas/*.md (promoções)",
+    ],
     grupo: "cuidado",
     rotulo: "Verificar marco de fase",
     resumo:
@@ -163,6 +195,9 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
   },
   {
     id: "progresso",
+    escreve: [
+      "_gestao/PROGRESSO.md",
+    ],
     grupo: "cuidado",
     rotulo: "Atualizar progresso",
     resumo:
@@ -180,6 +215,10 @@ export const ACOES_PROJETO: readonly AcaoProjeto[] = [
    */
   {
     id: "recriar-equipe",
+    escreve: [
+      "_gestao/equipe.json",
+      "_gestao/DECISOES.md",
+    ],
     grupo: "equipe",
     rotulo: "Recriar equipe",
     resumo:

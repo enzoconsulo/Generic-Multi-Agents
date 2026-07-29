@@ -135,7 +135,7 @@ function DetalheProjeto({
 
       <AcoesProjeto projeto={projeto} jobAtivo={jobAtivo} />
 
-      <EspecialistasProjeto projeto={projeto.nome} jobAtivo={jobAtivo} />
+      <EspecialistasProjeto projeto={projeto.nome} jobAtivo={jobAtivo} jobs={aoVivo.jobs} />
 
       <SecaoGestao
         projeto={projeto.nome}

@@ -53,6 +53,8 @@ export interface AcaoProjetoCatalogo {
   resumo: string;
   agente: string;
   peso: PesoAcao;
+  /** O que a ação escreve no disco; vazio = só lê e relata (T-040). */
+  escreve: string[];
   /** Quando presente, a UI pede um texto livre antes de disparar. */
   entrada: { rotulo: string; placeholder: string; obrigatoria: boolean } | null;
 }

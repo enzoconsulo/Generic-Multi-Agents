@@ -102,6 +102,32 @@ export function jobsDoProjeto(jobs: Job[], projeto: string): Job[] {
   return jobs.filter((j) => j.escopo === `projeto:${projeto}`).sort((a, b) => instante(b) - instante(a));
 }
 
+/**
+ * Custo REAL da última execução de uma ação neste projeto, ou null se nunca rodou aqui
+ * (T-040). É melhor que a estimativa qualitativa por um motivo simples: é o que aconteceu
+ * nesta máquina, neste projeto, com estes arquivos — a estimativa é uma tabela genérica.
+ *
+ * Casa pelo título do job (`"<rótulo> — <projeto>"`, montado em `acoes-projeto.ts`), que é
+ * o único vínculo entre job e ação que sobrevive no histórico.
+ */
+export function ultimoCustoDaAcao(
+  jobs: Job[],
+  projeto: string,
+  rotulo: string,
+): number | null {
+  const prefixo = `${rotulo} — `;
+  for (const job of jobsDoProjeto(jobs, projeto)) {
+    if (!job.titulo.startsWith(prefixo)) continue;
+    const custo = (job.resultado as { custoUsd?: number | null } | null | undefined)?.custoUsd;
+    // Só conta execução que chegou ao fim: job cancelado no meio informaria um custo
+    // parcial como se fosse o preço da ação.
+    if (job.estado === "concluido" && typeof custo === "number" && Number.isFinite(custo)) {
+      return custo;
+    }
+  }
+  return null;
+}
+
 /** Há algum job deste projeto ainda em andamento? */
 export function temJobAtivo(jobs: Job[], projeto: string): boolean {
   return jobs.some((j) => j.escopo === `projeto:${projeto}` && ESTADOS_JOB_ATIVOS.has(j.estado));
