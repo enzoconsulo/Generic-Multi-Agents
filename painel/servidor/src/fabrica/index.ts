@@ -9,5 +9,11 @@ export { lerFabrica, lerProjeto } from "./fabrica.js";
 export { agentesValidos, lerEquipe } from "./equipe.js";
 export { faseAtualDoPlano, parsearMarco, parsearPlano } from "./plano.js";
 export { lerIdeias, lerLogMaisRecente, parsearIdeia } from "./sistema.js";
-export { contarPorStatus, lerTarefas, parsearSecoes, parsearTarefa } from "./tarefas.js";
+export {
+  contarPorStatus,
+  lerResumosTarefas,
+  lerTarefas,
+  parsearSecoes,
+  parsearTarefa,
+} from "./tarefas.js";
 export * from "./tipos.js";

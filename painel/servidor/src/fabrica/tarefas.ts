@@ -19,6 +19,25 @@ import {
 /** Lê todas as tarefas (T-*.md) de uma pasta `_gestao/tarefas/`. Pasta ausente = lista
  *  vazia (o erro de _gestao/ é reportado no nível do projeto, não aqui). */
 export async function lerTarefas(dirTarefas: string): Promise<TarefaCompleta[]> {
+  return lerArquivosTarefa(dirTarefas, (nome, texto) => parsearTarefa(nome, texto));
+}
+
+/**
+ * Só o frontmatter, SEM quebrar o corpo em seções (T-043).
+ *
+ * `lerFabrica` monta o painel de todos os projetos e descarta as seções logo depois de
+ * calculá-las — pagava o parse do corpo de TODA tarefa de TODO projeto para jogar fora.
+ * Duas funções em vez de uma flag porque o tipo passa a impedir o engano: quem chama esta
+ * recebe `TarefaResumo` e não tem seção para acessar.
+ */
+export async function lerResumosTarefas(dirTarefas: string): Promise<TarefaResumo[]> {
+  return lerArquivosTarefa(dirTarefas, (nome, texto) => parsearTarefa(nome, texto, false));
+}
+
+async function lerArquivosTarefa<T>(
+  dirTarefas: string,
+  parsear: (nome: string, texto: string) => T,
+): Promise<T[]> {
   let nomes: string[];
   try {
     nomes = await readdir(dirTarefas);
@@ -26,17 +45,28 @@ export async function lerTarefas(dirTarefas: string): Promise<TarefaCompleta[]> 
     return [];
   }
   const arquivos = nomes.filter((nome) => /^T-\d+.*\.md$/i.test(nome)).sort();
-  const tarefas: TarefaCompleta[] = [];
-  for (const nome of arquivos) {
-    const texto = await readFile(join(dirTarefas, nome), "utf8");
-    tarefas.push(parsearTarefa(nome, texto));
-  }
-  return tarefas;
+  // Em PARALELO: o custo aqui é latência por arquivo (disco OneDrive), não CPU, então ler
+  // em fila deixava o servidor esperando um arquivo de cada vez. `map` + `Promise.all`
+  // preserva a ordem do `sort` acima — a lista sai idêntica à da versão serial.
+  return Promise.all(
+    arquivos.map(async (nome) => parsear(nome, await readFile(join(dirTarefas, nome), "utf8"))),
+  );
 }
 
-/** Transforma o texto de um arquivo de tarefa em dados tipados. Nunca lança:
- *  qualquer problema vira entrada em `erros` e os campos ganham fallbacks. */
-export function parsearTarefa(arquivo: string, texto: string): TarefaCompleta {
+/**
+ * Transforma o texto de um arquivo de tarefa em dados tipados. Nunca lança: qualquer
+ * problema vira entrada em `erros` e os campos ganham fallbacks.
+ *
+ * `comSecoes: false` devolve o mesmo objeto sem `secoes` — para quem só precisa do
+ * frontmatter e não quer pagar o parse do corpo (ver `lerResumosTarefas`).
+ */
+export function parsearTarefa(arquivo: string, texto: string, comSecoes?: true): TarefaCompleta;
+export function parsearTarefa(arquivo: string, texto: string, comSecoes: false): TarefaResumo;
+export function parsearTarefa(
+  arquivo: string,
+  texto: string,
+  comSecoes = true,
+): TarefaCompleta | TarefaResumo {
   const erros: string[] = [];
   const { dados, corpo, erro } = separarFrontmatter(texto);
   if (erro !== null) erros.push(erro);
@@ -87,7 +117,7 @@ export function parsearTarefa(arquivo: string, texto: string): TarefaCompleta {
     if (agente === null) erros.push("campo agente inválido");
   }
 
-  return {
+  const resumo: TarefaResumo = {
     arquivo,
     id,
     titulo,
@@ -101,8 +131,8 @@ export function parsearTarefa(arquivo: string, texto: string): TarefaCompleta {
     criada,
     atualizada,
     erros,
-    secoes: parsearSecoes(corpo),
   };
+  return comSecoes ? { ...resumo, secoes: parsearSecoes(corpo) } : resumo;
 }
 
 /** Quebra o corpo da tarefa nas seções do protocolo (títulos `## `). Comparação sem

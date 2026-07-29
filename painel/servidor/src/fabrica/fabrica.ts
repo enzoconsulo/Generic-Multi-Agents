@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { faseAtualDoPlano, parsearPlano } from "./plano.js";
-import { contarPorStatus, lerTarefas } from "./tarefas.js";
+import { contarPorStatus, lerResumosTarefas, lerTarefas } from "./tarefas.js";
 import { lerIdeias, lerLogMaisRecente } from "./sistema.js";
 import { lerEquipe } from "./equipe.js";
 import { lerAnaliseEstruturada } from "./analise-estruturada.js";
@@ -13,6 +13,7 @@ import type {
   ProjetoDetalhe,
   ProjetoResumo,
   TarefaCompleta,
+  TarefaResumo,
 } from "./tipos.js";
 
 /**
@@ -24,20 +25,25 @@ export async function lerFabrica(raiz: string): Promise<EstadoFabrica> {
   const erros: string[] = [];
   const nomes = await listarProjetos(raiz, erros);
 
-  const projetos: ProjetoResumo[] = [];
-  for (const nome of nomes) {
-    const base = await lerBaseProjeto(raiz, nome);
-    projetos.push({
-      nome,
-      // Resumo não carrega o corpo das tarefas (isso é papel do lerProjeto).
-      tarefas: base.tarefas.map(({ secoes: _secoes, ...resumo }) => resumo),
-      contagemPorStatus: base.contagemPorStatus,
-      faseAtual: base.faseAtual,
-      erros: base.erros,
-    });
-  }
-
-  const [ideias, logMaisRecente] = await Promise.all([
+  // Projetos em PARALELO (e as ideias/log junto): o painel inicial lê a fábrica INTEIRA, e
+  // em fila o tempo era a soma de todos os projetos — 206 ms com 10×30 tarefas, medido em
+  // `integracao/bench-escala.ts`. É latência de disco somada, não trabalho de CPU.
+  const [projetos, ideias, logMaisRecente] = await Promise.all([
+    Promise.all(
+      nomes.map(async (nome): Promise<ProjetoResumo> => {
+        // Resumo não carrega o corpo das tarefas (isso é papel do lerProjeto) — e agora
+        // também não PAGA por ele: antes as seções eram parseadas e descartadas na linha
+        // seguinte, para toda tarefa de todo projeto.
+        const base = await lerBaseProjeto(raiz, nome, false);
+        return {
+          nome,
+          tarefas: base.tarefas,
+          contagemPorStatus: base.contagemPorStatus,
+          faseAtual: base.faseAtual,
+          erros: base.erros,
+        };
+      }),
+    ),
     lerIdeias(raiz),
     lerLogMaisRecente(raiz),
   ]);
@@ -54,9 +60,11 @@ export async function lerProjeto(raiz: string, nome: string): Promise<ProjetoDet
   if (!nomeDeProjetoValido(nome)) return null;
   if (!(await ehDiretorio(join(raiz, "projetos", nome)))) return null;
 
-  const base = await lerBaseProjeto(raiz, nome);
+  // Tudo junto: a base (tarefas + plano) não depende dos textos, e esperar por ela antes
+  // de começar a ler DECISOES/PROGRESSO/ANALISE era latência de disco empilhada à toa.
   const dirGestao = join(raiz, "projetos", nome, "_gestao");
-  const [decisoes, progresso, analise, analiseEstruturada, equipe] = await Promise.all([
+  const [base, decisoes, progresso, analise, analiseEstruturada, equipe] = await Promise.all([
+    lerBaseProjeto(raiz, nome, true),
     lerTextoOpcional(join(dirGestao, "DECISOES.md")),
     lerTextoOpcional(join(dirGestao, "PROGRESSO.md")),
     lerTextoOpcional(join(dirGestao, "ANALISE.md")),
@@ -79,8 +87,8 @@ export async function lerProjeto(raiz: string, nome: string): Promise<ProjetoDet
   };
 }
 
-interface BaseProjeto {
-  tarefas: TarefaCompleta[];
+interface BaseProjeto<T extends TarefaResumo> {
+  tarefas: T[];
   contagemPorStatus: ContagemPorStatus;
   faseAtual: FaseAtual | null;
   plano: Plano | null;
@@ -88,17 +96,35 @@ interface BaseProjeto {
 }
 
 /** Leitura comum a resumo e detalhe: tarefas + plano + derivados. */
-async function lerBaseProjeto(raiz: string, nome: string): Promise<BaseProjeto> {
+async function lerBaseProjeto(
+  raiz: string,
+  nome: string,
+  comSecoes: true,
+): Promise<BaseProjeto<TarefaCompleta>>;
+async function lerBaseProjeto(
+  raiz: string,
+  nome: string,
+  comSecoes: false,
+): Promise<BaseProjeto<TarefaResumo>>;
+async function lerBaseProjeto(
+  raiz: string,
+  nome: string,
+  comSecoes: boolean,
+): Promise<BaseProjeto<TarefaResumo>> {
   const erros: string[] = [];
   const dirGestao = join(raiz, "projetos", nome, "_gestao");
 
   const temGestao = await ehDiretorio(dirGestao);
   if (!temGestao) erros.push("projeto sem pasta _gestao/");
 
-  const tarefas = await lerTarefas(join(dirGestao, "tarefas"));
+  // Tarefas e plano juntos: são arquivos diferentes, não há motivo para esperar um.
+  const dirTarefas = join(dirGestao, "tarefas");
+  const [tarefas, textoPlano] = await Promise.all([
+    comSecoes ? lerTarefas(dirTarefas) : lerResumosTarefas(dirTarefas),
+    lerTextoOpcional(join(dirGestao, "PLANO.md")),
+  ]);
 
   let plano: Plano | null = null;
-  const textoPlano = await lerTextoOpcional(join(dirGestao, "PLANO.md"));
   if (textoPlano !== null) {
     plano = parsearPlano(textoPlano);
     // Problemas estruturais do plano sobem para o projeto (o resumo não carrega o plano).

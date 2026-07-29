@@ -75,3 +75,45 @@ describe("parsearSecoes (unidade)", () => {
     expect(secoes.contexto).toBe("");
   });
 });
+
+describe("parse sem seções — caminho barato do painel (T-043)", () => {
+  const TEXTO = `---
+id: T-007
+titulo: Tarefa de teste
+status: pronta
+prioridade: alta
+dependencias: [T-001, T-002]
+areas: [src/a.ts]
+tentativas: 2
+criada: 2026-07-01
+atualizada: 2026-07-29
+---
+
+## Objetivo
+Fazer a coisa.
+
+## Verificação
+Rodou.
+`;
+
+  it("devolve exatamente o mesmo frontmatter que a versão completa", () => {
+    // A garantia que importa: `lerFabrica` passou a usar este caminho, e a única coisa
+    // que pode mudar é NÃO ter seções. Qualquer divergência de campo seria um painel
+    // mostrando dado diferente do que a página do projeto mostra.
+    const { secoes: _s, ...completaSemSecoes } = parsearTarefa("T-007-x.md", TEXTO);
+    expect(parsearTarefa("T-007-x.md", TEXTO, false)).toEqual(completaSemSecoes);
+  });
+
+  it("não carrega o corpo — é isso que economiza", () => {
+    expect(parsearTarefa("T-007-x.md", TEXTO, false)).not.toHaveProperty("secoes");
+    expect(parsearTarefa("T-007-x.md", TEXTO).secoes.objetivo).toBe("Fazer a coisa.");
+  });
+
+  it("erros de frontmatter continuam sendo reportados sem o corpo", () => {
+    // Sem isto, o caminho barato viraria um caminho CEGO: tarefa quebrada apareceria
+    // saudável no painel geral e só denunciaria ao abrir o projeto.
+    const ruim = parsearTarefa("T-009-y.md", "---\nid: T-009\n---\n\n## Objetivo\nx\n", false);
+    expect(ruim.erros.length).toBeGreaterThan(0);
+    expect(ruim.erros.join(" ")).toMatch(/status/);
+  });
+});
