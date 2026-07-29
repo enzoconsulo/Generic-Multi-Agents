@@ -489,3 +489,19 @@ export interface Ajustes {
   claude: ContaClaude;
   painel: AjustesPainel;
 }
+
+/**
+ * Consumo de tokens de um job (T-044). Espelha `TokensJob` do servidor.
+ * `cacheLeitura` é o contexto reenviado a cada turno — num fluxo agêntico costuma ser a
+ * maior parcela, e é o que diz se o caro é o TAMANHO DO CONTEXTO ou o que o modelo escreveu.
+ */
+export interface TokensJob {
+  entrada: number;
+  saida: number;
+  cacheLeitura: number;
+  cacheEscrita: number;
+  porModelo: Record<
+    string,
+    { entrada: number; saida: number; cacheLeitura: number; custoUsd: number }
+  >;
+}

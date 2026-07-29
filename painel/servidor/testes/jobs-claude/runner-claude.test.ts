@@ -230,3 +230,77 @@ describe("RunnerClaude — tradução de mensagens do SDK em eventos e resultado
     );
   });
 });
+
+describe("tokens do fluxo (T-044) — preço esconde a causa", () => {
+  const USAGE = {
+    "claude-sonnet-5": {
+      inputTokens: 120,
+      outputTokens: 3400,
+      cacheReadInputTokens: 250000,
+      cacheCreationInputTokens: 18000,
+      costUSD: 0.42,
+    },
+    "claude-haiku-4-5": {
+      inputTokens: 10,
+      outputTokens: 200,
+      cacheReadInputTokens: 900,
+      cacheCreationInputTokens: 0,
+      costUSD: 0.002,
+    },
+  };
+
+  it("soma o uso de TODOS os modelos e guarda a quebra por modelo", async () => {
+    // Um fluxo usa mais de um modelo (fallback, resumidor em haiku, subagente com modelo
+    // próprio). Somar sem guardar a quebra esconderia justamente quem está gastando.
+    const runner = new RunnerClaude(
+      consultaDe([{ type: "result", is_error: false, modelUsage: USAGE }]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const r = await runner.executar(jobFake(PARAMS), ctx);
+
+    expect(r.tokens).not.toBeNull();
+    expect(r.tokens?.saida).toBe(3600);
+    expect(r.tokens?.cacheLeitura).toBe(250900);
+    expect(r.tokens?.cacheEscrita).toBe(18000);
+    expect(r.tokens?.porModelo["claude-sonnet-5"]?.custoUsd).toBeCloseTo(0.42);
+    expect(Object.keys(r.tokens?.porModelo ?? {})).toHaveLength(2);
+  });
+
+  it("o log de conclusão mostra saída e cache relido, não só o preço", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "result", is_error: false, total_cost_usd: 0.42, modelUsage: USAGE },
+      ]),
+    );
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    await runner.executar(jobFake(PARAMS), ctx);
+
+    const final = eventos.map((e) => (e.dados as { texto: string }).texto).join(" ");
+    expect(final).toMatch(/3,6k saída/);
+    expect(final).toMatch(/250,9k de cache relido/);
+  });
+
+  it("SDK sem modelUsage não quebra o fluxo — tokens ficam null", async () => {
+    // Churn de versão do SDK não pode derrubar job: a telemetria é acessório.
+    const runner = new RunnerClaude(consultaDe([{ type: "result", is_error: false }]));
+    const { ctx } = contexto(new AbortController().signal);
+    expect((await runner.executar(jobFake(PARAMS), ctx)).tokens).toBeNull();
+  });
+
+  it("entrada estranha no modelUsage é ignorada em vez de virar NaN", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        {
+          type: "result",
+          is_error: false,
+          modelUsage: { bom: { outputTokens: 5 }, ruim: null, pior: "texto" },
+        },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const r = await runner.executar(jobFake(PARAMS), ctx);
+    expect(r.tokens?.saida).toBe(5);
+    expect(r.tokens?.entrada).toBe(0);
+    expect(Object.keys(r.tokens?.porModelo ?? {})).toEqual(["bom"]);
+  });
+});

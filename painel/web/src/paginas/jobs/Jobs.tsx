@@ -10,12 +10,13 @@ import {
   type EtapaPipeline,
   type SegmentoAgente,
 } from "../../lib/atividade";
-import type { Job, LinhaLog, Pendencia, ResumoTrecho } from "../../lib/tipos";
+import type { Job, LinhaLog, Pendencia, ResumoTrecho, TokensJob } from "../../lib/tipos";
 import {
   classeEstadoJob,
   decorrido,
   duracaoLegivel,
   jobCancelavel,
+  milhares,
   rotuloEstadoJob,
 } from "../../lib/formato";
 import { useAgora } from "../../lib/useAgora";
@@ -151,7 +152,11 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
   const segmentos = job.usaClaude ? segmentarPorAgente(linhas) : segmentarPorEstagio(linhas);
   const tarefa = tarefaEmFoco(linhas);
   const modelo = typeof job.params["modelo"] === "string" ? job.params["modelo"] : "—";
-  const resultado = job.resultado as { custoUsd?: number | null; numTurnos?: number | null } | null;
+  const resultado = job.resultado as {
+    custoUsd?: number | null;
+    numTurnos?: number | null;
+    tokens?: TokensJob | null;
+  } | null;
 
   async function cancelar() {
     setCancelando(true);
@@ -216,6 +221,17 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
         {resultado?.numTurnos != null && <Campo rot="Turnos" valor={String(resultado.numTurnos)} />}
         {resultado?.custoUsd != null && (
           <Campo rot="Custo real" valor={`~$${resultado.custoUsd.toFixed(4)}`} />
+        )}
+        {/* Tokens ao lado do preço (T-044): preço diz QUANTO, token diz POR QUÊ. Numa
+            auditoria de custo é a diferença entre saber que ficou caro e saber onde. */}
+        {resultado?.tokens != null && (
+          <>
+            <Campo rot="Tokens de saída" valor={milhares(resultado.tokens.saida)} />
+            <Campo
+              rot="Contexto relido"
+              valor={`${milhares(resultado.tokens.cacheLeitura)} de cache`}
+            />
+          </>
         )}
         {job.sessionId !== undefined && <Campo rot="Sessão" valor={job.sessionId} />}
         {job.erro !== undefined && <Campo rot="Erro" valor={job.erro} />}

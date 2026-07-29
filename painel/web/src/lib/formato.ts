@@ -159,3 +159,15 @@ export function estimarCusto(peso: string, custoModelo: string): Estimativa {
       return { rotulo: "Muito alto", tier: "muito-alto" };
   }
 }
+
+/**
+ * Milhares abreviados para leitura de relance: 250900 → "250,9k" (T-044).
+ * Token de fluxo agêntico chega na casa das centenas de milhares; o número cru só ocupa
+ * espaço e ninguém compara duas execuções olhando 7 dígitos.
+ */
+export function milhares(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) return `${(n / 1000).toFixed(1).replace(".", ",")}k`;
+  return `${(n / 1_000_000).toFixed(2).replace(".", ",")}M`;
+}

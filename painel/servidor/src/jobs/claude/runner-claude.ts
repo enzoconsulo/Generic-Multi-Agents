@@ -31,6 +31,25 @@ export interface ParamsClaude {
   esforco?: Esforco;
 }
 
+/**
+ * Consumo de tokens do fluxo (T-044). Guardado porque **preço esconde a causa**: os dois
+ * cortes de custo que valeram alguma coisa nesta base (o resumidor da T-039 e o `effort`
+ * da T-042) só foram encontrados olhando TOKENS. Sem isto, toda auditoria de custo futura
+ * recomeça do zero e precisa gastar assinatura para descobrir o óbvio.
+ *
+ * `cacheLeitura` é o número que mais importa num fluxo agêntico: é o contexto reenviado a
+ * cada turno. Se ele domina, o caro é o TAMANHO DO CONTEXTO, não o que o modelo escreveu —
+ * e aí adiantar mexer em prompt/ferramentas, não em `effort`.
+ */
+export interface TokensJob {
+  entrada: number;
+  saida: number;
+  cacheLeitura: number;
+  cacheEscrita: number;
+  /** Um fluxo pode usar mais de um modelo (fallback, subagentes com modelo próprio). */
+  porModelo: Record<string, { entrada: number; saida: number; cacheLeitura: number; custoUsd: number }>;
+}
+
 export interface ResultadoClaude {
   sessionId: string | null;
   /** Estimativa informativa (assinatura não cobra à parte) — exibir como referência. */
@@ -39,6 +58,8 @@ export interface ResultadoClaude {
   erro: boolean;
   /** Texto final do fluxo. */
   texto: string;
+  /** null quando o SDK não reportou uso (erro precoce, versão sem o campo). */
+  tokens: TokensJob | null;
 }
 
 /** Assinatura estreita do SDK usada pelo runner (fácil de falsear nos testes). */
@@ -70,6 +91,29 @@ interface MensagemSDK {
   total_cost_usd?: number;
   num_turns?: number;
   result?: unknown;
+  /** `modelUsage` do SDK: uso por modelo. Lido de forma defensiva (churn de versão). */
+  modelUsage?: Record<string, unknown>;
+}
+
+/** Soma o `modelUsage` do SDK. Nunca lança: campo ausente/estranho vira null. */
+function lerTokens(modelUsage: Record<string, unknown> | undefined): TokensJob | null {
+  if (modelUsage === undefined || modelUsage === null || typeof modelUsage !== "object") return null;
+  const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const total: TokensJob = { entrada: 0, saida: 0, cacheLeitura: 0, cacheEscrita: 0, porModelo: {} };
+
+  for (const [modelo, bruto] of Object.entries(modelUsage)) {
+    if (bruto === null || typeof bruto !== "object") continue;
+    const u = bruto as Record<string, unknown>;
+    const entrada = num(u["inputTokens"]);
+    const saida = num(u["outputTokens"]);
+    const cacheLeitura = num(u["cacheReadInputTokens"]);
+    total.entrada += entrada;
+    total.saida += saida;
+    total.cacheLeitura += cacheLeitura;
+    total.cacheEscrita += num(u["cacheCreationInputTokens"]);
+    total.porModelo[modelo] = { entrada, saida, cacheLeitura, custoUsd: num(u["costUSD"]) };
+  }
+  return Object.keys(total.porModelo).length === 0 ? null : total;
 }
 
 export class RunnerClaude implements Runner {
@@ -146,6 +190,7 @@ export class RunnerClaude implements Runner {
     let custoUsd: number | null = null;
     let numTurnos: number | null = null;
     let erro = false;
+    let tokens: TokensJob | null = null;
     let textoResult = "";
     const partes: string[] = [];
 
@@ -192,12 +237,16 @@ export class RunnerClaude implements Runner {
           erro = msg.is_error === true;
           custoUsd = typeof msg.total_cost_usd === "number" ? msg.total_cost_usd : null;
           numTurnos = typeof msg.num_turns === "number" ? msg.num_turns : null;
+          tokens = lerTokens(msg.modelUsage);
           if (typeof msg.result === "string" && msg.result !== "") textoResult = msg.result;
           ctx.emitir("log", {
             nivel: erro ? "erro" : "resultado",
             texto:
               `${erro ? "Fluxo terminou com erro" : "Fluxo concluído"}` +
-              ` · custo ~$${custoUsd ?? "?"} · ${numTurnos ?? "?"} turno(s)`,
+              ` · custo ~$${custoUsd ?? "?"} · ${numTurnos ?? "?"} turno(s)` +
+              (tokens !== null
+                ? ` · ${fmt(tokens.saida)} saída, ${fmt(tokens.cacheLeitura)} de cache relido`
+                : ""),
           });
           break;
         }
@@ -213,8 +262,13 @@ export class RunnerClaude implements Runner {
     if (erro) {
       throw new Error(`Fluxo Claude terminou com erro. ${texto.slice(0, 800)}`.trim());
     }
-    return { sessionId, custoUsd, numTurnos, erro, texto };
+    return { sessionId, custoUsd, numTurnos, erro, texto, tokens };
   }
+}
+
+/** Milhares abreviados: 15893 -> "15,9k". Log de fluxo é para ler de relance. */
+function fmt(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1).replace(".", ",")}k` : String(n);
 }
 
 /** Ferramentas que despacham um subagente (varia conforme o binário/SDK). */
