@@ -27,9 +27,16 @@ export function ehEsforco(valor: unknown): valor is Esforco {
 export interface Guardrails {
   maxTurns: number;
   /**
-   * `effort` do SDK. Só vale a pena baixar em fluxo MECÂNICO — economizar em verificação
-   * ou replanejamento sai caro em retrabalho, que é o gasto que mais pesa nesta fábrica
-   * (medido no log de 2026-07-28). Ausente = padrão do modelo.
+   * `effort` do SDK. Ausente = padrão do modelo.
+   *
+   * A régua NÃO é "a ação parece simples", é **o que a ação precisa DESCOBRIR**. Medido
+   * na T-042, com a mesma entrada nas duas pernas: em `projeto:progresso` — redigir o que
+   * já aconteceu — `medium` entregou trabalho equivalente por metade do preço; em
+   * `projeto:conferir` — procurar desvio que ninguém viu — `medium` simplesmente não
+   * achou o problema e devolveu 74% de "economia" sem ter feito nada.
+   *
+   * Por isso, ao rebaixar uma ação, compare o TRABALHO ENTREGUE, nunca só a fatura:
+   * execução que não faz nada é sempre a mais barata.
    */
   esforco?: Esforco;
   maxBudgetUsd: number | null;
@@ -74,11 +81,21 @@ const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
   "projeto:testar": { maxTurns: 80, watchdogMs: 20 * MINUTO }, // suíte longa é silêncio legítimo
   "projeto:replanejar": { maxTurns: 120 }, // reescreve plano e tarefas: mais fôlego
   /** T-034 — escopo de um projeto, então bem abaixo dos comandos globais equivalentes. */
-  // Zeladoria mecânica: validar frontmatter e consolidar texto não precisam do teto de
-  // raciocínio. São as ÚNICAS que descem — o resto é julgamento.
-  "projeto:conferir": { maxTurns: 80, esforco: "medium" },
+  /**
+   * Fica no PADRÃO, e isso foi medido (T-042), não suposto. Rodando a MESMA entrada duas
+   * vezes, o padrão achou o PROGRESSO.md fora de sincronia com o marco da Fase 1 e
+   * corrigiu (commit, +11 linhas); em `medium` a ação não achou nada e terminou sem
+   * entregar. Os "−74% de custo" eram uma execução que não fez o trabalho. Conferir
+   * integridade é procurar desvio que ninguém viu — a última coisa a fazer com pressa.
+   */
+  "projeto:conferir": { maxTurns: 80 },
   /** Marco roda software de verdade e ainda promove tarefas: silêncio longo é legítimo. */
   "projeto:marco": { maxTurns: 100, watchdogMs: 20 * MINUTO },
+  /**
+   * Aqui `medium` se pagou: mesma entrada, trabalho equivalente (commit de +33 linhas
+   * contra +40 do padrão) por metade do custo e 2,6× mais rápido. Consolidar um
+   * PROGRESSO.md é redigir o que já aconteceu, não descobrir nada.
+   */
   "projeto:progresso": { maxTurns: 60, esforco: "medium" },
   /** T-035 — ler o projeto e sintetizar os especialistas. */
   "projeto:recriar-equipe": { maxTurns: 80 },

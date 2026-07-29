@@ -103,10 +103,42 @@ não mudou nenhum número exibido.
 ### Suíte
 452 testes passam (355 servidor + 97 web), `tsc` estrito limpo nos dois pacotes.
 
-### O que NÃO foi medido
-O ganho do `effort: medium` em si (quanto cai o custo de `/status`, `projeto:conferir` e
-`projeto:progresso`) exigiria rodar cada ação duas vezes de verdade, gastando a
-assinatura — decisão do usuário, pela regra de custo externo. O que está provado é que o
-parâmetro agora CHEGA ao SDK; antes não chegava.
+### A/B do `effort` com execuções reais (US$ 2,21, autorizado pelo usuário)
+`integracao/medir-esforco.ts`, 6 execuções, repositório do projeto restaurado ao MESMO
+commit antes de cada perna — sem isso a segunda rodada encontraria o trabalho da primeira
+feito e mediria "não havia nada a fazer".
+
+| ação | esforço | US$ | turnos | saída | seg | entregue |
+|---|---|---|---|---|---|---|
+| `/status` | padrão | 0,3357 | 10 | 3478 | 50 | — (só lê) |
+| `/status` | medium | 0,2908 | 7 | 1739 | 35 | — (só lê) |
+| `projeto:conferir` | padrão | 0,7530 | 18 | 10886 | 153 | commit, PROGRESSO.md +11 |
+| `projeto:conferir` | medium | 0,1947 | 7 | 2020 | 34 | **nada** |
+| `projeto:progresso` | padrão | 0,4315 | 11 | 8848 | 127 | commit, +40 linhas |
+| `projeto:progresso` | medium | 0,2085 | 6 | 2807 | 48 | commit, +33 linhas |
+
+**O achado que inverteu uma decisão:** os −74% do `projeto:conferir` eram economia FALSA.
+Com a mesma entrada, o padrão encontrou o PROGRESSO.md fora de sincronia com o marco da
+Fase 1 e corrigiu; em `medium` a ação não achou nada e terminou. Execução que não faz o
+trabalho é sempre a mais barata. `projeto:conferir` **voltou ao padrão**.
+
+Em `projeto:progresso` a economia é real: trabalho equivalente (+33 contra +40 linhas) por
+−52% de custo e 2,6× mais rápido. `/status` fica em `medium` por −13% e −30% de tempo,
+sem risco (não escreve).
+
+Régua que sai daqui: o que decide não é "a ação parece simples", é **o que ela precisa
+DESCOBRIR**. Redigir o que já aconteceu tolera menos esforço; procurar desvio que ninguém
+viu, não.
+
+**O instrumento estava furado e quase fez passar o erro.** A primeira versão media
+arquivos tocados com `git status` DEPOIS da execução — e os agentes de zeladoria
+commitam, então a árvore lia limpa: "0 arquivos tocados" nas seis pernas, inclusive nas
+três que commitaram. Só apareceu ao conferir o `reflog` do projeto por desconfiança do
+número. Corrigido para diferenciar contra o HEAD do início.
+
+### Custo real por ação, para a próxima auditoria
+Pesquisar $1,84 · Replanejar $1,81 · Revisar $1,14 · Documentar $1,11 · Testar $0,71 ·
+Conferir $0,75 · Progresso $0,43→$0,21 · Recriar equipe $0,49 · Marco $0,09 ·
+/status $0,34→$0,29.
 
 ## Revisão

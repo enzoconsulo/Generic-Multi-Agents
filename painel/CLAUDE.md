@@ -35,6 +35,11 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
   exige Claude Code logado. Valida o `canUseTool` ponta a ponta contra o SDK real:
   pendência criada → job pausa → resposta destrava → fluxo conclui. Validado em
   2026-07-27.
+- `npx tsx integracao/medir-esforco.ts`: **gasta a assinatura** (~US$ 2). A/B do `effort`
+  nas ações mecânicas, rodando cada uma duas vezes (padrão vs `medium`) e comparando
+  custo, TOKENS e arquivos tocados. Restaura o repositório do projeto entre as pernas
+  (`reset --hard` no HEAD do início) — sem isso a segunda rodada encontraria o trabalho da
+  primeira feito e mediria "não havia nada a fazer". Recusa-se a rodar com árvore suja.
 
 ## Arquitetura em 1 minuto
 - `servidor/` — Express 5 (TS estrito, ESM). `src/config.ts` resolve a raiz da fábrica
@@ -148,6 +153,14 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
 - **UI dada por pronta sem ninguém ver a tela é aposta.** Aconteceu duas vezes seguidas
   (T-020, T-023): lógica testada + strings no bundle NÃO provam que a tela ficou boa nem
   que o usuário vê diferença. Hoje não há desculpa — veja o item acima.
+- **Execução que não faz nada é sempre a mais barata.** Ao medir corte de custo, compare o
+  TRABALHO ENTREGUE, não a fatura. `projeto:conferir` em `effort: medium` marcou −74% de
+  custo e ia entrar como vitória: com a mesma entrada, o padrão achou o PROGRESSO.md fora
+  de sincronia e corrigiu (+11 linhas), e o `medium` terminou sem achar nada. Pior, o
+  instrumento contava arquivos com `git status` DEPOIS da execução — e os agentes de
+  zeladoria COMMITAM, então a árvore lê limpa e tudo marcava "0 arquivos tocados",
+  inclusive as pernas que commitaram. Meça contra o HEAD do início
+  (`git diff --name-only <head> HEAD`) e desconfie de coluna que dá zero para todo mundo.
 - **Opção do SDK com nome errado é ignorada EM SILÊNCIO.** O `effort` da T-042 nasceu como
   `outputConfig: { effort }` — objeto que não existe na API do SDK. Compilou (spread
   condicional escapa da checagem de propriedade excedente), passou nos testes, e todo

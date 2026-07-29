@@ -58,15 +58,15 @@ describe("montarJobAcao aplica os guardrails", () => {
   });
 });
 
-describe("esforço: só o mecânico desce (T-042)", () => {
-  it("as ações rebaixadas são exatamente as de zeladoria", () => {
+describe("esforço: quem desce foi decidido MEDINDO (T-042)", () => {
+  it("as rebaixadas são exatamente as duas que provaram entregar o mesmo", () => {
     // Lista explícita e fechada de propósito: acrescentar uma ação aqui é uma decisão de
-    // custo × qualidade, e deve exigir mexer no teste junto.
-    const mecanicas = ["status", "projeto:conferir", "projeto:progresso"];
-    for (const id of mecanicas) {
+    // custo × qualidade e deve exigir mexer no teste junto — de preferência depois de
+    // rodar `integracao/medir-esforco.ts`, que compara TRABALHO ENTREGUE, não a fatura.
+    for (const id of ["status", "projeto:progresso"]) {
       expect(guardrailsParaAcao(id).esforco).toBe("medium");
     }
-    const julgamento = [
+    const padrao = [
       "trabalhar",
       "novo-projeto",
       "ideia",
@@ -81,8 +81,15 @@ describe("esforço: só o mecânico desce (T-042)", () => {
       "projeto:marco",
       "projeto:recriar-equipe",
     ];
-    for (const id of julgamento) {
+    for (const id of padrao) {
       expect(guardrailsParaAcao(id).esforco).toBeUndefined();
     }
+  });
+
+  it("projeto:conferir NÃO desce — medido: em medium não achou o desvio", () => {
+    // Regressão de uma decisão que já foi tomada errado uma vez. Em `medium` a ação
+    // devolveu 74% de "economia" sem entregar nada, contra um commit de +11 linhas no
+    // padrão a partir da MESMA entrada. Procurar desvio é o oposto de tarefa mecânica.
+    expect(guardrailsParaAcao("projeto:conferir").esforco).toBeUndefined();
   });
 });

@@ -562,9 +562,13 @@ isoladamente; `/manutencao` e `/encerrar-dia` nem aceitavam projeto.
 declarado como legítimo — para não virar alvo da próxima rodada de "otimização".
 
 *Cortado:*
-1. **`effort: medium` só nas três ações mecânicas** — `/status`, `projeto:conferir` e
-   `projeto:progresso`. Validar frontmatter, ler estado e consolidar um arquivo de texto
-   não usam profundidade de raciocínio.
+1. **`effort: medium` em `/status` e `projeto:progresso`** — e SÓ nelas, depois de um A/B
+   com execuções reais (US$ 2,21). `projeto:conferir` tinha entrado no corte e SAIU: em
+   `medium` ela devolveu 74% de "economia" sem entregar nada, enquanto o padrão, com a
+   mesma entrada, achou o PROGRESSO.md fora de sincronia com o marco e corrigiu. A régua
+   não é "a ação parece simples", é **o que ela precisa DESCOBRIR**: redigir o que já
+   aconteceu tolera menos esforço (progresso: −52% e trabalho equivalente); procurar
+   desvio que ninguém viu, não.
 2. **Requisição idêntica em voo vira uma só** (`useDados`). Sem TTL, de propósito: cache
    com validade serviria dado velho depois de uma gravação (equipe editada, `ci.json`
    salvo), e trocar 3 requisições locais por uma tela que mente é mau negócio.
@@ -574,8 +578,9 @@ declarado como legítimo — para não virar alvo da próxima rodada de "otimiza
    `useSyncExternalStore` — a conta deixou de depender da disciplina de quem chama.
 
 *Declarado legítimo — não cortar sem medir de novo:*
-- **`effort` padrão (`high`) em todo fluxo de julgamento**: executor, testador, revisor,
-  planejador, documentador, pesquisador, marco de fase, análise. O gasto que mais pesa
+- **`effort` padrão em todo fluxo de julgamento**: executor, testador, revisor,
+  planejador, documentador, pesquisador, marco de fase, análise — e `projeto:conferir`,
+  que a medição trouxe de volta para cá. O gasto que mais pesa
   nesta fábrica é RETRABALHO (log de 2026-07-28), e um ciclo reprovado custa mais que a
   diferença de esforço de vários fluxos. Economizar aí é trocar centavos por dólares.
 - **`maxBudgetUsd: null`**: informacional por decisão da T-019, não esquecimento.

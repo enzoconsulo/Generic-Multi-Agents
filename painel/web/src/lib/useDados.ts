@@ -13,7 +13,10 @@ import { api, ErroApi } from "./api";
  */
 const emVoo = new Map<string, Promise<unknown>>();
 
-function buscarDeduplicado<T>(caminho: string): Promise<T> {
+/** Exportada só para teste: as duas propriedades que importam aqui (uma requisição para
+ *  chamadas simultâneas; nenhum cache depois que resolve) não dão para exercitar pelo
+ *  hook, porque os testes da web rodam sem DOM. */
+export function buscarDeduplicado<T>(caminho: string): Promise<T> {
   const existente = emVoo.get(caminho);
   if (existente !== undefined) return existente as Promise<T>;
   const promessa = api<T>(caminho).finally(() => emVoo.delete(caminho));
