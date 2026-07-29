@@ -2768,3 +2768,133 @@ a:hover {
   color: var(--cor-alerta);
   border-color: var(--cor-alerta);
 }
+
+/* Análise em painel visual (T-041) — entender olhando, não lendo. */
+.analise-painel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.analise-rot {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cor-texto-suave);
+  margin-bottom: 0.35rem;
+}
+.analise-destaque {
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-link);
+  border-radius: var(--raio);
+  padding: 0.8rem 0.9rem;
+}
+.analise-oquefaz {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.5;
+}
+.analise-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.analise-chip {
+  font-size: 0.74rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: 999px;
+  color: var(--cor-texto-suave);
+}
+.analise-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0.9rem;
+}
+.analise-bloco {
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 0.8rem 0.9rem;
+}
+.analise-pecas,
+.analise-atencao {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.analise-peca {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.analise-peca:last-child {
+  border-bottom: none;
+}
+.analise-peca-nome {
+  font-size: 0.82rem;
+}
+.analise-peca-papel {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+.analise-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.3rem 0;
+  font-size: 0.85rem;
+}
+.analise-marca {
+  font-size: 0.7rem;
+}
+/* Gravidade pela cor da marca: o olho separa antes de ler. */
+.grav-alta .analise-marca {
+  color: var(--cor-erro);
+}
+.grav-media .analise-marca {
+  color: var(--cor-alerta);
+}
+.grav-baixa .analise-marca {
+  color: var(--cor-texto-suave);
+}
+.analise-fluxo {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.analise-passo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  font-size: 0.86rem;
+}
+.analise-passo-n {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--cor-borda-forte);
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+}
+.analise-md {
+  margin-top: 0.4rem;
+}
+.analise-md > summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}

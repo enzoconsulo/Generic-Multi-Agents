@@ -1,3 +1,4 @@
+import type { AnaliseEstruturada } from "./analise-estruturada.js";
 /**
  * Tipos do estado da fábrica — o contrato destes dados é `_sistema/PROTOCOLO_TAREFAS.md`
  * (frontmatter e vocabulário de status), `_sistema/templates/PLANO.md` (linhas Meta:/
@@ -142,6 +143,8 @@ export interface ProjetoDetalhe {
   decisoes: string | null;
   progresso: string | null;
   analise: string | null;
+  /** Análise estruturada (T-041); null = projeto sem analise.json — a tela cai no .md. */
+  analiseEstruturada: AnaliseEstruturada | null;
   erros: string[];
 }
 

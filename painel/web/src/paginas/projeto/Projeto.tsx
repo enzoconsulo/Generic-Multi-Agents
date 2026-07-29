@@ -4,6 +4,7 @@ import { useDados } from "../../lib/useDados";
 import { useJobsAoVivo, type EstadoAoVivo } from "../../lib/useJobsAoVivo";
 import { api, ErroApi } from "../../lib/api";
 import type {
+  AnaliseEstruturada,
   EquipeProjeto,
   EstrategiaModelo,
   FasePlano,
@@ -33,6 +34,7 @@ import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
 import { EspecialistasProjeto } from "./EspecialistasProjeto";
 import { SecaoEquipe } from "./SecaoEquipe";
 import { SecaoGestao } from "./SecaoGestao";
+import { PainelAnalise } from "./PainelAnalise";
 import { EquipeAoVivo } from "./EquipeAoVivo";
 import { MapaPlano } from "./MapaPlano";
 import { SecaoCi } from "./ci/PainelCi";
@@ -184,7 +186,12 @@ function DetalheProjeto({
 
       <SecaoCi projeto={projeto.nome} jobAtivo={jobAtivo} aoVivo={aoVivo} />
 
-      <SecaoAnalise projeto={projeto.nome} analise={projeto.analise} bloqueado={jobAtivo !== null} />
+      <SecaoAnalise
+        projeto={projeto.nome}
+        analise={projeto.analise}
+        estruturada={projeto.analiseEstruturada}
+        bloqueado={jobAtivo !== null}
+      />
 
       <SecaoTexto titulo="Decisões" texto={projeto.decisoes} vazio="Sem DECISOES.md." />
       <SecaoTexto titulo="Progresso" texto={projeto.progresso} vazio="Sem PROGRESSO.md." />
@@ -379,10 +386,12 @@ function CampoSecao({ rot, texto }: { rot: string; texto: string }) {
 function SecaoAnalise({
   projeto,
   analise,
+  estruturada,
   bloqueado,
 }: {
   projeto: string;
   analise: string | null;
+  estruturada: AnaliseEstruturada | null;
   bloqueado: boolean;
 }) {
   const fabrica = useDados<RespostaFabrica>("/api/fabrica");
@@ -402,8 +411,27 @@ function SecaoAnalise({
           />
         )}
       </div>
-      {temAnalise ? (
-        <TextoLongo texto={(analise as string).trim()} />
+      {/* Painel visual quando há `analise.json` (T-041); o `.md` fica atrás de um toggle.
+          Projeto analisado ANTES da T-041 só tem o texto — e cai no ramo de baixo sem
+          quebrar, que é o requisito de compatibilidade da tarefa. */}
+      {estruturada !== null ? (
+        <>
+          <PainelAnalise analise={estruturada} />
+          {temAnalise && (
+            <details className="analise-md">
+              <summary>ver a análise por extenso (ANALISE.md)</summary>
+              <TextoLongo texto={(analise as string).trim()} />
+            </details>
+          )}
+        </>
+      ) : temAnalise ? (
+        <>
+          <p className="aviso aviso-info aviso-compacto">
+            Esta análise é de antes do painel visual. Reanalise para ver em blocos — o texto
+            continua disponível de qualquer forma.
+          </p>
+          <TextoLongo texto={(analise as string).trim()} />
+        </>
       ) : (
         <p className="texto-suave">
           Análise ainda não gerada. Clique em <strong>Analisar</strong> — o painel lê o código

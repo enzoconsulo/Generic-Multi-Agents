@@ -35,15 +35,45 @@ O diretório de trabalho (cwd) já é a raiz do projeto. Trabalhe em português 
    estiver sob git (o comando falha), use a palavra `sem-git` no lugar do hash. Para a
    data, use a data de hoje no formato AAAA-MM-DD.
 
-3. **Atualização incremental.** Se `_gestao/ANALISE.md` JÁ existir, NÃO reescreva do zero:
+3. **Escreva TAMBÉM `_gestao/analise.json`**, com o MESMO conteúdo em forma estruturada —
+   é o que o painel usa para desenhar a análise em vez de exibir texto corrido. O `.md`
+   continua sendo o que um humano lê fora do painel; os dois saem da mesma passada, de
+   propósito, porque gerar em momentos diferentes é como as duas versões divergem.
+
+   Formato exato (campos ausentes viram vazio na tela, nunca erro):
+
+   ```json
+   {
+     "oQueFaz": "1 ou 2 frases. O que o projeto faz e para quem.",
+     "pecas": [
+       { "nome": "gerador_anuncio.py", "papel": "monta o anúncio a partir da foto" }
+     ],
+     "fluxo": ["passo 1", "passo 2", "passo 3"],
+     "stack": ["Python 3.11", "Streamlit", "OpenAI via HTTP direto"],
+     "atencao": [
+       { "texto": "sem suíte automatizada", "gravidade": "media" }
+     ]
+   }
+   ```
+
+   Regras do JSON:
+   - `pecas`: no máximo 8, as que um recém-chegado precisa conhecer — não liste todo
+     arquivo do projeto. `papel` em UMA linha curta.
+   - `fluxo`: no máximo 6 passos, cada um uma frase curta. É a linha do tempo de uma
+     execução, não a lista de módulos.
+   - `atencao`: `gravidade` é `"alta"`, `"media"` ou `"baixa"`. Lista vazia é resposta
+     legítima — não invente problema para preencher.
+   - Nada de markdown dentro dos campos: é texto puro, a tela cuida da apresentação.
+
+4. **Atualização incremental.** Se `_gestao/ANALISE.md` JÁ existir, NÃO reescreva do zero:
    leia o que está lá, mantenha o que continua verdadeiro e ajuste apenas o que mudou no
    código. As cinco seções e o rodapé devem continuar presentes e coerentes com o estado
    atual do projeto (atualize a data e o commit do rodapé sempre).
 
 ## Regras
 
-- Escreva SOMENTE `_gestao/ANALISE.md`. Não crie, edite ou apague NENHUM outro arquivo do
-  projeto, não rode testes, não instale nada, não commite.
+- Escreva SOMENTE `_gestao/ANALISE.md` e `_gestao/analise.json`. Não crie, edite ou apague
+  NENHUM outro arquivo do projeto, não rode testes, não instale nada, não commite.
 - Baseie-se apenas no que o código mostra. Se algo for incerto, diga que é uma dedução —
   não invente comportamento.
 - Seja concreto e conciso: cite nomes reais de arquivos/módulos/funções em vez de

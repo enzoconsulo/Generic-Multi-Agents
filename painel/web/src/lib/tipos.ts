@@ -136,6 +136,26 @@ export interface ProjetoResumo {
   erros: string[];
 }
 
+/** Peça principal do projeto, na análise estruturada (T-041). */
+export interface PecaAnalise {
+  nome: string;
+  papel: string;
+}
+
+export interface PontoAtencao {
+  texto: string;
+  gravidade: "alta" | "media" | "baixa";
+}
+
+/** Análise em forma estruturada — espelha o servidor; a tela desenha a partir disto. */
+export interface AnaliseEstruturada {
+  oQueFaz: string;
+  pecas: PecaAnalise[];
+  fluxo: string[];
+  stack: string[];
+  atencao: PontoAtencao[];
+}
+
 export interface ProjetoDetalhe {
   nome: string;
   tarefas: TarefaCompleta[];
@@ -146,6 +166,8 @@ export interface ProjetoDetalhe {
   decisoes: string | null;
   progresso: string | null;
   analise: string | null;
+  /** Analise estruturada (T-041); null = so existe o .md, e a tela cai nele. */
+  analiseEstruturada: AnaliseEstruturada | null;
   erros: string[];
 }
 

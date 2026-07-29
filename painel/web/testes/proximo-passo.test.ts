@@ -38,6 +38,7 @@ function projeto(tarefas: TarefaCompleta[], analise: string | null = null): Proj
     equipe: { agentes: [], erros: [] },
     decisoes: null,
     progresso: null,
+    analiseEstruturada: null,
     analise,
     erros: [],
   };
