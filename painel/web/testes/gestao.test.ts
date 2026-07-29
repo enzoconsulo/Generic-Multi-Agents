@@ -5,6 +5,7 @@ import {
   tarefasBloqueadas,
   tarefasPromoviveis,
   ultimoCustoDaAcao,
+  custosPorAcao,
 } from "../src/lib/gestao";
 import type { Job, TarefaCompleta } from "../src/lib/tipos";
 
@@ -187,5 +188,52 @@ describe("ultimoCustoDaAcao (T-040)", () => {
     // "Testar" não pode capturar "Testar tudo — meu" — o separador " — " garante isso.
     const jobs = [jobDe("Testar tudo — meu", 3.0)];
     expect(ultimoCustoDaAcao(jobs, "meu", "Testar")).toBeNull();
+  });
+});
+
+describe("custosPorAcao (T-042)", () => {
+  function jobDe(titulo: string, custoUsd: number, estado: Job["estado"] = "concluido", em = "2026-07-28T10:00:00.000Z") {
+    return job({
+      id: titulo + em + String(custoUsd),
+      escopo: "projeto:meu",
+      estado,
+      titulo,
+      iniciadoEm: em,
+      resultado: { custoUsd },
+    });
+  }
+
+  it("monta o mapa de todas as ações numa passada", () => {
+    const jobs = [jobDe("Documentar — meu", 0.42), jobDe("Testar — meu", 0.71)];
+    const custos = custosPorAcao(jobs, "meu");
+    expect(custos.get("Documentar")).toBe(0.42);
+    expect(custos.get("Testar")).toBe(0.71);
+    expect(custos.get("Pesquisar")).toBeUndefined();
+  });
+
+  it("guarda a execução MAIS RECENTE de cada ação", () => {
+    const jobs = [
+      jobDe("Documentar — meu", 0.1, "concluido", "2026-07-28T09:00:00.000Z"),
+      jobDe("Documentar — meu", 0.9, "concluido", "2026-07-28T15:00:00.000Z"),
+    ];
+    expect(custosPorAcao(jobs, "meu").get("Documentar")).toBe(0.9);
+  });
+
+  it("dá o MESMO resultado que a consulta por ação — o refactor não pode mudar o número", () => {
+    // A garantia que importa num refactor de desempenho: o valor exibido continua igual.
+    const jobs = [
+      jobDe("Documentar — meu", 0.42),
+      jobDe("Testar — meu", 0.71),
+      jobDe("Revisar código — meu", 1.14, "cancelado"),
+    ];
+    for (const rotulo of ["Documentar", "Testar", "Revisar código", "Inexistente"]) {
+      expect(custosPorAcao(jobs, "meu").get(rotulo) ?? null).toBe(
+        ultimoCustoDaAcao(jobs, "meu", rotulo),
+      );
+    }
+  });
+
+  it("título sem o separador não entra no mapa", () => {
+    expect(custosPorAcao([jobDe("SemSeparador", 1)], "meu").size).toBe(0);
   });
 });

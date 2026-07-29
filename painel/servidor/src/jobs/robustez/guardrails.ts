@@ -8,8 +8,30 @@
  * cortar — serve para a UI avisar. Fica `null` (sem teto) por default, de propósito.
  */
 
+/**
+ * Profundidade de raciocínio do fluxo. Ausente = o padrão do modelo (`high`).
+ *
+ * O tipo sai da lista, e não o contrário, porque o runner precisa VALIDAR em tempo de
+ * execução (o job atravessa o disco em `dados/` antes de chegar ao SDK). Com duas listas
+ * — uma no tipo, outra na validação — acrescentar um nível aqui passaria pelo compilador
+ * e seria descartado calado lá.
+ */
+export const ESFORCOS = ["low", "medium", "high"] as const;
+export type Esforco = (typeof ESFORCOS)[number];
+
+/** Guarda de tipo para o valor que volta do disco. */
+export function ehEsforco(valor: unknown): valor is Esforco {
+  return typeof valor === "string" && (ESFORCOS as readonly string[]).includes(valor);
+}
+
 export interface Guardrails {
   maxTurns: number;
+  /**
+   * `effort` do SDK. Só vale a pena baixar em fluxo MECÂNICO — economizar em verificação
+   * ou replanejamento sai caro em retrabalho, que é o gasto que mais pesa nesta fábrica
+   * (medido no log de 2026-07-28). Ausente = padrão do modelo.
+   */
+  esforco?: Esforco;
   maxBudgetUsd: number | null;
   /** Silêncio tolerado pelo watchdog neste tipo de fluxo (ms). */
   watchdogMs: number;
@@ -35,7 +57,8 @@ const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
   manutencao: { maxTurns: 120 },
   "encerrar-dia": { maxTurns: 100 },
   ideia: { maxTurns: 100 },
-  status: { maxTurns: 40, watchdogMs: 10 * MINUTO },
+  // /status é leitura e sumarização — mecânico pela mesma régua.
+  status: { maxTurns: 40, watchdogMs: 10 * MINUTO, esforco: "medium" },
   /** Análise não é um dos 6 comandos, mas é um fluxo Claude e também merece teto. */
   analisar: { maxTurns: 100 },
 
@@ -51,10 +74,12 @@ const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
   "projeto:testar": { maxTurns: 80, watchdogMs: 20 * MINUTO }, // suíte longa é silêncio legítimo
   "projeto:replanejar": { maxTurns: 120 }, // reescreve plano e tarefas: mais fôlego
   /** T-034 — escopo de um projeto, então bem abaixo dos comandos globais equivalentes. */
-  "projeto:conferir": { maxTurns: 80 },
+  // Zeladoria mecânica: validar frontmatter e consolidar texto não precisam do teto de
+  // raciocínio. São as ÚNICAS que descem — o resto é julgamento.
+  "projeto:conferir": { maxTurns: 80, esforco: "medium" },
   /** Marco roda software de verdade e ainda promove tarefas: silêncio longo é legítimo. */
   "projeto:marco": { maxTurns: 100, watchdogMs: 20 * MINUTO },
-  "projeto:progresso": { maxTurns: 60 },
+  "projeto:progresso": { maxTurns: 60, esforco: "medium" },
   /** T-035 — ler o projeto e sintetizar os especialistas. */
   "projeto:recriar-equipe": { maxTurns: 80 },
 };

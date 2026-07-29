@@ -556,3 +556,41 @@ auto-estruturação pela equipe de especialistas. Antes só existiam os dois ext
 (/ideia planeja tudo, /trabalhar executa tudo) e os agentes eram inalcançáveis
 isoladamente; `/manutencao` e `/encerrar-dia` nem aceitavam projeto.
 **Quem:** usuário + orquestrador
+
+## 2026-07-29 — Onde cortar custo e, principalmente, onde NÃO cortar (T-042)
+**Decisão:** o corte de custo tem escopo fechado em três frentes, e o resto do gasto fica
+declarado como legítimo — para não virar alvo da próxima rodada de "otimização".
+
+*Cortado:*
+1. **`effort: medium` só nas três ações mecânicas** — `/status`, `projeto:conferir` e
+   `projeto:progresso`. Validar frontmatter, ler estado e consolidar um arquivo de texto
+   não usam profundidade de raciocínio.
+2. **Requisição idêntica em voo vira uma só** (`useDados`). Sem TTL, de propósito: cache
+   com validade serviria dado velho depois de uma gravação (equipe editada, `ci.json`
+   salvo), e trocar 3 requisições locais por uma tela que mente é mau negócio.
+3. **Canal SSE único de verdade** (`useJobsAoVivo`). A regra "uma conexão por página"
+   existia desde a T-016 e estava quebrada: o `App` assina para o selo do cabeçalho e a
+   página assinava de novo. O estado saiu do hook e foi para o módulo, com
+   `useSyncExternalStore` — a conta deixou de depender da disciplina de quem chama.
+
+*Declarado legítimo — não cortar sem medir de novo:*
+- **`effort` padrão (`high`) em todo fluxo de julgamento**: executor, testador, revisor,
+  planejador, documentador, pesquisador, marco de fase, análise. O gasto que mais pesa
+  nesta fábrica é RETRABALHO (log de 2026-07-28), e um ciclo reprovado custa mais que a
+  diferença de esforço de vários fluxos. Economizar aí é trocar centavos por dólares.
+- **`maxBudgetUsd: null`**: informacional por decisão da T-019, não esquecimento.
+- **Suíte completa uma vez por ciclo no testador**: duplicação já foi eliminada; o que
+  sobrou é verificação real.
+- **Resumidor em haiku com `tools: []`** (T-039): já está no piso, US$ 0,0019 por resumo.
+- **Custo por ação exibido no cartão** (T-040): a leitura da lista de jobs é uma passada
+  só; o valor de saber o preço antes de clicar paga o resto.
+
+**Medido, não estimado** (página do projeto, build de produção, navegador real):
+requisições ao abrir **15 → 8**, sem nenhuma duplicata (`/api/fabrica` 4→1,
+`/api/acoes-projeto` 2→1, `/api/eventos` 2→1, `/api/jobs` 2→1, `/api/inputs` 2→1).
+Página de Jobs: 3 requisições. Custo por cartão: **6–7× mais rápido** (1000 jobs,
+6,83 ms → 0,98 ms por render), com conferência de equivalência de valor em cada tamanho.
+**Motivo:** pedido do usuário de equilibrar custo e desempenho sem perder desempenho. A
+metade "não cortar" é a parte que costuma faltar: sem ela, a próxima auditoria refaz o
+trabalho e acaba cortando onde dói.
+**Quem:** usuário + orquestrador

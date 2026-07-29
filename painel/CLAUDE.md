@@ -141,9 +141,29 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   - **Página longa sai ilegível na captura**: o PNG inteiro é reduzido para caber, e
     detalhe de 0.7rem some. Para inspecionar de perto, remova as outras seções pelo `--js`
     antes do retrato — a página encurta e a fidelidade sobe.
+  - **Para contar REQUISIÇÕES, use o domínio Network do CDP, não um wrapper de `fetch`**
+    injetado por `--js`: o `--js` roda depois do bundle, então perde justamente a
+    enxurrada de chamadas da montagem, que é o que interessa medir. Foi assim que se
+    provou o 15 → 8 da T-042.
 - **UI dada por pronta sem ninguém ver a tela é aposta.** Aconteceu duas vezes seguidas
   (T-020, T-023): lógica testada + strings no bundle NÃO provam que a tela ficou boa nem
   que o usuário vê diferença. Hoje não há desculpa — veja o item acima.
+- **Opção do SDK com nome errado é ignorada EM SILÊNCIO.** O `effort` da T-042 nasceu como
+  `outputConfig: { effort }` — objeto que não existe na API do SDK. Compilou (spread
+  condicional escapa da checagem de propriedade excedente), passou nos testes, e todo
+  fluxo continuou no padrão: a economia configurada simplesmente não acontecia. Na mesma
+  cadeia, `lerParams` nem lia a chave — DOIS pontos mudos seguidos. É a família do
+  `watchdogMs` que a tabela anunciava e ninguém consumia. Ao passar opção nova ao SDK:
+  confira o nome em `node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts` (é a verdade
+  da versão PINADA) e escreva teste sobre o objeto `options` que chega ao SDK — não sobre
+  a tabela de configuração, que é o lado fácil e não prova nada.
+- **Hook que abre conexão vira N conexões quando dois componentes o chamam.** `App` assina
+  o SSE para o selo do cabeçalho e a página assinava de novo: 2 conexões, 2 fanouts de
+  cada evento, `/api/jobs` e `/api/inputs` em dobro — com a regra "uma conexão por página"
+  escrita e tida como cumprida. Correção (T-042): estado no MÓDULO + `useSyncExternalStore`,
+  com a conexão amarrada à contagem de assinantes. Invariante que depende de quem chama
+  lembrar não é invariante. Se fizer isso, o `getSnapshot` PRECISA devolver o mesmo objeto
+  enquanto nada muda — objeto novo a cada chamada põe o React em laço infinito de render.
 - **Entregue onde o usuário OLHA.** A T-023 pôs a visualização de agentes na página do
   projeto; o usuário acompanha execução na página de **Jobs**, que ficou como estava. Ao
   receber um pedido de UI, confirme em QUAL tela ele acontece.

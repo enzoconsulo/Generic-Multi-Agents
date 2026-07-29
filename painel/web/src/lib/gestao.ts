@@ -115,17 +115,32 @@ export function ultimoCustoDaAcao(
   projeto: string,
   rotulo: string,
 ): number | null {
-  const prefixo = `${rotulo} — `;
+  return custosPorAcao(jobs, projeto).get(rotulo) ?? null;
+}
+
+/**
+ * Custo da última execução de CADA ação, numa passada só (T-042).
+ *
+ * `ultimoCustoDaAcao` chamada por cartão refazia o filtro e a ordenação da lista inteira
+ * de jobs uma vez por ação — nove varreduras por render, e a página re-renderiza a cada
+ * evento do SSE. Aqui a lista é percorrida uma vez; a UI monta o mapa e consulta.
+ */
+export function custosPorAcao(jobs: Job[], projeto: string): Map<string, number> {
+  const custos = new Map<string, number>();
+  // Mais recentes primeiro: o primeiro que casar com um rótulo é o último que rodou.
   for (const job of jobsDoProjeto(jobs, projeto)) {
-    if (!job.titulo.startsWith(prefixo)) continue;
-    const custo = (job.resultado as { custoUsd?: number | null } | null | undefined)?.custoUsd;
     // Só conta execução que chegou ao fim: job cancelado no meio informaria um custo
     // parcial como se fosse o preço da ação.
-    if (job.estado === "concluido" && typeof custo === "number" && Number.isFinite(custo)) {
-      return custo;
-    }
+    if (job.estado !== "concluido") continue;
+    const custo = (job.resultado as { custoUsd?: number | null } | null | undefined)?.custoUsd;
+    if (typeof custo !== "number" || !Number.isFinite(custo)) continue;
+
+    const sep = job.titulo.indexOf(" — ");
+    if (sep <= 0) continue;
+    const rotulo = job.titulo.slice(0, sep);
+    if (!custos.has(rotulo)) custos.set(rotulo, custo);
   }
-  return null;
+  return custos;
 }
 
 /** Há algum job deste projeto ainda em andamento? */

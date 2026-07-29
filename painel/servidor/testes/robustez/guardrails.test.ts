@@ -44,4 +44,45 @@ describe("montarJobAcao aplica os guardrails", () => {
       expect(job.params?.maxTurns).toBeGreaterThan(0);
     }
   });
+
+  it("esforço da tabela chega aos params do job (T-042)", () => {
+    // A tabela definir não basta: entre ela e o modelo há a montagem do job, o disco e o
+    // `lerParams` do runner. Este teste cobre o primeiro trecho; o do runner cobre o
+    // resto. Sem os dois, `esforco` seria mais uma coluna que ninguém consome.
+    expect(montarJobAcao({ ...base, id: "status" }, "/raiz").params?.esforco).toBe("medium");
+  });
+
+  it("ação de julgamento não recebe esforço — fica no padrão do modelo", () => {
+    // Rebaixar aqui economiza centavos e paga em retrabalho, que é o gasto caro medido.
+    expect(montarJobAcao({ ...base, id: "trabalhar" }, "/raiz").params?.esforco).toBeUndefined();
+  });
+});
+
+describe("esforço: só o mecânico desce (T-042)", () => {
+  it("as ações rebaixadas são exatamente as de zeladoria", () => {
+    // Lista explícita e fechada de propósito: acrescentar uma ação aqui é uma decisão de
+    // custo × qualidade, e deve exigir mexer no teste junto.
+    const mecanicas = ["status", "projeto:conferir", "projeto:progresso"];
+    for (const id of mecanicas) {
+      expect(guardrailsParaAcao(id).esforco).toBe("medium");
+    }
+    const julgamento = [
+      "trabalhar",
+      "novo-projeto",
+      "ideia",
+      "manutencao",
+      "encerrar-dia",
+      "analisar",
+      "projeto:documentar",
+      "projeto:pesquisar",
+      "projeto:revisar",
+      "projeto:testar",
+      "projeto:replanejar",
+      "projeto:marco",
+      "projeto:recriar-equipe",
+    ];
+    for (const id of julgamento) {
+      expect(guardrailsParaAcao(id).esforco).toBeUndefined();
+    }
+  });
 });

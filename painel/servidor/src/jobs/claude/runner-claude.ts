@@ -1,5 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { ContextoExecucao, Job, NovaPendencia, Runner } from "../tipos.js";
+import { ehEsforco, type Esforco } from "../robustez/guardrails.js";
 
 /**
  * Runner que executa um fluxo da fábrica via Claude Agent SDK (T-008). O padrão de uso
@@ -26,6 +27,8 @@ export interface ParamsClaude {
   permissionMode?: string;
   /** Limite de turnos agênticos (guarda de custo); ausente = sem limite. */
   maxTurns?: number;
+  /** Profundidade de raciocínio (`effort` do SDK); ausente = padrão do modelo. */
+  esforco?: Esforco;
 }
 
 export interface ResultadoClaude {
@@ -128,6 +131,14 @@ export class RunnerClaude implements Runner {
         ...(aprovaPelaUI ? { canUseTool } : {}),
         abortController: controlador,
         ...(p.maxTurns !== undefined ? { maxTurns: p.maxTurns } : {}),
+        // `effort` é opção de TOPO das Options do SDK (sdk.d.ts: `effort?: EffortLevel`).
+        // Não existe `outputConfig` na API do SDK — aninhar aqui compila (spread
+        // condicional escapa da checagem de excesso) e é descartado em silêncio, o
+        // fluxo continua no padrão e a economia nunca acontece. É o mesmo modo de falha
+        // do `watchdogMs` que ninguém consumia; por isso há teste sobre o nome da opção.
+        // Só vai quando a tabela de guardrails define: omitir mantém o padrão do modelo,
+        // que é o certo para os fluxos de julgamento.
+        ...(p.esforco !== undefined ? { effort: p.esforco } : {}),
       },
     });
 
@@ -279,6 +290,7 @@ function lerParams(params: Record<string, unknown>): ParamsClaude {
   const agentes = params["agentes"];
   const permissionMode = params["permissionMode"];
   const maxTurns = params["maxTurns"];
+  const esforco = params["esforco"];
   return {
     prompt,
     cwd,
@@ -289,5 +301,9 @@ function lerParams(params: Record<string, unknown>): ParamsClaude {
       : {}),
     ...(typeof permissionMode === "string" ? { permissionMode } : {}),
     ...(typeof maxTurns === "number" ? { maxTurns } : {}),
+    // Validado, não repassado cru: o job passa pelo disco (`dados/`) entre a montagem e a
+    // execução, então o que chega aqui é dado externo. Valor estranho é ignorado — cair no
+    // padrão do modelo é degradação certa; mandar lixo ao SDK derruba o fluxo inteiro.
+    ...(ehEsforco(esforco) ? { esforco } : {}),
   };
 }

@@ -1,6 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ErroApi } from "./api";
 
+/**
+ * Requisições EM VOO, por caminho (T-042). Vários componentes da mesma página pedem o
+ * mesmo dado — `/api/fabrica` era buscado 4× e `/api/acoes-projeto` 2× a cada abertura da
+ * página do projeto, porque cada um abria a própria requisição.
+ *
+ * Deduplica só o que está NO AR: nada de cache com validade. Um cache serviria dado velho
+ * depois de uma gravação (a equipe editada, o `ci.json` salvo), e trocar 4 requisições
+ * locais por uma tela que mente é um péssimo negócio. Assim que a resposta chega, a
+ * entrada some — a próxima busca é uma busca de verdade.
+ */
+const emVoo = new Map<string, Promise<unknown>>();
+
+function buscarDeduplicado<T>(caminho: string): Promise<T> {
+  const existente = emVoo.get(caminho);
+  if (existente !== undefined) return existente as Promise<T>;
+  const promessa = api<T>(caminho).finally(() => emVoo.delete(caminho));
+  emVoo.set(caminho, promessa);
+  return promessa;
+}
+
 interface EstadoDados<T> {
   carregando: boolean;
   dados: T | null;
@@ -36,7 +56,7 @@ export function useDados<T>(caminho: string): EstadoDados<T> & { recarregar: () 
         : { ...atual, carregando: true, erro: null },
     );
 
-    api<T>(caminho)
+    buscarDeduplicado<T>(caminho)
       .then((dados) => {
         if (ativo) setEstado({ carregando: false, dados, erro: null });
       })

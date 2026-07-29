@@ -308,6 +308,7 @@ export async function montarJobAcaoProjeto(
       ...(opcoes.fallback ? { fallback: opcoes.fallback } : {}),
       maxTurns,
       watchdogMs: guardrails.watchdogMs,
+      ...(guardrails.esforco !== undefined ? { esforco: guardrails.esforco } : {}),
     },
   };
 }

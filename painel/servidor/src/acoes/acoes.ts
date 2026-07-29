@@ -83,6 +83,7 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
         : {}),
       maxTurns,
       watchdogMs: guardrails.watchdogMs,
+      ...(guardrails.esforco !== undefined ? { esforco: guardrails.esforco } : {}),
     },
   };
 }

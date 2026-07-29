@@ -11,7 +11,7 @@ import type {
   RespostaFabrica,
 } from "../../lib/tipos";
 import { estimarCusto, rotuloEstadoJob, rotuloPeso } from "../../lib/formato";
-import { ultimoCustoDaAcao } from "../../lib/gestao";
+import { custosPorAcao } from "../../lib/gestao";
 import { ExplicaAcao, SeloEscrita } from "../../componentes/ExplicaAcao";
 
 /**
@@ -106,6 +106,8 @@ export function AcoesDoGrupo({
   if (catalogo.dados === null || fabrica.dados === null) return null;
   const acoes = catalogo.dados.acoes.filter((a) => a.grupo === grupo);
   if (acoes.length === 0) return null;
+  // Uma varredura da lista de jobs para TODOS os cartões (T-042).
+  const custos = custosPorAcao(jobs, projeto);
 
   return (
     <div className="grade-cards">
@@ -117,7 +119,7 @@ export function AcoesDoGrupo({
           estrategias={fabrica.dados!.estrategias}
           estrategiaPadrao={fabrica.dados!.estrategiaPadrao}
           bloqueado={jobAtivo !== null}
-          custoReal={ultimoCustoDaAcao(jobs, projeto, acao.rotulo)}
+          custoReal={custos.get(acao.rotulo) ?? null}
         />
       ))}
     </div>
@@ -144,6 +146,7 @@ function GrupoAcoes({
   jobs: Job[];
 }) {
   if (acoes.length === 0) return null;
+  const custos = custosPorAcao(jobs, projeto);
 
   return (
     <section className="secao">
@@ -166,7 +169,7 @@ function GrupoAcoes({
             estrategias={estrategias}
             estrategiaPadrao={estrategiaPadrao}
             bloqueado={jobAtivo !== null}
-            custoReal={ultimoCustoDaAcao(jobs, projeto, acao.rotulo)}
+            custoReal={custos.get(acao.rotulo) ?? null}
           />
         ))}
       </div>

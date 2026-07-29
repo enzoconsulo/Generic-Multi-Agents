@@ -180,6 +180,48 @@ describe("RunnerClaude — tradução de mensagens do SDK em eventos e resultado
     expect(opcoes?.["fallbackModel"]).toBeUndefined();
   });
 
+  /**
+   * T-042 — o `effort` da tabela de guardrails só existe se CHEGAR ao SDK com o nome
+   * certo. Estes testes olham para as options porque as duas falhas reais foram mudas:
+   * o valor foi aninhado num `outputConfig` que não existe na API, e o `lerParams` nem
+   * lia a chave. Nos dois casos tudo compilava, os testes passavam e todo fluxo seguia
+   * no padrão — a economia configurada simplesmente não acontecia. Mesma família do
+   * `watchdogMs` que a tabela anunciava e ninguém consumia.
+   */
+  it("passa effort ao SDK como opção de TOPO quando a ação define esforço", async () => {
+    let opcoes: Record<string, unknown> | undefined;
+    const runner = new RunnerClaude(
+      consultaDe([{ type: "result", is_error: false }], (o) => (opcoes = o)),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    await runner.executar(jobFake({ ...PARAMS, esforco: "medium" }), ctx);
+
+    expect(opcoes?.["effort"]).toBe("medium");
+    // Nome errado é o modo de falha real: aninhar aqui é ignorado em silêncio pelo SDK.
+    expect(opcoes?.["outputConfig"]).toBeUndefined();
+  });
+
+  it("sem esforço na tabela, não manda effort — o padrão do modelo é o certo aí", async () => {
+    let opcoes: Record<string, unknown> | undefined;
+    const runner = new RunnerClaude(
+      consultaDe([{ type: "result", is_error: false }], (o) => (opcoes = o)),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    await runner.executar(jobFake(PARAMS), ctx);
+    expect(opcoes).not.toHaveProperty("effort");
+  });
+
+  it("esforço inválido vindo do disco é ignorado, não repassado ao SDK", async () => {
+    let opcoes: Record<string, unknown> | undefined;
+    const runner = new RunnerClaude(
+      consultaDe([{ type: "result", is_error: false }], (o) => (opcoes = o)),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    await runner.executar(jobFake({ ...PARAMS, esforco: "turbo" }), ctx);
+    // Cair no padrão é degradação previsível; mandar lixo ao SDK derruba o fluxo.
+    expect(opcoes).not.toHaveProperty("effort");
+  });
+
   it("rejeita params sem prompt/cwd/modelo válidos", async () => {
     const runner = new RunnerClaude(consultaDe([]));
     const { ctx } = contexto(new AbortController().signal);
