@@ -66,6 +66,24 @@ export interface Pendencia extends NovaPendencia {
   resposta?: RespostaInput;
 }
 
+/** Um item do resumo de trecho: o que foi entregue ou o que merece atenção (T-039). */
+export interface ItemResumoTrecho {
+  tipo: "feito" | "atencao";
+  texto: string;
+}
+
+/** Resumo de um trecho de agente, gerado por modelo barato (T-039). */
+export interface ResumoTrecho {
+  /** Índice do trecho dentro do job — casa com a segmentação do console. */
+  indice: number;
+  agente: string | null;
+  linhas: string[];
+  itens: ItemResumoTrecho[];
+  custoUsd: number | null;
+  /** true = não houve resumo utilizável; a UI mostra o texto cru. */
+  naoDeu: boolean;
+}
+
 export interface Job {
   /** Identificador curto e único (8 hex). */
   id: string;
@@ -86,6 +104,12 @@ export interface Job {
   resultado?: unknown;
   /** Mensagem em PT-BR quando `falhou`/`interrompido`. */
   erro?: string;
+  /**
+   * Resumos dos trechos de agente (T-039). Ficam NO JOB porque as linhas de log são
+   * efêmeras (só trafegam pelo SSE): depois de um F5 o resumo é a única memória do que
+   * cada agente fez.
+   */
+  resumos?: ResumoTrecho[];
   /** Histórico de pendências de input (abertas e respondidas) — auditoria (T-010). */
   inputs?: Pendencia[];
   /**

@@ -13,6 +13,7 @@ import {
   type NovaPendencia,
   type Pendencia,
   type RespostaInput,
+  type ResumoTrecho,
   type Runner,
 } from "./tipos.js";
 
@@ -282,6 +283,26 @@ export class GerenciadorJobs {
     if (dados.sessionId !== undefined) job.sessionId = dados.sessionId;
     if (dados.cwd !== undefined) job.cwd = dados.cwd;
     this.persistir(job);
+  }
+
+  /**
+   * Anexa o resumo de um trecho ao job e avisa a UI (T-039). Persiste na hora: as linhas
+   * de log não sobrevivem a um F5, então o resumo é a única memória do trecho.
+   *
+   * Idempotente por `indice` — reprocessar o mesmo trecho substitui em vez de duplicar.
+   * Job já removido é ignorado em silêncio: resumo chegando tarde não é erro.
+   */
+  anexarResumo(jobId: string, resumo: ResumoTrecho): void {
+    const job = this.jobs.get(jobId);
+    if (job === undefined) return;
+    const atuais = job.resumos ?? [];
+    const i = atuais.findIndex((r) => r.indice === resumo.indice);
+    if (i === -1) atuais.push(resumo);
+    else atuais[i] = resumo;
+    atuais.sort((a, b) => a.indice - b.indice);
+    job.resumos = atuais;
+    this.persistir(job);
+    this.emitirEvento(jobId, "resumo", resumo);
   }
 
   /** Reflete no metadado do job a pendência respondida (auditoria no histórico). */

@@ -2645,3 +2645,60 @@ a:hover {
 .dep-trava {
   border-color: var(--cor-alerta, var(--cor-borda-forte));
 }
+
+/* Resumo de trecho (T-039) — o cartão que substituiu o despejo de texto cru. */
+.trecho-cab-linha {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0.7rem 0.2rem;
+  font-size: 0.85rem;
+}
+.trecho-resumo {
+  padding: 0 0.7rem 0.5rem;
+}
+.resumo-linha {
+  margin: 0 0 0.35rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+.resumo-itens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.75rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.resumo-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+}
+.resumo-marca {
+  font-weight: 700;
+}
+.resumo-feito .resumo-marca {
+  color: var(--cor-sucesso);
+}
+.resumo-atencao .resumo-marca {
+  color: var(--cor-alerta);
+}
+/* O texto integral vira uma saída discreta: existe, mas não disputa a atenção. */
+.trecho-verbatim {
+  display: block;
+  margin: 0 0.7rem 0.55rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.trecho-verbatim:hover {
+  color: var(--cor-texto);
+  text-decoration: underline;
+}

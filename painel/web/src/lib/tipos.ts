@@ -174,6 +174,26 @@ export const ESTADOS_JOB = [
 ] as const;
 export type EstadoJob = (typeof ESTADOS_JOB)[number];
 
+/** Item do resumo de um trecho (T-039) — espelha o servidor. */
+export interface ItemResumoTrecho {
+  tipo: "feito" | "atencao";
+  texto: string;
+}
+
+/**
+ * Resumo de um trecho de agente, gerado por modelo barato no servidor (T-039).
+ * `indice` casa com a posição do segmento em `segmentarPorAgente`.
+ */
+export interface ResumoTrecho {
+  indice: number;
+  agente: string | null;
+  linhas: string[];
+  itens: ItemResumoTrecho[];
+  custoUsd: number | null;
+  /** true = não houve resumo utilizável; a UI mostra o texto cru. */
+  naoDeu: boolean;
+}
+
 export interface Job {
   id: string;
   tipo: string;
@@ -190,6 +210,8 @@ export interface Job {
   /** Metadados de retomada manual (T-019), gravados assim que conhecidos. */
   sessionId?: string;
   cwd?: string;
+  /** Resumos dos trechos de agente (T-039) — memória durável, o log é efêmero. */
+  resumos?: ResumoTrecho[];
 }
 
 /** GET /api/jobs */

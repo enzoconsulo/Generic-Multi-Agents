@@ -8,6 +8,7 @@ import type {
   Pendencia,
   RespostaInputs,
   RespostaJobs,
+  ResumoTrecho,
 } from "./tipos";
 
 export interface EstadoAoVivo {
@@ -125,6 +126,21 @@ export function useJobsAoVivo(): EstadoAoVivo {
       if (evento.tipo === "input-respondido") {
         const id = (evento.dados as { pendencia?: { id?: string } } | undefined)?.pendencia?.id;
         if (id) setPendencias((atual) => remover(atual, id));
+        return;
+      }
+
+      if (evento.tipo === "resumo") {
+        // O resumo chega assim que o trecho fecha (T-039) e mora NO JOB — atualizar aqui
+        // faz o cartão aparecer ao vivo, sem esperar a próxima transição de estado.
+        const resumo = evento.dados as ResumoTrecho | undefined;
+        if (resumo === undefined || typeof resumo.indice !== "number") return;
+        setJobs((atual) => {
+          const job = atual[evento.jobId];
+          if (job === undefined) return atual;
+          const outros = (job.resumos ?? []).filter((r) => r.indice !== resumo.indice);
+          const resumos = [...outros, resumo].sort((a, b) => a.indice - b.indice);
+          return { ...atual, [evento.jobId]: { ...job, resumos } };
+        });
         return;
       }
 

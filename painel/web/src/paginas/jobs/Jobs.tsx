@@ -10,7 +10,7 @@ import {
   type EtapaPipeline,
   type SegmentoAgente,
 } from "../../lib/atividade";
-import type { Job, LinhaLog, Pendencia } from "../../lib/tipos";
+import type { Job, LinhaLog, Pendencia, ResumoTrecho } from "../../lib/tipos";
 import {
   classeEstadoJob,
   decorrido,
@@ -226,7 +226,22 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
       <h4 className="secao-tarefa-rot">
         {job.usaClaude ? "O que cada agente fez" : "Passo a passo"}
       </h4>
-      {linhas.length === 0 ? (
+      {linhas.length === 0 && (job.resumos?.length ?? 0) > 0 ? (
+        // Log perdido mas resumo preservado — este é o caso NORMAL ao rever uma execução
+        // antiga, porque as linhas de log só trafegam pelo SSE e o resumo mora no job.
+        // Sem este ramo o resumo ficaria invisível justamente quando é a única memória
+        // do que aconteceu.
+        <>
+          <p className="texto-suave">
+            O texto integral não está mais em memória — o resumo de cada trecho ficou:
+          </p>
+          <ol className="trechos">
+            {job.resumos!.map((r) => (
+              <ResumoSolto key={r.indice} resumo={r} />
+            ))}
+          </ol>
+        </>
+      ) : linhas.length === 0 ? (
         <p className="texto-suave">
           {rodando
             ? "Aguardando os primeiros passos…"
@@ -241,6 +256,9 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
               segmento={s}
               aberto={i === segmentos.length - 1}
               rotuloSemAgente={job.usaClaude ? "orquestrador" : "pipeline"}
+              // O `indice` do servidor é a posição do segmento aqui: as duas pontas usam
+              // a mesma regra de corte (despacho de subagente abre trecho).
+              resumo={job.resumos?.find((r) => r.indice === i)}
             />
           ))}
         </ol>
@@ -298,15 +316,56 @@ function TrilhaPipeline({
   );
 }
 
+/**
+ * Resumo exibido sem o trecho de log correspondente — o que sobra de uma execução depois
+ * que o log efêmero se foi. Mesma aparência do cartão dentro do `Trecho`, sem o "ver na
+ * íntegra" (não há íntegra para mostrar).
+ */
+function ResumoSolto({ resumo }: { resumo: ResumoTrecho }) {
+  if (resumo.naoDeu || resumo.linhas.length === 0) return null;
+  return (
+    <li className="trecho trecho-orquestrador">
+      <div className="trecho-cab-linha">
+        <span className="trecho-nome">{resumo.agente ?? "orquestrador"}</span>
+        {resumo.custoUsd != null && (
+          <span className="trecho-meta">resumo ~${resumo.custoUsd.toFixed(4)}</span>
+        )}
+      </div>
+      <div className="trecho-resumo">
+        {resumo.linhas.map((l, i) => (
+          <p key={i} className="resumo-linha">
+            {l}
+          </p>
+        ))}
+        {resumo.itens.length > 0 && (
+          <ul className="resumo-itens">
+            {resumo.itens.map((item, i) => (
+              <li key={i} className={`resumo-item resumo-${item.tipo}`}>
+                <span className="resumo-marca" aria-hidden="true">
+                  {item.tipo === "feito" ? "✓" : "⚠"}
+                </span>
+                {item.texto}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </li>
+  );
+}
+
 function Trecho({
   segmento,
   aberto,
   rotuloSemAgente,
+  resumo,
 }: {
   segmento: SegmentoAgente;
   aberto: boolean;
   /** Como chamar o trecho sem agente: "orquestrador" (Claude) ou "pipeline" (CI). */
   rotuloSemAgente: string;
+  /** Resumo do trecho (T-039); ausente = ainda não chegou ou não deu. */
+  resumo?: ResumoTrecho | undefined;
 }) {
   const [expandido, setExpandido] = useState(aberto);
   const nome = segmento.agente ?? rotuloSemAgente;
@@ -317,21 +376,58 @@ function Trecho({
   const NIVEIS_TEXTO = new Set(["assistente", "subagente", "log", "resultado", "erro"]);
   const textos = segmento.linhas.filter((l) => NIVEIS_TEXTO.has(l.nivel) && l.texto.trim() !== "");
 
+  // Com resumo utilizável, ele é o conteúdo do trecho e o texto cru vira opcional. Foi o
+  // pedido explícito do usuário: o console despejava páginas de texto e, por isso mesmo,
+  // não era lido.
+  const temResumo = resumo !== undefined && !resumo.naoDeu && resumo.linhas.length > 0;
+
   return (
     <li className={`trecho trecho-${segmento.etapa ?? "orquestrador"}`}>
-      <button type="button" className="trecho-cab" onClick={() => setExpandido((v) => !v)}>
-        <span className="trecho-seta" aria-hidden="true">
-          {expandido ? "▾" : "▸"}
-        </span>
+      <div className="trecho-cab-linha">
         <span className="trecho-nome">{nome}</span>
         {segmento.etapa !== null && <span className="badge badge-suave">{segmento.etapa}</span>}
         <span className="trecho-meta">
           {ferramentas > 0 && `${ferramentas} ferramenta(s)`}
           {segmento.duracaoMs > 0 && ` · ${duracaoLegivel(segmento.duracaoMs)}`}
+          {resumo?.custoUsd != null && ` · resumo ~$${resumo.custoUsd.toFixed(4)}`}
         </span>
-      </button>
+      </div>
 
-      {expandido && (
+      {temResumo && (
+        <div className="trecho-resumo">
+          {resumo.linhas.map((l, i) => (
+            <p key={i} className="resumo-linha">
+              {l}
+            </p>
+          ))}
+          {resumo.itens.length > 0 && (
+            <ul className="resumo-itens">
+              {resumo.itens.map((item, i) => (
+                <li key={i} className={`resumo-item resumo-${item.tipo}`}>
+                  <span className="resumo-marca" aria-hidden="true">
+                    {item.tipo === "feito" ? "✓" : "⚠"}
+                  </span>
+                  {item.texto}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {textos.length > 0 && (
+        <button
+          type="button"
+          className="trecho-verbatim"
+          onClick={() => setExpandido((v) => !v)}
+          aria-expanded={expandido}
+        >
+          {expandido ? "▾ esconder o texto integral" : `▸ ver na íntegra (${textos.length} trecho(s))`}
+        </button>
+      )}
+
+      {/* Sem resumo, o texto cru abre por padrão: é melhor texto demais que tela vazia. */}
+      {(expandido || (!temResumo && aberto)) && (
         <div className="trecho-corpo">
           {textos.length === 0 ? (
             <p className="texto-suave">Sem texto produzido neste trecho.</p>
