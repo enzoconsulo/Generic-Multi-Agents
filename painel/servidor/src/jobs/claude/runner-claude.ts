@@ -68,6 +68,14 @@ export interface ResultadoClaude {
   motivo?: "limite-uso";
   /** Hora de reabertura anunciada pelo provedor, quando `motivo === "limite-uso"`. */
   reabreEm?: string | null;
+  /**
+   * Quantas sessões o SDK abriu neste job (T-047). Um job NÃO é uma sessão: numa rodada real
+   * o `/trabalhar` abriu SEIS — despacho em background reabre sessão. Importa para custo
+   * porque **cada sessão é um prefixo novo para ESCREVER no cache**, e escrita de cache é a
+   * maior linha da conta (1,25× contra 0,1× da leitura). Contar é de graça e é o único jeito
+   * de enxergar esse driver, já que só a última sessão reporta `result`.
+   */
+  sessoes?: number;
 }
 
 /**
@@ -243,6 +251,8 @@ export class RunnerClaude implements Runner {
     let erro = false;
     let tokens: TokensJob | null = null;
     let textoResult = "";
+    /** Um job pode abrir várias sessões (despacho em background reabre). Ver `sessoes`. */
+    let sessoes = 0;
     const partes: string[] = [];
     /**
      * Disjuntor de cota (T-045). Uma vez batido o limite da assinatura, TODA continuação é
@@ -257,6 +267,7 @@ export class RunnerClaude implements Runner {
       switch (msg.type) {
         case "system":
           if (msg.subtype === "init") {
+            sessoes += 1;
             sessionId = msg.session_id ?? null;
             // Grava JÁ no job (T-019): se o fluxo for interrompido no meio, é isto que
             // permite a retomada manual. Esperar o `result` para registrar significaria
@@ -283,11 +294,16 @@ export class RunnerClaude implements Runner {
               if (limiteBatido === null && ehLimiteDeUso(bloco.text)) limiteBatido = bloco.text;
             } else if (bloco.type === "tool_use" && bloco.name) {
               const alvo = alvoDeSubagente(bloco);
+              // Despacho mantém a seta (o segmentador da T-039 casa `→ agente` para fechar
+              // trecho — mudar essa grafia quebraria os resumos). Demais ferramentas ganham
+              // o alvo depois de dois-pontos, que não colide com esse padrão.
+              const sobre = alvo === null ? alvoDeFerramenta(bloco) : null;
               ctx.emitir("log", {
                 nivel: "ferramenta",
                 texto:
                   `${subagente ? "(subagente) " : ""}${bloco.name}` +
-                  `${alvo !== null ? ` → ${alvo}` : ""}`,
+                  `${alvo !== null ? ` → ${alvo}` : ""}` +
+                  `${sobre !== null ? `: ${sobre}` : ""}`,
               });
             }
           }
@@ -337,9 +353,18 @@ export class RunnerClaude implements Runner {
 
     if (limiteBatido !== null) {
       const reabre = horaDeReabertura(limiteBatido);
+      // "Nada foi entregue" era MENTIRA em job multi-sessão (T-047). Numa rodada real o
+      // fluxo concluiu 21 turnos — T-003 aprovada, T-004 num ciclo inteiro, 4 commits — e
+      // só então bateu na cota; a mensagem mandava redisparar como se nada tivesse saído,
+      // o que faria o usuário refazer trabalho já commitado. Um `result` recebido é a prova
+      // de que uma sessão fechou: só sem ele é honesto dizer que não saiu nada.
+      const entregouAlgo = numTurnos !== null && numTurnos > 0;
       throw new ErroFluxoClaude(
         `Limite de uso da assinatura batido${reabre !== null ? ` — retoma após ${reabre}` : ""}. ` +
-          "Nada foi entregue; redispare quando a cota voltar.",
+          (entregouAlgo
+            ? `O fluxo concluiu ${numTurnos} turno(s) antes de parar — o que foi commitado está valendo. ` +
+              "Confira o estado das tarefas antes de redisparar, para não refazer trabalho pronto."
+            : "Nada foi entregue; redispare quando a cota voltar."),
         {
           sessionId,
           custoUsd,
@@ -349,6 +374,7 @@ export class RunnerClaude implements Runner {
           tokens,
           motivo: "limite-uso",
           reabreEm: reabre,
+          sessoes,
         },
       );
     }
@@ -356,10 +382,10 @@ export class RunnerClaude implements Runner {
     if (erro) {
       throw new ErroFluxoClaude(
         `Fluxo Claude terminou com erro. ${texto.slice(0, 800)}`.trim(),
-        { sessionId, custoUsd, numTurnos, erro, texto, tokens },
+        { sessionId, custoUsd, numTurnos, erro, texto, tokens, sessoes },
       );
     }
-    return { sessionId, custoUsd, numTurnos, erro, texto, tokens };
+    return { sessionId, custoUsd, numTurnos, erro, texto, tokens, sessoes };
   }
 }
 
@@ -422,6 +448,35 @@ function alvoDeSubagente(bloco: BlocoConteudo): string | null {
   if (bloco.name === undefined || !FERRAMENTAS_DESPACHO.has(bloco.name)) return null;
   const tipo = bloco.input?.["subagent_type"];
   return typeof tipo === "string" && tipo !== "" ? tipo : null;
+}
+
+/**
+ * SOBRE O QUE a ferramenta agiu, em uma linha (T-047).
+ *
+ * Medido numa execução real: **74% a 92% das linhas do console eram só o nome da ferramenta**,
+ * com trechos de até 15 chamadas seguidas sem uma palavra de contexto — "Bash / Read / Bash /
+ * Glob" rolando sem dizer nada. O resumidor da T-039 não cobre isso: ele só fecha trecho num
+ * despacho de agente, e as piores sequências acontecem DENTRO do trabalho de um agente só.
+ *
+ * O dado sempre esteve no evento e era descartado. Extrair é de graça — nenhuma chamada de
+ * modelo, nenhum token — e é o que transforma a lista em narrativa legível.
+ */
+function alvoDeFerramenta(bloco: BlocoConteudo): string | null {
+  const input = bloco.input;
+  if (input === undefined || input === null) return null;
+
+  // Ordem importa: a primeira chave presente ganha. Caminho antes de conteúdo, porque
+  // "Write app.py" informa e o corpo do arquivo inundaria a linha.
+  for (const chave of ["file_path", "path", "notebook_path", "pattern", "command", "url", "query"]) {
+    const bruto = input[chave];
+    if (typeof bruto !== "string" || bruto.trim() === "") continue;
+
+    let texto = bruto.trim().replace(/\s+/g, " ");
+    // Caminho vira só o nome do arquivo: o diretório é sempre o mesmo e come a linha inteira.
+    if (chave.endsWith("path")) texto = texto.split(/[\\/]/).pop() ?? texto;
+    return texto.length > 60 ? `${texto.slice(0, 60)}…` : texto;
+  }
+  return null;
 }
 
 function lerParams(params: Record<string, unknown>): ParamsClaude {

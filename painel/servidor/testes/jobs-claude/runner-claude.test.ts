@@ -411,3 +411,113 @@ describe("disjuntor de cota (T-045) — parar de gastar contra parede rígida", 
     expect(r.texto).toBe("ok");
   });
 });
+
+describe("alvo da ferramenta no log (T-047) — console era 74-92% de nome pelado", () => {
+  function logsDe(mensagens: unknown[]) {
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    return { ctx, eventos, textos: () => eventos
+      .filter((e) => e.tipo === "log")
+      .map((e) => (e.dados as { nivel: string; texto: string }))
+      .filter((d) => d.nivel === "ferramenta")
+      .map((d) => d.texto), mensagens };
+  }
+
+  async function rodar(input: Record<string, unknown>, nome = "Read") {
+    const h = logsDe([]);
+    const consulta = consultaDe([
+      { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
+      { type: "assistant", message: { content: [{ type: "tool_use", name: nome, input }] } },
+      { type: "result", is_error: false, total_cost_usd: 0.01, num_turns: 1, result: "ok" },
+    ]);
+    await new RunnerClaude(consulta).executar(jobFake(PARAMS), h.ctx);
+    return h.textos()[0] ?? "";
+  }
+
+  it("caminho vira só o nome do arquivo — o diretório come a linha e não informa", async () => {
+    expect(await rodar({ file_path: "C:/fabrica/projetos/app/src/app.py" })).toBe("Read: app.py");
+  });
+
+  it("comando de shell aparece, normalizado", async () => {
+    expect(await rodar({ command: "git   status\n--short" }, "Bash")).toBe("Bash: git status --short");
+  });
+
+  it("alvo longo é truncado para não estourar a linha", async () => {
+    const texto = await rodar({ command: "x".repeat(200) }, "Bash");
+    expect(texto.length).toBeLessThanOrEqual(60 + "Bash: ".length + 1);
+    expect(texto.endsWith("…")).toBe(true);
+  });
+
+  it("ferramenta sem alvo reconhecível continua só com o nome", async () => {
+    expect(await rodar({ algo: "irrelevante" }, "TodoWrite")).toBe("TodoWrite");
+  });
+
+  /**
+   * Invariante crítica: o segmentador da T-039 casa `→ agente` NO FIM da linha para fechar
+   * trecho. Se o alvo fosse anexado depois da seta, todo resumo de agente pararia de sair.
+   */
+  it("despacho mantém a seta no fim — é o que a T-039 casa para fechar trecho", async () => {
+    const texto = await rodar({ subagent_type: "executor", prompt: "faça X" }, "Task");
+    expect(texto).toBe("Task → executor");
+    expect(/→\s*([a-z0-9-]+)\s*$/i.test(texto)).toBe(true);
+  });
+});
+
+describe("job multi-sessão (T-047) — um job NÃO é uma sessão", () => {
+  const LIMITE = "You've hit your session limit · resets 12:10pm (America/Sao_Paulo)";
+
+  /**
+   * Observado numa rodada real: o `/trabalhar` abriu SEIS sessões num job só (despacho em
+   * background reabre sessão). Só a primeira reportou `result`. Contar importa para custo:
+   * cada sessão é um prefixo novo para ESCREVER no cache, a linha mais cara da conta.
+   */
+  it("conta as sessões abertas, não só a que reportou resultado", async () => {
+    const consulta = consultaDe([
+      { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
+      { type: "result", is_error: false, total_cost_usd: 1.16, num_turns: 21, result: "feito" },
+      { type: "system", subtype: "init", session_id: "s2", model: "sonnet" },
+      { type: "system", subtype: "init", session_id: "s3", model: "sonnet" },
+    ]);
+    const { ctx } = contexto(new AbortController().signal);
+
+    const r = await new RunnerClaude(consulta).executar(jobFake(PARAMS), ctx);
+    expect(r.sessoes).toBe(3);
+    expect(r.numTurnos).toBe(21);
+  });
+
+  /**
+   * O pior defeito da T-045: a mensagem afirmava "Nada foi entregue" mesmo quando o fluxo
+   * tinha concluído turnos e commitado. Isso mandava o usuário refazer trabalho pronto.
+   */
+  it("com turnos concluídos, a mensagem de cota NÃO diz que nada foi entregue", async () => {
+    const consulta = consultaDe([
+      { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
+      { type: "result", is_error: false, total_cost_usd: 1.16, num_turns: 21, result: "feito" },
+      { type: "assistant", message: { content: [{ type: "text", text: LIMITE }] } },
+    ]);
+    const { ctx } = contexto(new AbortController().signal);
+
+    const falha = await new RunnerClaude(consulta)
+      .executar(jobFake(PARAMS), ctx)
+      .then(() => null)
+      .catch((e: unknown) => e as Error);
+
+    expect(falha?.message).toContain("21 turno(s)");
+    expect(falha?.message).toContain("está valendo");
+    expect(falha?.message).not.toContain("Nada foi entregue");
+  });
+
+  it("sem nenhum turno, mantém o aviso de que nada saiu", async () => {
+    const consulta = consultaDe([
+      { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
+      { type: "assistant", message: { content: [{ type: "text", text: LIMITE }] } },
+    ]);
+    const { ctx } = contexto(new AbortController().signal);
+
+    const falha = await new RunnerClaude(consulta)
+      .executar(jobFake(PARAMS), ctx)
+      .then(() => null)
+      .catch((e: unknown) => e as Error);
+
+    expect(falha?.message).toContain("Nada foi entregue");
+  });
+});

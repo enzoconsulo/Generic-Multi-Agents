@@ -15,11 +15,19 @@
 export interface ResultadoComMotivo {
   motivo?: string;
   reabreEm?: string | null;
+  /** Turnos concluídos antes da parada — decide se houve entrega. Ver abaixo. */
+  numTurnos?: number | null;
 }
 
 /**
  * Texto do aviso quando o job parou por cota, ou `null` quando não foi o caso (e aí o
  * campo "Erro" normal é que deve aparecer).
+ *
+ * **Um job pode ter entregado muito antes de bater na cota** (T-047): numa rodada real o
+ * fluxo concluiu 21 turnos — uma tarefa aprovada, outra num ciclo inteiro, 4 commits — e só
+ * então parou. A primeira versão deste aviso dizia "interrompido sem entregar" nos dois
+ * casos, o que mandaria o usuário refazer trabalho já commitado. Turnos concluídos é a
+ * prova de entrega, então o texto muda com eles.
  */
 export function avisoLimiteDeUso(resultado: ResultadoComMotivo | null | undefined): string | null {
   if (resultado?.motivo !== "limite-uso") return null;
@@ -28,6 +36,15 @@ export function avisoLimiteDeUso(resultado: ResultadoComMotivo | null | undefine
     typeof resultado.reabreEm === "string" && resultado.reabreEm.trim() !== ""
       ? ` A cota retoma após ${resultado.reabreEm.trim()}.`
       : "";
+
+  const turnos = resultado.numTurnos;
+  if (typeof turnos === "number" && turnos > 0) {
+    return (
+      `O fluxo concluiu ${turnos} turno(s) antes de a cota acabar — o que foi commitado está` +
+      ` valendo.${quando} Confira o estado das tarefas antes de redisparar, para não refazer` +
+      " trabalho pronto."
+    );
+  }
   return (
     "O fluxo foi interrompido para não gastar sem entregar." +
     quando +

@@ -159,6 +159,7 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
     tokens?: TokensJob | null;
     motivo?: string;
     reabreEm?: string | null;
+    sessoes?: number;
   } | null;
   // Decisão e texto vivem em `lib/limite-uso` — os testes da web são de lógica pura, então
   // lógica dentro do componente seria lógica não verificada.
@@ -225,6 +226,12 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
         <Campo rot="Escopo" valor={job.escopo} />
         {tempo !== null && <Campo rot={rodando ? "Rodando há" : "Durou"} valor={tempo} />}
         {resultado?.numTurnos != null && <Campo rot="Turnos" valor={String(resultado.numTurnos)} />}
+        {/* Só quando passa de 1: um job com uma sessão é o esperado e o campo viraria ruído.
+            Acima disso importa — cada sessão reescreve o prefixo do cache, a linha mais cara
+            da conta (1,25x contra 0,1x da leitura). Ver `sessoes` no runner. */}
+        {resultado?.sessoes != null && resultado.sessoes > 1 && (
+          <Campo rot="Sessões abertas" valor={String(resultado.sessoes)} />
+        )}
         {resultado?.custoUsd != null && (
           <Campo rot="Custo real" valor={`~$${resultado.custoUsd.toFixed(4)}`} />
         )}
