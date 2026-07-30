@@ -1,130 +1,131 @@
 Continuar o trabalho na fábrica Gerador_de_projetos.
+Handoff reescrito em 2026-07-30, no encerramento do dia.
 
 === SITUE-SE PRIMEIRO (ritual de início) ===
 Leia, nesta ordem:
-    1. _sistema/logs/2026-07-27.md      (a sessão anterior INTEIRA — comece por aqui)
-    2. painel/_gestao/PROGRESSO.md       (histórico do painel; topo = mais recente)
-    3. painel/CLAUDE.md                  (seção "Armadilhas conhecidas" — 13 armadilhas
-                                          reais, cada uma de um bug que já custou tempo)
-Scan de status (um Grep resolve):
-    ^status: em painel/_gestao/tarefas/*.md          → 27 concluida + T-028 em-teste
-    ^status: em projetos/*/_gestao/tarefas/*.md      → ia-hibrida-limpa: 1 pronta, 5 backlog
+    1. _sistema/logs/2026-07-30.md   (a sessão anterior — comece aqui; o fim do arquivo
+                                      tem a seção "Amanhã")
+    2. _sistema/logs/2026-07-29.md   (análise de custo e cache; o raciocínio completo)
+    3. painel/CLAUDE.md              (seção "Armadilhas conhecidas" — cada uma custou uma sessão)
+Scan de status: um Grep de ^status: em projetos/*/_gestao/tarefas/*.md resolve.
 
-Como rodar:  duplo-clique em INICIAR.bat (raiz) → abre http://127.0.0.1:8765 sozinho.
-             Ou: cd painel && npm run build && npm start
-Testes:      cd painel && npm test  → 209 (servidor) + 33 (web), todos verdes.
-             O servidor roda em SÉRIE (fileParallelism: false) porque o pool paralelo
-             saturava o IPC e morria com ERR_IPC_CHANNEL_CLOSED — parecia bug do código.
-             Ainda assim, feche o painel antes de testar.
-Teste pago:  npm run teste:integracao (~US$0,01, valida canUseTool contra o SDK real).
+Rodar:   cd painel && npm start  →  http://127.0.0.1:8765   (ou INICIAR.bat na raiz)
+Testes:  cd painel && npm test  →  501 verdes (393 servidor + 108 web)
+         DERRUBE O PAINEL ANTES — painel no ar atrapalha a suíte.
 
 
 =================================================================
-JÁ ESTÁ FEITO — NÃO REFAZER
+ESTADO EM QUE PAREI
 =================================================================
-
-O PAINEL (T-001..T-023) ESTÁ COMPLETO, Fases 1-3 com marco. MAS ver o item 1:
-ficou faltando a página de Jobs visual (T-024, criada e pronta para executar).
-  - Leitura: panorama, projetos, kanban, plano, decisões, progresso, análise.
-  - Execução: as 6 ações da fábrica pela web, escolha de modelo, estimativa de custo,
-    log ao vivo (SSE), cancelamento, inputs pela UI (canUseTool VALIDADO em execução paga).
-  - Importação de pasta com SELETOR NATIVO de pasta (botão "Escolher…", roda no backend
-    porque o navegador não entrega caminho absoluto).
-  - CI local por projeto, genérico por ecossistema (Node, Python, Go, Rust, .NET, Maven,
-    Gradle) — stack não reconhecida recebe config em branco editável, não erro.
-  - Robustez: watchdog de inatividade, guardrails de turnos por ação, recuperação
-    pós-reinício (jobs órfãos, pendências de input, histórico de CI travado).
-  - Visualização: equipe ao vivo (quem trabalha agora), mapa do planejamento (fases com
-    progresso, tarefas como blocos clicáveis) e página /como-funciona.
-  - Repositório no GitHub (enzoconsulo/Generic-Multi-Agents), clonável, com INICIAR.bat.
-
-GENERICIDADE — JÁ PROVADA, não precisa auditar de novo:
-  O planejador criou equipe coerente para PYTHON/STREAMLIT no ia-hibrida-limpa
-  (`ia-integracao` + `streamlit-ui`). Antes disso só havia prova num CLI Node.
+- projetos/ia-hibrida-limpa: COMPLETO E CONSISTENTE. T-001..T-006 `concluida`, os três
+  marcos de fase aprovados, README/how_to_use/CLAUDE.md conferidos contra o código.
+  Submódulo Local_AI em dia com o remoto. Nenhuma tarefa `pronta` ou `backlog`.
+- _sistema/ideias/: nenhuma ideia `nova` aguardando roteamento.
+- painel: 501 testes verdes. Árvores git limpas nos TRÊS repositórios (fábrica, projeto,
+  submódulo).
+- Não sobrou dívida técnica conhecida. A última (contabilidade de tokens multi-sessão)
+  fechou hoje — ver abaixo.
 
 
 =================================================================
-O QUE FAZER — EM ORDEM
+A FÁBRICA ESTÁ SEM TRABALHO — É ISSO QUE PRECISA DE DECISÃO
 =================================================================
+Um /trabalhar amanhã não teria o que fazer. A primeira coisa é ESCOLHER trabalho novo.
+Opções, na ordem que eu faria — PERGUNTE, nenhuma é óbvia o bastante para decidir sozinho:
 
-1) VOCÊ CONSEGUE VER A TELA — use isso (novidade de 2026-07-28)
-   `cd painel && npm start` e depois:
-     node ferramentas/captura.mjs http://127.0.0.1:8765/projeto/<nome> saida.png --espera=3000
-   Dirige o Edge/Chrome já instalado via DevTools Protocol, sem instalar nada, e o PNG
-   pode ser LIDO com a ferramenta Read. Foi o que destravou a maior lacuna do projeto:
-   até 27/07 nenhuma tela tinha sido vista renderizada.
-   NÃO use `--screenshot` direto do navegador (captura antes do React pintar) nem
-   `--virtual-time-budget` (derruba o navegador nesta máquina — testado).
-   Derrube o painel antes de rodar `npm test`: painel no ar quebra o worker do vitest.
+  a) NOVA IDEIA (/ideia) ou /novo-projeto. É o caminho natural: o usuário dá a ideia bruta
+     e o planejador transforma em especificação, plano e tarefas.
+  b) PUBLICAR ia-hibrida-limpa no GitHub (aba Git do painel: remoto, varredura de
+     segurança, push). Já é viável — o submódulo foi enviado em 30/07. Irreversível →
+     confirmar antes.
+  c) TAREFA REGISTRADA E NÃO EXECUTADA: o restante do how_to_use.md do Estúdio (fluxo
+     antigo v5.0/RunPod) segue desatualizado; só a seção "Anúncio Shopee" foi reescrita.
+     Vira tarefa se o usuário priorizar.
 
-   >>> A partir de agora, tarefa de UI só vai para `concluida` DEPOIS de capturar e olhar.
-   Já rendeu 7 defeitos numa única passada (T-027), sendo dois deles INFORMAÇÃO FALSA na
-   tela com a suíte inteira verde.
 
-   Para provar comportamento ao vivo (cronômetro, pulso, progresso) SEM gastar assinatura:
-   crie um projeto temporário em projetos/ com um `_gestao/ci.json` cujo estágio rode um
-   script lento (`node -e "setInterval(...)"`), dispare POST /api/ci/<nome>/rodar e capture
-   duas vezes com intervalo. Job de CI é gratuito — roda processo local, não usa Claude.
-   Apague o projeto de teste ao terminar.
+=================================================================
+FECHADO EM 30/07 — NÃO REABRIR
+=================================================================
+- CONTABILIDADE DE TOKENS MULTI-SESSÃO: `modelUsage` é CUMULATIVO POR JOB. Sobrescrever
+  está certo, NÃO há subcontagem. O "platô idêntico nos sete últimos result" tinha
+  explicação boba: eles saíram numa janela de 2 ms (descarregados juntos no fim) e leram um
+  ACUMULADOR VIVO já final, enquanto total_cost_usd é escalar copiado por mensagem. Prova
+  aritmética: a soma de costUSD do modelUsage bate com o total_cost_usd até a 9ª casa nos
+  quatro jobs com telemetria. Há guarda no runner que avisa na tela se um SDK futuro mudar
+  a semântica — e teste travando que a conferência só vale com os valores FINAIS (conferir
+  a cada result dá falso positivo em toda rodada multi-sessão saudável).
+- SUBMÓDULO Local_AI: os 26 commits foram enviados (3d76584..4c91f38). Clone funciona.
+- "Otimizar o cache de contexto": prompt caching JÁ está ligado e bem configurado. O SDK
+  NÃO expõe cache_control nem TTL (conferido no sdk.d.ts da versão pinada 0.3.217).
+  Cachear em arquivo NÃO ajuda — o custo é por token NA REQUISIÇÃO, não por leitura de
+  disco. Detalhe completo no log de 29/07.
+- "Mexer no effort para economizar": effort mexe na GERAÇÃO (~16% da conta). Contexto
+  relido é ~65x a saída. Está otimizando a parte pequena.
+- getContextUsage(): NÃO FAZER. Mede tamanho de prefixo (22% da conta); o driver de 61%
+  (número de sessões) já ficou visível de graça no T-047. Exige mudar o tipo `Consulta` do
+  runner, que a suíte inteira usa para falsear o SDK. Reabrir SÓ SE tamanho de prefixo
+  virar o gargalo medido.
+- /status pago duplica ~70% do que o painel calcula de graça em 15 ms. DECISÃO DO USUÁRIO:
+  fica como está — não vale trocar julgamento da IA por US$ 0,29.
 
-2) EXECUTAR O ia-hibrida-limpa (é o passo natural; nada de código do painel envolvido)
-   Estado: ESPECIFICACAO + PLANO (3 fases) + T-001..T-006 criados; equipe com
-   `ia-integracao` e `streamlit-ui`. T-001 `pronta`, resto em `backlog` aguardando a cadeia.
-   Feature: geração completa de anúncio (título + descrição orientados a venda, no contexto
-   da foto) na aba de criar imagens do estudio_shopee.
+LEVERS REAIS DE CUSTO, em ordem (medidos):
+  1. não desperdiçar despacho de subagente — cada sessão nova é um prefixo novo para
+     ESCREVER no cache, e escrita é 61% da conta (1,25x contra 0,1x da leitura)
+  2. número de turnos
+  3. tamanho do prefixo
 
-   Como: painel → projeto ia-hibrida-limpa → "Trabalhar neste projeto".
-   CUSTO: é o fluxo mais caro que existe (pipeline completo). USE HAIKU OU SONNET.
-   NUNCA Fable/xhigh. Avise a estimativa ao usuário ANTES de disparar.
 
-   O que observar (é a primeira execução multi-agente de ponta a ponta num projeto real
-   de stack não-Node): se os especialistas certos são despachados, se o testador roda os
-   critérios de verdade, e se a tela "equipe ao vivo" reflete quem está trabalhando.
-
-3) VERIFICAÇÃO VISUAL NO NAVEGADOR (a única pendência que sobreviveu ao projeto)
-   Nenhuma tela do painel foi vista renderizada — o ambiente do Claude não tem navegador.
-   Toda a lógica é testada, o VISUAL não. Peça ao usuário para olhar, ou verifique você se
-   tiver navegador disponível. Vale conferir: aba CI/CD, equipe ao vivo, mapa do plano,
-   estado vazio da home, e o seletor de pasta (se a janela abre NA FRENTE do navegador).
-
-4) PENDÊNCIAS CONHECIDAS DO ia-hibrida-limpa (não são bugs do painel)
-   a) `Local_AI/` é um repositório git ANINHADO dentro do projeto. O `git add` registrou
-      só uma referência quebrada: o conteúdo não entra no histórico e um clone vem vazio
-      ali. Decidir com o usuário: apagar `Local_AI/.git` (vira código normal do projeto)
-      ou transformar em submódulo de verdade.
-   b) O CI não vai detectar ecossistema: o `requirements.txt` está em
-      `Local_AI/analista_dados_shopee/`, e a detecção só olha a RAIZ do projeto. Isso
-      degrada bem (config em branco editável pela UI), mas se incomodar, a melhoria é
-      procurar marcador em subpastas — ver `painel/servidor/src/ci/ecossistemas.ts`.
-
-5) MELHORIAS DO PAINEL JÁ MAPEADAS (só se o usuário pedir)
-   - Home também poderia ter o "próximo passo sugerido" (hoje só a página do projeto tem).
-   - Histórico de execuções por agente ao longo do tempo (hoje a equipe ao vivo mostra só
-     o job atual).
-   - O log do job não sobrevive à sessão: `dados/` guarda metadados, não o stdout. Se for
-     necessário rever log de execução antiga, precisa persistir as linhas.
+=================================================================
+PAINEL — pontas soltas conhecidas, nenhuma urgente
+=================================================================
+- /api/jobs devolve ~135 KB na carga inicial e cresce; ~88% é `params` e `resultado` que a
+  LISTA não desenha. NÃO é gargalo (9 ms em loopback) e a poda do T-045 limita em 400 jobs.
+  Só mexa se a tela de Jobs pesar de verdade.
+- Verificação visual no navegador: a lógica é testada, o VISUAL não. Use
+  `node ferramentas/captura.mjs <url> saida.png --espera=3000` (dirige o Edge/Chrome via
+  DevTools Protocol, e o PNG pode ser LIDO). Tarefa de UI só vai para `concluida` depois de
+  capturar e olhar.
 
 
 =================================================================
 REGRAS QUE NÃO PODEM SER ESQUECIDAS
 =================================================================
-
 CUSTO: já foram queimados R$550 numa noite em Fable/xhigh.
-  - Construa DIRETO você mesmo (orquestrador), SEM despachar o pipeline caro de agentes,
-    a menos que o usuário peça.
-  - Execução real de fluxo (planejador, /trabalhar, análise, CI): Haiku ou Sonnet.
-  - SEMPRE diga a estimativa ANTES de gastar. E lembre: no painel não existe disparo "a
-    seco" — `POST /api/acoes/:id` já executa de verdade.
+  - Construa DIRETO você mesmo (orquestrador) quando der; o pipeline de agentes é caro.
+  - Execução real de fluxo: Haiku ou Sonnet. NUNCA Fable/xhigh sem o usuário pedir. Se a
+    sessão principal estiver em Opus, PASSE model explícito no despacho do agente.
+  - SEMPRE diga a estimativa ANTES de gastar. No painel não existe disparo "a seco":
+    POST /api/acoes/:id JÁ EXECUTA de verdade.
+  - Rodada real de referência: um /trabalhar completo custou US$ 7,42 (61 turnos,
+    8 sessões, 13,5M de cache relido).
 
-DISCIPLINA DE VERIFICAÇÃO (as três lições que mais custaram tempo nesta sessão):
+ANTES DE PAGAR PARA MEDIR, PROCURE A EVIDÊNCIA QUE JÁ ESTÁ EM DISCO. A questão dos tokens
+ia custar outra rodada de /trabalhar; foi respondida de graça pela gravação SSE da sessão
+anterior (scratchpad de ~/.claude), pelos JSONs em painel/dados/jobs/ e por uma soma. O
+carimbo de hora dos eventos disse o que os números sozinhos não diziam.
+
+DISCIPLINA DE VERIFICAÇÃO (o que mais custou tempo):
   - Corrigir o teste até passar ESCONDE o bug. Se um teste falha, pergunte primeiro se ele
-    está certo e o código errado. (Um ENOENT/500 real ficou mascarado assim.)
-  - Falha que se repete em TODA execução NÃO é flaky. Abra o teste antes de rotular.
-  - Documentação que mente é pior que documentação ausente — a próxima sessão decide em
-    cima dela.
+    está certo e o código errado. (Aconteceu de novo hoje, e o teste estava certo.)
+  - Falha que se repete em TODA execução NÃO é flaky.
+  - Documentação que mente é pior que documentação ausente. E tarefa de documentação tem
+    escopo declarado: hoje a T-006 cobriu how_to_use.md + CLAUDE.md e o README ficou
+    mentindo por dois dias. Confira o `areas:` em vez de confiar que "já foi coberto".
+  - Mensagem de erro que assume um cenário e afirma categoricamente sobre outro é BUG.
 
-O PAINEL É MANTIDO À MÃO pelo orquestrador: fica fora do pipeline
-executor/testador/revisor (que só opera em projetos/). Mudou o painel? Rode
-`cd painel && npm test` antes de commitar, e commite na raiz da fábrica.
+ARMADILHAS TÉCNICAS DESTA BASE:
+  - Opção do SDK com nome errado é ignorada EM SILÊNCIO. Confira sempre em
+    painel/servidor/node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts.
+  - `modelUsage` é acumulador VIVO, não instantâneo por mensagem (ver seção fechada acima).
+  - Log de ferramenta com despacho DEVE manter `→ agente` NO FIM da linha — é o que o
+    segmentador da T-039 casa (/→\s*([a-z0-9-]+)\s*$/i) para fechar trecho. Mudar isso
+    mata TODOS os resumos de agente em silêncio. Há teste travando a invariante.
+  - Um job NÃO é uma sessão: um /trabalhar abriu 8. Despacho em background reabre sessão.
+  - Local_AI é submódulo git de verdade: código commita DENTRO dele; o repo pai recebe só o
+    ponteiro. Commit no pai sem push do submódulo = clone quebrado para quem baixar.
+
+O PAINEL É MANTIDO À MÃO pelo orquestrador — fica fora do pipeline executor/testador/
+revisor (que só opera em projetos/). Mudou o painel? `cd painel && npm test` antes de
+commitar, e commite na raiz da fábrica.
 
 Trabalhe com autonomia máxima (decida e registre nos arquivos), respeitando a regra de custo.
