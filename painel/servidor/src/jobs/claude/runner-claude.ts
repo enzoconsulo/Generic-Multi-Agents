@@ -60,6 +60,57 @@ export interface ResultadoClaude {
   texto: string;
   /** null quando o SDK não reportou uso (erro precoce, versão sem o campo). */
   tokens: TokensJob | null;
+  /**
+   * Causa da falha quando ela é RECONHECÍVEL (T-045). `limite-uso` é a única hoje e existe
+   * para a UI distinguir "a fábrica tem um bug" de "a assinatura acabou, volta às 14:40" —
+   * são reações opostas do usuário, e antes as duas apareciam como "falhou".
+   */
+  motivo?: "limite-uso";
+  /** Hora de reabertura anunciada pelo provedor, quando `motivo === "limite-uso"`. */
+  reabreEm?: string | null;
+}
+
+/**
+ * Falha de um fluxo Claude que CARREGA a contabilidade (T-045). Existe porque o `throw`
+ * cru descartava `custoUsd`/`tokens`: os jobs que falham são justamente os mais caros
+ * (queimaram contexto e não entregaram nada) e eram os únicos sem dado nenhum — uma
+ * rodada real gastou US$ 0,61 e gravou `resultado: null`.
+ */
+export class ErroFluxoClaude extends Error {
+  constructor(
+    mensagem: string,
+    /** Resultado parcial: o que o SDK reportou até falhar. Vai para `job.resultado`. */
+    readonly resultado: ResultadoClaude,
+  ) {
+    super(mensagem);
+    this.name = "ErroFluxoClaude";
+  }
+}
+
+/**
+ * Limite de uso da assinatura — parede RÍGIDA: só o relógio abre. Reconhecer isto é o que
+ * permite parar na hora em vez de reabrir sessão contra ela (ver `motivo` abaixo).
+ * Casado em minúsculas; cobre as formas de sessão e de janela semanal.
+ */
+const PADROES_LIMITE: readonly RegExp[] = [
+  /hit your (?:session|usage) limit/i,
+  /limite de (?:sess[ãa]o|uso)/i,
+  /usage limit reached/i,
+  /rate.?limit(?:ed)? · resets/i,
+];
+
+/** O texto indica limite de assinatura batido? */
+export function ehLimiteDeUso(texto: string): boolean {
+  return PADROES_LIMITE.some((re) => re.test(texto));
+}
+
+/**
+ * Hora de reabertura anunciada na mensagem ("resets 2:40pm"), para a UI dizer QUANDO
+ * voltar em vez de só "falhou". Devolve o trecho como veio — normalizar fuso a partir de
+ * um texto do provedor daria falsa precisão.
+ */
+export function horaDeReabertura(texto: string): string | null {
+  return /resets? ([^\n·]{1,40})/i.exec(texto)?.[1]?.trim() ?? null;
 }
 
 /** Assinatura estreita do SDK usada pelo runner (fácil de falsear nos testes). */
@@ -193,6 +244,13 @@ export class RunnerClaude implements Runner {
     let tokens: TokensJob | null = null;
     let textoResult = "";
     const partes: string[] = [];
+    /**
+     * Disjuntor de cota (T-045). Uma vez batido o limite da assinatura, TODA continuação é
+     * desperdício garantido: numa rodada real o fluxo reabriu sessão duas vezes contra a
+     * parede, pagando 173,8k de cache relido em cada, e terminou sem entregar nada.
+     * Só o relógio abre essa porta — então paramos no primeiro sinal.
+     */
+    let limiteBatido: string | null = null;
 
     for await (const bruto of consulta) {
       const msg = bruto as MensagemSDK;
@@ -220,6 +278,9 @@ export class RunnerClaude implements Runner {
                 nivel: subagente ? "subagente" : "assistente",
                 texto: bloco.text,
               });
+              // O provedor anuncia a cota como TEXTO do assistente (é o que aparece na
+              // tela do CLI), não como erro de transporte — daí a checagem ser aqui.
+              if (limiteBatido === null && ehLimiteDeUso(bloco.text)) limiteBatido = bloco.text;
             } else if (bloco.type === "tool_use" && bloco.name) {
               const alvo = alvoDeSubagente(bloco);
               ctx.emitir("log", {
@@ -256,11 +317,47 @@ export class RunnerClaude implements Runner {
           // ignorados de propósito — o consumidor nunca deve quebrar com tipo novo.
           break;
       }
+
+      // Disjuntor: aborta o SDK e sai do laço ANTES de outra sessão nascer. `abort()` aqui
+      // é o mesmo mecanismo do cancelamento pelo usuário (in-band, confiável no Windows).
+      if (limiteBatido !== null) {
+        const reabre = horaDeReabertura(limiteBatido);
+        ctx.emitir("log", {
+          nivel: "erro",
+          texto:
+            "Limite de uso da assinatura batido — fluxo interrompido para não gastar à toa" +
+            `${reabre !== null ? `; retoma após ${reabre}` : ""}.`,
+        });
+        controlador.abort();
+        break;
+      }
     }
 
     const texto = textoResult !== "" ? textoResult : partes.join("\n");
+
+    if (limiteBatido !== null) {
+      const reabre = horaDeReabertura(limiteBatido);
+      throw new ErroFluxoClaude(
+        `Limite de uso da assinatura batido${reabre !== null ? ` — retoma após ${reabre}` : ""}. ` +
+          "Nada foi entregue; redispare quando a cota voltar.",
+        {
+          sessionId,
+          custoUsd,
+          numTurnos,
+          erro: true,
+          texto,
+          tokens,
+          motivo: "limite-uso",
+          reabreEm: reabre,
+        },
+      );
+    }
+
     if (erro) {
-      throw new Error(`Fluxo Claude terminou com erro. ${texto.slice(0, 800)}`.trim());
+      throw new ErroFluxoClaude(
+        `Fluxo Claude terminou com erro. ${texto.slice(0, 800)}`.trim(),
+        { sessionId, custoUsd, numTurnos, erro, texto, tokens },
+      );
     }
     return { sessionId, custoUsd, numTurnos, erro, texto, tokens };
   }

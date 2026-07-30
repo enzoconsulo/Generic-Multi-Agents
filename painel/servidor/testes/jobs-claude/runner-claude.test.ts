@@ -304,3 +304,110 @@ describe("tokens do fluxo (T-044) — preço esconde a causa", () => {
     expect(Object.keys(r.tokens?.porModelo ?? {})).toEqual(["bom"]);
   });
 });
+
+describe("disjuntor de cota (T-045) — parar de gastar contra parede rígida", () => {
+  /**
+   * Reproduz a rodada real de 2026-07-29: o fluxo bateu o limite, e o SDK seguiu abrindo
+   * DUAS sessões novas contra a parede, pagando cache relido em cada. O disjuntor tem de
+   * cortar na primeira mensagem de limite — o que não for consumido prova a economia.
+   */
+  const LIMITE = "You've hit your session limit · resets 2:40pm (America/Sao_Paulo)";
+
+  function consultaContada(mensagens: unknown[]) {
+    const estado = { consumidas: 0 };
+    const consulta: Consulta = () =>
+      (async function* () {
+        for (const m of mensagens) {
+          estado.consumidas++;
+          yield m;
+        }
+      })();
+    return { consulta, estado };
+  }
+
+  it("aborta no primeiro sinal de limite e não consome as sessões seguintes", async () => {
+    const { consulta, estado } = consultaContada([
+      { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
+      { type: "assistant", message: { content: [{ type: "text", text: LIMITE }] } },
+      // Tudo daqui para baixo é o desperdício que o disjuntor existe para evitar.
+      { type: "system", subtype: "init", session_id: "s2", model: "sonnet" },
+      { type: "assistant", message: { content: [{ type: "text", text: LIMITE }] } },
+      { type: "system", subtype: "init", session_id: "s3", model: "sonnet" },
+      { type: "result", is_error: true, total_cost_usd: 0.61 },
+    ]);
+    const { ctx } = contexto(new AbortController().signal);
+
+    await expect(new RunnerClaude(consulta).executar(jobFake(PARAMS), ctx)).rejects.toThrow(
+      /Limite de uso da assinatura/,
+    );
+    expect(estado.consumidas).toBe(2);
+  });
+
+  it("preserva custo e tokens na falha, com motivo e hora de reabertura", async () => {
+    const consulta = consultaDe([
+      { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
+      {
+        type: "result",
+        is_error: false,
+        total_cost_usd: 0.5569,
+        num_turns: 15,
+        modelUsage: {
+          "claude-sonnet-5": {
+            inputTokens: 300,
+            outputTokens: 6600,
+            cacheReadInputTokens: 147900,
+            cacheCreationInputTokens: 0,
+            costUSD: 0.5569,
+          },
+        },
+      },
+      { type: "assistant", message: { content: [{ type: "text", text: LIMITE }] } },
+    ]);
+    const { ctx } = contexto(new AbortController().signal);
+
+    const falha = await new RunnerClaude(consulta)
+      .executar(jobFake(PARAMS), ctx)
+      .then(() => null)
+      .catch((e: unknown) => e as Error & { resultado?: Record<string, unknown> });
+
+    expect(falha?.resultado?.["motivo"]).toBe("limite-uso");
+    expect(falha?.resultado?.["reabreEm"]).toBe("2:40pm (America/Sao_Paulo)");
+    expect(falha?.resultado?.["custoUsd"]).toBeCloseTo(0.5569);
+    expect(falha?.resultado?.["numTurnos"]).toBe(15);
+    const tokens = falha?.resultado?.["tokens"] as { cacheLeitura: number };
+    expect(tokens.cacheLeitura).toBe(147900);
+  });
+
+  it("erro comum também preserva a contabilidade, sem virar motivo de cota", async () => {
+    const consulta = consultaDe([
+      { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
+      { type: "result", is_error: true, total_cost_usd: 0.02, num_turns: 3, result: "estourou" },
+    ]);
+    const { ctx } = contexto(new AbortController().signal);
+
+    const falha = await new RunnerClaude(consulta)
+      .executar(jobFake(PARAMS), ctx)
+      .then(() => null)
+      .catch((e: unknown) => e as Error & { resultado?: Record<string, unknown> });
+
+    expect(falha?.message).toMatch(/terminou com erro/);
+    expect(falha?.resultado?.["motivo"]).toBeUndefined();
+    expect(falha?.resultado?.["custoUsd"]).toBeCloseTo(0.02);
+  });
+
+  it("não confunde texto que só MENCIONA limite com a parede do provedor", async () => {
+    const consulta = consultaDe([
+      { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
+      {
+        type: "assistant",
+        message: { content: [{ type: "text", text: "Vou checar o limite de turnos da ação." }] },
+      },
+      { type: "result", is_error: false, total_cost_usd: 0.01, num_turns: 1, result: "ok" },
+    ]);
+    const { ctx } = contexto(new AbortController().signal);
+
+    const r = await new RunnerClaude(consulta).executar(jobFake(PARAMS), ctx);
+    expect(r.motivo).toBeUndefined();
+    expect(r.texto).toBe("ok");
+  });
+});

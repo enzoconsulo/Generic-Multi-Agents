@@ -369,7 +369,13 @@ export class GerenciadorJobs {
       })
       .then(
         (resultado) => ({ falha: undefined, resultado }),
-        (falha: unknown) => ({ falha: mensagemDeErro(falha), resultado: undefined }),
+        // Falha que carrega contabilidade (T-045) preserva o `resultado` parcial: sem
+        // isto, o job mais caro do sistema — o que queimou contexto e não entregou — é o
+        // único que não deixa rastro de custo nem de tokens.
+        (falha: unknown) => ({
+          falha: mensagemDeErro(falha),
+          resultado: resultadoParcialDaFalha(falha),
+        }),
       )
       .then(({ falha, resultado }) => {
         const cancelado = this.cancelamentosPedidos.has(job.id);
@@ -388,7 +394,11 @@ export class GerenciadorJobs {
               erro: motivoInterrupcao,
             });
           } else if (falha !== undefined) {
-            this.mudarEstado(job, "falhou", { terminadoEm: agora(), erro: falha });
+            this.mudarEstado(job, "falhou", {
+              terminadoEm: agora(),
+              erro: falha,
+              ...(resultado !== undefined ? { resultado } : {}),
+            });
           } else {
             this.mudarEstado(job, "concluido", { terminadoEm: agora(), resultado });
           }
@@ -473,6 +483,18 @@ function fecharPendenciasAbertas(job: Job): void {
 
 function mensagemDeErro(falha: unknown): string {
   return falha instanceof Error ? falha.message : String(falha);
+}
+
+/**
+ * Resultado parcial anexado a um erro de runner (T-045), ou `undefined` se não houver.
+ *
+ * Reconhecido por FORMA, não por classe: a fila é genérica e não deve conhecer o runner
+ * Claude — qualquer runner pode falhar carregando o que já sabia (custo, tokens, motivo).
+ */
+function resultadoParcialDaFalha(falha: unknown): unknown {
+  if (!(falha instanceof Error)) return undefined;
+  const anexo = (falha as Error & { resultado?: unknown }).resultado;
+  return anexo !== null && typeof anexo === "object" ? anexo : undefined;
 }
 
 function agora(): string {

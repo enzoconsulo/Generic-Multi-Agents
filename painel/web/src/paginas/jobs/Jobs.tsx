@@ -156,7 +156,12 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
     custoUsd?: number | null;
     numTurnos?: number | null;
     tokens?: TokensJob | null;
+    motivo?: string;
+    reabreEm?: string | null;
   } | null;
+  // Cota batida não é bug da fábrica: só o relógio resolve, e redisparar antes da hora
+  // gasta de novo sem entregar. Por isso vem como aviso próprio, não como "Erro".
+  const limiteDeUso = resultado?.motivo === "limite-uso";
 
   async function cancelar() {
     setCancelando(true);
@@ -234,8 +239,18 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
           </>
         )}
         {job.sessionId !== undefined && <Campo rot="Sessão" valor={job.sessionId} />}
-        {job.erro !== undefined && <Campo rot="Erro" valor={job.erro} />}
+        {job.erro !== undefined && !limiteDeUso && <Campo rot="Erro" valor={job.erro} />}
       </dl>
+
+      {limiteDeUso && (
+        <div className="aviso aviso-erro">
+          <strong>Limite de uso da assinatura.</strong> O fluxo foi interrompido para não
+          gastar sem entregar
+          {resultado?.reabreEm != null ? ` — a cota retoma após ${resultado.reabreEm}` : ""}.
+          Redispare depois disso; antes, qualquer tentativa gasta contexto e para no mesmo
+          ponto.
+        </div>
+      )}
 
       {erroCancel !== null && <div className="aviso aviso-erro">{erroCancel}</div>}
 

@@ -158,3 +158,73 @@ describe("GerenteResumos (T-039)", () => {
     expect(resumos[0]?.linhas).toEqual(["b"]);
   });
 });
+
+describe("GerenteResumos × limite de uso (T-045)", () => {
+  let dir: string;
+  let ger: GerenciadorJobs;
+  let manual: RunnerManual;
+  let gerente: GerenteResumos;
+  let sdk: ReturnType<typeof sdkFalso>;
+
+  beforeEach(() => {
+    dir = dirTemporario();
+    ger = new GerenciadorJobs({ dirJobs: dir, tetoClaude: 2 });
+    manual = criarRunnerManual();
+    ger.registrarRunner("manual", manual.runner);
+    sdk = sdkFalso();
+    gerente = new GerenteResumos(ger, sdk.consulta);
+    gerente.iniciar();
+  });
+
+  afterEach(() => {
+    gerente.parar();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  /**
+   * O resumidor usa a MESMA assinatura do fluxo. Se o job morreu por cota esgotada,
+   * resumir é chamada garantidamente perdida — foi o que produziu os dois cartões
+   * `naoDeu` da rodada real de 2026-07-29.
+   */
+  function terminar(jobId: string, resultado: unknown) {
+    ger.emissor.emit("evento", {
+      jobId,
+      tipo: "estado",
+      dados: {
+        de: "executando",
+        para: "falhou",
+        job: { id: jobId, usaClaude: true, resultado },
+      },
+      em: new Date().toISOString(),
+    });
+  }
+
+  function logDe(jobId: string) {
+    ger.emissor.emit("evento", {
+      jobId,
+      tipo: "log",
+      dados: { nivel: "assistente", texto: "Comecei a trabalhar no plano." },
+      em: new Date().toISOString(),
+    });
+  }
+
+  it("não gasta chamada de resumo quando o job parou por cota esgotada", async () => {
+    const job = ger.criarJob({ tipo: "manual", titulo: "x", escopo: "global", usaClaude: true });
+    await aguardarEstado(ger, job.id, "executando");
+    logDe(job.id);
+    terminar(job.id, { motivo: "limite-uso", reabreEm: "2:40pm" });
+    await gerente.aguardar();
+    expect(sdk.contar()).toBe(0);
+    manual.concluir(job.id);
+  });
+
+  it("segue resumindo quando a falha foi por outro motivo", async () => {
+    const job = ger.criarJob({ tipo: "manual", titulo: "y", escopo: "global", usaClaude: true });
+    await aguardarEstado(ger, job.id, "executando");
+    logDe(job.id);
+    terminar(job.id, { custoUsd: 0.02 });
+    await gerente.aguardar();
+    expect(sdk.contar()).toBe(1);
+    manual.concluir(job.id);
+  });
+});

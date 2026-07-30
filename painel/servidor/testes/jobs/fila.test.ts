@@ -151,6 +151,46 @@ describe("fila de jobs — locks de concorrência", () => {
     expect(final.erro).toBe("Deu ruim de propósito");
   });
 
+  /**
+   * T-045: o job que falha depois de gastar é o mais caro do sistema e era o único sem
+   * rastro — o `throw` levava a mensagem e descartava custo/tokens. Reconhecimento por
+   * FORMA (`.resultado` no erro), para a fila não precisar conhecer o runner Claude.
+   */
+  it("falha que carrega contabilidade grava o resultado parcial no job", async () => {
+    const contas = { custoUsd: 0.61, numTurnos: 15, motivo: "limite-uso" };
+    ger.registrarRunner("fake-caro", {
+      executar: () => {
+        const erro = Object.assign(new Error("Limite de uso da assinatura batido"), {
+          resultado: contas,
+        });
+        return Promise.reject(erro);
+      },
+    });
+    const job = ger.criarJob({
+      tipo: "fake-caro",
+      titulo: "Job que falha caro",
+      escopo: "projeto:beta",
+      usaClaude: true,
+    });
+
+    const final = await aguardarEstado(ger, job.id, "falhou");
+    expect(final.erro).toMatch(/Limite de uso/);
+    expect(final.resultado).toEqual(contas);
+  });
+
+  it("falha comum (erro sem anexo) não inventa resultado", async () => {
+    ger.registrarRunner("fake-seco", criarRunnerFake({ passos: 1, delayMs: 1, falharCom: "seco" }));
+    const job = ger.criarJob({
+      tipo: "fake-seco",
+      titulo: "Job que falha sem contas",
+      escopo: "projeto:gama",
+      usaClaude: true,
+    });
+
+    const final = await aguardarEstado(ger, job.id, "falhou");
+    expect(final.resultado).toBeUndefined();
+  });
+
   it("emite eventos no canal único: transições de estado e logs do runner, com jobId", async () => {
     ger.registrarRunner("fake", criarRunnerFake({ passos: 2, delayMs: 1 }));
     const eventos: EventoJob[] = [];
