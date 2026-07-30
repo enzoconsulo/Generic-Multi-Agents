@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ErroApi } from "../../lib/api";
+import { avisoLimiteDeUso } from "../../lib/limite-uso";
 import { useJobsAoVivo } from "../../lib/useJobsAoVivo";
 import {
   agenteAtivo,
@@ -159,9 +160,9 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
     motivo?: string;
     reabreEm?: string | null;
   } | null;
-  // Cota batida não é bug da fábrica: só o relógio resolve, e redisparar antes da hora
-  // gasta de novo sem entregar. Por isso vem como aviso próprio, não como "Erro".
-  const limiteDeUso = resultado?.motivo === "limite-uso";
+  // Decisão e texto vivem em `lib/limite-uso` — os testes da web são de lógica pura, então
+  // lógica dentro do componente seria lógica não verificada.
+  const avisoCota = avisoLimiteDeUso(resultado);
 
   async function cancelar() {
     setCancelando(true);
@@ -239,16 +240,12 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
           </>
         )}
         {job.sessionId !== undefined && <Campo rot="Sessão" valor={job.sessionId} />}
-        {job.erro !== undefined && !limiteDeUso && <Campo rot="Erro" valor={job.erro} />}
+        {job.erro !== undefined && avisoCota === null && <Campo rot="Erro" valor={job.erro} />}
       </dl>
 
-      {limiteDeUso && (
+      {avisoCota !== null && (
         <div className="aviso aviso-erro">
-          <strong>Limite de uso da assinatura.</strong> O fluxo foi interrompido para não
-          gastar sem entregar
-          {resultado?.reabreEm != null ? ` — a cota retoma após ${resultado.reabreEm}` : ""}.
-          Redispare depois disso; antes, qualquer tentativa gasta contexto e para no mesmo
-          ponto.
+          <strong>Limite de uso da assinatura.</strong> {avisoCota}
         </div>
       )}
 
