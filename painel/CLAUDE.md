@@ -170,6 +170,15 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   confira o nome em `node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts` (é a verdade
   da versão PINADA) e escreva teste sobre o objeto `options` que chega ao SDK — não sobre
   a tabela de configuração, que é o lado fácil e não prova nada.
+- **`modelUsage` do SDK é um ACUMULADOR VIVO, não um instantâneo por mensagem.** Num job
+  multi-sessão os `result` das sessões de fundo são descarregados juntos no fim (sete numa
+  janela de **2 ms**, medido na rodada `358c14f1`) e todos leem o acumulador **já final** —
+  por isso vieram idênticos enquanto `total_cost_usd`, escalar copiado na criação de cada
+  mensagem, preservou a escada 0,79 → 7,42. Consequências: (a) `modelUsage` é cumulativo
+  por JOB, sobrescrever está certo e não há subcontagem de tokens; (b) comparar o
+  `modelUsage` com o custo **no meio** do fluxo acusa divergência em toda rodada saudável —
+  a conferência só vale com os dois valores finais, e há teste travando isso. A invariante
+  boa: a soma de `costUSD` do `modelUsage` bate com o `total_cost_usd` até a 9ª casa.
 - **Hook que abre conexão vira N conexões quando dois componentes o chamam.** `App` assina
   o SSE para o selo do cabeçalho e a página assinava de novo: 2 conexões, 2 fanouts de
   cada evento, `/api/jobs` e `/api/inputs` em dobro — com a regra "uma conexão por página"

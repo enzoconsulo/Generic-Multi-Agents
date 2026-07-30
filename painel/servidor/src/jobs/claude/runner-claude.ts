@@ -321,9 +321,17 @@ export class RunnerClaude implements Runner {
           // `num_turns` é POR SESSÃO — veio 17, 7, 4, 6, 4, 6, 7, 10. O job gravava só o
           // último (10) quando o trabalho real foram 61. Este é o único campo que soma.
           if (typeof msg.num_turns === "number") numTurnos = (numTurnos ?? 0) + msg.num_turns;
-          // `modelUsage` veio IDÊNTICO nos sete últimos `result`s, o que só faz sentido se já
-          // for um total acumulado — então sobrescreve, como o custo. Ficou anotado no log do
-          // dia que o platô não bate com o custo subindo; se isso virar problema, medir de novo.
+          // `modelUsage` é CUMULATIVO por job, como o custo — sobrescrever é o certo.
+          // QUESTÃO FECHADA em 30/07 pela gravação SSE da rodada 358c14f1, sem gastar
+          // assinatura (o platô que parecia não bater tem explicação simples):
+          //   · os sete últimos `result` saíram no MESMO instante (15:45:49.760–762, 2 ms de
+          //     janela) — não são sete sessões terminando ao longo de 24 min, são mensagens
+          //     descarregadas juntas no fim. Todas leem o acumulador quando ele JÁ está final,
+          //     por isso vieram idênticas enquanto `total_cost_usd`, um escalar copiado na
+          //     criação de cada mensagem, preservou a escada 0,79 → 7,42.
+          //   · a soma de `costUSD` do `modelUsage` bate com o `total_cost_usd` cumulativo até
+          //     a 9ª casa (7,42026945) nos quatro jobs com telemetria. Fosse por sessão, a
+          //     última daria ~0,67 (7,42 − 6,75). Não há subcontagem de tokens.
           tokens = lerTokens(msg.modelUsage);
           if (typeof msg.result === "string" && msg.result !== "") textoResult = msg.result;
           ctx.emitir("log", {
@@ -356,6 +364,26 @@ export class RunnerClaude implements Runner {
         });
         controlador.abort();
         break;
+      }
+    }
+
+    // Guarda da invariante de tokens — conferida UMA vez, com os valores FINAIS. No meio do
+    // fluxo a comparação não vale: `modelUsage` é acumulador vivo e os `result` descarregados
+    // juntos já trazem o total do job, enquanto cada `total_cost_usd` guarda o instantâneo da
+    // própria mensagem. No fim os dois são finais e batem. Se um SDK futuro mandar
+    // `modelUsage` POR SESSÃO, o job gravaria só o uso da última — subcontagem SILENCIOSA,
+    // como a dos turnos até o T-047. Aqui isso vira uma linha na tela; não corrige nada,
+    // porque corrigir no palpite foi exatamente o que criou aquele bug.
+    if (tokens !== null && custoUsd !== null && custoUsd > 0.01) {
+      const somaModelos = Object.values(tokens.porModelo).reduce((s, m) => s + m.custoUsd, 0);
+      if (Math.abs(somaModelos - custoUsd) > custoUsd * 0.01) {
+        ctx.emitir("log", {
+          nivel: "erro",
+          texto:
+            `Contabilidade de tokens suspeita: modelUsage soma $${somaModelos.toFixed(4)}` +
+            ` contra $${custoUsd.toFixed(4)} de custo do fluxo — os tokens deste job podem` +
+            ` estar subcontados. Remedir antes de usar o número.`,
+        });
       }
     }
 

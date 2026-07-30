@@ -550,6 +550,78 @@ describe("contabilidade multi-sessão (T-047) — custo e turnos se comportam di
     expect(r.sessoes).toBe(8);
   });
 
+  /**
+   * `modelUsage` é cumulativo por job — fechado em 30/07 pela gravação SSE da 358c14f1: os
+   * sete últimos `result` saíram numa janela de 2 ms (mensagens descarregadas juntas no fim),
+   * lendo o acumulador já final, e a soma de `costUSD` bate com o `total_cost_usd` cumulativo.
+   * O guarda abaixo existe para que um SDK que volte a mandar POR SESSÃO apareça na tela em
+   * vez de subcontar tokens em silêncio, como aconteceu com os turnos até o T-047.
+   */
+  const usagePorModelo = (custo: number) => ({
+    "claude-sonnet-5": {
+      inputTokens: 100,
+      outputTokens: 5000,
+      cacheReadInputTokens: 400000,
+      cacheCreationInputTokens: 20000,
+      costUSD: custo,
+    },
+  });
+
+  it("acumulador adiantado no meio do fluxo NÃO é tratado como divergência", async () => {
+    // Comportamento REAL do SDK: os `result` descarregados juntos no fim leem o acumulador
+    // já final (7,4203) enquanto carregam o custo do próprio instante (0,79, 1,44, …). Comparar
+    // a cada `result` acusaria subcontagem em toda rodada multi-sessão saudável — falso
+    // positivo que este teste existe para impedir. A conferência só vale no fim.
+    const mensagens: unknown[] = [];
+    for (const [custo, turnos] of RESULTS) {
+      mensagens.push({ type: "system", subtype: "init", session_id: `s${turnos}`, model: "sonnet" });
+      mensagens.push({
+        type: "result",
+        is_error: false,
+        total_cost_usd: custo,
+        num_turns: turnos,
+        modelUsage: usagePorModelo(7.4203),
+      });
+    }
+    const { ctx, eventos } = contexto(new AbortController().signal);
+
+    await new RunnerClaude(consultaDe(mensagens)).executar(jobFake(PARAMS), ctx);
+
+    const textos = eventos.map((e) => (e.dados as { texto: string }).texto).join(" ");
+    expect(textos).not.toMatch(/subcontados/);
+  });
+
+  it("modelUsage POR SESSÃO vira aviso na tela — uma vez só, sem derrubar o fluxo", async () => {
+    // Cenário do SDK que mudasse de semântica: cada `result` traz só o uso da própria sessão,
+    // enquanto o custo segue cumulativo. Sem o guarda, o job gravaria o uso da ÚLTIMA sessão
+    // como se fosse o do job inteiro — e ninguém veria.
+    const mensagens: unknown[] = [];
+    for (const [custo, turnos] of RESULTS) {
+      mensagens.push({ type: "system", subtype: "init", session_id: `s${turnos}`, model: "sonnet" });
+      mensagens.push({
+        type: "result",
+        is_error: false,
+        total_cost_usd: custo,
+        num_turns: turnos,
+        modelUsage: usagePorModelo(0.6688),
+      });
+    }
+    const { ctx, eventos } = contexto(new AbortController().signal);
+
+    const r = await new RunnerClaude(consultaDe(mensagens)).executar(jobFake(PARAMS), ctx);
+
+    const avisos = eventos
+      .map((e) => (e.dados as { texto: string }).texto)
+      .filter((t) => /subcontados/.test(t));
+    expect(avisos).toHaveLength(1);
+    // Diz os dois números: o que o modelUsage soma e o que o fluxo custou de verdade.
+    expect(avisos[0]).toContain("$0.6688");
+    expect(avisos[0]).toContain("$7.4203");
+    // Aviso é diagnóstico: o fluxo termina normalmente e a contabilidade segue gravada.
+    expect(r.erro).toBe(false);
+    expect(r.tokens?.saida).toBe(5000);
+  });
+
   it("uma sessão só continua reportando os próprios turnos", async () => {
     const consulta = consultaDe([
       { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
