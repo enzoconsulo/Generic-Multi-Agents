@@ -312,8 +312,18 @@ export class RunnerClaude implements Runner {
 
         case "result": {
           erro = msg.is_error === true;
+          // MEDIDO numa rodada de 8 sessões (T-047): custo e turnos se comportam DIFERENTE
+          // entre `result`s, e tratar os dois igual subcontava turnos em 6×.
+          //
+          // `total_cost_usd` é CUMULATIVO — subiu monotonicamente 0,79 → 1,44 → … → 7,42 ao
+          // longo das sessões. Sobrescrever é o certo; somar daria mais de 30 dólares falsos.
           custoUsd = typeof msg.total_cost_usd === "number" ? msg.total_cost_usd : null;
-          numTurnos = typeof msg.num_turns === "number" ? msg.num_turns : null;
+          // `num_turns` é POR SESSÃO — veio 17, 7, 4, 6, 4, 6, 7, 10. O job gravava só o
+          // último (10) quando o trabalho real foram 61. Este é o único campo que soma.
+          if (typeof msg.num_turns === "number") numTurnos = (numTurnos ?? 0) + msg.num_turns;
+          // `modelUsage` veio IDÊNTICO nos sete últimos `result`s, o que só faz sentido se já
+          // for um total acumulado — então sobrescreve, como o custo. Ficou anotado no log do
+          // dia que o platô não bate com o custo subindo; se isso virar problema, medir de novo.
           tokens = lerTokens(msg.modelUsage);
           if (typeof msg.result === "string" && msg.result !== "") textoResult = msg.result;
           ctx.emitir("log", {

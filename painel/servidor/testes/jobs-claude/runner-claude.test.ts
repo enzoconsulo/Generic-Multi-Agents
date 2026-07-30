@@ -521,3 +521,44 @@ describe("job multi-sessão (T-047) — um job NÃO é uma sessão", () => {
     expect(falha?.message).toContain("Nada foi entregue");
   });
 });
+
+describe("contabilidade multi-sessão (T-047) — custo e turnos se comportam diferente", () => {
+  /**
+   * Números REAIS da rodada 358c14f1 (8 sessões). Custo subiu monotonicamente ao longo dos
+   * `result`s (cumulativo); turnos vieram por sessão. Tratar os dois igual subcontava turnos
+   * em 6× — o job gravava 10 quando o trabalho real foram 61.
+   */
+  const RESULTS: ReadonlyArray<[number, number]> = [
+    [0.7898, 17], [1.4396, 7], [2.0148, 4], [4.2591, 6],
+    [5.2465, 4], [6.0067, 6], [6.7515, 7], [7.4203, 10],
+  ];
+
+  it("soma os turnos e NÃO soma o custo (que já vem cumulativo do SDK)", async () => {
+    const mensagens: unknown[] = [];
+    for (const [custo, turnos] of RESULTS) {
+      mensagens.push({ type: "system", subtype: "init", session_id: `s${turnos}`, model: "sonnet" });
+      mensagens.push({ type: "result", is_error: false, total_cost_usd: custo, num_turns: turnos });
+    }
+    const { ctx } = contexto(new AbortController().signal);
+
+    const r = await new RunnerClaude(consultaDe(mensagens)).executar(jobFake(PARAMS), ctx);
+
+    // 17+7+4+6+4+6+7+10 = 61, não 10.
+    expect(r.numTurnos).toBe(61);
+    // O último custo é o total; somar daria mais de 30 dólares falsos.
+    expect(r.custoUsd).toBeCloseTo(7.4203);
+    expect(r.sessoes).toBe(8);
+  });
+
+  it("uma sessão só continua reportando os próprios turnos", async () => {
+    const consulta = consultaDe([
+      { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
+      { type: "result", is_error: false, total_cost_usd: 1.16, num_turns: 21 },
+    ]);
+    const { ctx } = contexto(new AbortController().signal);
+
+    const r = await new RunnerClaude(consulta).executar(jobFake(PARAMS), ctx);
+    expect(r.numTurnos).toBe(21);
+    expect(r.sessoes).toBe(1);
+  });
+});
