@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GerenciadorJobs } from "../../src/jobs/fila.js";
 import { criarRunnerFake } from "../../src/jobs/runner-fake.js";
-import type { Job } from "../../src/jobs/tipos.js";
+import { podarJobs, salvarJob } from "../../src/jobs/persistencia.js";
+import type { EstadoJob, Job } from "../../src/jobs/tipos.js";
 import { aguardarEstado, criarRunnerManual, dirTemporario } from "./ajudantes.js";
 
 describe("persistência de jobs em dados/jobs/<id>.json", () => {
@@ -94,5 +95,76 @@ describe("persistência de jobs em dados/jobs/<id>.json", () => {
     writeFileSync(join(dir, "deadbeef.json.tmp"), '{ "id": "trunca', "utf8");
     const ger = new GerenciadorJobs({ dirJobs: dir, tetoClaude: 2 });
     expect(ger.listar()).toEqual([]);
+  });
+});
+
+describe("poda do histórico (T-045) — crescimento sem teto degrada devagar", () => {
+  function jobEm(id: string, estado: EstadoJob, criadoEm: string): Job {
+    return {
+      id,
+      tipo: "claude",
+      titulo: `job ${id}`,
+      escopo: "global",
+      usaClaude: true,
+      params: { prompt: "/status" },
+      estado,
+      criadoEm,
+    };
+  }
+
+  it("apaga os terminais mais antigos além do teto e devolve os mantidos", () => {
+    const dir = dirTemporario();
+    try {
+      const jobs = Array.from({ length: 10 }, (_, i) =>
+        jobEm(`j${i}`, "concluido", `2026-07-${String(10 + i).padStart(2, "0")}T00:00:00.000Z`),
+      );
+      for (const j of jobs) salvarJob(dir, j);
+
+      const { mantidos, apagados } = podarJobs(dir, jobs, 4);
+
+      expect(apagados).toBe(6);
+      // Sobram os QUATRO mais recentes (j9..j6), não os primeiros lidos do diretório.
+      expect(mantidos.map((j) => j.id).sort()).toEqual(["j6", "j7", "j8", "j9"]);
+      expect(readdirSync(dir).sort()).toEqual(["j6.json", "j7.json", "j8.json", "j9.json"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("NUNCA poda job vivo, nem quando é o mais antigo de todos", () => {
+    const dir = dirTemporario();
+    try {
+      const vivo = jobEm("vivo", "executando", "2026-01-01T00:00:00.000Z");
+      const jobs = [
+        vivo,
+        ...Array.from({ length: 5 }, (_, i) =>
+          jobEm(`t${i}`, "concluido", `2026-07-${String(20 + i)}T00:00:00.000Z`),
+        ),
+      ];
+      for (const j of jobs) salvarJob(dir, j);
+
+      const { mantidos, apagados } = podarJobs(dir, jobs, 2);
+
+      expect(apagados).toBe(3);
+      expect(mantidos.some((j) => j.id === "vivo")).toBe(true);
+      expect(existsSync(join(dir, "vivo.json"))).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("abaixo do teto não toca em nada", () => {
+    const dir = dirTemporario();
+    try {
+      const jobs = [jobEm("a", "concluido", "2026-07-01T00:00:00.000Z")];
+      salvarJob(dir, jobs[0]!);
+
+      const { mantidos, apagados } = podarJobs(dir, jobs, 400);
+
+      expect(apagados).toBe(0);
+      expect(mantidos).toHaveLength(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

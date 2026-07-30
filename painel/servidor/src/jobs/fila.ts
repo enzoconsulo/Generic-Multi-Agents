@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { RegistroInputs } from "./inputs.js";
-import { carregarJobs, salvarJob } from "./persistencia.js";
+import { MAX_JOBS_RETIDOS, carregarJobs, podarJobs, salvarJob } from "./persistencia.js";
 import {
   ESTADOS_CANCELAVEIS,
   ESTADOS_TERMINAIS,
@@ -92,10 +92,21 @@ export class GerenciadorJobs {
     }
     this.tetoClaude = opcoes.tetoClaude;
 
+    // Poda ANTES de carregar na memória: histórico sem teto faz o boot ler milhares de
+    // arquivos (readFileSync em laço, sob OneDrive) e infla `/api/jobs` para sempre.
+    // Só toca em job terminal — nada em curso é candidato. Ver `podarJobs`.
+    const { mantidos, apagados } = podarJobs(this.dirJobs, carregarJobs(this.dirJobs));
+    if (apagados > 0) {
+      console.log(
+        `[jobs] Histórico podado: ${apagados} job(s) terminal(is) além do teto de ` +
+          `${MAX_JOBS_RETIDOS} foram apagados.`,
+      );
+    }
+
     // Histórico persistido volta para a memória. Job que ficou em estado não-terminal
     // (processo caiu/reiniciou no meio) vira `interrompido` — o disco nunca fica
     // mentindo "executando" para sempre.
-    for (const job of carregarJobs(this.dirJobs)) {
+    for (const job of mantidos) {
       if (!ESTADOS_TERMINAIS.has(job.estado)) {
         job.estado = "interrompido";
         job.terminadoEm = agora();

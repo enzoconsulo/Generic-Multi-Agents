@@ -1,6 +1,14 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
-import { ESTADOS_JOB, type EstadoJob, type Job } from "./tipos.js";
+import { ESTADOS_JOB, ESTADOS_TERMINAIS, type EstadoJob, type Job } from "./tipos.js";
 
 /**
  * Persistência dos metadados de job em `<dirJobs>/<id>.json`, um arquivo por job,
@@ -39,6 +47,56 @@ export function carregarJobs(dirJobs: string): Job[] {
     }
   }
   return jobs;
+}
+
+/**
+ * Retenção do histórico (T-045). Sem isto o `dados/jobs/` cresce para sempre: cada job
+ * guarda o prompt inteiro e o resultado, o boot lê TODOS com `readFileSync` em laço (sob
+ * OneDrive, que é lento por arquivo), a memória segura todos, e o payload de `/api/jobs`
+ * cresce linear e sem teto. Degrada devagar e não aparece em nenhum teste — só depois de
+ * meses de uso diário.
+ *
+ * O teto é generoso de propósito: o histórico é o que dá para auditar custo depois, e
+ * 400 jobs cobrem semanas de uso pesado ocupando poucos MB.
+ */
+export const MAX_JOBS_RETIDOS = 400;
+
+/**
+ * Apaga do disco os jobs terminais mais antigos que excedem o teto e devolve os que
+ * ficaram — assim o chamador não precisa reler o diretório.
+ *
+ * Só poda estado TERMINAL: job vivo (`na-fila`, `executando`, `aguardando-input`) nunca é
+ * candidato, por mais antigo que o `criadoEm` pareça — apagar um desses perderia trabalho
+ * em curso. Roda no boot, quando não há execução concorrente.
+ */
+export function podarJobs(
+  dirJobs: string,
+  jobs: Job[],
+  max = MAX_JOBS_RETIDOS,
+): { mantidos: Job[]; apagados: number } {
+  const terminais = jobs.filter((j) => ESTADOS_TERMINAIS.has(j.estado));
+  if (terminais.length <= max) return { mantidos: jobs, apagados: 0 };
+
+  // Mais recentes primeiro; o excedente do fim da lista é o que sai.
+  const ordenados = [...terminais].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+  const aRemover = new Set(ordenados.slice(max).map((j) => j.id));
+
+  let apagados = 0;
+  for (const id of [...aRemover]) {
+    try {
+      rmSync(join(dirJobs, `${id}.json`), { force: true });
+      apagados++;
+    } catch (erro) {
+      // Disco ocupado/EPERM (OneDrive) não pode impedir o painel de subir: o arquivo fica
+      // mais um ciclo e a próxima poda tenta de novo. Mantido na memória para a UI não
+      // perder de vista um job cujo arquivo ainda existe.
+      console.warn(
+        `[jobs] Não deu para podar ${id}: ${erro instanceof Error ? erro.message : erro}`,
+      );
+      aRemover.delete(id);
+    }
+  }
+  return { mantidos: jobs.filter((j) => !aRemover.has(j.id)), apagados };
 }
 
 /** Validação estrutural mínima do JSON lido do disco. */
