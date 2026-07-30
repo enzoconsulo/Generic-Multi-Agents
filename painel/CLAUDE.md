@@ -186,6 +186,19 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   com a conexão amarrada à contagem de assinantes. Invariante que depende de quem chama
   lembrar não é invariante. Se fizer isso, o `getSnapshot` PRECISA devolver o mesmo objeto
   enquanto nada muda — objeto novo a cada chamada põe o React em laço infinito de render.
+- **Parser próprio de markdown precisa cobrir o que os documentos REAIS usam.** O de
+  `lib/markdown.ts` passava nos testes e mesmo assim a aba "Análise e docs" saía quebrada:
+  continuação indentada de item virava parágrafo NO MEIO da lista (partindo item e texto),
+  sublista era achatada no nível do pai, e linhas `**Decisão:**`/`**Motivo:**`/`**Quem:**`
+  eram emendadas numa frase só. Os testes usavam exemplos de uma linha; o conteúdo da
+  fábrica quebra linha o tempo todo. Ao mexer aí, teste com um TRECHO COPIADO de um `.md`
+  de projeto. Corolário: quem renderiza documento dentro de uma `<ol>`/`<ul>` precisa fixar
+  `list-style-type` — o navegador conta o aninhamento do HTML, não o do documento.
+- **Recorte por LINHAS do markdown cru mostra o gabarito, não o conteúdo.** DECISOES.md e
+  PROGRESSO.md começam pelo modelo do formato (`## AAAA-MM-DD — <título>`), então cortar as
+  14 primeiras linhas exibia rótulo com placeholder e escondia todo o dado real atrás do
+  "Mostrar tudo". `lib/documento.ts` separa gabarito de entradas — corte de documento se faz
+  por SEÇÃO, nunca por contagem de linhas.
 - **Entregue onde o usuário OLHA.** A T-023 pôs a visualização de agentes na página do
   projeto; o usuário acompanha execução na página de **Jobs**, que ficou como estava. Ao
   receber um pedido de UI, confirme em QUAL tela ele acontece.

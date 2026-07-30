@@ -1217,6 +1217,18 @@ a:hover {
   display: grid;
   gap: 0.28rem;
 }
+/* Explícito porque o documento é renderizado DENTRO de uma lista (as entradas): sem
+   isto o navegador conta o aninhamento do HTML e o primeiro nível já sai com marcador
+   de segundo. */
+ul.md-lista {
+  list-style-type: disc;
+}
+ol.md-lista {
+  list-style-type: decimal;
+}
+ul.md-lista ul.md-lista {
+  list-style-type: circle;
+}
 .md-lista li::marker {
   color: var(--cor-acento);
 }
@@ -1250,6 +1262,37 @@ a:hover {
   border-top: 1px solid var(--cor-borda);
   margin: 1rem 0;
 }
+/* Sublista: recuo menor e marcador mais discreto, para o nível de cima seguir dominando. */
+.md-lista .md-lista {
+  margin: 0.28rem 0 0.1rem;
+  padding-left: 1.1rem;
+}
+.md-lista .md-lista li::marker {
+  color: var(--cor-texto-suave);
+}
+/* Ficha `**Rótulo:** valor` (DECISOES/PROGRESSO): cada par na própria linha. Emendados
+   num parágrafo só, "Decisão", "Motivo" e "Quem" viravam uma frase corrida. */
+.md-def {
+  margin: 0.5rem 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.md-def-par {
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--cor-borda-forte);
+}
+.md-def-rot {
+  display: inline;
+  font-weight: 600;
+  color: var(--cor-acento-forte);
+}
+.md-def-rot::after {
+  content: ":";
+}
+.md-def-val {
+  display: inline;
+  margin: 0 0 0 0.35rem;
+}
 
 /* Documento longo: mostra o começo e some com o resto atrás de um clique. */
 .texto-longo {
@@ -1270,6 +1313,130 @@ a:hover {
   height: 4rem;
   background: linear-gradient(to bottom, transparent, var(--cor-fundo));
   pointer-events: none;
+}
+
+/* ---------- Documento de gestão por entradas ----------
+   ANALISE/DECISOES/PROGRESSO deixaram de ser um recorte de 14 linhas do markdown cru
+   (que mostrava o GABARITO do formato, rótulo sem dado) e viram a lista das seções do
+   arquivo: cada uma com cabeçalho próprio e corpo a um clique. */
+.doc {
+  display: grid;
+  gap: 0.7rem;
+}
+.doc-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.8rem;
+}
+.doc-contagem {
+  font-size: 0.8rem;
+}
+.doc-barra-acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.doc-guia > summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+.doc-guia > summary:hover {
+  color: var(--cor-texto);
+}
+.doc-guia-corpo {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px dashed var(--cor-borda-forte);
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto-suave);
+  font-size: 0.85rem;
+}
+
+.doc-entradas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.doc-entrada {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background-color: var(--cor-superficie);
+  overflow: hidden;
+}
+.doc-entrada-aberta {
+  border-color: var(--cor-borda-forte);
+}
+.doc-cab {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.6rem 0.85rem;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.doc-cab:hover {
+  background-color: var(--cor-superficie-2);
+}
+.doc-seta {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--cor-texto-suave);
+  transition: transform 0.15s ease;
+}
+.doc-entrada-aberta .doc-seta {
+  transform: rotate(90deg);
+  color: var(--cor-acento);
+}
+.doc-cab-texto {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.doc-cab-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.doc-data {
+  flex-shrink: 0;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--cor-borda-forte);
+  background-color: var(--cor-superficie-2);
+  color: var(--cor-texto-suave);
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+}
+.doc-titulo {
+  font-weight: 600;
+  color: var(--cor-texto);
+  line-height: 1.35;
+}
+/* Fechada, a entrada ainda diz do que trata — título sozinho vira índice sem conteúdo. */
+.doc-previa {
+  color: var(--cor-texto-suave);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.doc-corpo {
+  padding: 0.1rem 0.9rem 0.85rem;
+  border-top: 1px solid var(--cor-borda);
 }
 
 /* Selo de atividade no menu: a fábrica trabalhando fica visível de qualquer tela. */

@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from "react";
-import { parseMarkdown, type Bloco, type Inline } from "../lib/markdown";
+import { parseMarkdown, type Bloco, type BlocoLista, type Inline } from "../lib/markdown";
 
 /**
  * Renderiza os documentos da fábrica (ANALISE/DECISOES/PROGRESSO, seções de tarefa) como
@@ -11,6 +11,11 @@ import { parseMarkdown, type Bloco, type Inline } from "../lib/markdown";
  */
 export function Markdown({ texto }: { texto: string }) {
   const blocos = parseMarkdown(texto);
+  return <Blocos blocos={blocos} />;
+}
+
+/** Renderiza blocos já parseados — usado por `Documento`, que fatia o texto por seção. */
+export function Blocos({ blocos }: { blocos: Bloco[] }) {
   if (blocos.length === 0) return null;
   return (
     <div className="md">
@@ -38,22 +43,21 @@ function RenderBloco({ bloco }: { bloco: Bloco }) {
         </p>
       );
     case "lista":
-      return bloco.ordenada ? (
-        <ol className="md-lista">
-          {bloco.itens.map((it, i) => (
-            <li key={i}>
-              <Linha conteudo={it} />
-            </li>
+      return <Lista bloco={bloco} />;
+    case "definicao":
+      // Ficha rótulo → valor. Cada par ocupa a própria linha: emendados num parágrafo
+      // (o que acontecia antes), "Decisão", "Motivo" e "Quem" viravam uma frase só.
+      return (
+        <dl className="md-def">
+          {bloco.itens.map((par, i) => (
+            <div key={i} className="md-def-par">
+              <dt className="md-def-rot">{par.rotulo}</dt>
+              <dd className="md-def-val">
+                <Linha conteudo={par.conteudo} />
+              </dd>
+            </div>
           ))}
-        </ol>
-      ) : (
-        <ul className="md-lista">
-          {bloco.itens.map((it, i) => (
-            <li key={i}>
-              <Linha conteudo={it} />
-            </li>
-          ))}
-        </ul>
+        </dl>
       );
     case "codigo":
       return <pre className="md-codigo">{bloco.texto}</pre>;
@@ -66,6 +70,21 @@ function RenderBloco({ bloco }: { bloco: Bloco }) {
     case "regua":
       return <hr className="md-regua" />;
   }
+}
+
+/** Lista com aninhamento — a análise descreve módulo e submódulo em dois níveis. */
+function Lista({ bloco }: { bloco: BlocoLista }) {
+  const itens = bloco.itens.map((it, i) => (
+    <li key={i}>
+      <Linha conteudo={it.conteudo} />
+      {it.sublista !== null && <Lista bloco={it.sublista} />}
+    </li>
+  ));
+  return bloco.ordenada ? (
+    <ol className="md-lista">{itens}</ol>
+  ) : (
+    <ul className="md-lista">{itens}</ul>
+  );
 }
 
 function Linha({ conteudo }: { conteudo: Inline[] }): ReactNode {

@@ -28,7 +28,7 @@ import { PublicacaoRepo } from "../../componentes/PublicacaoRepo";
 import { EstadoPublicacao } from "../git/Git";
 import type { ListaRepos } from "../../lib/tipos";
 import { Markdown } from "../../componentes/Markdown";
-import { TextoLongo } from "../../componentes/TextoLongo";
+import { Documento } from "../../componentes/Documento";
 import { BadgeMarco, ChipStatus, ResumoStatus } from "../../componentes/Indicadores";
 import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
 import { EspecialistasProjeto } from "./EspecialistasProjeto";
@@ -507,7 +507,7 @@ function SecaoAnalise({
           {temAnalise && (
             <details className="analise-md">
               <summary>ver a análise por extenso (ANALISE.md)</summary>
-              <TextoLongo texto={(analise as string).trim()} />
+              <Documento texto={(analise as string).trim()} />
             </details>
           )}
         </>
@@ -517,7 +517,7 @@ function SecaoAnalise({
             Esta análise é de antes do painel visual. Reanalise para ver em blocos — o texto
             continua disponível de qualquer forma.
           </p>
-          <TextoLongo texto={(analise as string).trim()} />
+          <Documento texto={(analise as string).trim()} />
         </>
       ) : (
         <p className="texto-suave">
@@ -637,7 +637,7 @@ function SecaoTexto({
       {texto === null || texto.trim() === "" ? (
         <p className="texto-suave">{vazio}</p>
       ) : (
-        <TextoLongo texto={texto.trim()} />
+        <Documento texto={texto.trim()} />
       )}
     </section>
   );
