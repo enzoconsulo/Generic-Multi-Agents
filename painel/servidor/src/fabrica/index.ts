@@ -5,7 +5,7 @@
  * Uso típico: `lerFabrica(config.fabricaRaiz)` para a visão geral e
  * `lerProjeto(config.fabricaRaiz, nome)` para a página de um projeto.
  */
-export { lerFabrica, lerProjeto } from "./fabrica.js";
+export { lerFabrica, lerProjeto, listarProjetos } from "./fabrica.js";
 export { agentesValidos, lerEquipe } from "./equipe.js";
 export { faseAtualDoPlano, parsearMarco, parsearPlano } from "./plano.js";
 export { lerIdeias, lerLogMaisRecente, parsearIdeia } from "./sistema.js";

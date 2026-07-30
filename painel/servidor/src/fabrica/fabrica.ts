@@ -142,7 +142,11 @@ async function lerBaseProjeto(
   };
 }
 
-async function listarProjetos(raiz: string, erros: string[]): Promise<string[]> {
+/**
+ * Nomes dos projetos da fábrica, em ordem alfabética. Exportado porque a injeção de
+ * agentes dinâmicos precisa varrer todos quando `/trabalhar` roda sem projeto.
+ */
+export async function listarProjetos(raiz: string, erros: string[] = []): Promise<string[]> {
   try {
     const entradas = await readdir(join(raiz, "projetos"), { withFileTypes: true });
     return entradas
