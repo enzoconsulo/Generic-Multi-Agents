@@ -21,8 +21,28 @@ const ALTURA = 30; // altura de cada linha (casada com o CSS da lista)
 const LARGURA_FAIXA = 16;
 const RAIO = 4.5;
 
-export function GrafoGit({ repo, titulo }: { repo: string; titulo: string }) {
-  const [aberto, setAberto] = useState(false);
+export function GrafoGit({
+  repo,
+  titulo,
+  iniciaAberto = false,
+  mostrarCommit = true,
+}: {
+  repo: string;
+  titulo: string;
+  /**
+   * Numa aba dedicada a git o grafo É o conteúdo — nascer fechado obriga um clique para
+   * ver o que a pessoa veio ver. Fechado segue sendo o padrão onde ele é só mais uma
+   * seção entre outras (a home), porque aí fechado também economiza a requisição.
+   */
+  iniciaAberto?: boolean;
+  /**
+   * O grafo traz seu próprio botão de commit porque na maioria dos lugares ele é a única
+   * superfície git da tela. Na aba Git o cartão do repositório JÁ tem um — os dois juntos
+   * davam "5 alterações sem commit / Commitar…" duplicado no mesmo cartão.
+   */
+  mostrarCommit?: boolean;
+}) {
+  const [aberto, setAberto] = useState(iniciaAberto);
 
   return (
     <section className="secao caixa">
@@ -42,12 +62,12 @@ export function GrafoGit({ repo, titulo }: { repo: string; titulo: string }) {
       </button>
 
       {/* Só monta (e só busca) quando aberto: fechado não gasta requisição nem espaço. */}
-      {aberto && <ConteudoGit repo={repo} />}
+      {aberto && <ConteudoGit repo={repo} mostrarCommit={mostrarCommit} />}
     </section>
   );
 }
 
-function ConteudoGit({ repo }: { repo: string }) {
+function ConteudoGit({ repo, mostrarCommit }: { repo: string; mostrarCommit: boolean }) {
   const [limite, setLimite] = useState(40);
   const historico = useDados<HistoricoGit>(
     `/api/git/${encodeURIComponent(repo)}?limite=${limite}`,
@@ -62,7 +82,7 @@ function ConteudoGit({ repo }: { repo: string }) {
         </p>
       )}
 
-      {dados?.ehRepo === true && (
+      {mostrarCommit && dados?.ehRepo === true && (
         <PainelCommit repo={repo} aoCommitar={historico.recarregar} />
       )}
 

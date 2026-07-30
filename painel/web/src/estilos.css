@@ -156,6 +156,45 @@ a:hover {
   color: var(--cor-texto-suave);
 }
 
+/* Abas da página do projeto — mesma linguagem da navegação do topo (sublinhado no
+   ativo), um nível abaixo na hierarquia: fonte menor e sem peso de cabeçalho. */
+.abas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  margin: 0 0 1.5rem;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.aba {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 0.5rem 0.85rem;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.aba:hover {
+  color: var(--cor-texto);
+}
+.aba-ativa,
+.aba-ativa:hover {
+  color: var(--cor-texto);
+  border-bottom-color: var(--cor-acento);
+}
+.aba-num {
+  font-size: 0.75rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: var(--cor-borda);
+  color: var(--cor-texto-suave);
+}
+
 .secao {
   margin-bottom: 2rem;
 }

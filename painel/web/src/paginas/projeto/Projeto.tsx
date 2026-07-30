@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useDados } from "../../lib/useDados";
 import { useJobsAoVivo, type EstadoAoVivo } from "../../lib/useJobsAoVivo";
 import { api, ErroApi } from "../../lib/api";
@@ -93,6 +93,33 @@ export function Projeto() {
   );
 }
 
+/**
+ * Abas da página do projeto.
+ *
+ * Empilhado, o projeto virava um rolo de ~8000px com treze seções — e o que estava no
+ * fim (git, publicação, CI, análise) só existia para quem rolasse até lá. Pior no grafo
+ * de git: o painel de detalhe do commit nasce ABAIXO da lista inteira (crescer um item
+ * desalinharia o SVG), então numa página desse tamanho clicar num commit parecia não
+ * fazer nada. Numa aba própria a página é curta e o detalhe cabe na tela.
+ *
+ * A aba vive na URL (`?aba=git`), no mesmo padrão do `/jobs?job=` — link direto funciona
+ * e voltar do navegador não perde onde a pessoa estava.
+ */
+const ABAS = [
+  { id: "visao", rotulo: "Visão geral" },
+  { id: "tarefas", rotulo: "Tarefas" },
+  { id: "equipe", rotulo: "Equipe" },
+  { id: "git", rotulo: "Git" },
+  { id: "ci", rotulo: "CI/CD" },
+  { id: "analise", rotulo: "Análise e docs" },
+] as const;
+
+type IdAba = (typeof ABAS)[number]["id"];
+
+function ehAba(v: string | null): v is IdAba {
+  return v !== null && ABAS.some((a) => a.id === v);
+}
+
 function DetalheProjeto({
   projeto,
   jobAtivo,
@@ -109,6 +136,32 @@ function DetalheProjeto({
   // tarefa, então clicar num bloco do mapa abre o detalhe no quadro.
   const [selecionada, setSelecionada] = useState<string | null>(null);
   const refQuadro = useRef<HTMLDivElement>(null);
+  const [params, setParams] = useSearchParams();
+
+  const paramAba = params.get("aba");
+  const aba: IdAba = ehAba(paramAba) ? paramAba : "visao";
+
+  function irParaAba(id: IdAba) {
+    const proximos = new URLSearchParams(params);
+    proximos.set("aba", id);
+    // `replace`: trocar de aba não deve encher o histórico do navegador de entradas.
+    setParams(proximos, { replace: true });
+  }
+
+  /**
+   * O mapa do plano (aba Visão geral) e a gestão apontam para uma tarefa que mora na aba
+   * Tarefas — então selecionar TROCA de aba. O scroll não pode acontecer no mesmo passo:
+   * o quadro só existe depois que a outra aba renderiza, e `refQuadro` ainda é null aqui.
+   */
+  function selecionarTarefa(arquivo: string) {
+    setSelecionada(arquivo);
+    irParaAba("tarefas");
+  }
+
+  useEffect(() => {
+    if (aba !== "tarefas" || selecionada === null) return;
+    refQuadro.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [aba, selecionada]);
 
   return (
     <>
@@ -130,71 +183,105 @@ function DetalheProjeto({
         </div>
       )}
 
-      <section className="secao">
-        <h3 className="secao-titulo">Resumo</h3>
-        <ResumoStatus contagem={projeto.contagemPorStatus} />
-      </section>
+      <nav className="abas" aria-label="Seções do projeto">
+        {ABAS.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            className={`aba ${a.id === aba ? "aba-ativa" : ""}`}
+            aria-current={a.id === aba ? "page" : undefined}
+            onClick={() => irParaAba(a.id)}
+          >
+            {a.rotulo}
+            {a.id === "tarefas" && projeto.tarefas.length > 0 && (
+              <span className="aba-num">{projeto.tarefas.length}</span>
+            )}
+          </button>
+        ))}
+      </nav>
 
-      <AcoesProjeto projeto={projeto} jobAtivo={jobAtivo} />
+      {aba === "visao" && (
+        <>
+          <section className="secao">
+            <h3 className="secao-titulo">Resumo</h3>
+            <ResumoStatus contagem={projeto.contagemPorStatus} />
+          </section>
 
-      <EspecialistasProjeto projeto={projeto.nome} jobAtivo={jobAtivo} jobs={aoVivo.jobs} />
+          <AcoesProjeto projeto={projeto} jobAtivo={jobAtivo} />
 
-      <SecaoGestao
-        projeto={projeto.nome}
-        tarefas={projeto.tarefas}
-        jobs={aoVivo.jobs}
-        aoSelecionar={(arquivo) => {
-          setSelecionada(arquivo);
-          refQuadro.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
-      />
+          <EquipeAoVivo
+            equipe={projeto.equipe}
+            tarefas={projeto.tarefas}
+            logs={jobAtivo !== null ? (aoVivo.logs[jobAtivo.id] ?? []) : []}
+            jobAtivo={jobAtivo}
+          />
 
-      <SecaoEquipe
-        projeto={projeto.nome}
-        equipe={projeto.equipe}
-        jobAtivo={jobAtivo}
-        aoGravar={aoRecarregar}
-      />
+          <MapaPlano
+            plano={projeto.plano}
+            tarefas={projeto.tarefas}
+            aoSelecionar={selecionarTarefa}
+          />
+        </>
+      )}
 
-      <EquipeAoVivo
-        equipe={projeto.equipe}
-        tarefas={projeto.tarefas}
-        logs={jobAtivo !== null ? (aoVivo.logs[jobAtivo.id] ?? []) : []}
-        jobAtivo={jobAtivo}
-      />
+      {aba === "tarefas" && (
+        <>
+          <SecaoGestao
+            projeto={projeto.nome}
+            tarefas={projeto.tarefas}
+            jobs={aoVivo.jobs}
+            aoSelecionar={selecionarTarefa}
+          />
 
-      <MapaPlano
-        plano={projeto.plano}
-        tarefas={projeto.tarefas}
-        aoSelecionar={(arquivo) => {
-          setSelecionada(arquivo);
-          refQuadro.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
-      />
+          <div ref={refQuadro}>
+            <QuadroTarefas
+              tarefas={projeto.tarefas}
+              selecionada={selecionada}
+              aoSelecionar={setSelecionada}
+            />
+          </div>
+        </>
+      )}
 
-      <div ref={refQuadro}>
-        <QuadroTarefas
-          tarefas={projeto.tarefas}
-          selecionada={selecionada}
-          aoSelecionar={setSelecionada}
-        />
-      </div>
+      {aba === "equipe" && (
+        <>
+          <EspecialistasProjeto
+            projeto={projeto.nome}
+            jobAtivo={jobAtivo}
+            jobs={aoVivo.jobs}
+          />
 
-      <GrafoGit repo={projeto.nome} titulo="Histórico do código" />
+          <SecaoEquipe
+            projeto={projeto.nome}
+            equipe={projeto.equipe}
+            jobAtivo={jobAtivo}
+            aoGravar={aoRecarregar}
+          />
+        </>
+      )}
 
-      <SecaoPublicacao projeto={projeto.nome} />
+      {aba === "git" && (
+        <>
+          <GrafoGit repo={projeto.nome} titulo="Histórico do código" iniciaAberto />
+          <SecaoPublicacao projeto={projeto.nome} />
+        </>
+      )}
 
-      <SecaoCi projeto={projeto.nome} jobAtivo={jobAtivo} aoVivo={aoVivo} />
+      {aba === "ci" && <SecaoCi projeto={projeto.nome} jobAtivo={jobAtivo} aoVivo={aoVivo} />}
 
-      <SecaoAnalise
-        projeto={projeto.nome}
-        analise={projeto.analise}
-        estruturada={projeto.analiseEstruturada}
-        bloqueado={jobAtivo !== null}
-      />
+      {aba === "analise" && (
+        <>
+          <SecaoAnalise
+            projeto={projeto.nome}
+            analise={projeto.analise}
+            estruturada={projeto.analiseEstruturada}
+            bloqueado={jobAtivo !== null}
+          />
 
-      <SecaoTexto titulo="Decisões" texto={projeto.decisoes} vazio="Sem DECISOES.md." />
-      <SecaoTexto titulo="Progresso" texto={projeto.progresso} vazio="Sem PROGRESSO.md." />
+          <SecaoTexto titulo="Decisões" texto={projeto.decisoes} vazio="Sem DECISOES.md." />
+          <SecaoTexto titulo="Progresso" texto={projeto.progresso} vazio="Sem PROGRESSO.md." />
+        </>
+      )}
     </>
   );
 }

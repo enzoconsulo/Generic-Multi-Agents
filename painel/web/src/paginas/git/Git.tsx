@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useDados } from "../../lib/useDados";
 import type { ListaRepos, RepoResumo } from "../../lib/tipos";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
+import { GrafoGit } from "../../componentes/GrafoGit";
 import { PainelCommit } from "../../componentes/PainelCommit";
 import { PublicacaoRepo } from "../../componentes/PublicacaoRepo";
 
@@ -67,6 +68,14 @@ function CartaoRepo({ repo, aoMudar }: { repo: RepoResumo; aoMudar: () => void }
 
       {repo.ehRepo && <PainelCommit repo={repo.id} aoCommitar={aoMudar} />}
       <PublicacaoRepo repo={repo} aoMudar={aoMudar} />
+
+      {/* O histórico faltava JUSTAMENTE na aba Git: o grafo só existia na home (fábrica) e
+          na página de cada projeto. Quem vinha aqui ver "o que já foi commitado" via o
+          contador de pendências e nenhum commit. Fechado por padrão porque o cartão é uma
+          lista — abrir todos de uma vez daria uma requisição por repositório. */}
+      {repo.ehRepo && (
+        <GrafoGit repo={repo.id} titulo="Histórico de commits" mostrarCommit={false} />
+      )}
     </section>
   );
 }

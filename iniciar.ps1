@@ -80,12 +80,20 @@ if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
 }
 Ok "npm $(& npm -v)"
 
-if (Get-Command git -ErrorAction SilentlyContinue) {
-    Ok "git disponivel"
-} else {
-    Aviso "git NAO encontrado. O painel abre, mas importar projetos vai falhar"
-    Write-Host "          (a importacao inicializa um repositorio quando a pasta nao tem um)." -ForegroundColor Gray
+# git e REQUISITO, nao conveniencia: a fabrica inteira e feita de repositorios. Cada
+# projeto e um repo proprio, o executor commita ao fim de cada tarefa, o painel desenha o
+# grafo de commits, publica e faz a varredura de seguranca. Sem git o painel ate abre,
+# mas quase tudo que ele faz falha uma tela adiante -- melhor falhar aqui, com a causa na
+# tela, do que virar um erro obscuro no meio de um job.
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Erro "git nao encontrado no PATH."
+    Write-Host "         A fabrica e feita de repositorios git: cada projeto e um repo," -ForegroundColor Gray
+    Write-Host "         o executor commita cada tarefa e o painel publica a partir dai." -ForegroundColor Gray
+    Write-Host "         Instale em https://git-scm.com/download/win e abra um terminal novo." -ForegroundColor Gray
+    exit 1
 }
+$versaoGit = (& git --version)
+Ok "$versaoGit"
 
 # O painel dispara os fluxos pelo binario EMBUTIDO no Agent SDK, nao pelo `claude` do
 # PATH (decisao registrada no spike T-001). O que importa de verdade e existir o login
