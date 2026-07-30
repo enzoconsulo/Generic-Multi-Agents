@@ -20,6 +20,52 @@ const exec = promisify(execFile);
  * NUNCA lê conteúdo de credencial ou de chave privada — só a existência dos arquivos.
  */
 
+/**
+ * Cache curto do diagnóstico (T-045). A rota gastava ~200 ms MEDIDOS a cada abertura da
+ * aba Ajustes, e o custo é quase todo spawn de processo no Windows: `git config` ×3,
+ * `gh --version`, `gh auth status`, `claude --version`. O que eles respondem quase nunca
+ * muda — versão do CLI, identidade do git, existência de credencial.
+ *
+ * TTL curto em vez de cache permanente porque login feito FORA do painel (num terminal)
+ * precisa aparecer sem reiniciar o servidor. E o que o próprio painel escreve não espera
+ * o TTL: `definirIdentidade` invalida na hora, senão a tela mostraria o valor antigo
+ * logo depois de gravar — o único caso em que errar é garantido.
+ */
+const TTL_DIAGNOSTICO_MS = 30_000;
+
+interface Entrada<T> {
+  valor: T;
+  em: number;
+}
+
+/** Exportado para teste: o comportamento interessante é o TTL, a dedupe e a invalidação. */
+export function comCache<T>(
+  ttlMs: number,
+  ler: () => Promise<T>,
+): (() => Promise<T>) & { invalidar: () => void } {
+  let entrada: Entrada<T> | null = null;
+  /** Chamada em voo: duas abas abrindo juntas não devem disparar os spawns em dobro. */
+  let emVoo: Promise<T> | null = null;
+
+  const fn = async (): Promise<T> => {
+    if (entrada !== null && Date.now() - entrada.em < ttlMs) return entrada.valor;
+    if (emVoo !== null) return emVoo;
+    emVoo = ler()
+      .then((valor) => {
+        entrada = { valor, em: Date.now() };
+        return valor;
+      })
+      .finally(() => {
+        emVoo = null;
+      });
+    return emVoo;
+  };
+  fn.invalidar = (): void => {
+    entrada = null;
+  };
+  return fn;
+}
+
 /** Roda um comando curto; `null` quando o programa não existe ou falha. */
 async function tentar(programa: string, args: string[]): Promise<string | null> {
   try {
@@ -57,7 +103,7 @@ export interface ContaGitHub {
   comoResolver: string | null;
 }
 
-export async function lerContaGitHub(): Promise<ContaGitHub> {
+async function lerContaGitHubDireto(): Promise<ContaGitHub> {
   const [nome, email, helper, gh] = await Promise.all([
     configGit("user.name"),
     configGit("user.email"),
@@ -114,6 +160,12 @@ export async function lerContaGitHub(): Promise<ContaGitHub> {
   };
 }
 
+/**
+ * Diagnóstico do GitHub, com cache de {@link TTL_DIAGNOSTICO_MS}. Chame `.invalidar()`
+ * depois de qualquer escrita que mude o que ele lê.
+ */
+export const lerContaGitHub = comCache(TTL_DIAGNOSTICO_MS, lerContaGitHubDireto);
+
 /** Grava a identidade dos commits (global). É a única coisa daqui que o painel escreve. */
 export async function definirIdentidade(nome: string, email: string): Promise<void> {
   const n = nome.trim();
@@ -131,6 +183,11 @@ export async function definirIdentidade(nome: string, email: string): Promise<vo
   } catch (erro) {
     const texto = erro instanceof Error ? erro.message : String(erro);
     throw new ErroAjustes(500, `Não foi possível gravar a identidade: ${texto}`);
+  } finally {
+    // No `finally` de propósito: se a primeira chave gravou e a segunda falhou, o cache
+    // ficou desatualizado do mesmo jeito. Invalidar só no caminho feliz mostraria valor
+    // velho justamente no estado inconsistente — que é quando olhar a tela importa mais.
+    lerContaGitHub.invalidar();
   }
 }
 
@@ -166,7 +223,7 @@ const CAMINHOS_CLI: readonly string[] = [
   join(homedir(), ".claude", "local", "claude"),
 ];
 
-export async function lerContaClaude(): Promise<ContaClaude> {
+async function lerContaClaudeDireto(): Promise<ContaClaude> {
   const versaoBruta = await tentar("claude", ["--version"]);
   const temCredenciais = existsSync(join(homedir(), ".claude", ".credentials.json"));
   // Fora do PATH ainda é instalado: procurar no disco antes de declarar ausência.
@@ -194,6 +251,12 @@ export async function lerContaClaude(): Promise<ContaClaude> {
         : "Instale o Claude Code e faça login (`claude`); o painel executa os fluxos pelo mesmo login.",
   };
 }
+
+/**
+ * Diagnóstico do Claude, com cache de {@link TTL_DIAGNOSTICO_MS}. `claude --version` é o
+ * spawn mais caro dos seis e o que menos muda — versão do CLI não troca durante a sessão.
+ */
+export const lerContaClaude = comCache(TTL_DIAGNOSTICO_MS, lerContaClaudeDireto);
 
 /* ---------------------------------- Painel ---------------------------------- */
 
