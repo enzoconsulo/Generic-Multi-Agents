@@ -59,10 +59,9 @@ export function linhasSignificativas(texto: string): string[] {
 }
 
 /**
- * Similaridade de Jaccard entre dois conjuntos de linhas. Simples de propósito: o que se
- * precisa distinguir é "mesma entrega" de "metade da entrega", não medir prosa com
- * precisão. Vazio contra vazio devolve 1 — a leitura disso fica com `julgar`, que trata
- * ausência de entrega como INCONCLUSIVO antes de olhar similaridade.
+ * Similaridade de Jaccard entre dois conjuntos. Vazio contra vazio devolve 1 — a leitura
+ * disso fica com `julgar`, que trata ausência de entrega como INCONCLUSIVO antes de olhar
+ * similaridade.
  */
 export function similaridade(a: readonly string[], b: readonly string[]): number {
   const A = new Set(a);
@@ -71,6 +70,32 @@ export function similaridade(a: readonly string[], b: readonly string[]): number
   let intersecao = 0;
   for (const x of A) if (B.has(x)) intersecao += 1;
   return intersecao / (A.size + B.size - intersecao);
+}
+
+/** Palavras significativas de um texto, para comparar prosa sem depender da redação. */
+export function palavras(linhas: readonly string[]): string[] {
+  return linhas.join(" ").toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}/-]*/gu) ?? [];
+}
+
+/**
+ * Similaridade adequada ao TIPO de artefato — e isto foi aprendido errando.
+ *
+ * A primeira versão comparava sempre por LINHA. Para diff de código está certo: a linha é a
+ * unidade real da entrega, e duas execuções que produzem o mesmo código produzem as mesmas
+ * linhas. Para PROSA está errado: dois relatórios com os mesmos fatos, redigidos de forma
+ * diferente, batem **11%** por linha. Medido — e o instrumento acusou "ENTREGA DIFERENTE"
+ * numa medição real do `/status` por causa disso, um falso alarme do próprio medidor.
+ *
+ * Por palavra, os mesmos dois relatórios batem **47%**, contra **17%** quando um deles
+ * realmente omite metade dos fatos. A margem não é enorme, mas separa — e é por isso que os
+ * cortes de `julgar` são mais baixos no modo prosa.
+ */
+export function similaridadeDe(
+  tipo: Entrega["tipoArtefato"],
+  a: readonly string[],
+  b: readonly string[],
+): number {
+  return tipo === "relatorio" ? similaridade(palavras(a), palavras(b)) : similaridade(a, b);
 }
 
 /**
@@ -105,13 +130,20 @@ export function julgar(a: Entrega, b: Entrega): Veredito {
     };
   }
 
-  const sim = similaridade(a.artefato, b.artefato);
+  // Prosa e código não se medem com a mesma régua — ver `similaridadeDe`. Os cortes do modo
+  // prosa são mais baixos porque redação varia mesmo com os fatos idênticos.
+  const prosa = a.tipoArtefato === "relatorio" && b.tipoArtefato === "relatorio";
+  const sim = similaridadeDe(prosa ? "relatorio" : "commit", a.artefato, b.artefato);
+  const corteSuspeita = prosa ? 0.3 : 0.5;
+  const corteEquivalente = prosa ? 0.45 : 0.8;
+
   const razao = a.artefato.length === 0 ? 1 : b.artefato.length / a.artefato.length;
   const medida =
     `${a.artefato.length} → ${b.artefato.length} linhas entregues ` +
-    `(${(razao * 100).toFixed(0)}% do volume), similaridade ${(sim * 100).toFixed(0)}%`;
+    `(${(razao * 100).toFixed(0)}% do volume), similaridade ${(sim * 100).toFixed(0)}%` +
+    `${prosa ? " (por palavra — artefato é prosa)" : ""}`;
 
-  if (razao < 0.8 || sim < 0.5) {
+  if (razao < 0.8 || sim < corteSuspeita) {
     return {
       tipo: "entrega-menor",
       texto:
@@ -120,7 +152,7 @@ export function julgar(a: Entrega, b: Entrega): Veredito {
         "(bom) ou menos conteúdo (ruim), e o instrumento não sabe a diferença.",
     };
   }
-  if (sim >= 0.8) {
+  if (sim >= corteEquivalente) {
     return { tipo: "economia", texto: `Entrega equivalente — economia real. ${medida}.` };
   }
   return { tipo: "economia", texto: `Entrega parecida — economia provável. ${medida}.` };

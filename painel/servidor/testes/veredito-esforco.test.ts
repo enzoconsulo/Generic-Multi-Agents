@@ -69,6 +69,39 @@ describe("julgar — o veredito que estava errado", () => {
   it("relatório que encolhe é tratado como entrega menor, igual a commit", () => {
     expect(julgar(relatorio(N(30)), relatorio(N(12))).tipo).toBe("entrega-menor");
   });
+
+  /**
+   * Regressão do falso alarme que o próprio instrumento produziu na re-medição do `/status`
+   * (31/07): acusou "ENTREGA DIFERENTE — similaridade 2%" comparando dois relatórios com os
+   * MESMOS fatos. A causa era comparar prosa por linha; qualquer reescrita zera o Jaccard.
+   */
+  it("dois relatórios com os mesmos fatos e redação diferente NÃO são entrega diferente", () => {
+    const a = relatorio(
+      linhasSignificativas(`| ia-hibrida-limpa | 0 | 0 | 0 | 0 | 12 | 12 |
+Nenhuma tarefa bloqueada.
+Fase 3 concluida, marco aprovado em 29/07.
+Proximo passo: nao ha trabalho pendente.`),
+    );
+    const b = relatorio(
+      linhasSignificativas(`| ia-hibrida-limpa | 0 | 0 | 0 | 0 | 12 | 12 |
+Nao ha tarefas bloqueadas.
+Marco da Fase 3 aprovado (29/07).
+Proximo passo: escopo fechado, nada pendente.`),
+    );
+    expect(julgar(a, b).tipo).toBe("economia");
+    expect(julgar(a, b).texto).toContain("por palavra");
+  });
+
+  it("…mas relatório que OMITE metade dos fatos continua sendo pego", () => {
+    const completo = relatorio(
+      linhasSignificativas(`| ia-hibrida-limpa | 0 | 0 | 0 | 0 | 12 | 12 |
+Nenhuma tarefa bloqueada.
+Fase 3 concluida, marco aprovado em 29/07.
+Proximo passo: nao ha trabalho pendente.`),
+    );
+    const truncado = relatorio(linhasSignificativas(`| ia-hibrida-limpa | 0 | 0 | 0 | 0 | 12 | 12 |`));
+    expect(julgar(completo, truncado).tipo).toBe("entrega-menor");
+  });
 });
 
 describe("similaridade", () => {

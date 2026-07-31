@@ -290,9 +290,52 @@ esforço não compensa. **Nenhuma conclusão daqui transfere para lá.**
 ### Decisão
 
 Não mexer em `esforco` no `/trabalhar` — continua sem evidência, e a evidência que existe é
-de outra categoria de ação. Os dois achados acionáveis são: **re-medir `/status`** (está em
-`medium` com uma amostra contra) e **corrigir o instrumento** para comparar conteúdo, não
-contagem de arquivos.
+de outra categoria de ação. Os dois achados acionáveis foram: **re-medir `/status`** e
+**corrigir o instrumento**. Ambos feitos — ver §7.1 e §7.2.
+
+### 7.1 Instrumento corrigido
+
+O veredito tinha um único caso de alerta e chamava todo o resto de "economia real". Passou a
+distinguir quatro situações, e a mais importante é a que faltava: **INCONCLUSIVO**, quando as
+duas pernas não entregam nada. Também compara CONTEÚDO (linhas do diff, similaridade de
+Jaccard, razão de volume) em vez de contagem de arquivos, trata relatório como entrega — sem
+isso toda ação read-only sumia da avaliação — e ganhou `--repeticoes=N` com faixa min–max,
+marcando faixas sobrepostas como diferença **não estabelecida**.
+
+Lógica pura extraída para `integracao/veredito.ts` e testada (17 casos, regressões das
+medições reais). `medir-esforco.ts` roda `git` na carga e gasta assinatura ao executar, logo
+não é importável por teste — e era justamente essa lógica que errava.
+
+**Defeito do próprio instrumento, encontrado usando-o:** a primeira versão comparava sempre
+por LINHA. Certo para diff de código; errado para prosa — dois relatórios com os MESMOS fatos
+e redação diferente batem **11%** por linha, e o instrumento acusou "ENTREGA DIFERENTE" na
+re-medição do `/status` por isso. Falso alarme do medidor, não sinal. Por palavra, os mesmos
+dois batem **47%**, contra **17%** quando um omite metade dos fatos. Modo prosa agora usa
+comparação por palavra e cortes mais baixos.
+
+### 7.2 `/status` re-medido (n=3, US$ 0,87) — o "+12%" era ruído
+
+| | Média | Faixa |
+|---|---:|---|
+| padrão | $0,1645 | [0,1391 – 0,1850] |
+| `medium` | $0,1245 | [0,0982 – 0,1726] |
+
+**−24% na média, mas as faixas se sobrepõem** → diferença não estabelecida.
+
+O achado que importa é sobre a medição anterior, não sobre o esforço: aquela rodada (n=1) deu
+padrão **$0,2726**. Nesta, a mesma perna, mesma entrada, variou entre **$0,1391 e $0,1850** —
+e a rodada anterior ficou 47% acima do topo desta faixa. **A variação entre execuções da
+mesma configuração é maior que a diferença entre configurações.** O "+12%" que motivou tudo
+isto era ruído, e minha leitura de que havia "uma amostra contra a decisão da T-042" estava
+errada: não havia amostra nenhuma, havia uma observação.
+
+**Decisão: manter `/status` em `medium`.** Não porque ficou provado que economiza — não
+ficou —, mas porque nada o contradiz, e o sinal fraco que existe (média menor, menos turnos,
+menos saída) aponta na direção em que já está. Mudar exigiria evidência que não temos.
+
+**Lição de método, e é a mais cara desta sessão:** n=1 num sistema com esta variância não é
+medição, é anedota. O `--repeticoes` existe agora porque a ausência dele produziu uma
+"descoberta" que consumiu duas rodadas para ser desfeita.
 
 ---
 
