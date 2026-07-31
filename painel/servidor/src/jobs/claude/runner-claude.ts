@@ -76,6 +76,16 @@ export interface ResultadoClaude {
    * de enxergar esse driver, já que só a última sessão reporta `result`.
    */
   sessoes?: number;
+  /**
+   * Despachos de subagente feitos em SEGUNDO PLANO (T-048). Em headless não há quem entregue
+   * a notificação de término: se o fluxo encerra o turno esperando por ela, a sessão fecha e
+   * o agente em voo é cortado no meio. Foi assim que o `/novo-projeto banco-imobiliario`
+   * terminou `concluido`, sem erro, com 9 das 22 tarefas nunca escritas.
+   *
+   * Contar é de graça (o dado já vem no `tool_use`) e é o único sinal objetivo de que um job
+   * "bem-sucedido" pode ter abandonado trabalho. Zero é o normal.
+   */
+  despachosFundo?: number;
 }
 
 /**
@@ -253,6 +263,8 @@ export class RunnerClaude implements Runner {
     let textoResult = "";
     /** Um job pode abrir várias sessões (despacho em background reabre). Ver `sessoes`. */
     let sessoes = 0;
+    /** Ver `despachosFundo`: subagente despachado em segundo plano dentro de um headless. */
+    let despachosFundo = 0;
     const partes: string[] = [];
     /**
      * Disjuntor de cota (T-045). Uma vez batido o limite da assinatura, TODA continuação é
@@ -294,6 +306,18 @@ export class RunnerClaude implements Runner {
               if (limiteBatido === null && ehLimiteDeUso(bloco.text)) limiteBatido = bloco.text;
             } else if (bloco.type === "tool_use" && bloco.name) {
               const alvo = alvoDeSubagente(bloco);
+              if (ehDespachoEmFundo(bloco)) {
+                despachosFundo += 1;
+                // Avisar AQUI (e não só no fim) porque é acionável enquanto o fluxo roda:
+                // dá para acompanhar se o agente chegou a terminar antes da sessão fechar.
+                ctx.emitir("log", {
+                  nivel: "erro",
+                  texto:
+                    `Despacho em SEGUNDO PLANO${alvo !== null ? ` (${alvo})` : ""} — em job` +
+                    " headless não há notificação de término: se o fluxo encerrar o turno" +
+                    " agora, este agente é cortado no meio. Confira os artefatos no fim.",
+                });
+              }
               // Despacho mantém a seta (o segmentador da T-039 casa `→ agente` para fechar
               // trecho — mudar essa grafia quebraria os resumos). Demais ferramentas ganham
               // o alvo depois de dois-pontos, que não colide com esse padrão.
@@ -387,6 +411,19 @@ export class RunnerClaude implements Runner {
       }
     }
 
+    // O fluxo acabou e houve despacho em segundo plano: pode ter terminado com trabalho em
+    // voo. Não dá para saber daqui se o agente concluiu — mas dá para dizer que o resultado
+    // NÃO é confiável sozinho, que é a informação que faltava quando isto aconteceu de verdade.
+    if (despachosFundo > 0) {
+      ctx.emitir("log", {
+        nivel: "erro",
+        texto:
+          `Fluxo terminou depois de ${despachosFundo} despacho(s) em segundo plano.` +
+          " Confira se os artefatos ficaram completos (tarefas do plano com arquivo," +
+          " commits, status) antes de dar o fluxo por bom — trabalho pode ter sido cortado.",
+      });
+    }
+
     const texto = textoResult !== "" ? textoResult : partes.join("\n");
 
     if (limiteBatido !== null) {
@@ -413,6 +450,7 @@ export class RunnerClaude implements Runner {
           motivo: "limite-uso",
           reabreEm: reabre,
           sessoes,
+          despachosFundo,
         },
       );
     }
@@ -420,10 +458,10 @@ export class RunnerClaude implements Runner {
     if (erro) {
       throw new ErroFluxoClaude(
         `Fluxo Claude terminou com erro. ${texto.slice(0, 800)}`.trim(),
-        { sessionId, custoUsd, numTurnos, erro, texto, tokens, sessoes },
+        { sessionId, custoUsd, numTurnos, erro, texto, tokens, sessoes, despachosFundo },
       );
     }
-    return { sessionId, custoUsd, numTurnos, erro, texto, tokens, sessoes };
+    return { sessionId, custoUsd, numTurnos, erro, texto, tokens, sessoes, despachosFundo };
   }
 }
 
@@ -486,6 +524,16 @@ function alvoDeSubagente(bloco: BlocoConteudo): string | null {
   if (bloco.name === undefined || !FERRAMENTAS_DESPACHO.has(bloco.name)) return null;
   const tipo = bloco.input?.["subagent_type"];
   return typeof tipo === "string" && tipo !== "" ? tipo : null;
+}
+
+/**
+ * Despacho de subagente pedido em SEGUNDO PLANO — o modo de falha da T-048 (ver
+ * `despachosFundo`). Lido do input do próprio `tool_use`, então é fato observado, não
+ * heurística sobre o texto do modelo.
+ */
+function ehDespachoEmFundo(bloco: BlocoConteudo): boolean {
+  if (bloco.name === undefined || !FERRAMENTAS_DESPACHO.has(bloco.name)) return false;
+  return bloco.input?.["run_in_background"] === true;
 }
 
 /**

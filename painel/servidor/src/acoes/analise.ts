@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { config } from "../config.js";
 import type { NovoJob } from "../jobs/fila.js";
+import { guardrailsParaAcao } from "../jobs/robustez/guardrails.js";
+import { comPreambuloHeadless } from "./preambulo.js";
 
 /**
  * Ação de ANÁLISE (T-012): um job "claude" que lê o código de um projeto e gera/atualiza
@@ -70,17 +72,27 @@ export async function montarJobAnalise(
 
   const prompt = await lerPromptAnalise();
 
+  // Guardrails da tabela, como as outras duas famílias de job. A entrada `analisar`
+  // existia em `guardrails.ts` desde a T-019 — com o comentário "também merece teto" — e
+  // NUNCA era consultada aqui: a análise subia sem `maxTurns` (nenhum teto de turnos) e
+  // sem `watchdogMs` (o watchdog caía no limite global em vez do da ação). É a mesma
+  // família do `watchdogMs` que a tabela anunciava e ninguém lia; por isso há teste
+  // travando os dois campos.
+  const guardrails = guardrailsParaAcao("analisar");
+
   return {
     tipo: "claude",
     titulo: `Analisar ${projeto}`,
     escopo: `projeto:${projeto}`,
     usaClaude: true,
     params: {
-      prompt,
+      prompt: comPreambuloHeadless(prompt),
       cwd: dir,
       modelo: opcoes.modelo,
       ...(opcoes.fallback ? { fallback: opcoes.fallback } : {}),
-      ...(opcoes.maxTurns !== undefined ? { maxTurns: opcoes.maxTurns } : {}),
+      maxTurns: opcoes.maxTurns ?? guardrails.maxTurns,
+      watchdogMs: guardrails.watchdogMs,
+      ...(guardrails.esforco !== undefined ? { esforco: guardrails.esforco } : {}),
     },
   };
 }

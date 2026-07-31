@@ -27,6 +27,23 @@ router.get("/", (req, res) => {
   res.json({ jobs: obterGerenciador().listar(estado) });
 });
 
+/**
+ * GET /api/jobs/:id/logs — histórico de log do job (T-048).
+ *
+ * O SSE só entrega o que passa enquanto a aba está aberta, e seu buffer de replay guarda
+ * 500 eventos para a fábrica inteira. Job de ontem, ou job que rolou para fora do buffer,
+ * abria sem uma linha sequer — e era justamente o log que responderia "por que parou".
+ * Declarado ANTES de `/:id` porque o Express casa na ordem de registro.
+ */
+router.get("/:id/logs", (req, res) => {
+  const gerenciador = obterGerenciador();
+  if (!gerenciador.obter(req.params.id)) {
+    res.status(404).json({ erro: `Job "${req.params.id}" não encontrado` });
+    return;
+  }
+  res.json(gerenciador.historicoDeLog(req.params.id));
+});
+
 /** GET /api/jobs/:id — o job, ou 404. */
 router.get("/:id", (req, res) => {
   const job = obterGerenciador().obter(req.params.id);

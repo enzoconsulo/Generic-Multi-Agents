@@ -20,6 +20,11 @@ apenas reporte. Rodar tipicamente 1x por semana ou quando o /status parecer inco
      volta para `pronta`, preservando notas parciais.
    - `tentativas >= 3` ainda ativa → marque `bloqueada` com motivo consolidado.
    - `backlog` com todas as dependências `concluida` → promova para `pronta`.
+   - **Id citado nas fases do PLANO.md sem arquivo em `_gestao/tarefas/`** → planejamento
+     cortado no meio (acontece quando um fluxo termina com o planejador ainda escrevendo).
+     A tarefa não existe para a fábrica: nada a promove nem a executa. Reporte com a lista
+     exata dos ids e sugira despachar o `planejador` para completá-los — não invente as
+     tarefas você mesmo, decomposição é dele.
 3. **Git por projeto:** repositório existe? `git status` limpo? Alterações não
    commitadas órfãs → commit de resgate `chore: resgate de manutenção` e anote no log
    qual tarefa provavelmente as gerou. Na raiz da fábrica: mudanças de

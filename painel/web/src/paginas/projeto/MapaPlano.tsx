@@ -28,6 +28,12 @@ export function MapaPlano({
 }) {
   const mapa = montarMapaPlano(plano, tarefas);
   const semNada = mapa.fases.length === 0 && mapa.semFase.length === 0;
+  // Planejamento interrompido no meio: o plano cita a tarefa e o arquivo dela nunca foi
+  // escrito. Aconteceu de verdade no banco-imobiliario — 9 ids sem arquivo — e o único
+  // sinal na tela era um bloco cinza "T-014?" perdido dentro da fase. Sem escopo e sem
+  // frontmatter a tarefa não existe para a fábrica: nada a promove, nada a executa, e ela
+  // não aparece no quadro. Isso é um bloqueio do projeto inteiro, não um detalhe da fase.
+  const ausentes = mapa.fases.flatMap((f) => f.idsAusentes);
 
   return (
     <section className="secao">
@@ -35,6 +41,19 @@ export function MapaPlano({
 
       {plano?.erros !== undefined && plano.erros.length > 0 && (
         <div className="aviso aviso-info aviso-compacto">{plano.erros.join(" · ")}</div>
+      )}
+
+      {ausentes.length > 0 && (
+        <div className="aviso aviso-erro">
+          <strong>
+            Planejamento incompleto: {ausentes.length} tarefa(s) do plano sem arquivo.
+          </strong>{" "}
+          O PLANO.md cita {ausentes.join(", ")}, mas não existe{" "}
+          <code>_gestao/tarefas/</code> para elas — sem escopo e sem frontmatter, a fábrica
+          não tem o que executar e elas nunca aparecem no quadro. Normalmente é planejador
+          cortado no meio: use <strong>Pedir funcionalidade</strong> pedindo que ele complete
+          as tarefas que faltam do plano.
+        </div>
       )}
 
       {semNada ? (

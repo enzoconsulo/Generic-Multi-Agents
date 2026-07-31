@@ -186,6 +186,22 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   com a conexão amarrada à contagem de assinantes. Invariante que depende de quem chama
   lembrar não é invariante. Se fizer isso, o `getSnapshot` PRECISA devolver o mesmo objeto
   enquanto nada muda — objeto novo a cada chamada põe o React em laço infinito de render.
+- **Job headless que despacha agente em SEGUNDO PLANO perde o trabalho dele.** O
+  `/novo-projeto banco-imobiliario` despachou o `planejador` em background e encerrou o turno
+  para "aguardar a notificação". Não existe quem notifique aqui: o modelo para de emitir, a
+  sessão fecha, o SDK manda `result` e o job assenta — com o agente ainda escrevendo. Ficou
+  `concluido`, `erro: false`, 18 de 150 turnos, US$ 0,57, e 9 das 22 tarefas do plano nunca
+  criadas. **Nada na tela dizia isso**: cota, watchdog e teto de turnos tinham aviso próprio;
+  "terminou sem fazer" não tinha. Hoje o preâmbulo de `acoes/preambulo.ts` proíbe no prompt,
+  o runner conta os `run_in_background` (`despachosFundo`) e a aba Jobs avisa. Ao criar
+  caminho novo de disparo, passe pelo preâmbulo — job sem ele volta a poder se perder.
+- **Log que só existe em memória some justo quando é preciso.** O log de execução vivia no
+  buffer do hub SSE — 500 eventos para a fábrica INTEIRA —, então abrir um job de ontem dava
+  console vazio, e a única memória era o `resumos`, escrito por um modelo pequeno (numa
+  rodada real ele afirmou "22 tarefas geradas" quando 13 existiam). Diagnosticar a parada
+  acima só foi possível pelo texto final gravado em `resultado`, por sorte. Agora o
+  `<id>.log.jsonl` é gravado no fim da execução (`jobs/historico-log.ts`); o corte por teto
+  tira o MEIO, nunca o fim, que é onde o fluxo quebra.
 - **Parser próprio de markdown precisa cobrir o que os documentos REAIS usam.** O de
   `lib/markdown.ts` passava nos testes e mesmo assim a aba "Análise e docs" saía quebrada:
   continuação indentada de item virava parágrafo NO MEIO da lista (partindo item e texto),

@@ -4,6 +4,7 @@ import { config } from "../config.js";
 import type { NovoJob } from "../jobs/fila.js";
 import { guardrailsParaAcao } from "../jobs/robustez/guardrails.js";
 import { ErroProjetoInexistente, dirProjeto } from "./analise.js";
+import { comPreambuloHeadless } from "./preambulo.js";
 
 /**
  * AÇÕES DE AGENTE POR PROJETO (T-033): pedir UM especialista para UM projeto, em vez de
@@ -288,7 +289,9 @@ export async function montarJobAcaoProjeto(
   if (dir === null) throw new ErroProjetoInexistente(projeto);
 
   const modelo = await lerPromptProjeto(idAcao);
-  const prompt = montarDespacho(modelo, { projeto, dirProjeto: dir, entrada: opcoes.entrada ?? "" });
+  const prompt = comPreambuloHeadless(
+    montarDespacho(modelo, { projeto, dirProjeto: dir, entrada: opcoes.entrada ?? "" }),
+  );
 
   // Guardrails resolvidos AQUI e gravados no job: o watchdog lê o limite de silêncio de
   // `params`, em vez de tentar deduzir de que ação o job veio (T-037).

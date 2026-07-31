@@ -9,6 +9,7 @@ import {
   montarJobAnalise,
 } from "../../src/acoes/analise.js";
 import type { NovoJob } from "../../src/jobs/fila.js";
+import { guardrailsParaAcao } from "../../src/jobs/robustez/guardrails.js";
 
 /** Fábrica falsa em pasta temporária com um projeto `fix`. */
 function fabricaTemp(): string {
@@ -36,6 +37,25 @@ describe("montarJobAnalise (T-012)", () => {
     expect(p.modelo).toBe("haiku");
     expect(typeof p.prompt).toBe("string");
     expect((p.prompt as string).length).toBeGreaterThan(100);
+  });
+
+  /**
+   * A entrada `analisar` existe em `guardrails.ts` desde a T-019 e não era lida aqui: a
+   * análise subia sem teto de turnos e com o watchdog no limite global, não no da ação.
+   * Mesmo modo de falha do `watchdogMs` que a tabela anunciava e ninguém consumia — por
+   * isso o teste é sobre o que CHEGA no job, não sobre a tabela.
+   */
+  it("aplica os guardrails da ação `analisar` (teto de turnos e silêncio)", async () => {
+    const raiz = fabricaTemp();
+    const p = params(await montarJobAnalise("fix", raiz, { modelo: "haiku" }));
+    expect(p.maxTurns).toBe(guardrailsParaAcao("analisar").maxTurns);
+    expect(p.watchdogMs).toBe(guardrailsParaAcao("analisar").watchdogMs);
+  });
+
+  it("um maxTurns explícito do disparo ainda ganha do guardrail", async () => {
+    const raiz = fabricaTemp();
+    const p = params(await montarJobAnalise("fix", raiz, { modelo: "haiku", maxTurns: 7 }));
+    expect(p.maxTurns).toBe(7);
   });
 
   it("passa fallback e maxTurns quando fornecidos", async () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ErroAcaoDesconhecida, montarJobAcao } from "../../src/acoes/acoes.js";
+import { PREAMBULO_HEADLESS } from "../../src/acoes/preambulo.js";
 
 const RAIZ = "C:/fabrica";
 
@@ -8,14 +9,26 @@ describe("montarJobAcao — comando, cwd e escopo de lock", () => {
     const job = montarJobAcao({ id: "status", modelo: "sonnet" }, RAIZ);
     expect(job.tipo).toBe("claude");
     expect(job.usaClaude).toBe(true);
-    expect(job.params?.["prompt"]).toBe("/status");
+    expect(job.params?.["prompt"]).toBe(`${PREAMBULO_HEADLESS}/status`);
     expect(job.params?.["cwd"]).toBe(RAIZ);
     expect(job.params?.["modelo"]).toBe("sonnet");
   });
 
   it("inclui os argumentos no prompt", () => {
     const job = montarJobAcao({ id: "trabalhar", argumentos: "painel-fabrica", modelo: "opus" }, RAIZ);
-    expect(job.params?.["prompt"]).toBe("/trabalhar painel-fabrica");
+    expect(job.params?.["prompt"]).toBe(`${PREAMBULO_HEADLESS}/trabalhar painel-fabrica`);
+  });
+
+  // O preâmbulo é o que impede a falha da T-048 (agente despachado em segundo plano num
+  // job headless, sessão fecha, trabalho cortado no meio). Se ele sumir do prompt, some em
+  // silêncio — nada quebra, o fluxo só volta a poder se perder. Daí o teste explícito.
+  it("todo job de comando leva a regra de despacho síncrono no prompt", () => {
+    const job = montarJobAcao({ id: "novo-projeto", argumentos: "jogo", modelo: "sonnet" }, RAIZ);
+    const prompt = String(job.params?.["prompt"]);
+    expect(prompt.startsWith(PREAMBULO_HEADLESS)).toBe(true);
+    expect(prompt).toContain("run_in_background");
+    // O TÍTULO segue sendo o comando puro: o preâmbulo é infraestrutura, não o pedido.
+    expect(job.titulo).toBe("/novo-projeto jogo");
   });
 
   it("trava a fábrica inteira (global) para ações de orquestração", () => {

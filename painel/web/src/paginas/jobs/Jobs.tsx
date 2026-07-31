@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ErroApi } from "../../lib/api";
 import { avisoLimiteDeUso } from "../../lib/limite-uso";
+import { avisoDespachoFundo } from "../../lib/avisos-job";
+import { useHistoricoLog } from "../../lib/useHistoricoLog";
 import { useJobsAoVivo } from "../../lib/useJobsAoVivo";
 import {
   agenteAtivo,
@@ -138,7 +140,11 @@ function ItemJob({
   );
 }
 
-function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
+function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[] }) {
+  // Ao vivo vem do SSE; job já terminado (ou fora do buffer de replay) é lido do
+  // `<id>.log.jsonl` gravado no fim da execução. Ver `useHistoricoLog`.
+  const historico = useHistoricoLog(job.id, linhasAoVivo);
+  const linhas = historico.linhas;
   const [cancelando, setCancelando] = useState(false);
   const [erroCancel, setErroCancel] = useState<string | null>(null);
   const [verLogCru, setVerLogCru] = useState(false);
@@ -160,10 +166,12 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
     motivo?: string;
     reabreEm?: string | null;
     sessoes?: number;
+    despachosFundo?: number;
   } | null;
   // Decisão e texto vivem em `lib/limite-uso` — os testes da web são de lógica pura, então
   // lógica dentro do componente seria lógica não verificada.
   const avisoCota = avisoLimiteDeUso(resultado);
+  const avisoFundo = avisoDespachoFundo(resultado);
 
   async function cancelar() {
     setCancelando(true);
@@ -256,6 +264,12 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
         </div>
       )}
 
+      {avisoFundo !== null && (
+        <div className="aviso aviso-erro">
+          <strong>Pode ter ficado trabalho pela metade.</strong> {avisoFundo}
+        </div>
+      )}
+
       {erroCancel !== null && <div className="aviso aviso-erro">{erroCancel}</div>}
 
       <h4 className="secao-tarefa-rot">
@@ -280,11 +294,17 @@ function DetalheJob({ job, linhas }: { job: Job; linhas: LinhaLog[] }) {
         <p className="texto-suave">
           {rodando
             ? "Aguardando os primeiros passos…"
-            : "O log desta execução não está mais em memória. O painel guarda os metadados " +
-              "do job, mas não o texto da saída entre reinícios do servidor."}
+            : "Sem log gravado para esta execução — ela é anterior ao histórico persistido, " +
+              "ou o servidor caiu antes de fechá-la."}
         </p>
       ) : (
         <ol className="trechos">
+          {historico.descartadas > 0 && (
+            <li className="texto-suave trecho-aviso">
+              {historico.descartadas} linha(s) do meio foram omitidas pelo teto de histórico —
+              começo e fim estão inteiros.
+            </li>
+          )}
           {segmentos.map((s, i) => (
             <Trecho
               key={i}

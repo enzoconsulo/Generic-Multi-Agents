@@ -2,6 +2,7 @@ import { IDS_ACOES, type IdAcao } from "../fabrica/catalogo-acoes.js";
 import type { NovoJob } from "../jobs/fila.js";
 import { guardrailsParaAcao } from "../jobs/robustez/guardrails.js";
 import type { EscopoLock } from "../jobs/tipos.js";
+import { comPreambuloHeadless } from "./preambulo.js";
 
 /**
  * Traduz uma ação da fábrica (um dos 6 comandos) num job "claude" (T-011). O prompt é o
@@ -70,11 +71,12 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
 
   return {
     tipo: "claude",
+    // Título fica o comando puro: o preâmbulo é infraestrutura, não o pedido do usuário.
     titulo: prompt,
     escopo: escopoDaAcao(id, args),
     usaClaude: true,
     params: {
-      prompt,
+      prompt: comPreambuloHeadless(prompt),
       cwd: fabricaRaiz,
       modelo: pedido.modelo,
       ...(pedido.fallback ? { fallback: pedido.fallback } : {}),

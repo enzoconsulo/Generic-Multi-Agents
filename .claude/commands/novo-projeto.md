@@ -29,9 +29,16 @@ mínima):
    ideia dada pelo usuário e a ordem de produzir ESPECIFICACAO.md, PLANO.md e as tarefas
    conforme o protocolo. Se a ideia envolver escolha técnica genuinamente incerta,
    despache antes o `pesquisador` e repasse a recomendação ao planejador.
+   **Despacho síncrono (regra 7 do CLAUDE.md): espere o planejador terminar nesta mesma
+   resposta.** Nada de segundo plano, nada de encerrar o turno para aguardar notificação —
+   a sessão fecharia e ele seria cortado no meio da escrita das tarefas.
 5. **Valide o resultado:** confira que a especificação, o plano e as tarefas existem e
    seguem o protocolo (frontmatter completo, dependências sem ciclo, critérios de aceite
-   objetivos). Problemas → devolva ao planejador com a lista do que corrigir.
+   objetivos). **Confira um a um que TODO id citado nas fases do PLANO.md tem arquivo em
+   `_gestao/tarefas/`** — id sem arquivo é tarefa que não existe para a fábrica: ninguém a
+   promove, ninguém a executa, e ela não aparece no quadro do painel. Faltou algum →
+   despache o planejador de novo, com a lista exata dos ids que faltam, e só siga quando a
+   contagem bater. Problemas de conteúdo → devolva ao planejador com o que corrigir.
 6. **Promova** para `pronta` as tarefas sem dependências.
 7. **Commite** os artefatos de gestão no repositório do projeto
    (`chore: especificação e backlog inicial`).

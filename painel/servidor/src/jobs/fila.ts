@@ -3,6 +3,15 @@ import { EventEmitter } from "node:events";
 import { RegistroInputs } from "./inputs.js";
 import { MAX_JOBS_RETIDOS, carregarJobs, podarJobs, salvarJob } from "./persistencia.js";
 import {
+  apagarHistorico,
+  empurrarLinha,
+  historicoVazio,
+  lerHistorico,
+  salvarHistorico,
+  type HistoricoLog,
+  type LinhaHistorico,
+} from "./historico-log.js";
+import {
   ESTADOS_CANCELAVEIS,
   ESTADOS_TERMINAIS,
   type ContextoExecucao,
@@ -82,6 +91,14 @@ export class GerenciadorJobs {
   private readonly runners = new Map<string, Runner>();
   /** Pendências de input (T-010): pareamento pergunta↔resposta entre runner e usuário. */
   private readonly inputs = new RegistroInputs();
+  /**
+   * Log de execução acumulado por job EM CURSO, para virar `<id>.log.jsonl` quando ele
+   * terminar (T-048). Antes disso o log só existia no buffer SSE em memória — 500 eventos
+   * para a fábrica inteira —, então job terminado era job sem evidência do que aconteceu.
+   * Liberado no assentamento; guardar só o que está em voo mantém a memória limitada pelo
+   * teto de execuções simultâneas.
+   */
+  private readonly logsEmCurso = new Map<string, HistoricoLog>();
   private readonly dirJobs: string;
   private readonly tetoClaude: number;
 
@@ -95,7 +112,14 @@ export class GerenciadorJobs {
     // Poda ANTES de carregar na memória: histórico sem teto faz o boot ler milhares de
     // arquivos (readFileSync em laço, sob OneDrive) e infla `/api/jobs` para sempre.
     // Só toca em job terminal — nada em curso é candidato. Ver `podarJobs`.
-    const { mantidos, apagados } = podarJobs(this.dirJobs, carregarJobs(this.dirJobs));
+    const antes = carregarJobs(this.dirJobs);
+    const { mantidos, apagados } = podarJobs(this.dirJobs, antes);
+    // O `.log.jsonl` do job podado sai junto — senão vira lixo órfão que ninguém mais lê
+    // e que cresce sem teto (é o arquivo GRANDE do par).
+    if (apagados > 0) {
+      const vivos = new Set(mantidos.map((j) => j.id));
+      for (const j of antes) if (!vivos.has(j.id)) apagarHistorico(this.dirJobs, j.id);
+    }
     if (apagados > 0) {
       console.log(
         `[jobs] Histórico podado: ${apagados} job(s) terminal(is) além do teto de ` +
@@ -414,6 +438,9 @@ export class GerenciadorJobs {
             this.mudarEstado(job, "concluido", { terminadoEm: agora(), resultado });
           }
         } finally {
+          // Depois de `mudarEstado`: o último log (inclusive o de erro/interrupção) precisa
+          // estar no buffer antes de ele virar arquivo.
+          this.fecharHistoricoDeLog(job.id);
           this.agendar();
         }
       })
@@ -453,6 +480,7 @@ export class GerenciadorJobs {
   /** Emissão não-fatal: listener que lança (ex.: SSE da T-009) não derruba a fila. */
   private emitirEvento(jobId: string, tipo: string, dados?: unknown): void {
     const evento: EventoJob = { jobId, tipo, dados, em: agora() };
+    if (tipo === "log") this.registrarLinhaDeLog(jobId, evento.em, dados);
     try {
       this.emissor.emit("evento", evento);
     } catch (erro) {
@@ -461,6 +489,49 @@ export class GerenciadorJobs {
           mensagemDeErro(erro),
       );
     }
+  }
+
+  /**
+   * Acumula a linha para o `<id>.log.jsonl` do job (T-048). Defensivo com o payload: o
+   * evento vem de runners diferentes (Claude, CI) e um campo fora do formato não pode
+   * custar o histórico inteiro.
+   */
+  private registrarLinhaDeLog(jobId: string, em: string, dados: unknown): void {
+    if (dados === null || typeof dados !== "object") return;
+    const d = dados as { nivel?: unknown; texto?: unknown };
+    const texto = typeof d.texto === "string" ? d.texto : "";
+    if (texto === "") return;
+    let historico = this.logsEmCurso.get(jobId);
+    if (historico === undefined) {
+      historico = historicoVazio();
+      this.logsEmCurso.set(jobId, historico);
+    }
+    empurrarLinha(historico, {
+      em,
+      nivel: typeof d.nivel === "string" ? d.nivel : "log",
+      texto,
+    });
+  }
+
+  /**
+   * Fecha o histórico do job: grava em disco e libera a memória. Chamado no assentamento,
+   * quando o job já é terminal.
+   */
+  private fecharHistoricoDeLog(jobId: string): void {
+    const historico = this.logsEmCurso.get(jobId);
+    this.logsEmCurso.delete(jobId);
+    if (historico !== undefined) salvarHistorico(this.dirJobs, jobId, historico);
+  }
+
+  /**
+   * Log de um job para a tela: o que está em memória enquanto ele roda, o arquivo depois.
+   * É o que permite abrir um job de ontem e ver o que aconteceu — antes só existia o
+   * buffer do SSE, comum a toda a fábrica e limitado a 500 eventos.
+   */
+  historicoDeLog(jobId: string): HistoricoLog {
+    const emCurso = this.logsEmCurso.get(jobId);
+    if (emCurso !== undefined) return { linhas: [...emCurso.linhas], descartadas: emCurso.descartadas };
+    return { linhas: lerHistorico(this.dirJobs, jobId), descartadas: 0 };
   }
 
   private gerarId(): string {

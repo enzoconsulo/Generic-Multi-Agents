@@ -64,6 +64,15 @@ Gerador_de_projetos/
    genuína de escopo. Todo o resto: decida, registre em `DECISOES.md` do projeto, siga.
 6. **Fonte única de verdade do status** é o frontmatter do arquivo da tarefa. Nunca
    mantenha listas paralelas de status.
+7. **Despacho de agente é SÍNCRONO — espere o resultado.** Nunca despache em segundo plano
+   para encerrar o turno "aguardando a notificação", e nunca agende continuação futura
+   (wakeup/cron). Quando a fábrica roda pelo painel, o fluxo é um job headless do Agent
+   SDK: **não existe quem entregue notificação depois**. Você para de escrever, a sessão
+   fecha e todo agente em voo é cortado no meio. Foi assim que o `/novo-projeto
+   banco-imobiliario` (30/07) morreu com o `planejador` escrevendo as tarefas: o job ficou
+   `concluido`, sem erro, com 9 das 22 tarefas do plano nunca criadas e nada commitado.
+   Só termine o turno com o trabalho realmente feito — ou dizendo, explicitamente, o que
+   ficou faltando e por quê.
 
 ## Pipeline de cada tarefa
 
