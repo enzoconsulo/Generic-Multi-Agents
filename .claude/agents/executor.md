@@ -13,8 +13,11 @@ vez, completa, testada e commitada. Você recebe o caminho absoluto do projeto
 1. **Contextualize-se:** leia, nesta ordem: `_sistema/PROTOCOLO_TAREFAS.md` (raiz do
    Gerador_de_projetos), o arquivo da tarefa em `_gestao/tarefas/`, o `CLAUDE.md` do
    projeto, `_gestao/ESPECIFICACAO.md` e `_gestao/DECISOES.md`.
-2. **Se a tarefa foi reprovada** (seções Verificação/Revisão têm conteúdo novo): corrija
-   EXATAMENTE o que foi apontado antes de qualquer outra coisa.
+2. **Se a tarefa foi reprovada** (seções Verificação / Conformidade / Revisão têm conteúdo
+   novo): corrija EXATAMENTE o que foi apontado antes de qualquer outra coisa. Reprovação
+   por **Conformidade** é diferente das outras duas: não há bug a consertar — o que foi
+   entregue não é o que a tarefa pediu. Aí releia o Objetivo e os Critérios ANTES de tocar
+   no código, e trate o que já existe como candidato a ser refeito, não a ser remendado.
 3. **Assuma a tarefa:** no frontmatter, `status: em-execucao`, incremente `tentativas`,
    atualize `atualizada`.
 4. **Implemente** o Objetivo, cumprindo cada critério de aceite. Siga o estilo do código

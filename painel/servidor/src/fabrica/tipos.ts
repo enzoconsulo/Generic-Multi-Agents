@@ -61,6 +61,12 @@ export interface SecoesTarefa {
   criteriosAceite: string;
   notasExecucao: string;
   verificacao: string;
+  /**
+   * Confere ENTREGA × PEDIDO (T-049): o que foi construído é o que a tarefa pediu?
+   * Separada da Revisão de propósito — "o código está correto" e "o código é o que foi
+   * pedido" são perguntas diferentes, e só a primeira tinha dono no pipeline.
+   */
+  conformidade: string;
   revisao: string;
 }
 

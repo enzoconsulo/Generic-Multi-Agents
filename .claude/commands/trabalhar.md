@@ -47,14 +47,23 @@ Trabalhe até esgotar as tarefas ou tudo estar bloqueado.
    registrar Notas). **Ao retorno de CADA agente**, confirme por busca que o status no
    frontmatter confere com o relatório dele antes do próximo despacho; divergência →
    corrija você mesmo conforme o protocolo e anote no log.
+   **Retrabalho sobe de modelo (protocolo, regra 12):** tarefa com `tentativas >= 1` — ou
+   seja, que já voltou reprovada — vai para o construtor REFORÇADO: `<id>-reforcado` quando
+   o painel injetou a equipe, senão `executor-reforcado`. Uma reprovação é prova de que o
+   modelo atual não deu conta; repetir a aposta gasta o ciclo inteiro de novo. Disparo já
+   em `opus`/`fable`: não há para onde subir, siga com o construtor normal.
 3. **Quando um executor terminar:** despache o `testador` da tarefa — respeitando a
    regra de projeto quieto (nenhum executor/testador ativo no MESMO projeto; enquanto
    não der, siga com outras tarefas e despache assim que o projeto liberar). Pulo de
    teste (tarefa trivial sem código executável): registre a decisão e mande direto ao
    revisor. Testador aprovou → despache o `revisor` (pode rodar em paralelo com
    qualquer agente). Reprovou → volta ao executor.
-4. **Revisor aprovou** → tarefa `concluida`; promova dependentes que ficaram livres.
-   Reprovou → volta ao executor. **Marco de fase:** todas as tarefas da fase `concluida`
+4. **Revisor aprovou** (conformidade `cumpre` e sem bug relevante) → tarefa `concluida`;
+   promova dependentes que ficaram livres. Reprovou → volta ao executor. **Repare no motivo
+   antes de redespachar:** reprovação por *conformidade* (o entregue não é o que foi pedido)
+   pede que o executor refaça a partir do Objetivo, não que remende o que já existe — diga
+   isso no despacho. Conformidade `cumpre-parcial` aprovada com pendência registrada: decida
+   se a sobra vira tarefa nova e anote no log. **Marco de fase:** todas as tarefas da fase `concluida`
    e a linha `Marco:` ainda `pendente` no PLANO.md → despache o `testador` em modo marco
    (meta da fase de ponta a ponta, também sob projeto quieto) e registre o resultado na
    linha `Marco:` (aprovado/reprovado + data). Reprovado: causa raiz única e óbvia →

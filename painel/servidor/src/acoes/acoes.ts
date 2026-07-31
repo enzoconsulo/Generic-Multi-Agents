@@ -2,7 +2,8 @@ import { IDS_ACOES, type IdAcao } from "../fabrica/catalogo-acoes.js";
 import type { NovoJob } from "../jobs/fila.js";
 import { guardrailsParaAcao } from "../jobs/robustez/guardrails.js";
 import type { EscopoLock } from "../jobs/tipos.js";
-import { comPreambuloHeadless } from "./preambulo.js";
+import { SUFIXO_REFORCO } from "./agentes-dinamicos.js";
+import { blocoReforco, comPreambuloHeadless } from "./preambulo.js";
 
 /**
  * Traduz uma ação da fábrica (um dos 6 comandos) num job "claude" (T-011). O prompt é o
@@ -37,6 +38,12 @@ export interface PedidoAcao {
   fallback?: string | null;
   /** Agentes dinâmicos (options.agents do SDK) — só para /trabalhar com equipe. */
   agentes?: Record<string, unknown>;
+  /**
+   * Modelo do retrabalho (`estrategia.reforco`). Só vira instrução no prompt quando há
+   * especialistas injetados — anunciar agente que não foi injetado gasta turno em despacho
+   * condenado, erro que a T-045 já pagou uma vez.
+   */
+  reforco?: string | null;
   /** Guarda de custo opcional. */
   maxTurns?: number;
 }
@@ -69,6 +76,16 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
   const guardrails = guardrailsParaAcao(id);
   const maxTurns = pedido.maxTurns ?? guardrails.maxTurns;
 
+  // Escalonamento só é anunciado quando existe de verdade: estratégia com `reforco` E
+  // especialistas injetados (é deles que saem os gêmeos `-reforcado`).
+  const idsEspecialistas = Object.keys(pedido.agentes ?? {}).filter(
+    (nome) => !nome.endsWith(SUFIXO_REFORCO),
+  );
+  const extra =
+    typeof pedido.reforco === "string" && pedido.reforco !== "" && idsEspecialistas.length > 0
+      ? blocoReforco(pedido.modelo, pedido.reforco, idsEspecialistas)
+      : "";
+
   return {
     tipo: "claude",
     // Título fica o comando puro: o preâmbulo é infraestrutura, não o pedido do usuário.
@@ -76,7 +93,7 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
     escopo: escopoDaAcao(id, args),
     usaClaude: true,
     params: {
-      prompt: comPreambuloHeadless(prompt),
+      prompt: comPreambuloHeadless(prompt, extra),
       cwd: fabricaRaiz,
       modelo: pedido.modelo,
       ...(pedido.fallback ? { fallback: pedido.fallback } : {}),

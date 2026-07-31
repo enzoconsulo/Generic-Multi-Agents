@@ -6,10 +6,12 @@ testam, revisam e documentam software de ponta a ponta, com o mínimo de interve
 usuário (Enzo). Ele fornece as ideias iniciais; o sistema faz todo o resto.
 
 Idioma de trabalho: português (BR). Os agentes usam `model: inherit` (herdam o
-modelo da sessão principal) — com UMA exceção deliberada: o `testador` roda em `haiku`,
-porque verificar é mecânico e é onde o custo escala sem ganho de qualidade. É seguro
-porque o `revisor` segue no modelo do disparo e lê o diff depois. Para trocar o modelo da
-fábrica, use `/model`.
+modelo da sessão principal) — com DUAS exceções deliberadas, uma para baixo e uma para
+cima: o `testador` roda em `haiku`, porque verificar é mecânico e é onde o custo escala sem
+ganho de qualidade (seguro porque o `revisor` segue no modelo do disparo e lê o diff
+depois); e o `executor-reforcado` roda em `opus`, para o RETRABALHO — quando uma reprovação
+já provou que o modelo do disparo não deu conta. Para trocar o modelo da fábrica, use
+`/model`.
 
 ## Mapa do diretório
 
@@ -24,6 +26,7 @@ Gerador_de_projetos/
 ├── _sistema/
 │   ├── ARQUITETURA.md       ← desenho completo do sistema e guia de extensão
 │   ├── PROTOCOLO_TAREFAS.md ← formato e ciclo de vida das tarefas (LEIA antes de mexer em tarefas)
+│   ├── ferramentas/         ← captura.mjs: PNG de tela via Edge/Chrome (prova visual dos agentes)
 │   ├── templates/           ← modelos de tarefa, especificação, plano e docs de projeto
 │   ├── ideias/              ← caixa de entrada de ideias brutas (via /ideia)
 │   └── logs/                ← um log por dia: AAAA-MM-DD.md
@@ -39,6 +42,7 @@ Gerador_de_projetos/
         │   ├── DECISOES.md
         │   ├── PROGRESSO.md
         │   ├── pesquisas/   ← relatórios do pesquisador
+        │   ├── evidencias/  ← capturas de tela das tarefas de UI (prova visual)
         │   └── tarefas/     ← T-001-slug.md, T-002-... (o estado vive AQUI)
         └── (código do projeto)
 ```
@@ -81,9 +85,22 @@ backlog → pronta → em-execucao → em-teste → em-revisao → concluida
                      (executor)   (testador)   (revisor)
 ```
 
+- **Dois portões, duas perguntas.** O `testador` responde "funciona?" executando os
+  critérios de aceite. O `revisor` responde "é o que foi pedido?" (seção **Conformidade**)
+  e "está correto?" (seção Revisão). São independentes: entrega que passa em todos os
+  critérios e não tem bug ainda pode não ser a tarefa — critério frouxo não é licença para
+  entregar outra coisa. Reprovar por conformidade não exige bug nenhum. Tarefa de interface
+  leva captura de tela em `_gestao/evidencias/` (`_sistema/ferramentas/captura.mjs`), e é
+  sobre ela que a conformidade visual é julgada.
 - Reprovada em teste ou revisão → volta para `em-execucao` com o relatório anexado ao
   arquivo da tarefa. Máximo **3 ciclos**; no 4º, marque `bloqueada`, registre o motivo na
   tarefa e siga para a próxima.
+- **Retrabalho sobe de modelo.** A 1ª execução usa o modelo do disparo; da 2ª em diante
+  (`tentativas >= 1`) despache o construtor reforçado — `<id>-reforcado` quando o painel
+  injetou a equipe, senão `executor-reforcado`. O gatilho é fato medido (a tarefa voltou
+  reprovada), não palpite: repetir a aposta que já falhou paga executor + testador +
+  revisor de novo e queima uma das 3 tentativas. Disparo já em `opus`/`fable`: não há para
+  onde subir, siga com o normal.
 - **Autocorreção (uma vez por linhagem):** ao bloquear por esgotamento, se a tarefa NÃO
   tem `replanejada-de`, despache o `planejador` em modo replanejamento — ele quebra ou
   reescreve a abordagem; a original vira `cancelada` com referência e as substitutas
@@ -108,8 +125,9 @@ Detalhes completos das transições e de quem escreve o quê: `_sistema/PROTOCOL
 |---|---|---|
 | `planejador` | Especificação, plano e decomposição em tarefas | /novo-projeto, /ideia, replanejamento |
 | `executor` | Implementa UMA tarefa de ponta a ponta (código + testes + commit) | tarefa `pronta` |
-| `testador` | Verifica os critérios de aceite executando o software de verdade | após o executor |
-| `revisor` | Caça bugs no diff da tarefa | após o testador |
+| `executor-reforcado` | O executor num modelo mais forte (`opus`) | RETRABALHO: tarefa com `tentativas >= 1` |
+| `testador` | Verifica os critérios de aceite executando o software de verdade (e captura a tela, se houver UI) | após o executor |
+| `revisor` | Confere **conformidade** (entrega × pedido) e caça bugs no diff | após o testador |
 | `documentador` | Atualiza README/CLAUDE.md/docs do projeto | após lote de tarefas concluídas |
 | `pesquisador` | Pesquisa técnica na web antes de decisões importantes | dúvida de lib/API/abordagem |
 

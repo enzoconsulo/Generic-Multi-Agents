@@ -15,7 +15,21 @@ export interface AgenteSDK {
   description: string;
   prompt: string;
   tools?: string[];
+  /**
+   * Alias do modelo deste agente. Ausente = herda o do fluxo, que é o normal. Existe para
+   * as variantes `-reforcado` (ver `SUFIXO_REFORCO`); o nome do campo é o do SDK
+   * (`AgentDefinition.model`, conferido em sdk.d.ts da versão pinada — opção com nome
+   * errado é descartada em SILÊNCIO, e já custou caro aqui antes).
+   */
+  model?: string;
 }
+
+/**
+ * Sufixo das variantes reforçadas. O orquestrador despacha `<id>-reforcado` quando a
+ * tarefa já voltou reprovada (`tentativas >= 1`, protocolo regra 12) — o gatilho é a
+ * falha medida, não um palpite sobre dificuldade.
+ */
+export const SUFIXO_REFORCO = "-reforcado";
 
 /**
  * Retorna os agentes a injetar para uma ação, ou undefined quando não se aplica
@@ -32,6 +46,12 @@ export async function agentesParaAcao(
   raiz: string,
   idAcao: string,
   argumentos: string,
+  /**
+   * Modelo do RETRABALHO (`estrategia.reforco`). Quando informado, cada especialista ganha
+   * um gêmeo `<id>-reforcado` com esse modelo, para o orquestrador escalar a tarefa que já
+   * voltou reprovada. `null`/ausente = estratégia já no topo, nada a injetar.
+   */
+  reforco?: string | null,
 ): Promise<Record<string, AgenteSDK> | undefined> {
   if (idAcao !== "trabalhar") return undefined;
 
@@ -59,11 +79,26 @@ export async function agentesParaAcao(
         continue;
       }
       donoDoId.set(a.id, projeto);
-      registro[a.id] = {
+      const base: AgenteSDK = {
         description: a.descricao !== "" ? a.descricao : `Especialista ${a.nome}`,
         prompt: a.prompt,
         ...(a.ferramentas !== null && a.ferramentas.length > 0 ? { tools: a.ferramentas } : {}),
       };
+      registro[a.id] = base;
+
+      // Gêmeo reforçado: mesmo prompt e mesmas ferramentas, modelo mais forte. Custa um
+      // pouco de contexto (o prompt entra duas vezes) e evita o gasto muito maior de
+      // repetir um ciclo inteiro — executor + testador + revisor — com o modelo que já
+      // falhou uma vez.
+      if (typeof reforco === "string" && reforco !== "") {
+        registro[`${a.id}${SUFIXO_REFORCO}`] = {
+          ...base,
+          description:
+            `RETRABALHO (modelo ${reforco}) — ${base.description} ` +
+            "Usar quando a tarefa já voltou reprovada (tentativas >= 1).",
+          model: reforco,
+        };
+      }
     }
   }
 

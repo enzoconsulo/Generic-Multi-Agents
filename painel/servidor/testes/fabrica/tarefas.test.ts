@@ -74,6 +74,24 @@ describe("parsearSecoes (unidade)", () => {
     expect(secoes.revisao).toBe("A revisão.");
     expect(secoes.contexto).toBe("");
   });
+
+  /**
+   * Conformidade (T-049) é seção do protocolo desde 31/07 e responde a pergunta que
+   * ninguém respondia: o entregue é o que foi pedido? Sem estar no mapa, ela cairia no
+   * ramo "seção inventada" e o veredito do revisor sumiria da tela — o painel mostraria a
+   * tarefa como se ela nunca tivesse sido conferida.
+   */
+  it("Conformidade é seção do protocolo, não texto descartado", () => {
+    const secoes = parsearSecoes(
+      ["## Conformidade", "Conformidade: cumpre", "- critério 1 → server/x.js:10"].join("\n"),
+    );
+    expect(secoes.conformidade).toContain("Conformidade: cumpre");
+    expect(secoes.conformidade).toContain("critério 1");
+  });
+
+  it("tarefa antiga, sem a seção, não quebra (fica vazia)", () => {
+    expect(parsearSecoes("## Objetivo\nalgo").conformidade).toBe("");
+  });
 });
 
 describe("parse sem seções — caminho barato do painel (T-043)", () => {

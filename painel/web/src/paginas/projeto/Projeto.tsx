@@ -435,6 +435,7 @@ function DetalheTarefa({
       <CampoSecao rot="Critérios de aceite" texto={s.criteriosAceite} />
       <CampoSecao rot="Notas de execução" texto={s.notasExecucao} />
       <CampoSecao rot="Verificação" texto={s.verificacao} />
+      <CampoSecao rot="Conformidade" texto={s.conformidade} />
       <CampoSecao rot="Revisão" texto={s.revisao} />
     </div>
   );

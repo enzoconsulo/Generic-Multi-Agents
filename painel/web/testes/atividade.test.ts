@@ -36,6 +36,7 @@ function tarefa(id: string, status: string, agente: string | null = null): Taref
       criteriosAceite: "",
       notasExecucao: "",
       verificacao: "",
+      conformidade: "",
       revisao: "",
     },
   };

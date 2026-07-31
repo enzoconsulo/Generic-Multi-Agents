@@ -94,6 +94,8 @@ export interface SecoesTarefa {
   criteriosAceite: string;
   notasExecucao: string;
   verificacao: string;
+  /** Entrega × pedido (T-049) — separada da Revisão, que é sobre correção do código. */
+  conformidade: string;
   revisao: string;
 }
 

@@ -20,6 +20,8 @@
  * sessão, e sessão nova é prefixo novo para ESCREVER no cache (1,25× contra 0,1× da
  * leitura). Um `/trabalhar` real abriu 8 sessões, com 602k de cache escrito e 13,5M relidos.
  */
+import { SUFIXO_REFORCO } from "./agentes-dinamicos.js";
+
 export const PREAMBULO_HEADLESS = `<execucao-headless>
 Você está rodando como JOB do painel (Claude Agent SDK, sem interface interativa).
 
@@ -37,7 +39,27 @@ explicitamente o que faltou e por quê.
 
 `;
 
+/**
+ * Bloco de escalonamento de modelo (protocolo, regra 12). Só entra quando a estratégia do
+ * disparo TEM para onde subir e a ação injetou especialistas — senão seria instrução para
+ * usar agente que não existe, que é como se perde turno em despacho condenado.
+ */
+export function blocoReforco(modelo: string, reforco: string, ids: readonly string[]): string {
+  const lista = ids.length > 0 ? ids.map((id) => `\`${id}\``).join(", ") : "(nenhum)";
+  return `<escalonamento-de-modelo>
+Este fluxo roda em \`${modelo}\`. Para RETRABALHO existe uma versão reforçada de cada
+especialista, rodando em \`${reforco}\`: ${lista}.
+
+Regra: tarefa com \`tentativas >= 1\` no frontmatter — isto é, que JÁ voltou reprovada —
+deve ser despachada ao gêmeo \`<id>${SUFIXO_REFORCO}\`, não ao normal. Uma reprovação é
+prova de que o modelo atual não resolveu; repetir a mesma aposta gasta executor, testador e
+revisor outra vez e queima uma das 3 tentativas antes do bloqueio.
+</escalonamento-de-modelo>
+
+`;
+}
+
 /** Prefixa o preâmbulo a um prompt de job. */
-export function comPreambuloHeadless(prompt: string): string {
-  return `${PREAMBULO_HEADLESS}${prompt}`;
+export function comPreambuloHeadless(prompt: string, extra = ""): string {
+  return `${PREAMBULO_HEADLESS}${extra}${prompt}`;
 }

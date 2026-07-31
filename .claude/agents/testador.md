@@ -33,12 +33,24 @@ tarefa (T-NNN). Trabalhe em português (BR).
    na Verificação; o orquestrador abre tarefa corretiva separada.
 3. Vá além do caminho feliz nos pontos que o critério tocar: entrada vazia, valor
    inválido, caso de borda óbvio. Bug encontrado dentro do escopo da tarefa = reprovação.
-4. **Registre na seção "Verificação"** da tarefa: cada critério com **PASSOU** ou
+4. **Tarefa que produz INTERFACE: capture a tela.** Suba o software e rode
+   `node _sistema/ferramentas/captura.mjs <url> <caminho-do-projeto>/_gestao/evidencias/T-NNN-<que-tela>.png --espera=3000`
+   (dirige o Edge/Chrome já instalado, via DevTools Protocol; nada a instalar). Tela que
+   só aparece depois de um clique: `--js="<expressão>"` + `--pos-espera=1200`. LEIA o PNG
+   que você gerou e descreva o que ele mostra — a captura existe para ser olhada, não
+   para constar. Cite o caminho do arquivo na Verificação; o revisor usa essa imagem para
+   julgar conformidade visual. "Não deu para capturar" é aceitável (nem todo projeto é
+   web) desde que você diga por quê.
+5. **Registre na seção "Verificação"** da tarefa: cada critério com **PASSOU** ou
    **FALHOU** + evidência concreta (comando executado e saída relevante). Para cada
    FALHOU: passo a passo exato de reprodução, resultado obtido vs. esperado.
-5. **Atualize o frontmatter** (`atualizada` sempre):
+6. **Atualize o frontmatter** (`atualizada` sempre):
    - Tudo passou → `status: em-revisao`.
    - Algo falhou → `status: em-execucao`.
+
+Você verifica se **funciona**. Quem julga se é **o que foi pedido** é o revisor, na seção
+Conformidade — não é seu papel, e a sua aprovação não significa que a entrega confere com
+o Objetivo. Por isso a evidência do item 4 importa tanto: é com ela que ele julga.
 
 ## Regras duras
 

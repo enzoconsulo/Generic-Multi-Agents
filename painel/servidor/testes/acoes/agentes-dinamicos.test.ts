@@ -92,3 +92,39 @@ describe("agentesParaAcao — injeção da equipe do projeto no /trabalhar", () 
     expect(await agentesParaAcao(raiz, "trabalhar", "app")).toBeUndefined();
   });
 });
+
+/**
+ * Escalonamento de modelo (protocolo, regra 12): a tarefa que já voltou reprovada vai para
+ * um gêmeo do especialista rodando num modelo mais forte. O gatilho é a falha medida, não
+ * palpite de dificuldade — insistir com o modelo que já falhou paga executor + testador +
+ * revisor de novo e ainda queima uma das 3 tentativas.
+ */
+describe("agentesParaAcao — gêmeos reforçados", () => {
+  const equipe = [{ id: "frontend", descricao: "UI", prompt: "faça UI", ferramentas: ["Read"] }];
+
+  it("injeta `<id>-reforcado` com o modelo do reforço, mantendo prompt e ferramentas", async () => {
+    const raiz = fabricaComEquipe(equipe);
+    const ag = await agentesParaAcao(raiz, "trabalhar", "app", "opus");
+
+    expect(Object.keys(ag ?? {}).sort()).toEqual(["frontend", "frontend-reforcado"]);
+    const reforcado = ag?.["frontend-reforcado"];
+    // O nome do campo é o do SDK (`AgentDefinition.model`): errado, seria ignorado EM
+    // SILÊNCIO e o gêmeo rodaria no mesmo modelo do fluxo, sem ninguém notar.
+    expect(reforcado?.model).toBe("opus");
+    expect(reforcado?.prompt).toBe("faça UI");
+    expect(reforcado?.tools).toEqual(["Read"]);
+    expect(reforcado?.description).toContain("RETRABALHO");
+    // O normal segue sem `model`: herda o do fluxo, que é o comportamento de sempre.
+    expect(ag?.["frontend"]?.model).toBeUndefined();
+  });
+
+  it("estratégia no topo (sem reforço) não injeta gêmeo nenhum", async () => {
+    const raiz = fabricaComEquipe(equipe);
+    expect(Object.keys((await agentesParaAcao(raiz, "trabalhar", "app", null)) ?? {})).toEqual([
+      "frontend",
+    ]);
+    expect(Object.keys((await agentesParaAcao(raiz, "trabalhar", "app")) ?? {})).toEqual([
+      "frontend",
+    ]);
+  });
+});

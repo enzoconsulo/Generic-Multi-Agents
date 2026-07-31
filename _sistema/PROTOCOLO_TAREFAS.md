@@ -44,7 +44,12 @@ O que o executor precisa saber: decisões já tomadas, arquivos relevantes, arma
 (preenchido pelo executor: o que fez, arquivos alterados, comandos de teste, hash do commit)
 
 ## Verificação
-(preenchido pelo testador: cada critério com PASSOU/FALHOU + evidência; se falhou, como reproduzir)
+(preenchido pelo testador: cada critério com PASSOU/FALHOU + evidência; se falhou, como reproduzir.
+ Tarefa de interface: caminho da captura em _gestao/evidencias/)
+
+## Conformidade
+(preenchido pelo revisor: `Conformidade: cumpre | cumpre-parcial | nao-cumpre` + cada critério
+ mapeado ao artefato que o cumpre, e o julgamento do Objetivo)
 
 ## Revisão
 (preenchido pelo revisor: achados com arquivo:linha e gravidade, ou "aprovado sem ressalvas")
@@ -61,8 +66,8 @@ O que o executor precisa saber: decisões já tomadas, arquivos relevantes, arma
 | `em-execucao` | `em-revisao` | executor | despacho mandou pular teste (tarefa trivial; decisão do orquestrador anotada na tarefa) |
 | `em-teste` | `em-revisao` | testador | todos os critérios PASSARAM |
 | `em-teste` | `em-execucao` | testador | algum critério FALHOU (relatório na seção Verificação) |
-| `em-revisao` | `concluida` | revisor | sem bugs relevantes |
-| `em-revisao` | `em-execucao` | revisor | bugs encontrados (lista na seção Revisão) |
+| `em-revisao` | `concluida` | revisor | conformidade `cumpre` E sem bugs relevantes |
+| `em-revisao` | `em-execucao` | revisor | bugs encontrados (seção Revisão) OU conformidade `nao-cumpre` (seção Conformidade) |
 | `em-execucao` | `pronta` | orquestrador | saneamento: sessão anterior caiu sem concluir a etapa (notas parciais preservadas) |
 | qualquer | `bloqueada` | orquestrador | 3 tentativas esgotadas, ou impedimento externo (motivo na tarefa) |
 | `bloqueada` | `pronta` | orquestrador | impedimento resolvido (zera `tentativas`) |
@@ -101,3 +106,19 @@ Regras:
 10. **Marco de fase:** o resultado da verificação de marco (aprovado/reprovado + data,
     com IDs das correções se houver) é registrado pelo orquestrador na linha `Marco:`
     da fase no PLANO.md do projeto — marco não vive em tarefa nenhuma.
+11. **Dois portões, duas perguntas.** O testador responde "**funciona?**" executando os
+    critérios de aceite. O revisor responde "**é o que foi pedido?**" (Conformidade) e
+    "**está correto?**" (Revisão). São independentes: uma entrega pode passar em todos os
+    critérios, não ter bug nenhum e ainda assim não ser a tarefa — critério frouxo ou mal
+    escrito não vira licença para entregar outra coisa. Reprovar por conformidade NÃO
+    exige bug. Tarefa que produz interface leva captura de tela em
+    `_gestao/evidencias/T-NNN-*.png` (feita pelo testador com
+    `_sistema/ferramentas/captura.mjs`), e é sobre ela que a conformidade visual é julgada.
+12. **Escalonamento de modelo no retrabalho.** A 1ª execução vai no modelo do disparo. Da
+    2ª em diante (`tentativas >= 1`, ou seja, a tarefa já voltou reprovada), o orquestrador
+    despacha o construtor REFORÇADO: `executor-reforcado` (ou, quando o painel injetou a
+    equipe, `<id>-reforcado` do especialista). O gatilho é fato medido — a tarefa falhou —,
+    não palpite sobre dificuldade. Insistir no mesmo modelo depois de uma reprovação gasta
+    executor + testador + revisor de novo e queima uma das 3 tentativas; subir a capacidade
+    custa menos que um ciclo perdido. Se o disparo já for `opus`/`fable`, não há para onde
+    escalar: siga com o construtor normal e registre isso.

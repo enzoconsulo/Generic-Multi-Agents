@@ -128,11 +128,13 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   esperar o `result` significaria ter o dado só quando a retomada não importa mais.
 - **Uma conexão SSE por página.** `Projeto.tsx` chama `useJobsAoVivo()` uma vez e passa o
   estado para baixo (ex.: `SecaoCi`). Abrir uma segunda quebra a decisão de canal único.
-- **DÁ para ver a tela: use `ferramentas/captura.mjs`.** Isso resolveu a maior lacuna do
+- **DÁ para ver a tela: use `../_sistema/ferramentas/captura.mjs`.** Isso resolveu a maior lacuna do
   projeto (nenhuma tela tinha sido vista renderizada até 2026-07-28).
-  `node ferramentas/captura.mjs <url> <arquivo.png> --espera=3000` dirige o Edge/Chrome
-  já instalado no Windows via DevTools Protocol — sem instalar nada — e o PNG pode ser
-  LIDO. Antes de marcar tarefa de UI como `concluida`, capture e olhe.
+  `node ../_sistema/ferramentas/captura.mjs <url> <arquivo.png> --espera=3000` dirige o
+  Edge/Chrome já instalado no Windows via DevTools Protocol — sem instalar nada — e o PNG
+  pode ser LIDO. Antes de marcar tarefa de UI como `concluida`, capture e olhe.
+  (Morava em `painel/ferramentas/`; subiu para `_sistema/` em 31/07, quando a prova visual
+  passou a ser exigida dos agentes em QUALQUER projeto web, não só aqui.)
   - Não use `--screenshot` direto do navegador: captura antes de o React resolver os
     fetches e sai "Carregando…" em toda seção. E `--virtual-time-budget`, que existiria
     para isso, DERRUBA o navegador nesta máquina (testado). Por isso o script usa CDP.

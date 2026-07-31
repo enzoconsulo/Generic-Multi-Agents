@@ -23,6 +23,7 @@ function tarefa(status: string): TarefaCompleta {
       criteriosAceite: "",
       notasExecucao: "",
       verificacao: "",
+      conformidade: "",
       revisao: "",
     },
   };

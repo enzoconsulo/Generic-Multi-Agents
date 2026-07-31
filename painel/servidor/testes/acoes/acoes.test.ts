@@ -31,6 +31,44 @@ describe("montarJobAcao — comando, cwd e escopo de lock", () => {
     expect(job.titulo).toBe("/novo-projeto jogo");
   });
 
+  /**
+   * Escalonamento (protocolo, regra 12): o prompt só anuncia os gêmeos reforçados quando
+   * eles EXISTEM. Anunciar agente não injetado é o erro que a T-045 já pagou — o fluxo
+   * despacha, o SDK responde "not found" e o turno vai embora.
+   */
+  it("anuncia o reforço só quando há reforço E especialistas injetados", () => {
+    const comEquipe = montarJobAcao(
+      {
+        id: "trabalhar",
+        argumentos: "app",
+        modelo: "sonnet",
+        reforco: "opus",
+        agentes: { frontend: {}, "frontend-reforcado": {} },
+      },
+      RAIZ,
+    );
+    const prompt = String(comEquipe.params?.["prompt"]);
+    expect(prompt).toContain("escalonamento-de-modelo");
+    expect(prompt).toContain("`opus`");
+    // Lista os ids BASE, nunca os gêmeos (despachar `x-reforcado-reforcado` não existe).
+    expect(prompt).toContain("`frontend`");
+    expect(prompt).not.toContain("`frontend-reforcado`");
+  });
+
+  it("sem especialistas, ou sem reforço, o prompt não fala de escalonamento", () => {
+    const semEquipe = montarJobAcao(
+      { id: "trabalhar", argumentos: "app", modelo: "sonnet", reforco: "opus" },
+      RAIZ,
+    );
+    expect(String(semEquipe.params?.["prompt"])).not.toContain("escalonamento-de-modelo");
+
+    const noTopo = montarJobAcao(
+      { id: "trabalhar", argumentos: "app", modelo: "fable", reforco: null, agentes: { f: {} } },
+      RAIZ,
+    );
+    expect(String(noTopo.params?.["prompt"])).not.toContain("escalonamento-de-modelo");
+  });
+
   it("trava a fábrica inteira (global) para ações de orquestração", () => {
     expect(montarJobAcao({ id: "encerrar-dia", modelo: "haiku" }, RAIZ).escopo).toBe("global");
     expect(montarJobAcao({ id: "manutencao", modelo: "haiku" }, RAIZ).escopo).toBe("global");

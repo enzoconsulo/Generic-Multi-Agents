@@ -144,6 +144,7 @@ export function parsearSecoes(corpo: string): SecoesTarefa {
     "criterios de aceite": "criteriosAceite",
     "notas de execucao": "notasExecucao",
     verificacao: "verificacao",
+    conformidade: "conformidade",
     revisao: "revisao",
   };
   const secoes: SecoesTarefa = {
@@ -152,6 +153,7 @@ export function parsearSecoes(corpo: string): SecoesTarefa {
     criteriosAceite: "",
     notasExecucao: "",
     verificacao: "",
+    conformidade: "",
     revisao: "",
   };
 

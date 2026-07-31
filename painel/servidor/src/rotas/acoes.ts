@@ -120,7 +120,12 @@ router.post("/:id", async (req, res) => {
 
   try {
     // Agentes dinâmicos: só /trabalhar <projeto> com equipe.json recebe especialistas.
-    const agentes = await agentesParaAcao(config.fabricaRaiz, req.params.id, argumentos);
+    const agentes = await agentesParaAcao(
+      config.fabricaRaiz,
+      req.params.id,
+      argumentos,
+      estrategia.reforco,
+    );
 
     const novo = montarJobAcao(
       {
@@ -128,6 +133,7 @@ router.post("/:id", async (req, res) => {
         argumentos,
         modelo: estrategia.modelo,
         fallback: estrategia.fallback,
+        reforco: estrategia.reforco,
         ...(agentes ? { agentes } : {}),
         ...(typeof corpo.maxTurns === "number" ? { maxTurns: corpo.maxTurns } : {}),
       },

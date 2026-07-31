@@ -64,6 +64,16 @@ export interface EstrategiaModelo {
   fallback: string | null;
   custo: TierCusto;
   descricao: string;
+  /**
+   * Modelo do RETRABALHO — para onde subir quando o `modelo` não deu conta (protocolo,
+   * regra 12). `null` = a estratégia já está no topo, não há para onde escalar.
+   *
+   * Não confundir com `fallback`, que é do SDK e trata INDISPONIBILIDADE (primário sem
+   * limite/sobrecarregado). Aqui o primário está disponível e funcionando; o que falhou
+   * foi a capacidade — a tarefa voltou reprovada. São gatilhos opostos e por isso são
+   * dois campos.
+   */
+  reforco: string | null;
 }
 
 const ESTRATEGIAS_MODELO: readonly EstrategiaModelo[] = [
@@ -75,6 +85,7 @@ const ESTRATEGIAS_MODELO: readonly EstrategiaModelo[] = [
     custo: "alto",
     descricao:
       "Prioriza o Fable (o mais capaz); se estiver sem limite ou sobrecarregado, cai automaticamente para o Opus. Melhor qualidade, com rede de segurança.",
+    reforco: null,
   },
   {
     id: "fable",
@@ -83,6 +94,7 @@ const ESTRATEGIAS_MODELO: readonly EstrategiaModelo[] = [
     fallback: null,
     custo: "alto",
     descricao: "Fable puro, o mais capaz. Sem fallback: se ficar sem limite, o fluxo falha em vez de cair para o Opus.",
+    reforco: null,
   },
   {
     id: "opus",
@@ -91,6 +103,7 @@ const ESTRATEGIAS_MODELO: readonly EstrategiaModelo[] = [
     fallback: null,
     custo: "alto",
     descricao: "Opus 4.8 — alta capacidade, um pouco mais barato que o Fable.",
+    reforco: "fable",
   },
   {
     id: "sonnet",
@@ -99,6 +112,7 @@ const ESTRATEGIAS_MODELO: readonly EstrategiaModelo[] = [
     fallback: null,
     custo: "medio",
     descricao: "Equilíbrio entre qualidade e custo. Boa escolha padrão para trabalho rotineiro.",
+    reforco: "opus",
   },
   {
     id: "haiku",
@@ -107,6 +121,7 @@ const ESTRATEGIAS_MODELO: readonly EstrategiaModelo[] = [
     fallback: null,
     custo: "baixo",
     descricao: "O mais rápido e barato. Ideal para ações leves como /status ou testes rápidos.",
+    reforco: "sonnet",
   },
 ];
 
