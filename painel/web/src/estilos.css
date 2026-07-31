@@ -573,6 +573,14 @@ a:hover {
   margin: 0;
   overflow-wrap: anywhere;
 }
+/* Rótulo com explicação no `title` (T-049). O sublinhado pontilhado é o que avisa que há
+   algo a ler ali — os campos de custo agora usam prefixos ("~" estimado, "≥" piso) e um
+   símbolo sem pista de onde se explica é pior que não ter símbolo nenhum. */
+.campo dt.campo-com-ajuda {
+  text-decoration: underline dotted var(--cor-borda);
+  text-underline-offset: 0.2rem;
+  cursor: help;
+}
 
 .secao-tarefa {
   margin-top: 1rem;

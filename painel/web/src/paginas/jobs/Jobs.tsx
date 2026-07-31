@@ -13,7 +13,8 @@ import {
   type EtapaPipeline,
   type SegmentoAgente,
 } from "../../lib/atividade";
-import type { Job, LinhaLog, Pendencia, ResumoTrecho, TokensJob } from "../../lib/tipos";
+import type { Job, LinhaLog, Pendencia, ResumoTrecho, ResultadoContabil } from "../../lib/tipos";
+import { custoDoJob, explicarCusto, formatarCusto } from "../../lib/custo";
 import {
   classeEstadoJob,
   decorrido,
@@ -159,15 +160,11 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
   const segmentos = job.usaClaude ? segmentarPorAgente(linhas) : segmentarPorEstagio(linhas);
   const tarefa = tarefaEmFoco(linhas);
   const modelo = typeof job.params["modelo"] === "string" ? job.params["modelo"] : "—";
-  const resultado = job.resultado as {
-    custoUsd?: number | null;
-    numTurnos?: number | null;
-    tokens?: TokensJob | null;
-    motivo?: string;
-    reabreEm?: string | null;
-    sessoes?: number;
-    despachosFundo?: number;
-  } | null;
+  const resultado = job.resultado as
+    | (ResultadoContabil & { motivo?: string; reabreEm?: string | null })
+    | null;
+  // Real ou estimado, com o prefixo que declara qual é. Ver `lib/custo`.
+  const custo = custoDoJob(job);
   // Decisão e texto vivem em `lib/limite-uso` — os testes da web são de lógica pura, então
   // lógica dentro do componente seria lógica não verificada.
   const avisoCota = avisoLimiteDeUso(resultado);
@@ -236,12 +233,20 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
         {resultado?.numTurnos != null && <Campo rot="Turnos" valor={String(resultado.numTurnos)} />}
         {/* Só quando passa de 1: um job com uma sessão é o esperado e o campo viraria ruído.
             Acima disso importa — cada sessão reescreve o prefixo do cache, a linha mais cara
-            da conta (1,25x contra 0,1x da leitura). Ver `sessoes` no runner. */}
+            da conta (~1,75x contra 0,1x da leitura). Ver `sessoes` no runner. */}
         {resultado?.sessoes != null && resultado.sessoes > 1 && (
           <Campo rot="Sessões abertas" valor={String(resultado.sessoes)} />
         )}
-        {resultado?.custoUsd != null && (
-          <Campo rot="Custo real" valor={`~$${resultado.custoUsd.toFixed(4)}`} />
+        {/* T-049: o campo aparece MESMO em job cortado, com "~" (estimado) ou "≥"
+            (subestimado). Antes ele simplesmente não renderizava quando `custoUsd` era
+            null — e job cortado por cota é justamente o mais caro, então o painel calava
+            exatamente onde precisava falar. */}
+        {custo !== null && (
+          <Campo
+            rot={custo.estimado ? "Custo estimado" : "Custo real"}
+            valor={formatarCusto(custo)}
+            ajuda={explicarCusto(custo)}
+          />
         )}
         {/* Tokens ao lado do preço (T-044): preço diz QUANTO, token diz POR QUÊ. Numa
             auditoria de custo é a diferença entre saber que ficou caro e saber onde. */}
@@ -251,8 +256,36 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
             <Campo
               rot="Contexto relido"
               valor={`${milhares(resultado.tokens.cacheLeitura)} de cache`}
+              ajuda={
+                "Contexto reenviado a cada volta. Num fluxo agêntico costuma ser a maior" +
+                " parcela do volume: se ele domina, o caro é o TAMANHO DO CONTEXTO, não o" +
+                " que o modelo escreveu."
+              }
             />
+            {/* A razão que responde "está eficiente?" numa olhada. Preço e token isolados
+                não comparam entre jobs de tamanhos diferentes; a razão compara. */}
+            {resultado.tokens.saida > 0 && (
+              <Campo
+                rot="Relido por token escrito"
+                valor={`${Math.round(resultado.tokens.cacheLeitura / resultado.tokens.saida)}×`}
+                ajuda={
+                  "Quantos tokens de contexto foram relidos para cada token produzido." +
+                  " É a medida de eficiência do fluxo: sobe quando os agentes carregam" +
+                  " contexto demais ou dão voltas curtas demais."
+                }
+              />
+            )}
           </>
+        )}
+        {resultado?.tokensParciais === true && (
+          <Campo
+            rot="Contabilidade"
+            valor="parcial"
+            ajuda={
+              "O fluxo foi cortado antes de o SDK fechar a conta. Os números vêm do que foi" +
+              " observado durante a execução — são um PISO do consumo real."
+            }
+          />
         )}
         {job.sessionId !== undefined && <Campo rot="Sessão" valor={job.sessionId} />}
         {job.erro !== undefined && avisoCota === null && <Campo rot="Erro" valor={job.erro} />}
@@ -640,10 +673,17 @@ function Console({ linhas, estado }: { linhas: LinhaLog[]; estado: string }) {
   );
 }
 
-function Campo({ rot, valor }: { rot: string; valor: string }) {
+/**
+ * `ajuda` vira `title` no rótulo (T-049). Existe porque os campos de custo passaram a
+ * carregar QUALIFICAÇÃO — "~" é estimativa, "≥" é piso — e um símbolo que ninguém consegue
+ * decifrar não informa: ou explica onde está, ou vira ruído com cara de precisão.
+ */
+function Campo({ rot, valor, ajuda }: { rot: string; valor: string; ajuda?: string }) {
   return (
     <div className="campo">
-      <dt>{rot}</dt>
+      <dt {...(ajuda !== undefined ? { title: ajuda, className: "campo-com-ajuda" } : {})}>
+        {rot}
+      </dt>
       <dd className="mono">{valor}</dd>
     </div>
   );

@@ -181,6 +181,29 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   `modelUsage` com o custo **no meio** do fluxo acusa divergência em toda rodada saudável —
   a conferência só vale com os dois valores finais, e há teste travando isso. A invariante
   boa: a soma de `costUSD` do `modelUsage` bate com o `total_cost_usd` até a 9ª casa.
+- **Contabilidade presa ao `result` some justo no job caro.** `custoUsd`/`tokens` só eram
+  gravados a partir da mensagem `result` do SDK. Job cortado ANTES dela — cota batida,
+  cancelamento, watchdog — gravava `null`. Como estourar cota é o desfecho dos jobs mais
+  caros, o painel subcontava de forma ENVIESADA: uma rodada de 40 min, 21 despachos de
+  agente, 472 chamadas de ferramenta e 5 tarefas concluídas apareceu como US$ 0,00, ao lado
+  de um `/status` de 40 s marcando US$ 0,32 — o inverso exato da realidade. Pior, a T-045
+  já tinha tentado preservar contabilidade parcial, mas a preservação dependia do mesmo
+  `result` que nunca chega. Hoje o `AcumuladorDeUso` lê `message.usage` de cada mensagem
+  `assistant`, então a conta existe ANTES de qualquer `result`. Ao acrescentar dado de
+  execução: pergunte o que sobra dele quando o fluxo é cortado no meio.
+- **`message.usage` repete na mesma volta — deduplique por `message.id`.** O `sdk.d.ts` diz,
+  no comentário de `SDKAssistantMessage.timestamp`: *"One API assistant turn may produce
+  several assistant messages sharing a message.id"*. O `usage` de cada uma é o da VOLTA
+  inteira, não o do pedaço. Somar mensagem a mensagem multiplica a conta pelo número de
+  blocos de conteúdo — e o erro é para CIMA, o pior lado: inventa gasto que não existe e
+  manda otimizar fantasma.
+- **Escrita de cache NÃO é 1,25× — meça antes de acreditar na tabela.** A tabela pública diz
+  1,25× (TTL 5 min) e 2× (TTL 1 h); o SDK usa os DOIS, em proporção que varia por job.
+  Calibrando contra os 6 jobs reais com telemetria, 1,25× errava 18,5% em média (29% nos
+  pequenos) e 1,75× erra 5,8%. Resolvendo a mistura: `5dfb1fe3` deu ~100% em TTL de 1 h
+  (bate na 4ª casa), `358c14f1` deu ~22%. **Nenhum multiplicador fixo pode ser exato** — por
+  isso a UI rotula com `~` e `≥` em vez de fingir precisão. Se mexer em `precos.ts`, refaça
+  a varredura contra `dados/jobs/`; há teste (`precos.test.ts`) travando o erro médio.
 - **Hook que abre conexão vira N conexões quando dois componentes o chamam.** `App` assina
   o SSE para o selo do cabeçalho e a página assinava de novo: 2 conexões, 2 fanouts de
   cada evento, `/api/jobs` e `/api/inputs` em dobro — com a regra "uma conexão por página"

@@ -506,6 +506,33 @@ export interface TokensJob {
   cacheEscrita: number;
   porModelo: Record<
     string,
-    { entrada: number; saida: number; cacheLeitura: number; custoUsd: number }
+    {
+      entrada: number;
+      saida: number;
+      cacheLeitura: number;
+      /** Opcional: jobs gravados antes da T-049 não têm escrita de cache por modelo. */
+      cacheEscrita?: number;
+      custoUsd: number;
+    }
   >;
+}
+
+/**
+ * Contabilidade de um job, como o servidor a grava em `job.resultado` (T-049).
+ * Espelha os campos de `ResultadoClaude` que a UI consome; tudo opcional porque jobs
+ * antigos em `dados/` foram gravados sem eles.
+ */
+export interface ResultadoContabil {
+  /** Custo REAL do SDK. `null`/ausente em job cortado antes do `result`. */
+  custoUsd?: number | null;
+  /** Custo estimado pela tabela de preços do servidor — sempre que houver tokens. */
+  custoEstimadoUsd?: number | null;
+  /** Modelos fora da tabela: quando não-vazio, a estimativa está SUBESTIMADA. */
+  modelosSemPreco?: string[];
+  numTurnos?: number | null;
+  tokens?: TokensJob | null;
+  /** Tokens vindos do acumulador incremental, não do `result` — job cortado. */
+  tokensParciais?: boolean;
+  sessoes?: number;
+  despachosFundo?: number;
 }

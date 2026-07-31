@@ -1,6 +1,7 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { ContextoExecucao, Job, NovaPendencia, Runner } from "../tipos.js";
 import { ehEsforco, type Esforco } from "../robustez/guardrails.js";
+import { estimarCusto } from "./precos.js";
 
 /**
  * Runner que executa um fluxo da fábrica via Claude Agent SDK (T-008). O padrão de uso
@@ -46,8 +47,18 @@ export interface TokensJob {
   saida: number;
   cacheLeitura: number;
   cacheEscrita: number;
-  /** Um fluxo pode usar mais de um modelo (fallback, subagentes com modelo próprio). */
-  porModelo: Record<string, { entrada: number; saida: number; cacheLeitura: number; custoUsd: number }>;
+  /**
+   * Um fluxo pode usar mais de um modelo (fallback, subagentes com modelo próprio).
+   *
+   * `cacheEscrita` entra aqui na T-049: sem ele não dá para ESTIMAR o custo por modelo, e
+   * escrita de cache é a linha mais cara por token (1,25× a entrada, contra 0,1× da
+   * leitura). `custoUsd` é o que o SDK reportou — fica `0` no acumulador incremental,
+   * porque ali o dado de preço não existe; quem preenche é `custoEstimadoUsd` do job.
+   */
+  porModelo: Record<
+    string,
+    { entrada: number; saida: number; cacheLeitura: number; cacheEscrita: number; custoUsd: number }
+  >;
 }
 
 export interface ResultadoClaude {
@@ -60,6 +71,23 @@ export interface ResultadoClaude {
   texto: string;
   /** null quando o SDK não reportou uso (erro precoce, versão sem o campo). */
   tokens: TokensJob | null;
+  /**
+   * `true` quando `tokens` veio do acumulador incremental (mensagens `assistant`) e não do
+   * `modelUsage` do `result` (T-049). Só acontece em job cortado antes do `result` — que é
+   * justamente o caro. A UI precisa disso para não apresentar número parcial como fechado.
+   */
+  tokensParciais?: boolean;
+  /**
+   * Custo ESTIMADO pela tabela de `precos.ts`, calculado sempre que há tokens. Existe para
+   * dar preço a job cortado (onde `custoUsd` é `null`) e, nos jobs completos, para servir
+   * de conferência contínua da tabela contra o valor real — de graça, sem gastar cota.
+   */
+  custoEstimadoUsd?: number | null;
+  /**
+   * Modelos que apareceram no uso e não estão na tabela de preços. Não-vazio =
+   * `custoEstimadoUsd` está SUBESTIMADO e a UI tem de dizer isso.
+   */
+  modelosSemPreco?: string[];
   /**
    * Causa da falha quando ela é RECONHECÍVEL (T-045). `limite-uso` é a única hoje e existe
    * para a UI distinguir "a fábrica tem um bug" de "a assinatura acabou, volta às 14:40" —
@@ -155,7 +183,18 @@ interface MensagemSDK {
   session_id?: string;
   model?: string;
   parent_tool_use_id?: string | null;
-  message?: { content?: BlocoConteudo[] };
+  /**
+   * `message` é o `BetaMessage` da API (sdk.d.ts: `SDKAssistantMessage.message`). Além do
+   * conteúdo, ele carrega `id`, `model` e `usage` — a contabilidade POR VOLTA, que é o que
+   * permite acumular custo sem esperar o `result`. Tudo opcional aqui de propósito: o
+   * runner nunca pode quebrar por churn de versão do SDK.
+   */
+  message?: {
+    content?: BlocoConteudo[];
+    id?: string;
+    model?: string;
+    usage?: Record<string, unknown>;
+  };
   is_error?: boolean;
   total_cost_usd?: number;
   num_turns?: number;
@@ -164,10 +203,12 @@ interface MensagemSDK {
   modelUsage?: Record<string, unknown>;
 }
 
+/** Lê número defensivamente: campo ausente, nulo ou estranho vira 0. */
+const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+
 /** Soma o `modelUsage` do SDK. Nunca lança: campo ausente/estranho vira null. */
 function lerTokens(modelUsage: Record<string, unknown> | undefined): TokensJob | null {
   if (modelUsage === undefined || modelUsage === null || typeof modelUsage !== "object") return null;
-  const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
   const total: TokensJob = { entrada: 0, saida: 0, cacheLeitura: 0, cacheEscrita: 0, porModelo: {} };
 
   for (const [modelo, bruto] of Object.entries(modelUsage)) {
@@ -176,13 +217,92 @@ function lerTokens(modelUsage: Record<string, unknown> | undefined): TokensJob |
     const entrada = num(u["inputTokens"]);
     const saida = num(u["outputTokens"]);
     const cacheLeitura = num(u["cacheReadInputTokens"]);
+    const cacheEscrita = num(u["cacheCreationInputTokens"]);
     total.entrada += entrada;
     total.saida += saida;
     total.cacheLeitura += cacheLeitura;
-    total.cacheEscrita += num(u["cacheCreationInputTokens"]);
-    total.porModelo[modelo] = { entrada, saida, cacheLeitura, custoUsd: num(u["costUSD"]) };
+    total.cacheEscrita += cacheEscrita;
+    total.porModelo[modelo] = {
+      entrada,
+      saida,
+      cacheLeitura,
+      cacheEscrita,
+      custoUsd: num(u["costUSD"]),
+    };
   }
   return Object.keys(total.porModelo).length === 0 ? null : total;
+}
+
+/**
+ * Acumulador de uso lido das mensagens `assistant` (T-049) — a contabilidade que sobrevive
+ * a um job cortado antes do `result`.
+ *
+ * **Deduplica por `message.id`, e isso não é zelo excessivo.** O próprio `sdk.d.ts` avisa,
+ * no comentário de `SDKAssistantMessage.timestamp`: *"One API assistant turn may produce
+ * several assistant messages sharing a message.id"*. O `usage` que vem em cada uma delas é
+ * o da VOLTA inteira, não o do pedaço — somar mensagem a mensagem multiplicaria a conta
+ * pelo número de blocos de conteúdo, e o erro seria para CIMA, que é o pior lado: um
+ * acumulador que exagera vira "descobrimos um gasto oculto" e manda otimizar o que não
+ * existe. Contar volta distinta é a única leitura correta.
+ */
+class AcumuladorDeUso {
+  private readonly voltas = new Set<string>();
+  private readonly porModelo: TokensJob["porModelo"] = {};
+  /** Voltas sem `message.id` — contadas, mas sem poder deduplicar. Ver `confiavel`. */
+  private semId = 0;
+
+  /** Registra uma mensagem `assistant`. Idempotente por `message.id`. */
+  registrar(msg: MensagemSDK): void {
+    const m = msg.message;
+    if (m === undefined || m.usage === undefined || typeof m.usage !== "object") return;
+
+    const id = typeof m.id === "string" ? m.id : null;
+    if (id === null) this.semId += 1;
+    else if (this.voltas.has(id)) return;
+    else this.voltas.add(id);
+
+    const modelo = typeof m.model === "string" && m.model !== "" ? m.model : "desconhecido";
+    const alvo = (this.porModelo[modelo] ??= {
+      entrada: 0,
+      saida: 0,
+      cacheLeitura: 0,
+      cacheEscrita: 0,
+      custoUsd: 0,
+    });
+    alvo.entrada += num(m.usage["input_tokens"]);
+    alvo.saida += num(m.usage["output_tokens"]);
+    alvo.cacheLeitura += num(m.usage["cache_read_input_tokens"]);
+    alvo.cacheEscrita += num(m.usage["cache_creation_input_tokens"]);
+  }
+
+  /** Voltas de API distintas observadas — o substituto honesto de `num_turns`. */
+  get voltasDistintas(): number {
+    return this.voltas.size + this.semId;
+  }
+
+  /**
+   * Sem `message.id` em alguma volta não há como garantir que não houve dupla contagem.
+   * A UI usa isto para não vender precisão que o dado não tem.
+   */
+  get confiavel(): boolean {
+    return this.semId === 0;
+  }
+
+  /** Fecha o acumulado; `null` quando nada foi registrado. */
+  fechar(): TokensJob | null {
+    const nomes = Object.keys(this.porModelo);
+    if (nomes.length === 0) return null;
+    const total: TokensJob = { entrada: 0, saida: 0, cacheLeitura: 0, cacheEscrita: 0, porModelo: this.porModelo };
+    for (const nome of nomes) {
+      const u = this.porModelo[nome];
+      if (u === undefined) continue;
+      total.entrada += u.entrada;
+      total.saida += u.saida;
+      total.cacheLeitura += u.cacheLeitura;
+      total.cacheEscrita += u.cacheEscrita;
+    }
+    return total;
+  }
 }
 
 export class RunnerClaude implements Runner {
@@ -265,6 +385,17 @@ export class RunnerClaude implements Runner {
     let sessoes = 0;
     /** Ver `despachosFundo`: subagente despachado em segundo plano dentro de um headless. */
     let despachosFundo = 0;
+    /**
+     * Contabilidade que sobrevive ao corte (T-049): alimentada a cada mensagem `assistant`,
+     * então já vale ANTES de qualquer `result`. Nos jobs completos serve de conferência.
+     */
+    const acumulador = new AcumuladorDeUso();
+    /**
+     * Chamadas de ferramenta observadas. É o sinal objetivo de que houve TRABALHO num job
+     * cortado — `numTurnos` vem `null` nesse caso, e era ele que a mensagem de falha
+     * consultava para decidir se dizia "nada foi entregue".
+     */
+    let ferramentas = 0;
     const partes: string[] = [];
     /**
      * Disjuntor de cota (T-045). Uma vez batido o limite da assinatura, TODA continuação é
@@ -293,6 +424,10 @@ export class RunnerClaude implements Runner {
           break;
 
         case "assistant": {
+          // ANTES de qualquer coisa: a contabilidade não pode depender de o resto do
+          // tratamento dar certo. É o único ponto do fluxo em que o custo é observável
+          // enquanto ele acontece.
+          acumulador.registrar(msg);
           const subagente = msg.parent_tool_use_id != null;
           for (const bloco of msg.message?.content ?? []) {
             if (bloco.type === "text" && bloco.text) {
@@ -305,6 +440,7 @@ export class RunnerClaude implements Runner {
               // tela do CLI), não como erro de transporte — daí a checagem ser aqui.
               if (limiteBatido === null && ehLimiteDeUso(bloco.text)) limiteBatido = bloco.text;
             } else if (bloco.type === "tool_use" && bloco.name) {
+              ferramentas += 1;
               const alvo = alvoDeSubagente(bloco);
               if (ehDespachoEmFundo(bloco)) {
                 despachosFundo += 1;
@@ -411,6 +547,52 @@ export class RunnerClaude implements Runner {
       }
     }
 
+    // Contabilidade final (T-049). O `modelUsage` do `result` é a fonte AUTORITATIVA e vence
+    // sempre; o acumulador incremental entra só quando ele não chegou — job cortado por cota,
+    // cancelamento ou watchdog, que são exatamente os caros. Antes disto esse caso gravava
+    // `custoUsd: null` + `tokens: null`, e o histórico do projeto marcava US$ 0,00 para uma
+    // rodada de 40 min com 21 despachos de agente.
+    const acumulado = acumulador.fechar();
+    const tokensParciais = tokens === null && acumulado !== null;
+    if (tokensParciais) tokens = acumulado;
+
+    // Turnos: mesma lógica. `num_turns` só existe no `result`; sem ele, voltas de API
+    // distintas é a medida honesta do que aconteceu.
+    if (numTurnos === null && acumulador.voltasDistintas > 0) {
+      numTurnos = acumulador.voltasDistintas;
+    }
+
+    const estimativa = tokens !== null ? estimarCusto(tokens.porModelo) : null;
+    const custoEstimadoUsd = estimativa?.usd ?? null;
+    const modelosSemPreco = estimativa?.modelosDesconhecidos ?? [];
+
+    // Conferência da TABELA DE PREÇOS contra o custo real, de graça, em todo job completo.
+    // Sem isto `precos.ts` só seria exercitada no caminho de falha — e uma tabela que
+    // envelhece sem ninguém perceber é a mesma família do `watchdogMs` que ninguém lia.
+    // Tolerância larga (20%) de propósito: TTL de cache e requisições de busca web entram
+    // no preço real e não no modelo simplificado — o alvo é pegar tabela ERRADA (que erra
+    // por dezenas de por cento), não perseguir a última casa decimal.
+    if (custoUsd !== null && custoUsd > 0.01 && custoEstimadoUsd !== null && modelosSemPreco.length === 0) {
+      const desvio = Math.abs(custoEstimadoUsd - custoUsd) / custoUsd;
+      if (desvio > 0.2) {
+        ctx.emitir("log", {
+          nivel: "erro",
+          texto:
+            `Tabela de preços desatualizada: estimativa $${custoEstimadoUsd.toFixed(4)} contra` +
+            ` $${custoUsd.toFixed(4)} de custo real (${(desvio * 100).toFixed(0)}% de desvio).` +
+            " Os jobs CORTADOS usam essa tabela — revise `jobs/claude/precos.ts`.",
+        });
+      }
+    }
+    if (modelosSemPreco.length > 0) {
+      ctx.emitir("log", {
+        nivel: "erro",
+        texto:
+          `Modelo sem preço na tabela: ${modelosSemPreco.join(", ")}. A estimativa de custo` +
+          " deste job está SUBESTIMADA — acrescente o modelo em `jobs/claude/precos.ts`.",
+      });
+    }
+
     // O fluxo acabou e houve despacho em segundo plano: pode ter terminado com trabalho em
     // voo. Não dá para saber daqui se o agente concluiu — mas dá para dizer que o resultado
     // NÃO é confiável sozinho, que é a informação que faltava quando isto aconteceu de verdade.
@@ -426,42 +608,60 @@ export class RunnerClaude implements Runner {
 
     const texto = textoResult !== "" ? textoResult : partes.join("\n");
 
+    /** Campos de contabilidade comuns aos três desfechos — nunca divergem por esquecimento. */
+    const contabilidade = {
+      custoUsd,
+      numTurnos,
+      tokens,
+      ...(tokensParciais ? { tokensParciais: true } : {}),
+      custoEstimadoUsd,
+      ...(modelosSemPreco.length > 0 ? { modelosSemPreco } : {}),
+      sessoes,
+      despachosFundo,
+    };
+
     if (limiteBatido !== null) {
       const reabre = horaDeReabertura(limiteBatido);
-      // "Nada foi entregue" era MENTIRA em job multi-sessão (T-047). Numa rodada real o
-      // fluxo concluiu 21 turnos — T-003 aprovada, T-004 num ciclo inteiro, 4 commits — e
-      // só então bateu na cota; a mensagem mandava redisparar como se nada tivesse saído,
-      // o que faria o usuário refazer trabalho já commitado. Um `result` recebido é a prova
-      // de que uma sessão fechou: só sem ele é honesto dizer que não saiu nada.
-      const entregouAlgo = numTurnos !== null && numTurnos > 0;
+      // "Nada foi entregue" era MENTIRA duas vezes seguidas.
+      //
+      // T-047: em job multi-sessão o fluxo concluía 21 turnos — tarefa aprovada, ciclo
+      // inteiro, 4 commits — e a mensagem mandava redisparar como se nada tivesse saído.
+      // Aquela correção passou a exigir um `result` como prova de trabalho.
+      //
+      // T-049: essa prova é FRACA demais. Um job de 40 min com 21 despachos de agente, 472
+      // chamadas de ferramenta e 5 tarefas concluídas rodou em UMA sessão só, foi cortado
+      // antes do `result` e caiu de novo no "nada foi entregue" — o pior conselho possível,
+      // porque manda refazer o que já está commitado. O sinal certo é o TRABALHO observado
+      // enquanto o fluxo rodava (ferramentas chamadas), não o carimbo do fim.
+      const entregouAlgo = ferramentas > 0 || (numTurnos !== null && numTurnos > 0);
       throw new ErroFluxoClaude(
         `Limite de uso da assinatura batido${reabre !== null ? ` — retoma após ${reabre}` : ""}. ` +
           (entregouAlgo
-            ? `O fluxo concluiu ${numTurnos} turno(s) antes de parar — o que foi commitado está valendo. ` +
-              "Confira o estado das tarefas antes de redisparar, para não refazer trabalho pronto."
-            : "Nada foi entregue; redispare quando a cota voltar."),
+            ? `O fluxo concluiu ${numTurnos ?? "?"} turno(s) e ${ferramentas} chamada(s) de` +
+              " ferramenta antes de parar — o que foi commitado está valendo. CONFIRA o estado" +
+              " das tarefas antes de redisparar, para não refazer trabalho pronto."
+            : "O fluxo parou antes de chamar qualquer ferramenta; nada foi alterado." +
+              " Redispare quando a cota voltar."),
         {
           sessionId,
-          custoUsd,
-          numTurnos,
           erro: true,
           texto,
-          tokens,
           motivo: "limite-uso",
           reabreEm: reabre,
-          sessoes,
-          despachosFundo,
+          ...contabilidade,
         },
       );
     }
 
     if (erro) {
-      throw new ErroFluxoClaude(
-        `Fluxo Claude terminou com erro. ${texto.slice(0, 800)}`.trim(),
-        { sessionId, custoUsd, numTurnos, erro, texto, tokens, sessoes, despachosFundo },
-      );
+      throw new ErroFluxoClaude(`Fluxo Claude terminou com erro. ${texto.slice(0, 800)}`.trim(), {
+        sessionId,
+        erro,
+        texto,
+        ...contabilidade,
+      });
     }
-    return { sessionId, custoUsd, numTurnos, erro, texto, tokens, sessoes, despachosFundo };
+    return { sessionId, erro, texto, ...contabilidade };
   }
 }
 

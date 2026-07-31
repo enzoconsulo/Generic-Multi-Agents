@@ -506,7 +506,14 @@ describe("job multi-sessão (T-047) — um job NÃO é uma sessão", () => {
     expect(falha?.message).not.toContain("Nada foi entregue");
   });
 
-  it("sem nenhum turno, mantém o aviso de que nada saiu", async () => {
+  /**
+   * O texto mudou na T-049 ("Nada foi entregue" → "nada foi alterado"), de propósito: o
+   * runner NÃO observa entregas, observa chamadas de ferramenta. Afirmar que nada foi
+   * entregue é uma conclusão mais forte do que o dado sustenta — e foi exatamente esse tipo
+   * de excesso que fez a mensagem mentir no caso oposto. A INVARIANTE testada é a mesma:
+   * sem trabalho observado, o aviso tem de continuar existindo.
+   */
+  it("sem nenhum turno nem ferramenta, mantém o aviso de que nada saiu", async () => {
     const consulta = consultaDe([
       { type: "system", subtype: "init", session_id: "s1", model: "sonnet" },
       { type: "assistant", message: { content: [{ type: "text", text: LIMITE }] } },
@@ -518,7 +525,8 @@ describe("job multi-sessão (T-047) — um job NÃO é uma sessão", () => {
       .then(() => null)
       .catch((e: unknown) => e as Error);
 
-    expect(falha?.message).toContain("Nada foi entregue");
+    expect(falha?.message).toContain("nada foi alterado");
+    expect(falha?.message).toContain("Redispare");
   });
 });
 
@@ -691,4 +699,172 @@ describe("RunnerClaude — despacho em segundo plano", () => {
     // O log do despacho em si continua saindo, com a seta que o segmentador de resumos usa.
     expect(textos.some((t) => t.includes("Agent → planejador"))).toBe(true);
   });
+});
+
+/**
+ * Contabilidade que sobrevive ao corte (T-049).
+ *
+ * O bug que originou tudo: `custoUsd`/`tokens` só eram gravados a partir da mensagem
+ * `result`. Um job cortado antes dela — cota batida é o caso comum — gravava `null`, e o
+ * histórico do projeto marcava US$ 0,00 para a rodada MAIS CARA. Como jobs que estouram
+ * cota são exatamente os caros, o painel subcontava de forma sistemática e enviesada.
+ */
+describe("RunnerClaude — contabilidade parcial de job cortado", () => {
+  /** Uma volta de API do SDK, com o `usage` que ela reporta. */
+  const volta = (id: string, modelo: string, u: Record<string, number>, texto = "ok") => ({
+    type: "assistant",
+    message: {
+      id,
+      model: modelo,
+      usage: u,
+      content: [{ type: "text", text: texto }],
+    },
+  });
+  const USO = {
+    input_tokens: 100,
+    output_tokens: 1000,
+    cache_read_input_tokens: 500_000,
+    cache_creation_input_tokens: 20_000,
+  };
+
+  it("estima custo e tokens quando o fluxo é cortado antes do `result`", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        volta("msg_1", "claude-sonnet-5", USO),
+        // A cota chega como TEXTO do assistente — é assim que o provedor anuncia.
+        {
+          type: "assistant",
+          message: { content: [{ type: "text", text: "You've hit your session limit · resets 11:30am" }] },
+        },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+
+    await expect(runner.executar(jobFake(PARAMS), ctx)).rejects.toMatchObject({
+      name: "ErroFluxoClaude",
+    });
+
+    const erro = await runner.executar(jobFake(PARAMS), ctx).catch((e) => e);
+    const r = erro.resultado;
+    // Sem `result` não há custo do SDK — e é exatamente aqui que antes ficava tudo nulo.
+    expect(r.custoUsd).toBeNull();
+    expect(r.tokens).not.toBeNull();
+    expect(r.tokensParciais).toBe(true);
+    expect(r.tokens.cacheLeitura).toBe(500_000);
+    expect(r.tokens.saida).toBe(1000);
+    // Sonnet 5: 500k de leitura de cache a 0,30/M já passa de US$ 0,15.
+    expect(r.custoEstimadoUsd).toBeGreaterThan(0.1);
+  });
+
+  /**
+   * A invariante que mais importa. `sdk.d.ts` avisa, no comentário de
+   * `SDKAssistantMessage.timestamp`: "One API assistant turn may produce several assistant
+   * messages sharing a message.id". O `usage` de cada uma é o da VOLTA inteira — somar
+   * mensagem a mensagem multiplicaria a conta pelo número de blocos, e o erro seria para
+   * CIMA, que é o pior lado: inventa um gasto que não existe e manda otimizar fantasma.
+   */
+  it("NÃO conta em dobro quando o SDK reparte uma volta em várias mensagens", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        volta("msg_1", "claude-sonnet-5", USO, "primeiro bloco"),
+        volta("msg_1", "claude-sonnet-5", USO, "segundo bloco da MESMA volta"),
+        volta("msg_1", "claude-sonnet-5", USO, "terceiro bloco da MESMA volta"),
+        {
+          type: "assistant",
+          message: { content: [{ type: "text", text: "You've hit your usage limit" }] },
+        },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const erro = await runner.executar(jobFake(PARAMS), ctx).catch((e) => e);
+
+    // Uma volta só, por mais que tenham chegado três mensagens.
+    expect(erro.resultado.tokens.cacheLeitura).toBe(500_000);
+    expect(erro.resultado.numTurnos).toBe(1);
+  });
+
+  it("soma voltas distintas e separa por modelo (subagente tem modelo próprio)", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        volta("msg_1", "claude-sonnet-5", USO),
+        volta("msg_2", "claude-sonnet-5", USO),
+        volta("msg_3", "claude-haiku-4-5-20251001", USO),
+        { type: "assistant", message: { content: [{ type: "text", text: "usage limit reached" }] } },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const erro = await runner.executar(jobFake(PARAMS), ctx).catch((e) => e);
+    const t = erro.resultado.tokens;
+
+    expect(erro.resultado.numTurnos).toBe(3);
+    expect(t.cacheLeitura).toBe(1_500_000);
+    expect(Object.keys(t.porModelo).sort()).toEqual([
+      "claude-haiku-4-5-20251001",
+      "claude-sonnet-5",
+    ]);
+    // Haiku é ~1/3 do preço do Sonnet: separar por modelo é o que impede a estimativa de
+    // cobrar tudo na tarifa mais cara.
+    expect(t.porModelo["claude-sonnet-5"].cacheLeitura).toBe(1_000_000);
+  });
+
+  it("o `result` continua VENCENDO a estimativa quando chega", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        volta("msg_1", "claude-sonnet-5", USO),
+        {
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          total_cost_usd: 0.42,
+          num_turns: 1,
+          result: "pronto",
+          modelUsage: {
+            "claude-sonnet-5": {
+              inputTokens: 100,
+              outputTokens: 1000,
+              cacheReadInputTokens: 500_000,
+              cacheCreationInputTokens: 20_000,
+              costUSD: 0.42,
+            },
+          },
+        },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const r = await runner.executar(jobFake(PARAMS), ctx);
+
+    expect(r.custoUsd).toBe(0.42);
+    expect(r.tokensParciais).toBeUndefined();
+    // A estimativa segue calculada — é ela que confere a tabela de preços de graça.
+    expect(r.custoEstimadoUsd).toBeGreaterThan(0);
+  });
+
+  it("mensagem de cota deixa de dizer 'nada foi entregue' quando houve trabalho", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        {
+          type: "assistant",
+          message: {
+            id: "msg_1",
+            model: "claude-sonnet-5",
+            usage: USO,
+            content: [{ type: "tool_use", name: "Edit" }],
+          },
+        },
+        { type: "assistant", message: { content: [{ type: "text", text: "You've hit your session limit" }] } },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const erro = await runner.executar(jobFake(PARAMS), ctx).catch((e) => e);
+
+    expect(erro.message).not.toContain("Nada foi entregue");
+    expect(erro.message).toContain("chamada(s) de ferramenta");
+    expect(erro.message).toContain("CONFIRA");
+  });
+
 });

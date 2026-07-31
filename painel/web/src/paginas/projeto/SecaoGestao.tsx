@@ -8,6 +8,7 @@ import {
   type SituacaoDependencia,
 } from "../../lib/gestao";
 import { decorrido, rotuloEstadoJob } from "../../lib/formato";
+import { custoDoJob, explicarCusto, formatarCusto, somarCusto } from "../../lib/custo";
 import { ChipStatus } from "../../componentes/Indicadores";
 
 /**
@@ -21,16 +22,6 @@ import { ChipStatus } from "../../componentes/Indicadores";
  * NÃO abre canal SSE próprio: recebe os jobs por prop. `Projeto.tsx` chama
  * `useJobsAoVivo()` uma vez e distribui — uma conexão por página é decisão do projeto.
  */
-/**
- * Custo REAL do job (vem do evento `result` do SDK), ou null quando não reportado — job
- * cancelado, que falhou antes de terminar, ou que não usa Claude.
- */
-function custoDoJob(job: Job): number | null {
-  const resultado = job.resultado as { custoUsd?: number | null } | null | undefined;
-  const custo = resultado?.custoUsd;
-  return typeof custo === "number" && Number.isFinite(custo) ? custo : null;
-}
-
 export function SecaoGestao({
   projeto,
   tarefas,
@@ -54,10 +45,10 @@ export function SecaoGestao({
     .map((t) => ({ tarefa: t, inexistentes: mapa.get(t.id)?.inexistentes ?? [] }))
     .filter((x) => x.inexistentes.length > 0);
 
-  // Soma só o que TEM custo conhecido; null quando nenhum job reportou (não mostrar "$0",
-  // que afirmaria gasto zero onde na verdade o dado não existe).
-  const comCusto = historico.map(custoDoJob).filter((c): c is number => c !== null);
-  const custoTotal = comCusto.length > 0 ? comCusto.reduce((a, b) => a + b, 0) : null;
+  // T-049: passa por `somarCusto`, que inclui os jobs CORTADOS (via estimativa). Antes,
+  // "só o que tem custo conhecido" queria dizer "só quem terminou" — e quem não termina é
+  // quem estourou a cota, ou seja, o mais caro do projeto ficava fora do total.
+  const custoTotal = somarCusto(historico);
 
   const nadaAMostrar =
     bloqueadas.length === 0 &&
@@ -136,8 +127,14 @@ export function SecaoGestao({
         <div className="bloco-gestao">
           <h4 className="bloco-gestao-titulo">
             Histórico deste projeto ({historico.length})
-            {custoTotal !== null && (
-              <span className="texto-suave"> · ~${custoTotal.toFixed(2)} no total</span>
+            {custoTotal !== null && custoTotal.jobs > 0 && (
+              <span className="texto-suave" title={explicarCusto(custoTotal)}>
+                {" "}
+                · {formatarCusto(custoTotal, 2)} no total
+                {/* Job sem contabilidade nenhuma não pode sumir do total em silêncio —
+                    foi assim que o gasto ficou invisível em primeiro lugar. */}
+                {custoTotal.semDado > 0 && ` (+${custoTotal.semDado} sem custo registrado)`}
+              </span>
             )}
           </h4>
           <ul className="lista-gestao">
@@ -151,12 +148,17 @@ export function SecaoGestao({
                   {j.terminadoEm !== undefined &&
                     j.iniciadoEm !== undefined &&
                     ` · ${decorrido(j.iniciadoEm, Date.parse(j.terminadoEm)) ?? "—"}`}
-                  {custoDoJob(j) !== null && (
-                    // Custo REAL do SDK, não estimativa. Somar o do projeto é o que
-                    // responde "quanto este projeto já custou", que a aba Jobs global
-                    // não consegue responder.
-                    <span className="dep-info">~${custoDoJob(j)!.toFixed(2)}</span>
-                  )}
+                  {(() => {
+                    // Real quando o SDK reportou; estimado quando o fluxo foi cortado. O
+                    // prefixo (`~`/`≥`) carrega essa diferença até aqui — antes toda linha
+                    // dizia "~" e o job cortado não aparecia de jeito nenhum.
+                    const c = custoDoJob(j);
+                    return c === null ? null : (
+                      <span className="dep-info" title={explicarCusto(c)}>
+                        {formatarCusto(c, 2)}
+                      </span>
+                    );
+                  })()}
                 </span>
               </li>
             ))}
