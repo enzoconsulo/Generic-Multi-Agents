@@ -59,6 +59,34 @@ export interface TokensJob {
     string,
     { entrada: number; saida: number; cacheLeitura: number; cacheEscrita: number; custoUsd: number }
   >;
+  /**
+   * Uso atribuído a cada AGENTE do pipeline (T-050). `orquestrador` é o nível de topo.
+   *
+   * Existe porque "o job custou X" não é acionável: o pipeline despacha executor, testador
+   * e revisor por tarefa, e sem separar não dá para saber qual deles justifica o preço. Na
+   * rodada que motivou isto, um `revisor` fez 70 chamadas de ferramenta e um `executor`
+   * fez 104 — mas contagem de ferramenta é proxy, não custo. Aqui vira custo.
+   *
+   * Só é preenchido no acumulador incremental: o `modelUsage` do `result` agrega por
+   * modelo e não sabe qual subagente gastou o quê.
+   */
+  porAgente?: Record<string, UsoAgente>;
+}
+
+/** Consumo de um agente do pipeline dentro de um job. */
+export interface UsoAgente {
+  entrada: number;
+  saida: number;
+  cacheLeitura: number;
+  cacheEscrita: number;
+  /** Voltas de API distintas — o "quantas vezes ele foi ao modelo". */
+  voltas: number;
+  /** Chamadas de ferramenta feitas por este agente. */
+  ferramentas: number;
+  /** Quantas vezes este agente foi despachado no job. */
+  despachos: number;
+  /** Modelos que ele usou (um agente pode cair no fallback). */
+  modelos: string[];
 }
 
 export interface ResultadoClaude {
@@ -174,6 +202,8 @@ interface BlocoConteudo {
   type?: string;
   text?: string;
   name?: string;
+  /** `id` do `tool_use` — é ele que as mensagens do subagente citam em `parent_tool_use_id`. */
+  id?: string;
   /** Input da ferramenta (usado p/ extrair `subagent_type` de despachos `Task`). */
   input?: Record<string, unknown>;
 }
@@ -183,6 +213,8 @@ interface MensagemSDK {
   session_id?: string;
   model?: string;
   parent_tool_use_id?: string | null;
+  /** Tipo do subagente que produziu a mensagem. Opcional no SDK — usado só como reserva. */
+  subagent_type?: string;
   /**
    * `message` é o `BetaMessage` da API (sdk.d.ts: `SDKAssistantMessage.message`). Além do
    * conteúdo, ele carrega `id`, `model` e `usage` — a contabilidade POR VOLTA, que é o que
@@ -248,8 +280,61 @@ function lerTokens(modelUsage: Record<string, unknown> | undefined): TokensJob |
 class AcumuladorDeUso {
   private readonly voltas = new Set<string>();
   private readonly porModelo: TokensJob["porModelo"] = {};
+  private readonly porAgente: Record<string, UsoAgente> = {};
+  /**
+   * `tool_use.id` do despacho → nome do agente. É assim que se liga uma mensagem de
+   * subagente ao agente que a produziu: o SDK marca cada mensagem do filho com
+   * `parent_tool_use_id` igual ao `id` do `tool_use` que o despachou.
+   *
+   * Preferimos este mapa ao campo `subagent_type` da própria mensagem porque ele é
+   * DETERMINÍSTICO: vem do input do `tool_use`, que sempre existe num despacho, enquanto
+   * `subagent_type` é opcional no tipo do SDK e some conforme a versão.
+   */
+  private readonly agentePorDespacho = new Map<string, string>();
   /** Voltas sem `message.id` — contadas, mas sem poder deduplicar. Ver `confiavel`. */
   private semId = 0;
+
+  /** Nome do agente dono desta mensagem; topo do fluxo é o orquestrador. */
+  private donoDe(msg: MensagemSDK): string {
+    const pai = msg.parent_tool_use_id;
+    if (pai == null) return ORQUESTRADOR;
+    return (
+      this.agentePorDespacho.get(pai) ??
+      // Fallback: o SDK também anuncia o tipo na própria mensagem em versões recentes.
+      (typeof msg.subagent_type === "string" && msg.subagent_type !== ""
+        ? msg.subagent_type
+        : "subagente")
+    );
+  }
+
+  private baldeAgente(nome: string): UsoAgente {
+    return (this.porAgente[nome] ??= {
+      entrada: 0,
+      saida: 0,
+      cacheLeitura: 0,
+      cacheEscrita: 0,
+      voltas: 0,
+      ferramentas: 0,
+      despachos: 0,
+      modelos: [],
+    });
+  }
+
+  /**
+   * Registra um despacho de subagente: liga o `tool_use.id` ao nome do agente, para as
+   * mensagens futuras do filho serem atribuídas a ele.
+   */
+  registrarDespacho(bloco: BlocoConteudo, agente: string): void {
+    if (typeof bloco.id === "string" && bloco.id !== "") {
+      this.agentePorDespacho.set(bloco.id, agente);
+    }
+    this.baldeAgente(agente).despachos += 1;
+  }
+
+  /** Contabiliza uma chamada de ferramenta no agente que a fez. */
+  registrarFerramenta(msg: MensagemSDK): void {
+    this.baldeAgente(this.donoDe(msg)).ferramentas += 1;
+  }
 
   /** Registra uma mensagem `assistant`. Idempotente por `message.id`. */
   registrar(msg: MensagemSDK): void {
@@ -262,6 +347,11 @@ class AcumuladorDeUso {
     else this.voltas.add(id);
 
     const modelo = typeof m.model === "string" && m.model !== "" ? m.model : "desconhecido";
+    const entrada = num(m.usage["input_tokens"]);
+    const saida = num(m.usage["output_tokens"]);
+    const cacheLeitura = num(m.usage["cache_read_input_tokens"]);
+    const cacheEscrita = num(m.usage["cache_creation_input_tokens"]);
+
     const alvo = (this.porModelo[modelo] ??= {
       entrada: 0,
       saida: 0,
@@ -269,10 +359,18 @@ class AcumuladorDeUso {
       cacheEscrita: 0,
       custoUsd: 0,
     });
-    alvo.entrada += num(m.usage["input_tokens"]);
-    alvo.saida += num(m.usage["output_tokens"]);
-    alvo.cacheLeitura += num(m.usage["cache_read_input_tokens"]);
-    alvo.cacheEscrita += num(m.usage["cache_creation_input_tokens"]);
+    alvo.entrada += entrada;
+    alvo.saida += saida;
+    alvo.cacheLeitura += cacheLeitura;
+    alvo.cacheEscrita += cacheEscrita;
+
+    const agente = this.baldeAgente(this.donoDe(msg));
+    agente.entrada += entrada;
+    agente.saida += saida;
+    agente.cacheLeitura += cacheLeitura;
+    agente.cacheEscrita += cacheEscrita;
+    agente.voltas += 1;
+    if (!agente.modelos.includes(modelo)) agente.modelos.push(modelo);
   }
 
   /** Voltas de API distintas observadas — o substituto honesto de `num_turns`. */
@@ -292,7 +390,14 @@ class AcumuladorDeUso {
   fechar(): TokensJob | null {
     const nomes = Object.keys(this.porModelo);
     if (nomes.length === 0) return null;
-    const total: TokensJob = { entrada: 0, saida: 0, cacheLeitura: 0, cacheEscrita: 0, porModelo: this.porModelo };
+    const total: TokensJob = {
+      entrada: 0,
+      saida: 0,
+      cacheLeitura: 0,
+      cacheEscrita: 0,
+      porModelo: this.porModelo,
+      porAgente: this.porAgente,
+    };
     for (const nome of nomes) {
       const u = this.porModelo[nome];
       if (u === undefined) continue;
@@ -303,7 +408,19 @@ class AcumuladorDeUso {
     }
     return total;
   }
+
+  /**
+   * Uso por agente mesmo quando o `modelUsage` do `result` for a fonte dos totais. Sem
+   * isto, job COMPLETO — o caso normal — ficaria sem a única visão que diz onde otimizar,
+   * porque `modelUsage` agrega por modelo e não conhece subagente.
+   */
+  agentes(): Record<string, UsoAgente> | undefined {
+    return Object.keys(this.porAgente).length > 0 ? this.porAgente : undefined;
+  }
 }
+
+/** Nome do nível de topo do fluxo na atribuição por agente. */
+const ORQUESTRADOR = "orquestrador";
 
 export class RunnerClaude implements Runner {
   constructor(private readonly consulta: Consulta = consultaReal) {}
@@ -441,7 +558,11 @@ export class RunnerClaude implements Runner {
               if (limiteBatido === null && ehLimiteDeUso(bloco.text)) limiteBatido = bloco.text;
             } else if (bloco.type === "tool_use" && bloco.name) {
               ferramentas += 1;
+              acumulador.registrarFerramenta(msg);
               const alvo = alvoDeSubagente(bloco);
+              // Liga `tool_use.id` → agente ANTES de o filho começar a emitir: é o que
+              // permite atribuir o consumo dele a quem o despachou.
+              if (alvo !== null) acumulador.registrarDespacho(bloco, alvo);
               if (ehDespachoEmFundo(bloco)) {
                 despachosFundo += 1;
                 // Avisar AQUI (e não só no fim) porque é acionável enquanto o fluxo roda:
@@ -555,6 +676,12 @@ export class RunnerClaude implements Runner {
     const acumulado = acumulador.fechar();
     const tokensParciais = tokens === null && acumulado !== null;
     if (tokensParciais) tokens = acumulado;
+    // A visão POR AGENTE vem sempre do acumulador, inclusive quando os totais vieram do
+    // `result`: `modelUsage` agrega por modelo e não sabe qual subagente gastou o quê.
+    if (tokens !== null && tokens.porAgente === undefined) {
+      const porAgente = acumulador.agentes();
+      if (porAgente !== undefined) tokens.porAgente = porAgente;
+    }
 
     // Turnos: mesma lógica. `num_turns` só existe no `result`; sem ele, voltas de API
     // distintas é a medida honesta do que aconteceu.

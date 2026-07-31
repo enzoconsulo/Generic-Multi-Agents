@@ -93,6 +93,55 @@ export function formatarCusto(c: CustoJob | TotalCusto, casas = 4): string {
   return `${prefixo}$${c.usd.toFixed(casas)}`;
 }
 
+/**
+ * Rateio do custo do job entre os agentes (T-050), ordenado do mais caro para o mais
+ * barato.
+ *
+ * O ponto: "o job custou X" não diz o que fazer. O pipeline despacha executor, testador e
+ * revisor por tarefa, e é a repartição que aponta onde mexer. E ela não é intuitiva —
+ * contagem de ferramentas engana, porque **o custo de um agente cresce com o QUADRADO das
+ * idas ao modelo** (cada chamada relê o contexto acumulado até ali). Um agente com o dobro
+ * das chamadas de outro custa cerca de quatro vezes mais, não duas.
+ *
+ * O rateio usa a leitura de cache como chave porque ela domina o volume num fluxo agêntico
+ * — tipicamente 100× o que o modelo escreve.
+ */
+export interface FatiaAgente {
+  agente: string;
+  usd: number;
+  fracao: number;
+  ferramentas: number;
+  voltas: number;
+  despachos: number;
+}
+
+export function ratearPorAgente(job: Job): FatiaAgente[] {
+  const r = contabil(job);
+  const porAgente = r?.tokens?.porAgente;
+  const total = custoDoJob(job);
+  if (porAgente === undefined || total === null) return [];
+
+  const peso = (u: { cacheLeitura: number; saida: number }) => u.cacheLeitura + u.saida * 10;
+  const nomes = Object.keys(porAgente);
+  const soma = nomes.reduce((s, n) => s + peso(porAgente[n]!), 0);
+  if (soma <= 0) return [];
+
+  return nomes
+    .map((agente) => {
+      const u = porAgente[agente]!;
+      const fracao = peso(u) / soma;
+      return {
+        agente,
+        usd: total.usd * fracao,
+        fracao,
+        ferramentas: u.ferramentas,
+        voltas: u.voltas,
+        despachos: u.despachos,
+      };
+    })
+    .sort((a, b) => b.usd - a.usd);
+}
+
 /** Texto de ajuda (title) coerente com o prefixo — o "~" sozinho não se explica. */
 export function explicarCusto(c: CustoJob | TotalCusto): string {
   const estimado = "estimado" in c ? c.estimado : c.temEstimativa;

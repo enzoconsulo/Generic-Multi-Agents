@@ -43,6 +43,18 @@ O que o executor precisa saber: decisões já tomadas, arquivos relevantes, arma
 ## Notas de execução
 (preenchido pelo executor: o que fez, arquivos alterados, comandos de teste, hash do commit)
 
+O hash vai em linha própria, nesta grafia exata — é o que o revisor procura para ir direto
+ao diff, e um ciclo de retrabalho ACRESCENTA uma linha em vez de substituir:
+
+```
+**Commit:** `d5a3edc`
+```
+
+Ele só existe DEPOIS do commit, então é gravado num segundo commit (`T-NNN: hash da
+revisão`). Escrever "a seguir" ou "ver mensagem do commit" no lugar do hash deixa o campo
+inútil: sem ele o revisor precisa descobrir os commits por `git log`, e uma revisão de 2
+chamadas de ferramenta vira uma de 70.
+
 ## Verificação
 (preenchido pelo testador: cada critério com PASSOU/FALHOU + evidência; se falhou, como reproduzir.
  Tarefa de interface: caminho da captura em _gestao/evidencias/)

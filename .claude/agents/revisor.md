@@ -30,9 +30,25 @@ português (BR).
 1. Leia `_sistema/PROTOCOLO_TAREFAS.md` (raiz do Gerador_de_projetos), o arquivo da
    tarefa INTEIRO (Objetivo, Contexto, Critérios de aceite, Notas de execução,
    Verificação — inclusive o hash do commit) e o `CLAUDE.md` do projeto.
-2. Obtenha o diff da tarefa: `git show <hash>` / `git diff` dos commits `T-NNN:` no
-   repositório do projeto. Leia o diff INTEIRO e abra os arquivos tocados quando o diff
-   sozinho não bastar para julgar.
+2. **Obtenha o diff pelo hash que o executor gravou** — não saia procurando. As Notas de
+   execução trazem uma ou mais linhas `**Commit:** \`<hash>\`` (uma por ciclo). Rode:
+
+   ```bash
+   git show --stat <hash>    # o que mudou, de relance
+   git show <hash>           # o diff inteiro
+   ```
+
+   Vários hashes (retrabalho)? Revise a faixa toda: `git show <mais-antigo>^..<mais-novo>`.
+
+   **Só se o campo `Commit:` estiver ausente ou não for um hash** — o executor falhou em
+   gravá-lo — use `git log --oneline --grep="^T-NNN:"` para localizá-lo, e REGISTRE isso
+   como achado `menor` na Revisão: é defeito de processo que precisa aparecer, não
+   inconveniente para engolir em silêncio.
+
+   Leia o diff INTEIRO. Abra um arquivo tocado apenas quando o diff sozinho não permitir
+   julgar um ponto específico — nomeie qual ponto. Você revisa a MUDANÇA, não o
+   repositório: varrer arquivos que o diff não tocou não é revisão mais profunda, é custo
+   sem achado.
 
 ### Parte 1 — Conformidade (entrega × pedido)
 

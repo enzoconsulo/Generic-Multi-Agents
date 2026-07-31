@@ -576,6 +576,54 @@ a:hover {
 /* Rótulo com explicação no `title` (T-049). O sublinhado pontilhado é o que avisa que há
    algo a ler ali — os campos de custo agora usam prefixos ("~" estimado, "≥" piso) e um
    símbolo sem pista de onde se explica é pior que não ter símbolo nenhum. */
+/* Rateio de custo por agente (T-050): barra proporcional para a leitura ser de relance —
+   a pergunta é "qual agente domina", não "quantos centavos exatamente". */
+.rateio {
+  margin-top: 1rem;
+}
+.rateio-titulo {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-texto-suave);
+  margin: 0 0 0.5rem;
+}
+.rateio-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.rateio-linha {
+  display: grid;
+  grid-template-columns: 9rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+}
+.rateio-nome {
+  overflow-wrap: anywhere;
+}
+.rateio-barra {
+  height: 0.5rem;
+  background: var(--cor-fundo-2, #1b1f27);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.rateio-preenchida {
+  display: block;
+  height: 100%;
+  background: var(--cor-acento, #6ea8fe);
+  border-radius: 999px;
+}
+.rateio-valor {
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+  cursor: help;
+}
+
 .campo dt.campo-com-ajuda {
   text-decoration: underline dotted var(--cor-borda);
   text-underline-offset: 0.2rem;

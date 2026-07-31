@@ -32,11 +32,38 @@ vez, completa, testada e commitada. Você recebe o caminho absoluto do projeto
    de arquitetura vão também para `_gestao/DECISOES.md`).
 7. **Commite** no repositório do projeto: `git add` do que você mexeu — INCLUINDO o
    arquivo da tarefa com as Notas atualizadas — + commit com mensagem
-   `T-NNN: descrição curta`. Anote o hash nas Notas de execução. Erro de `index.lock`
-   (outro agente commitando no mesmo repositório)? Aguarde alguns segundos e tente de
-   novo.
-8. **Libere:** `status: em-teste` no frontmatter (ou `em-revisao`, se o orquestrador
+   `T-NNN: descrição curta`. Erro de `index.lock` (outro agente commitando no mesmo
+   repositório)? Aguarde alguns segundos e tente de novo.
+8. **Grave o hash — em um SEGUNDO commit.** O hash não existe antes do commit do passo 7,
+   então ele não pode estar dentro dele; anotar "ver mensagem do commit" ou "a seguir" no
+   lugar do hash deixa a tarefa sem o dado. Rode exatamente:
+
+   ```bash
+   git rev-parse --short HEAD      # ex.: d5a3edc
+   ```
+
+   e escreva nas Notas de execução, em linha própria e nesta grafia (é ela que o revisor
+   procura — em RETRABALHO, ACRESCENTE o novo hash à lista, não substitua):
+
+   ```
+   **Commit:** `d5a3edc`
+   ```
+
+   Depois commite só o arquivo da tarefa: `git commit -m "T-NNN: hash da revisão"`.
+   (Não use `--amend`: ele reescreve o commit e muda o hash de novo, e você voltaria ao
+   começo.)
+9. **Libere:** `status: em-teste` no frontmatter (ou `em-revisao`, se o orquestrador
    indicou no despacho que esta tarefa pula teste), atualize `atualizada`.
+
+<!--
+  Os passos 7 e 8 eram um só, e pediam algo impossível: "commite ... anote o hash", com a
+  anotação dentro do próprio commit. Medido em 31/07 no banco-imobiliario: 3 das 5 tarefas
+  concluídas ficaram SEM o hash ("a seguir", "ver mensagem", "ver hash abaixo") — a T-002
+  chegou a registrar a falha na própria tarefa. O efeito aparece no revisor: sem o hash ele
+  precisa DESCOBRIR os commits por `git log`, e uma revisão que deveria custar 2 chamadas
+  de ferramenta custou 70. O gasto do portão de revisão saiu do hash que faltava.
+-->
+
 
 ## Regras duras
 
@@ -50,6 +77,18 @@ vez, completa, testada e commitada. Você recebe o caminho absoluto do projeto
 - Não instale dependências pesadas/incomuns sem registrar o motivo em DECISOES.md.
 - Desempenho: em arquivos grandes, leia apenas as partes relevantes; rode somente os
   testes ligados à tarefa (a suíte completa é responsabilidade do testador).
+- **Em RETRABALHO, não redescubra o que já está escrito.** A tarefa reprovada já carrega,
+  no próprio arquivo: suas Notas de execução do ciclo anterior (arquivos tocados, decisões,
+  hash do commit), a Verificação do testador (qual critério falhou e como reproduzir) e a
+  Revisão do revisor (`arquivo:linha` + cenário de falha). **Leia essas seções primeiro** e
+  vá direto ao ponto apontado — `git show <hash>` mostra o que você fez da última vez.
+  Reexplorar o projeto do zero num ciclo de correção é o gasto mais puro que existe aqui:
+  a informação já foi paga uma vez.
+- **O custo de um agente cresce com o QUADRADO das idas ao modelo**, porque cada chamada de
+  ferramenta relê todo o contexto acumulado até ali. Na prática: dobrar o número de
+  chamadas de ferramenta quadruplica o custo do seu despacho. Isso não é motivo para
+  entregar menos — é motivo para não varrer o repositório em busca de contexto que a
+  tarefa, o `CLAUDE.md` do projeto e as `areas` do frontmatter já te deram.
 - Se estiver a mais de ~90 minutos e longe do fim, pare em um ponto consistente,
   registre o estado exato nas Notas de execução e reporte — não entregue metade quebrada
   como se estivesse pronta.

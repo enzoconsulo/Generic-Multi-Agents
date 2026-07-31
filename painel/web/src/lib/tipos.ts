@@ -515,6 +515,20 @@ export interface TokensJob {
       custoUsd: number;
     }
   >;
+  /** Consumo por AGENTE do pipeline (T-050). Ausente em jobs anteriores. */
+  porAgente?: Record<string, UsoAgente>;
+}
+
+/** Consumo de um agente do pipeline dentro de um job. Espelha `UsoAgente` do servidor. */
+export interface UsoAgente {
+  entrada: number;
+  saida: number;
+  cacheLeitura: number;
+  cacheEscrita: number;
+  voltas: number;
+  ferramentas: number;
+  despachos: number;
+  modelos: string[];
 }
 
 /**

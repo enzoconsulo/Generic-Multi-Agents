@@ -14,7 +14,7 @@ import {
   type SegmentoAgente,
 } from "../../lib/atividade";
 import type { Job, LinhaLog, Pendencia, ResumoTrecho, ResultadoContabil } from "../../lib/tipos";
-import { custoDoJob, explicarCusto, formatarCusto } from "../../lib/custo";
+import { custoDoJob, explicarCusto, formatarCusto, ratearPorAgente } from "../../lib/custo";
 import {
   classeEstadoJob,
   decorrido,
@@ -165,6 +165,7 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
     | null;
   // Real ou estimado, com o prefixo que declara qual é. Ver `lib/custo`.
   const custo = custoDoJob(job);
+  const fatias = ratearPorAgente(job);
   // Decisão e texto vivem em `lib/limite-uso` — os testes da web são de lógica pura, então
   // lógica dentro do componente seria lógica não verificada.
   const avisoCota = avisoLimiteDeUso(resultado);
@@ -290,6 +291,34 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
         {job.sessionId !== undefined && <Campo rot="Sessão" valor={job.sessionId} />}
         {job.erro !== undefined && avisoCota === null && <Campo rot="Erro" valor={job.erro} />}
       </dl>
+
+      {/* Onde o dinheiro foi (T-050). O total sozinho não é acionável: o pipeline despacha
+          3 agentes por tarefa e é a repartição que diz em qual mexer. */}
+      {fatias.length > 1 && (
+        <div className="rateio">
+          <h4 className="rateio-titulo">Custo por agente</h4>
+          <ul className="rateio-lista">
+            {fatias.map((f) => (
+              <li key={f.agente} className="rateio-linha">
+                <span className="rateio-nome mono">{f.agente}</span>
+                <span className="rateio-barra" aria-hidden="true">
+                  <span className="rateio-preenchida" style={{ width: `${(f.fracao * 100).toFixed(1)}%` }} />
+                </span>
+                <span
+                  className="rateio-valor mono"
+                  title={
+                    `${f.despachos} despacho(s) · ${f.voltas} volta(s) ao modelo · ` +
+                    `${f.ferramentas} chamada(s) de ferramenta. O custo cresce com o QUADRADO ` +
+                    "das idas ao modelo: dobrar as chamadas quadruplica o gasto do agente."
+                  }
+                >
+                  {(f.fracao * 100).toFixed(0)}% · {f.ferramentas} ferr.
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {avisoCota !== null && (
         <div className="aviso aviso-erro">
