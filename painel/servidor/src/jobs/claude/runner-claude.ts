@@ -378,6 +378,26 @@ class AcumuladorDeUso {
     return this.voltas.size + this.semId;
   }
 
+  /** Quantos despachos de subagente foram vistos (independe de a atribuição ter funcionado). */
+  get despachosVistos(): number {
+    return this.agentePorDespacho.size;
+  }
+
+  /**
+   * A atribuição por agente casou alguma mensagem com algum subagente?
+   *
+   * Existe porque este acumulador foi testado contra o SDK FALSO: se as formas reais
+   * (`parent_tool_use_id`, `message.id`) divergirem, ele não quebra — ele atribui tudo ao
+   * orquestrador e produz um rateio plausível e ERRADO. É a mesma família do `effort` com
+   * nome errado e do `watchdogMs` que ninguém lia: falha silenciosa que parece sucesso.
+   */
+  get atribuiuSubagente(): boolean {
+    // `voltas > 0`, não a mera existência da chave: `registrarDespacho` já cria o balde do
+    // agente ao ver o despacho. Checar a chave daria "atribuiu" mesmo com zero consumo
+    // ligado a ele — o verificador validaria a si mesmo em vez do que ele verifica.
+    return Object.entries(this.porAgente).some(([n, u]) => n !== ORQUESTRADOR && u.voltas > 0);
+  }
+
   /**
    * Sem `message.id` em alguma volta não há como garantir que não houve dupla contagem.
    * A UI usa isto para não vender precisão que o dado não tem.
@@ -717,6 +737,20 @@ export class RunnerClaude implements Runner {
         texto:
           `Modelo sem preço na tabela: ${modelosSemPreco.join(", ")}. A estimativa de custo` +
           " deste job está SUBESTIMADA — acrescente o modelo em `jobs/claude/precos.ts`.",
+      });
+    }
+
+    // Houve despacho de subagente mas NADA foi atribuído a ele: a ligação
+    // `parent_tool_use_id` → despacho não casou. O rateio por agente sai plausível e errado
+    // (tudo no orquestrador), que é pior do que não existir. Ver `atribuiuSubagente`.
+    if (acumulador.despachosVistos > 0 && !acumulador.atribuiuSubagente) {
+      ctx.emitir("log", {
+        nivel: "erro",
+        texto:
+          `Rateio por agente NÃO funcionou: ${acumulador.despachosVistos} despacho(s) de` +
+          " subagente e nenhum consumo atribuído a eles. O custo por agente deste job está" +
+          " todo no orquestrador e é ENGANOSO — provável mudança na forma das mensagens do" +
+          " SDK (`parent_tool_use_id` / `message.id`). Não use esse rateio para decidir.",
       });
     }
 

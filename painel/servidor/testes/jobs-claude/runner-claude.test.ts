@@ -868,3 +868,99 @@ describe("RunnerClaude — contabilidade parcial de job cortado", () => {
   });
 
 });
+
+/**
+ * A atribuição por agente foi construída contra o SDK FALSO. Se as formas reais divergirem
+ * ela não quebra — atribui tudo ao orquestrador e produz um rateio plausível e ERRADO.
+ * Mesma família do `effort` com nome errado: falha silenciosa que parece sucesso.
+ */
+describe("RunnerClaude — rateio por agente e sua auto-verificação", () => {
+  const USO = {
+    input_tokens: 100,
+    output_tokens: 500,
+    cache_read_input_tokens: 200_000,
+    cache_creation_input_tokens: 10_000,
+  };
+  const despacho = (id: string, agente: string) => ({
+    type: "assistant",
+    message: {
+      id: `msg_${id}`,
+      model: "claude-sonnet-5",
+      usage: USO,
+      content: [{ type: "tool_use", id, name: "Agent", input: { subagent_type: agente } }],
+    },
+  });
+  const doSubagente = (msgId: string, pai: string, modelo = "claude-sonnet-5") => ({
+    type: "assistant",
+    parent_tool_use_id: pai,
+    message: {
+      id: msgId,
+      model: modelo,
+      usage: USO,
+      content: [{ type: "tool_use", id: `t_${msgId}`, name: "Read" }],
+    },
+  });
+
+  it("atribui o consumo ao subagente que o gastou, não ao orquestrador", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        despacho("tu_1", "revisor"),
+        doSubagente("m1", "tu_1"),
+        doSubagente("m2", "tu_1"),
+        { type: "result", is_error: false, total_cost_usd: 1, num_turns: 3, result: "ok" },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const r = await runner.executar(jobFake(PARAMS), ctx);
+
+    const porAgente = r.tokens?.porAgente ?? {};
+    expect(Object.keys(porAgente).sort()).toEqual(["orquestrador", "revisor"]);
+    // Duas voltas do subagente, uma do orquestrador (a que despachou).
+    expect(porAgente["revisor"]?.voltas).toBe(2);
+    expect(porAgente["revisor"]?.ferramentas).toBe(2);
+    expect(porAgente["revisor"]?.despachos).toBe(1);
+    expect(porAgente["orquestrador"]?.voltas).toBe(1);
+  });
+
+  it("DENUNCIA quando houve despacho e nada foi atribuído a subagente", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        despacho("tu_1", "revisor"),
+        // Mensagem do filho SEM `parent_tool_use_id` — simula churn de versão do SDK.
+        {
+          type: "assistant",
+          message: { id: "m1", model: "claude-sonnet-5", usage: USO, content: [{ type: "text", text: "oi" }] },
+        },
+        { type: "result", is_error: false, total_cost_usd: 1, num_turns: 2, result: "ok" },
+      ]),
+    );
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    await runner.executar(jobFake(PARAMS), ctx);
+
+    const textos = eventos
+      .filter((e) => e.tipo === "log")
+      .map((e) => (e.dados as { texto: string }).texto);
+    expect(textos.some((t) => t.includes("Rateio por agente NÃO funcionou"))).toBe(true);
+  });
+
+  it("não denuncia quando o job simplesmente não despachou ninguém", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        {
+          type: "assistant",
+          message: { id: "m1", model: "claude-sonnet-5", usage: USO, content: [{ type: "text", text: "oi" }] },
+        },
+        { type: "result", is_error: false, total_cost_usd: 1, num_turns: 1, result: "ok" },
+      ]),
+    );
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    await runner.executar(jobFake(PARAMS), ctx);
+    const textos = eventos
+      .filter((e) => e.tipo === "log")
+      .map((e) => (e.dados as { texto: string }).texto);
+    expect(textos.some((t) => t.includes("Rateio por agente NÃO funcionou"))).toBe(false);
+  });
+});

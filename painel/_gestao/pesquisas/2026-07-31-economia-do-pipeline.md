@@ -339,7 +339,91 @@ medição, é anedota. O `--repeticoes` existe agora porque a ausência dele pro
 
 ---
 
-## 8. O que falta medir
+## 8. Previsões para a próxima rodada real — escritas ANTES dela
+
+Tudo que foi mudado hoje é **hipótese até um `/trabalhar` real rodar**. Prompt não é
+contrato: instruir o revisor a ir direto ao hash não garante que ele vá. A próxima rodada é
+o experimento, e ela ia acontecer de qualquer jeito — é evidência de graça.
+
+Estas previsões ficam registradas aqui **antes** da rodada, para que o resultado não possa
+ser reinterpretado depois. Se falharem, cada uma aponta para uma causa distinta.
+
+| # | Previsão | Falseia o quê |
+|---|---|---|
+| P1 | Revisor: < 20 chamadas de ferramenta por despacho (era 46 e 70) | O hash não chegou, ou o prompt não é obedecido |
+| P2 | Fatia do revisor: 26% → 12–15% | O corte de chamadas não vira corte de custo (modelo errado) |
+| P3 | Custo total por trabalho comparável: −15 a −20% | As duas correções não somam |
+| P4 | `porAgente` preenchido, executor como maior item (~45–50%) | Atribuição não funciona contra o SDK real |
+| P5 | Nenhum aviso "Rateio por agente NÃO funcionou" | Formas do SDK divergem do que foi testado com falso |
+| P6 | 100% das tarefas concluídas com `**Commit:** <hash>` (era 40%) | O executor não adotou os dois commits |
+| P7 | Retrabalho abaixo de 31,8% ao longo de ~6 tarefas | TDD não reduz reprovação (amostra pequena; sinal fraco) |
+
+P1–P6 são verificáveis numa única rodada. **P7 não é**: precisa de várias tarefas para sair
+do ruído, e a lição do `/status` vale aqui — n pequeno em sistema com esta variância é
+anedota. Tratar P7 como tendência a acompanhar, nunca como resultado de uma rodada.
+
+### O que a rodada também entrega de graça
+
+`porAgente` traz leitura de cache, voltas e ferramentas por agente. Com dois agentes de `T`
+diferentes dá para resolver `C0` e `D` por regressão e **substituir o modelo estimado por
+medição** — hoje as fatias (47/26/14/13) são sólidas mas os valores absolutos são ordem de
+grandeza.
+
+---
+
+## 9. Descartes — o que NÃO fazer, com o motivo
+
+### 9.1 MCP do GitHub para os agentes — descartado por custo sem benefício identificado
+
+Ferramentas renderizam na **posição 0** do prompt (ordem: `tools` → `system` → `messages`),
+então um toolset novo entra no contexto de **todo despacho** e é relido a cada volta. Com
+Σ T ≈ 472 chamadas num `/trabalhar`, cada 1k token de definição custa ~472k de leitura de
+cache. Um toolset de GitHub realista (dezenas de ferramentas, 3–8k tokens) custa
+**US$ 0,30–0,71 por job, para sempre**, ~10% do job.
+
+Do outro lado, o que ele acrescentaria a ESTE fluxo:
+
+| Capacidade do MCP GitHub | Situação na fábrica |
+|---|---|
+| Push, remoto, `git init` | Já existe (`fabrica/publicacao.ts`) |
+| Repositório por projeto | Já existe (cada `projetos/<nome>` é repo independente com remoto) |
+| Trazer projeto de fora | Já existe (importação de pasta) |
+| Criar PR / revisar PR | **Não há workflow de PR** — um único desenvolvedor, sem revisor humano |
+| Ler issues | **Não há issues** — as tarefas vivem em `_gestao/tarefas/` |
+
+Custo permanente e mensurável contra benefício nulo no workload atual. **Descarte.** Se um
+dia o fluxo passar a envolver colaboradores humanos e PRs, a conta muda e vale refazer — o
+descarte é do *agora*, não do conceito.
+
+### 9.2 Mapa de módulos no `CLAUDE.md` do projeto — já feito
+
+Era a alavanca que eu ia propor para cortar descoberta do executor (47% do custo). Fui
+conferir antes: o `CLAUDE.md` do `banco-imobiliario` já tem "Arquitetura em 1 minuto" com
+`server/engine/`, `server/state/`, `server/sockets/`, `public/js/` e a regra da conexão
+única. **A alavanca já está puxada.**
+
+Consequência incômoda e importante: se o executor tem o mapa e ainda faz 45–104 chamadas,
+essas chamadas são majoritariamente **trabalho produtivo** (escrever, rodar teste, iterar),
+não desperdício de descoberta. **Os 47% do executor são em boa parte irredutíveis nesta
+arquitetura.** Depois da correção do revisor, o pipeline está perto do piso — ganhos
+adicionais exigiriam mexer no DESENHO (menos portões, outra mistura de modelos), o que
+troca custo por qualidade em vez de eliminar desperdício.
+
+### 9.3 Chunking em jobs de 20 min — mantido descartado, com dado novo
+
+Medido neutro em custo (§2, S4). O argumento restante era resiliência. Os números:
+**3 de 12 `/trabalhar` morreram por cota (25%)**, e no único caso com log detalhado
+(`603ea999`) o corte veio **9 segundos** depois de despachar três agentes — a perda de
+trabalho em voo foi de ~4 chamadas de ferramenta. Pequena.
+
+O custo real do corte não foi token perdido, foi **estado ambíguo**: 4 promoções ficaram
+sem commit até serem encontradas à mão um dia depois. Isso é problema de *encerramento*, não
+de tamanho do job. **Descarte como economia e como resiliência de token**; o que merece
+atenção é garantir commit de gestão antes de cada despacho longo.
+
+---
+
+## 10. O que falta medir
 
 O modelo é analítico e calibrado por ordem de grandeza, não por medição direta de
 `C0`/`D` — esses dois parâmetros foram estimados, não observados. A instrumentação por
