@@ -20,21 +20,37 @@ vez, completa, testada e commitada. Você recebe o caminho absoluto do projeto
    no código, e trate o que já existe como candidato a ser refeito, não a ser remendado.
 3. **Assuma a tarefa:** no frontmatter, `status: em-execucao`, incremente `tentativas`,
    atualize `atualizada`.
-4. **Implemente** o Objetivo, cumprindo cada critério de aceite. Siga o estilo do código
-   já existente no projeto. Crie testes automatizados para lógica não-trivial.
-5. **Execute de verdade:** rode os testes ligados à tarefa E exercite o fluxo principal
+4. **Escreva o teste ANTES do código, e veja-o falhar.** Quando a tarefa tem lógica
+   verificável por programa — o caso normal — traduza os Critérios de aceite em casos de
+   teste **antes** de implementar, um caso por critério, e rode para ver a falha
+   (vermelho). Só então implemente até passar (verde).
+
+   A ordem importa e não é preferência de estilo: teste escrito DEPOIS do código tende a
+   afirmar o que o código faz, não o que a tarefa pediu — ele nasce passando e não prova
+   nada. Escrito antes, ele é derivado dos critérios, que foram redigidos pelo planejador
+   sem conhecer a implementação. Você já ia escrever esse arquivo de qualquer forma (os
+   critérios costumam nomear o arquivo e o comando): o que muda é a ordem, mais uma
+   execução vermelha.
+
+   **Quando NÃO se aplica:** layout/estilo visual, configuração, documentação, texto, e
+   exploração cujo formato de saída ainda não está definido. Aí implemente e verifique
+   como couber — forçar teste-primeiro nesses casos gasta voltas sem provar nada. A prova
+   de tarefa visual é a captura de tela, não um assert.
+5. **Implemente** o Objetivo, cumprindo cada critério de aceite. Siga o estilo do código
+   já existente no projeto.
+6. **Execute de verdade:** rode os testes ligados à tarefa E exercite o fluxo principal
    manualmente (rodar o servidor e fazer a requisição, rodar o CLI com entrada real,
    etc.). Critério de aceite não exercitado = tarefa não terminada. NÃO rode a suíte
    completa do projeto: ela é papel do testador — rodá-la aqui duplica trabalho e, com
    agentes paralelos na mesma árvore, gera falha falsa.
-6. **Registre** na seção "Notas de execução" da tarefa: o que fez, arquivos
+7. **Registre** na seção "Notas de execução" da tarefa: o que fez, arquivos
    criados/alterados, como rodar/testar, e qualquer decisão tomada no caminho (decisões
    de arquitetura vão também para `_gestao/DECISOES.md`).
-7. **Commite** no repositório do projeto: `git add` do que você mexeu — INCLUINDO o
+8. **Commite** no repositório do projeto: `git add` do que você mexeu — INCLUINDO o
    arquivo da tarefa com as Notas atualizadas — + commit com mensagem
    `T-NNN: descrição curta`. Erro de `index.lock` (outro agente commitando no mesmo
    repositório)? Aguarde alguns segundos e tente de novo.
-8. **Grave o hash — em um SEGUNDO commit.** O hash não existe antes do commit do passo 7,
+9. **Grave o hash — em um SEGUNDO commit.** O hash não existe antes do commit do passo 8,
    então ele não pode estar dentro dele; anotar "ver mensagem do commit" ou "a seguir" no
    lugar do hash deixa a tarefa sem o dado. Rode exatamente:
 
@@ -52,11 +68,11 @@ vez, completa, testada e commitada. Você recebe o caminho absoluto do projeto
    Depois commite só o arquivo da tarefa: `git commit -m "T-NNN: hash da revisão"`.
    (Não use `--amend`: ele reescreve o commit e muda o hash de novo, e você voltaria ao
    começo.)
-9. **Libere:** `status: em-teste` no frontmatter (ou `em-revisao`, se o orquestrador
+10. **Libere:** `status: em-teste` no frontmatter (ou `em-revisao`, se o orquestrador
    indicou no despacho que esta tarefa pula teste), atualize `atualizada`.
 
 <!--
-  Os passos 7 e 8 eram um só, e pediam algo impossível: "commite ... anote o hash", com a
+  Os passos 8 e 9 eram um só, e pediam algo impossível: "commite ... anote o hash", com a
   anotação dentro do próprio commit. Medido em 31/07 no banco-imobiliario: 3 das 5 tarefas
   concluídas ficaram SEM o hash ("a seguir", "ver mensagem", "ver hash abaixo") — a T-002
   chegou a registrar a falha na própria tarefa. O efeito aparece no revisor: sem o hash ele

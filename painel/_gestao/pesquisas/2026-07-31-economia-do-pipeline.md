@@ -158,7 +158,145 @@ comando), não quando é volumoso.
 | Chunking em jobs de ~20 min | **Adiado** — neutro em custo; rediscutir como resiliência |
 | `esforco: medium` no `/trabalhar` | **Não decidido** — exige A/B pago (~US$ 2) |
 
-## 6. O que falta medir
+## 6. Três propostas avaliadas (2026-07-31, segunda rodada)
+
+### 6.1 Revisor só para código, pulando documentação — **concordo, mas é irrelevante**
+
+| Situação | Custo |
+|---|---:|
+| Revisão completa de tarefa de código (T=15) | $0,245 |
+| Revisão de tarefa de doc, como é hoje (T=8) | $0,169 |
+| Só conformidade, sem caçar bug (T=4) | $0,130 |
+
+Economia: **$0,077 em 22 tarefas.** O raciocínio que a torna irrelevante: o revisor é caro
+exatamente onde o diff é grande — em código. Numa tarefa de documentação o diff é pequeno,
+então ele **já é barato**; cortar onde já é barato não move a agulha.
+
+Vale por outro motivo, que não é custo: caçar bug em prosa produz **falso positivo**. Um
+revisor procurando "condição invertida" num README inventa achado. Se implementar, que seja
+por qualidade, não por economia — e a economia não deve ser usada como justificativa.
+
+### 6.2 Revisor em lote, no fim do backlog — **discordo, com prova**
+
+Esta é a proposta que a lei de custo refuta de forma decisiva.
+
+| N tarefas | Revisor por tarefa | Revisor em lote | Lote custa |
+|---:|---:|---:|---:|
+| 3 | $0,73 | $0,88 | **1,2× mais** |
+| 5 | $1,22 | $1,70 | **1,4× mais** |
+| 10 | $2,45 | $4,57 | **1,9× mais** |
+| 22 | $5,38 | $16,30 | **3,0× mais** |
+
+Lotear N tarefas num despacho multiplica o termo quadrático por N:
+
+```
+N agentes de T:   N·T·C0 + N·D·T²/2
+1 agente de N·T:  N·T·C0 + D·N²T²/2      ← quadrático N vezes maior
+```
+
+**Controle que isola a causa:** com `D = 0` (custo puramente linear no contexto inicial),
+lotear é exatamente neutro — 1,00× para qualquer N. Toda a penalidade vem do termo
+quadrático. E mesmo assumindo generosamente que o revisor em lote reaproveite contexto e
+gaste 10 chamadas por tarefa em vez de 15, ainda sai **1,7× mais caro** em N=22.
+
+**Consequência arquitetural mais ampla, e é contraintuitiva:** sob custo quadrático,
+**granularidade é economia**. O instinto normal — "menos despachos, menos overhead" — está
+invertido aqui. Dividir trabalho em agentes menores e independentes é mais barato, não mais
+caro. Isso vale para todo o pipeline, não só para o revisor.
+
+Somam-se dois argumentos de qualidade: revisar no fim do backlog descobre um defeito da
+tarefa 2 depois que 3..20 já construíram sobre ele (custo de correção cresce com o tempo até
+a detecção), e a regra de escalonamento depende de veredito por tarefa (`tentativas >= 1`).
+
+**Ressalva:** existe algo legítimo no instinto — coerência ENTRE tarefas não é vista pela
+revisão por tarefa. Mas isso já tem lugar no protocolo: o **marco de fase**. Revisão
+arquitetural de conjunto pertence lá, como adição, nunca como substituição.
+
+### 6.3 Teste antes do código — **concordo, e é mais barato do que parecia**
+
+O argumento levantado está certo e é o principal: teste escrito depois do código tende a
+afirmar o que o código faz, não o que a tarefa pediu. Ele nasce passando.
+
+**A fábrica já estava ~90% lá, e isso muda a conta.** Os Critérios de aceite são escritos
+pelo planejador antes de existir código, um a um, e frequentemente já nomeiam o arquivo e o
+comando de teste. Exemplo real, T-008:
+
+> `tests/aluguel-propriedades.test.js` roda com `node --test tests/aluguel-propriedades.test.js`
+> cobrindo todos os critérios acima.
+
+Ou seja: o arquivo de teste **já era exigido**. O que muda é a **ordem**, mais uma execução
+vermelha — não o escopo. Delta real ~+3 voltas, não +11.
+
+| | Custo |
+|---|---:|
+| Executor hoje (T=45) | $0,686 |
+| Executor com red-green (T=48) | $0,740 |
+| Custo extra em 6 tarefas | **+$0,33** |
+| Um ciclo de retrabalho evitado vale | $1,03 |
+
+**Equilíbrio: reduzir retrabalho em 5,3 pontos percentuais** (de 31,8% medidos — 7 de 22
+tarefas com `tentativas >= 1` — para 26,5%). Bar baixa o suficiente para aprovar, e o
+benefício de validade do teste vem de graça em cima.
+
+**Onde NÃO aplicar, e isso é parte da decisão:** layout/estilo visual, configuração,
+documentação, e exploração cujo formato de saída ainda não está definido. Teste-primeiro
+nesses casos gasta voltas sem provar nada — a prova de tarefa visual é a captura de tela.
+Mandato universal de TDD seria uma piora.
+
+---
+
+## 7. A/B do `effort` — rodado de verdade (US$ 2,13)
+
+`npx tsx integracao/medir-esforco.ts --projeto=ia-hibrida-limpa`, 31/07.
+
+| Ação | Esforço | US$ | Turnos | Saída | Entregue |
+|---|---|---:|---:|---:|---|
+| `/status` | padrão | 0,2726 | 11 | 2220 | — |
+| `/status` | **medium** | **0,3045** | 9 | 1814 | — |
+| `projeto:conferir` | padrão | 0,7194 | 20 | 8606 | — (0 arquivos) |
+| `projeto:conferir` | **medium** | **0,2287** | 9 | 2300 | — (0 arquivos) |
+| `projeto:progresso` | padrão | 0,3856 | 11 | 6615 | 1 arq., **+26 linhas** |
+| `projeto:progresso` | **medium** | **0,2146** | 6 | 2922 | 1 arq., **+16 linhas** |
+
+O instrumento concluiu "economia real" nos três. **Duas dessas conclusões não se sustentam**,
+e a armadilha é a mesma já registrada no `CLAUDE.md` do painel: *execução que não faz nada é
+sempre a mais barata*.
+
+**`/status` — resultado contrário ao esperado, e acionável.** `medium` saiu **12% MAIS caro**
+que o padrão, com menos turnos e menos saída. Ou seja: gastou mais lendo para escrever menos.
+Isso importa porque `/status` está **hoje configurado como `medium`** em `guardrails.ts`
+(decisão da T-042). Uma amostra não derruba a decisão — mas a decisão nunca teve amostra a
+favor, e agora tem uma contra. **Requer re-medição antes de manter.**
+
+**`projeto:conferir` — medição INVÁLIDA.** Os −68% comparam duas execuções que entregaram
+zero arquivos cada. O projeto alvo (`ia-hibrida-limpa`) estava com escopo fechado e árvore
+limpa: **não havia nada a encontrar**. A perna padrão gastou 20 turnos e 8606 tokens
+procurando e não achou; a `medium` gastou 9 e também não achou. Isso não distingue "medium é
+eficiente" de "medium não procura" — que é exatamente a distinção que a T-042 já tinha pago
+para descobrir, quando o padrão achou o `PROGRESSO.md` fora de sincronia e o `medium` não.
+Para valer, esta ação precisa ser medida num projeto com **defeito plantado conhecido**.
+
+**`projeto:progresso` — economia provável, com ressalva.** Os −44% vêm com **38% menos linhas
+escritas** (26 → 16). O instrumento conta ARQUIVOS e chama de "comparável"; não é a mesma
+entrega. Pode ser menos enchimento (bom) ou menos conteúdo (ruim) — só a leitura do texto
+resolve, e o instrumento não lê.
+
+**Limitação de fundo, e é a mais importante:** este experimento mede as ações **mecânicas de
+zeladoria** — foi para isso que foi construído, na T-042. Ele **não responde** à pergunta que
+motivou rodá-lo, que era sobre `/trabalhar`. `/trabalhar` decide o que construir e julga o que
+volta; é o fluxo de julgamento, a categoria em que a própria T-042 concluiu que rebaixar
+esforço não compensa. **Nenhuma conclusão daqui transfere para lá.**
+
+### Decisão
+
+Não mexer em `esforco` no `/trabalhar` — continua sem evidência, e a evidência que existe é
+de outra categoria de ação. Os dois achados acionáveis são: **re-medir `/status`** (está em
+`medium` com uma amostra contra) e **corrigir o instrumento** para comparar conteúdo, não
+contagem de arquivos.
+
+---
+
+## 8. O que falta medir
 
 O modelo é analítico e calibrado por ordem de grandeza, não por medição direta de
 `C0`/`D` — esses dois parâmetros foram estimados, não observados. A instrumentação por
