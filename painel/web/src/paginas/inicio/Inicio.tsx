@@ -13,7 +13,7 @@ import type {
 import { Carregando, MensagemErro } from "../../componentes/Estados";
 import { GrafoGit } from "../../componentes/GrafoGit";
 import { BadgeMarco, ResumoStatus } from "../../componentes/Indicadores";
-import { estimarCusto, rotuloPeso } from "../../lib/formato";
+import { estimarCusto, rotuloPeso, textoEstrategia } from "../../lib/formato";
 
 export function Inicio() {
   const fabrica = useDados<RespostaFabrica>("/api/fabrica");
@@ -214,7 +214,7 @@ function CartaoAcao({
                 </option>
               ))}
             </select>
-            {estrategia && <span className="campo-ajuda">{estrategia.descricao}</span>}
+            {estrategia && <span className="campo-ajuda">{textoEstrategia(estrategia)}</span>}
           </label>
 
           {estimativa && (

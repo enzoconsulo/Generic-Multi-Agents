@@ -28,6 +28,8 @@ export interface EstrategiaModelo {
   fallback: string | null;
   custo: TierCusto;
   descricao: string;
+  /** Modelo do RETRABALHO; `null` = já é o mais forte. Ver `textoEstrategia`. */
+  reforco: string | null;
 }
 
 export interface AcaoFabrica {

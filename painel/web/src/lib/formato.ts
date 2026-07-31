@@ -171,3 +171,23 @@ export function milhares(n: number): string {
   if (n < 1_000_000) return `${(n / 1000).toFixed(1).replace(".", ",")}k`;
   return `${(n / 1_000_000).toFixed(2).replace(".", ",")}M`;
 }
+
+/**
+ * Texto de ajuda da estratégia de modelo: a descrição dela mais o modelo de RETRABALHO,
+ * quando existe.
+ *
+ * O escalonamento é decidido pela estratégia escolhida no disparo, mas quem escolhe não
+ * tinha como saber disso — a tela só mostrava o modelo primário. Configuração que muda o
+ * comportamento e não aparece onde a decisão é tomada é a mesma família do `watchdogMs`
+ * que ninguém lia: existe, funciona, e o usuário não sabe.
+ */
+export function textoEstrategia(estrategia: {
+  descricao: string;
+  reforco: string | null;
+}): string {
+  if (estrategia.reforco === null || estrategia.reforco === "") return estrategia.descricao;
+  return (
+    `${estrategia.descricao} Tarefa que voltar reprovada é refeita em ` +
+    `${estrategia.reforco} (retrabalho sobe de modelo).`
+  );
+}

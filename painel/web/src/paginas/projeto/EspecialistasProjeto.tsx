@@ -10,7 +10,7 @@ import type {
   RespostaAcoesProjeto,
   RespostaFabrica,
 } from "../../lib/tipos";
-import { estimarCusto, rotuloEstadoJob, rotuloPeso } from "../../lib/formato";
+import { estimarCusto, rotuloEstadoJob, rotuloPeso, textoEstrategia } from "../../lib/formato";
 import { custosPorAcao } from "../../lib/gestao";
 import { ExplicaAcao, SeloEscrita } from "../../componentes/ExplicaAcao";
 
@@ -285,7 +285,7 @@ function CartaoEspecialista({
                 </option>
               ))}
             </select>
-            {estrategia && <span className="campo-ajuda">{estrategia.descricao}</span>}
+            {estrategia && <span className="campo-ajuda">{textoEstrategia(estrategia)}</span>}
           </label>
 
           {estimativa && (

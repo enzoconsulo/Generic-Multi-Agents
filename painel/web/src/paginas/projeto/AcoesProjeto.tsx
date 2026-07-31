@@ -10,7 +10,13 @@ import type {
   RespostaAcao,
   RespostaFabrica,
 } from "../../lib/tipos";
-import { ESTADOS_JOB_ATIVOS, estimarCusto, rotuloEstadoJob, rotuloPeso } from "../../lib/formato";
+import {
+  ESTADOS_JOB_ATIVOS,
+  estimarCusto,
+  rotuloEstadoJob,
+  rotuloPeso,
+  textoEstrategia,
+} from "../../lib/formato";
 import { proximoPasso, type AcaoSugerida } from "./proximo-passo";
 
 /**
@@ -259,7 +265,7 @@ function CartaoAcaoProjeto({
                 </option>
               ))}
             </select>
-            {estrategia && <span className="campo-ajuda">{estrategia.descricao}</span>}
+            {estrategia && <span className="campo-ajuda">{textoEstrategia(estrategia)}</span>}
           </label>
 
           {estimativa && (
