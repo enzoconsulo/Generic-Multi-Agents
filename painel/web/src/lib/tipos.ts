@@ -555,4 +555,6 @@ export interface ResultadoContabil {
   tokensParciais?: boolean;
   sessoes?: number;
   despachosFundo?: number;
+  /** Agentes sem `tool_result` quando a sessão fechou — dano consumado, não risco. */
+  despachosEmVoo?: number;
 }

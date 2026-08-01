@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ErroApi } from "../../lib/api";
 import { avisoLimiteDeUso } from "../../lib/limite-uso";
-import { avisoDespachoFundo } from "../../lib/avisos-job";
+import { avisoDespachoEmVoo, avisoDespachoFundo } from "../../lib/avisos-job";
 import { useHistoricoLog } from "../../lib/useHistoricoLog";
 import { useJobsAoVivo } from "../../lib/useJobsAoVivo";
 import {
@@ -170,6 +170,7 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
   // lógica dentro do componente seria lógica não verificada.
   const avisoCota = avisoLimiteDeUso(resultado);
   const avisoFundo = avisoDespachoFundo(resultado);
+  const avisoEmVoo = avisoDespachoEmVoo(resultado);
 
   async function cancelar() {
     setCancelando(true);
@@ -323,6 +324,13 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
       {avisoCota !== null && (
         <div className="aviso aviso-erro">
           <strong>Limite de uso da assinatura.</strong> {avisoCota}
+        </div>
+      )}
+
+      {/* Dano consumado vem ANTES do risco: quando os dois aparecem, é este que decide. */}
+      {avisoEmVoo !== null && (
+        <div className="aviso aviso-erro">
+          <strong>Agente cortado no meio do trabalho.</strong> {avisoEmVoo}
         </div>
       )}
 

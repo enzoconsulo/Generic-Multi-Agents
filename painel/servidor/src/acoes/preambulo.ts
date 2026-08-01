@@ -19,22 +19,40 @@
  * Efeito colateral que também importa para custo: cada despacho em segundo plano REABRE
  * sessão, e sessão nova é prefixo novo para ESCREVER no cache (1,25× contra 0,1× da
  * leitura). Um `/trabalhar` real abriu 8 sessões, com 602k de cache escrito e 13,5M relidos.
+ *
+ * REESCRITO em 01/08, depois de a mesma falha acontecer de novo (job `f72534e8`, T-017a,
+ * US$ 0,89 por zero tarefa). A versão anterior PROIBIA "despachar em segundo plano
+ * (`run_in_background`)" — proibia o flag LIGADO. Mas segundo plano é o **padrão** da
+ * ferramenta `Agent`: o orquestrador nunca precisou ligar nada, bastou omitir o campo. Ele
+ * cumpriu a regra ao pé da letra, despachou o `servidor`, encerrou o turno em 2min37 para
+ * "aguardar a notificação", e o agente seguiu 10 minutos órfão até ser cortado escrevendo
+ * o arquivo de teste. Regra que proíbe uma forma sem EXIGIR a outra deixa o caminho padrão
+ * aberto — hoje o texto MANDA passar `run_in_background: false`, que é acionável e
+ * verificável (o runner mede em `despachosFundo`/`despachosEmVoo`).
  */
 import { SUFIXO_REFORCO } from "./agentes-dinamicos.js";
 
 export const PREAMBULO_HEADLESS = `<execucao-headless>
 Você está rodando como JOB do painel (Claude Agent SDK, sem interface interativa).
 
-REGRA DURA: todo despacho de subagente é SÍNCRONO e bloqueante. Chame o agente e ESPERE o
-resultado dele na mesma resposta antes de seguir. É proibido:
-- despachar agente em segundo plano (\`run_in_background\`) e encerrar o turno;
-- encerrar o turno dizendo que vai "aguardar a notificação" de algo assíncrono;
+REGRA DURA: todo despacho de subagente é SÍNCRONO e bloqueante. Em TODA chamada da
+ferramenta \`Agent\` (ou \`Task\`) passe **\`run_in_background: false\`** — explicitamente,
+sempre, sem exceção. Segundo plano é o PADRÃO da ferramenta: omitir esse campo já abandona
+o agente. Depois de chamar, ESPERE o resultado dele na mesma resposta antes de seguir.
+
+É proibido:
+- despachar sem \`run_in_background: false\`, ou com ele em \`true\`;
+- encerrar o turno dizendo que vai "aguardar a notificação" / "seguir quando chegar";
 - agendar wakeup, cron ou qualquer continuação futura.
 
 Aqui não existe quem entregue notificação depois: quando você para de escrever, a sessão
-FECHA e todo agente ainda em voo é cortado no meio do trabalho. Só termine o turno quando a
-tarefa pedida estiver realmente concluída — ou quando estiver bloqueada, e então diga
-explicitamente o que faltou e por quê.
+FECHA e todo agente ainda em voo é cortado no meio do trabalho — o que ele não tinha
+gravado em disco se perde, e o job aparece como sucesso. Se você está prestes a terminar o
+turno e algum agente que você despachou ainda não devolveu resultado, você está prestes a
+destruir o trabalho dele.
+
+Só termine o turno quando a tarefa pedida estiver realmente concluída — ou quando estiver
+bloqueada, e então diga explicitamente o que faltou e por quê.
 </execucao-headless>
 
 `;

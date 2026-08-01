@@ -133,15 +133,27 @@ export interface ResultadoClaude {
    */
   sessoes?: number;
   /**
-   * Despachos de subagente feitos em SEGUNDO PLANO (T-048). Em headless não há quem entregue
-   * a notificação de término: se o fluxo encerra o turno esperando por ela, a sessão fecha e
-   * o agente em voo é cortado no meio. Foi assim que o `/novo-projeto banco-imobiliario`
-   * terminou `concluido`, sem erro, com 9 das 22 tarefas nunca escritas.
+   * Despachos de subagente que NÃO pediram execução bloqueante (T-048). Em headless não há
+   * quem entregue a notificação de término: se o fluxo encerra o turno esperando por ela, a
+   * sessão fecha e o agente em voo é cortado no meio. Foi assim que o `/novo-projeto
+   * banco-imobiliario` terminou `concluido`, sem erro, com 9 das 22 tarefas nunca escritas.
    *
-   * Contar é de graça (o dado já vem no `tool_use`) e é o único sinal objetivo de que um job
-   * "bem-sucedido" pode ter abandonado trabalho. Zero é o normal.
+   * Conta despacho SEM `run_in_background: false` — não só o com `true`. Segundo plano é o
+   * padrão da ferramenta, então omitir o campo já basta para abandonar o agente; ver
+   * `ehDespachoEmFundo`. Contar é de graça (o dado já vem no `tool_use`) e é um sinal de
+   * RISCO, não de dano: para o dano consumado, ver `despachosEmVoo`.
    */
   despachosFundo?: number;
+  /**
+   * Despachos de subagente que o fluxo terminou SEM receber o `tool_result` (01/08). É a
+   * prova do dano, e não do risco: se não veio resultado, aquele agente estava trabalhando
+   * quando a sessão fechou — foi cortado no meio, com tudo que ele não gravou perdido.
+   *
+   * Independe de `run_in_background`, do texto do modelo e da versão do SDK: casa o `id` do
+   * `tool_use` de despacho com o `tool_use_id` dos blocos `tool_result`. Zero é o normal;
+   * qualquer valor > 0 significa que o resultado do job NÃO pode ser lido como entrega.
+   */
+  despachosEmVoo?: number;
 }
 
 /**
@@ -206,6 +218,8 @@ interface BlocoConteudo {
   id?: string;
   /** Input da ferramenta (usado p/ extrair `subagent_type` de despachos `Task`). */
   input?: Record<string, unknown>;
+  /** `tool_result`: `id` do `tool_use` que ele responde. Ver `despachosEmVoo`. */
+  tool_use_id?: string;
 }
 interface MensagemSDK {
   type?: string;
@@ -583,6 +597,12 @@ export class RunnerClaude implements Runner {
     /** Ver `despachosFundo`: subagente despachado em segundo plano dentro de um headless. */
     let despachosFundo = 0;
     /**
+     * Despachos ainda sem `tool_result` — `tool_use.id` → agente. O que sobrar aqui quando o
+     * laço terminar é agente que estava trabalhando na hora em que a sessão fechou. Ver
+     * `despachosEmVoo`.
+     */
+    const despachosPendentes = new Map<string, string>();
+    /**
      * Contabilidade que sobrevive ao corte (T-049): alimentada a cada mensagem `assistant`,
      * então já vale ANTES de qualquer `result`. Nos jobs completos serve de conferência.
      */
@@ -642,7 +662,14 @@ export class RunnerClaude implements Runner {
               const alvo = alvoDeSubagente(bloco);
               // Liga `tool_use.id` → agente ANTES de o filho começar a emitir: é o que
               // permite atribuir o consumo dele a quem o despachou.
-              if (alvo !== null) acumulador.registrarDespacho(bloco, alvo);
+              if (alvo !== null) {
+                acumulador.registrarDespacho(bloco, alvo);
+                // Abre a pendência: só o `tool_result` correspondente a fecha. Ver
+                // `despachosEmVoo`.
+                if (typeof bloco.id === "string" && bloco.id !== "") {
+                  despachosPendentes.set(bloco.id, alvo);
+                }
+              }
               if (ehDespachoEmFundo(bloco)) {
                 despachosFundo += 1;
                 // Avisar AQUI (e não só no fim) porque é acionável enquanto o fluxo roda:
@@ -650,7 +677,8 @@ export class RunnerClaude implements Runner {
                 ctx.emitir("log", {
                   nivel: "erro",
                   texto:
-                    `Despacho em SEGUNDO PLANO${alvo !== null ? ` (${alvo})` : ""} — em job` +
+                    `Despacho NÃO-BLOQUEANTE${alvo !== null ? ` (${alvo})` : ""} — sem` +
+                    " `run_in_background: false`, que é o padrão da ferramenta. Em job" +
                     " headless não há notificação de término: se o fluxo encerrar o turno" +
                     " agora, este agente é cortado no meio. Confira os artefatos no fim.",
                 });
@@ -670,6 +698,17 @@ export class RunnerClaude implements Runner {
           }
           break;
         }
+
+        // O resultado de uma ferramenta volta como mensagem `user` (é assim que a API
+        // fecha o par `tool_use`/`tool_result`). O runner não lia essas mensagens; passa a
+        // ler SÓ para fechar a pendência do despacho — nada de custo depende daqui.
+        case "user":
+          for (const bloco of msg.message?.content ?? []) {
+            if (bloco.type === "tool_result" && typeof bloco.tool_use_id === "string") {
+              despachosPendentes.delete(bloco.tool_use_id);
+            }
+          }
+          break;
 
         case "result": {
           erro = msg.is_error === true;
@@ -821,9 +860,25 @@ export class RunnerClaude implements Runner {
       ctx.emitir("log", {
         nivel: "erro",
         texto:
-          `Fluxo terminou depois de ${despachosFundo} despacho(s) em segundo plano.` +
+          `Fluxo terminou depois de ${despachosFundo} despacho(s) não-bloqueante(s).` +
           " Confira se os artefatos ficaram completos (tarefas do plano com arquivo," +
           " commits, status) antes de dar o fluxo por bom — trabalho pode ter sido cortado.",
+      });
+    }
+
+    // ESTE é o dano consumado, não o risco: despacho sem `tool_result` quando o laço
+    // termina só pode significar agente cortado no meio. Vem por último de propósito — é a
+    // última linha do log, que é onde se olha primeiro.
+    const despachosEmVoo = despachosPendentes.size;
+    if (despachosEmVoo > 0) {
+      const nomes = [...new Set(despachosPendentes.values())].join(", ");
+      ctx.emitir("log", {
+        nivel: "erro",
+        texto:
+          `TRABALHO ABANDONADO: ${despachosEmVoo} agente(s) sem resultado quando a sessão` +
+          ` fechou (${nomes}). Estavam trabalhando neste instante e foram cortados — o que` +
+          " não tinham gravado em disco se perdeu. NÃO leia este job como entrega: confira" +
+          " arquivo de tarefa, commits e árvore suja antes de qualquer outra coisa.",
       });
     }
 
@@ -839,6 +894,7 @@ export class RunnerClaude implements Runner {
       ...(modelosSemPreco.length > 0 ? { modelosSemPreco } : {}),
       sessoes,
       despachosFundo,
+      despachosEmVoo,
     };
 
     if (limiteBatido !== null) {
@@ -948,13 +1004,22 @@ function alvoDeSubagente(bloco: BlocoConteudo): string | null {
 }
 
 /**
- * Despacho de subagente pedido em SEGUNDO PLANO — o modo de falha da T-048 (ver
+ * Despacho de subagente que NÃO é bloqueante — o modo de falha da T-048 (ver
  * `despachosFundo`). Lido do input do próprio `tool_use`, então é fato observado, não
  * heurística sobre o texto do modelo.
+ *
+ * A checagem é `!== false`, não `=== true`, e a diferença custou um job inteiro
+ * (`f72534e8`, 01/08): **segundo plano é o PADRÃO da ferramenta `Agent`** — quem quer
+ * despacho síncrono precisa passar `run_in_background: false`. A versão anterior só
+ * enxergava o flag LIGADO, então o orquestrador que simplesmente OMITE o campo produzia o
+ * desastre completo (subagente cortado 10 min depois do fim do job, T-017a sem nada
+ * gravado, nada commitado) com o contador marcando `despachosFundo: 0`, aba Jobs sem
+ * aviso e o job verde. Detector que só pega a forma explícita da falha não pega a forma
+ * comum dela.
  */
 function ehDespachoEmFundo(bloco: BlocoConteudo): boolean {
   if (bloco.name === undefined || !FERRAMENTAS_DESPACHO.has(bloco.name)) return false;
-  return bloco.input?.["run_in_background"] === true;
+  return bloco.input?.["run_in_background"] !== false;
 }
 
 /**

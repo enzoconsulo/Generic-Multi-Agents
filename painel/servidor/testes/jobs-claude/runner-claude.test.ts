@@ -648,26 +648,41 @@ describe("contabilidade multi-sessão (T-047) — custo e turnos se comportam di
  * O `/novo-projeto banco-imobiliario` despachou o `planejador` assim, encerrou o turno para
  * "aguardar a notificação" (que em headless nunca chega), a sessão fechou e o agente foi
  * cortado no meio — 9 das 22 tarefas nunca escritas, job gravado como `concluido`.
+ *
+ * REESCRITO em 01/08, porque este bloco CERTIFICAVA o bug. O caso "síncrono" era montado
+ * OMITINDO `run_in_background` — mas omitir é justamente o que dispara o segundo plano, que
+ * é o padrão da ferramenta. O teste passava verde afirmando que o caminho perigoso era o
+ * seguro, e a falha se repetiu em `f72534e8` (T-017a, US$ 0,89 por zero tarefa) com
+ * `despachosFundo: 0` na tela. Hoje "síncrono" exige o `false` explícito.
  */
 describe("RunnerClaude — despacho em segundo plano", () => {
-  const despacho = (fundo: boolean) => ({
+  /** `bg: undefined` = campo OMITIDO, que é o caminho padrão (e perigoso) da ferramenta. */
+  const despacho = (bg: boolean | undefined, id = "tu_1") => ({
     type: "assistant",
     message: {
       content: [
         {
           type: "tool_use",
+          id,
           name: "Agent",
           input: {
             subagent_type: "planejador",
-            ...(fundo ? { run_in_background: true } : {}),
+            ...(bg === undefined ? {} : { run_in_background: bg }),
           },
         },
       ],
     },
   });
+  /** `tool_result` que fecha o par — é o que prova que o agente devolveu antes do fim. */
+  const resultadoDe = (id = "tu_1") => ({
+    type: "user",
+    message: { content: [{ type: "tool_result", tool_use_id: id }] },
+  });
   const fim = { type: "result", is_error: false, total_cost_usd: 0.57, num_turns: 18 };
+  const logsDe = (eventos: readonly { tipo: string; dados?: unknown }[]) =>
+    eventos.filter((e) => e.tipo === "log").map((e) => (e.dados as { texto: string }).texto);
 
-  it("conta o despacho, avisa na hora e avisa de novo no fim", async () => {
+  it("conta o despacho com `true`, avisa na hora e avisa de novo no fim", async () => {
     const { ctx, eventos } = contexto(new AbortController().signal);
     const r = await new RunnerClaude(consultaDe([despacho(true), fim])).executar(
       jobFake(PARAMS),
@@ -675,29 +690,106 @@ describe("RunnerClaude — despacho em segundo plano", () => {
     );
 
     expect(r.despachosFundo).toBe(1);
-    const textos = eventos
-      .filter((e) => e.tipo === "log")
-      .map((e) => (e.dados as { texto: string }).texto);
-    expect(textos.some((t) => t.includes("SEGUNDO PLANO") && t.includes("planejador"))).toBe(true);
+    const textos = logsDe(eventos);
+    expect(textos.some((t) => t.includes("NÃO-BLOQUEANTE") && t.includes("planejador"))).toBe(true);
     expect(textos.some((t) => t.includes("Confira se os artefatos ficaram completos"))).toBe(true);
     // O fluxo NÃO vira erro: ele de fato terminou. O aviso é o que diz para conferir.
     expect(r.erro).toBe(false);
   });
 
-  it("despacho normal (síncrono) não gera aviso nenhum", async () => {
+  // O teste que faltava — e cuja ausência custou o job `f72534e8`.
+  it("OMITIR o campo conta igual a `true`: segundo plano é o padrão", async () => {
     const { ctx, eventos } = contexto(new AbortController().signal);
-    const r = await new RunnerClaude(consultaDe([despacho(false), fim])).executar(
+    const r = await new RunnerClaude(consultaDe([despacho(undefined), fim])).executar(
       jobFake(PARAMS),
       ctx,
     );
 
+    expect(r.despachosFundo).toBe(1);
+    expect(logsDe(eventos).some((t) => t.includes("run_in_background: false"))).toBe(true);
+  });
+
+  it("só `run_in_background: false` conta como síncrono", async () => {
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    const r = await new RunnerClaude(
+      consultaDe([despacho(false), resultadoDe(), fim]),
+    ).executar(jobFake(PARAMS), ctx);
+
     expect(r.despachosFundo).toBe(0);
+    expect(r.despachosEmVoo).toBe(0);
+    const textos = logsDe(eventos);
+    expect(textos.some((t) => t.includes("NÃO-BLOQUEANTE"))).toBe(false);
+    // O log do despacho em si continua saindo, com a seta que o segmentador de resumos usa.
+    expect(textos.some((t) => t.includes("Agent → planejador"))).toBe(true);
+  });
+});
+
+/**
+ * Agente em voo no fechamento da sessão — o DANO, contra o risco medido por `despachosFundo`.
+ *
+ * Existe porque os dois incidentes reais (30/07 e 01/08) só foram diagnosticados horas
+ * depois, lendo `dados/jobs/*.log.jsonl` à mão e reparando que havia chamadas de ferramenta
+ * do subagente DEPOIS da linha de `result`. Esse fato está no fluxo de mensagens o tempo
+ * todo: despacho sem `tool_result` = agente que estava trabalhando na hora do corte. Não
+ * depende de flag, de texto do modelo nem da versão do SDK.
+ */
+describe("RunnerClaude — agente cortado no meio (despachosEmVoo)", () => {
+  const despachoCom = (id: string, agente: string) => ({
+    type: "assistant",
+    message: {
+      content: [
+        { type: "tool_use", id, name: "Agent", input: { subagent_type: agente } },
+      ],
+    },
+  });
+  const resultadoDe = (id: string) => ({
+    type: "user",
+    message: { content: [{ type: "tool_result", tool_use_id: id }] },
+  });
+  const fim = { type: "result", is_error: false, total_cost_usd: 0.89, num_turns: 12 };
+
+  it("despacho sem tool_result é contado e nomeado", async () => {
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    const r = await new RunnerClaude(
+      consultaDe([despachoCom("tu_1", "servidor"), fim]),
+    ).executar(jobFake(PARAMS), ctx);
+
+    expect(r.despachosEmVoo).toBe(1);
     const textos = eventos
       .filter((e) => e.tipo === "log")
       .map((e) => (e.dados as { texto: string }).texto);
-    expect(textos.some((t) => t.includes("SEGUNDO PLANO"))).toBe(false);
-    // O log do despacho em si continua saindo, com a seta que o segmentador de resumos usa.
-    expect(textos.some((t) => t.includes("Agent → planejador"))).toBe(true);
+    expect(textos.some((t) => t.includes("TRABALHO ABANDONADO") && t.includes("servidor"))).toBe(
+      true,
+    );
+  });
+
+  it("conta só os que ficaram pendentes, num job com vários despachos", async () => {
+    const { ctx } = contexto(new AbortController().signal);
+    const r = await new RunnerClaude(
+      consultaDe([
+        despachoCom("tu_1", "executor"),
+        resultadoDe("tu_1"),
+        despachoCom("tu_2", "testador"),
+        resultadoDe("tu_2"),
+        despachoCom("tu_3", "revisor"),
+        fim,
+      ]),
+    ).executar(jobFake(PARAMS), ctx);
+
+    expect(r.despachosEmVoo).toBe(1);
+  });
+
+  it("job que fechou todos os pares não avisa nada", async () => {
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    const r = await new RunnerClaude(
+      consultaDe([despachoCom("tu_1", "executor"), resultadoDe("tu_1"), fim]),
+    ).executar(jobFake(PARAMS), ctx);
+
+    expect(r.despachosEmVoo).toBe(0);
+    const textos = eventos
+      .filter((e) => e.tipo === "log")
+      .map((e) => (e.dados as { texto: string }).texto);
+    expect(textos.some((t) => t.includes("TRABALHO ABANDONADO"))).toBe(false);
   });
 });
 
