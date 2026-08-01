@@ -278,8 +278,27 @@ function lerTokens(modelUsage: Record<string, unknown> | undefined): TokensJob |
  * existe. Contar volta distinta é a única leitura correta.
  */
 class AcumuladorDeUso {
-  private readonly voltas = new Set<string>();
-  private readonly porModelo: TokensJob["porModelo"] = {};
+  /**
+   * Uso por VOLTA de API, indexado por `message.id`.
+   *
+   * A primeira versão guardava só os ids num `Set` e somava a usage da PRIMEIRA mensagem de
+   * cada volta. Errado, e a rodada real `c6d8cede` mostrou como: 176 voltas somaram 1.642
+   * tokens de saída — 9 por volta, impossível —, enquanto a leitura de cache saiu plausível
+   * (34k–59k por volta).
+   *
+   * A explicação está na assimetria: quando o SDK reparte uma volta em várias mensagens com
+   * o mesmo `message.id`, **entrada e cache já são finais na primeira** (são conhecidos no
+   * instante da requisição), mas **a saída ainda está sendo gerada**. Pegar a primeira
+   * captura o lado de entrada certo e zera o de saída.
+   *
+   * Guardar o MÁXIMO por campo resolve os dois casos possíveis sem depender de qual é o
+   * verdadeiro: se a usage for a da volta inteira em toda mensagem, máximo = o valor; se for
+   * cumulativa parcial, máximo = o total final. Somar seria o único jeito de errar para
+   * cima, e é justamente o que a deduplicação existe para evitar.
+   */
+  private readonly voltasUso = new Map<string, VoltaUso>();
+  /** Voltas sem `message.id`: não dá para deduplicar nem para reconciliar; entram somadas. */
+  private readonly semIdUso: VoltaUso[] = [];
   private readonly porAgente: Record<string, UsoAgente> = {};
   /**
    * `tool_use.id` do despacho → nome do agente. É assim que se liga uma mensagem de
@@ -336,46 +355,49 @@ class AcumuladorDeUso {
     this.baldeAgente(this.donoDe(msg)).ferramentas += 1;
   }
 
-  /** Registra uma mensagem `assistant`. Idempotente por `message.id`. */
+  /**
+   * Registra uma mensagem `assistant`. Idempotente por `message.id`: repetição do mesmo id
+   * RECONCILIA (máximo por campo) em vez de somar ou de ser ignorada. Ver `voltasUso`.
+   */
   registrar(msg: MensagemSDK): void {
     const m = msg.message;
     if (m === undefined || m.usage === undefined || typeof m.usage !== "object") return;
 
-    const id = typeof m.id === "string" ? m.id : null;
-    if (id === null) this.semId += 1;
-    else if (this.voltas.has(id)) return;
-    else this.voltas.add(id);
+    const volta: VoltaUso = {
+      modelo: typeof m.model === "string" && m.model !== "" ? m.model : "desconhecido",
+      agente: this.donoDe(msg),
+      entrada: num(m.usage["input_tokens"]),
+      saida: num(m.usage["output_tokens"]),
+      cacheLeitura: num(m.usage["cache_read_input_tokens"]),
+      cacheEscrita: num(m.usage["cache_creation_input_tokens"]),
+    };
 
-    const modelo = typeof m.model === "string" && m.model !== "" ? m.model : "desconhecido";
-    const entrada = num(m.usage["input_tokens"]);
-    const saida = num(m.usage["output_tokens"]);
-    const cacheLeitura = num(m.usage["cache_read_input_tokens"]);
-    const cacheEscrita = num(m.usage["cache_creation_input_tokens"]);
+    const id = typeof m.id === "string" && m.id !== "" ? m.id : null;
+    if (id === null) {
+      this.semIdUso.push(volta);
+      return;
+    }
+    const antes = this.voltasUso.get(id);
+    if (antes === undefined) {
+      this.voltasUso.set(id, volta);
+      return;
+    }
+    // Reconcilia: modelo/agente vêm da primeira (não mudam no meio de uma volta); os
+    // números ficam com o maior visto, que é o valor final de cada campo.
+    antes.entrada = Math.max(antes.entrada, volta.entrada);
+    antes.saida = Math.max(antes.saida, volta.saida);
+    antes.cacheLeitura = Math.max(antes.cacheLeitura, volta.cacheLeitura);
+    antes.cacheEscrita = Math.max(antes.cacheEscrita, volta.cacheEscrita);
+  }
 
-    const alvo = (this.porModelo[modelo] ??= {
-      entrada: 0,
-      saida: 0,
-      cacheLeitura: 0,
-      cacheEscrita: 0,
-      custoUsd: 0,
-    });
-    alvo.entrada += entrada;
-    alvo.saida += saida;
-    alvo.cacheLeitura += cacheLeitura;
-    alvo.cacheEscrita += cacheEscrita;
-
-    const agente = this.baldeAgente(this.donoDe(msg));
-    agente.entrada += entrada;
-    agente.saida += saida;
-    agente.cacheLeitura += cacheLeitura;
-    agente.cacheEscrita += cacheEscrita;
-    agente.voltas += 1;
-    if (!agente.modelos.includes(modelo)) agente.modelos.push(modelo);
+  /** Todas as voltas contabilizadas, com e sem id. */
+  private get todasAsVoltas(): VoltaUso[] {
+    return [...this.voltasUso.values(), ...this.semIdUso];
   }
 
   /** Voltas de API distintas observadas — o substituto honesto de `num_turns`. */
   get voltasDistintas(): number {
-    return this.voltas.size + this.semId;
+    return this.voltasUso.size + this.semIdUso.length;
   }
 
   /** Quantos despachos de subagente foram vistos (independe de a atribuição ter funcionado). */
@@ -392,10 +414,11 @@ class AcumuladorDeUso {
    * nome errado e do `watchdogMs` que ninguém lia: falha silenciosa que parece sucesso.
    */
   get atribuiuSubagente(): boolean {
-    // `voltas > 0`, não a mera existência da chave: `registrarDespacho` já cria o balde do
-    // agente ao ver o despacho. Checar a chave daria "atribuiu" mesmo com zero consumo
-    // ligado a ele — o verificador validaria a si mesmo em vez do que ele verifica.
-    return Object.entries(this.porAgente).some(([n, u]) => n !== ORQUESTRADOR && u.voltas > 0);
+    // Lê as VOLTAS, não `porAgente`: `registrarDespacho` já cria o balde do agente ao ver o
+    // despacho, então checar a chave daria "atribuiu" com zero consumo ligado a ele — o
+    // verificador validaria a si mesmo. Ler as voltas também torna esta checagem
+    // independente de `fechar()` já ter rodado.
+    return this.todasAsVoltas.some((v) => v.agente !== ORQUESTRADOR);
   }
 
   /**
@@ -403,28 +426,55 @@ class AcumuladorDeUso {
    * A UI usa isto para não vender precisão que o dado não tem.
    */
   get confiavel(): boolean {
-    return this.semId === 0;
+    return this.semIdUso.length === 0;
   }
 
-  /** Fecha o acumulado; `null` quando nada foi registrado. */
+  /**
+   * Fecha o acumulado; `null` quando nada foi registrado.
+   *
+   * A agregação por modelo e por agente acontece AQUI, e não durante o registro, porque
+   * antes de a volta terminar os números dela ainda podem subir (ver `voltasUso`). Somar
+   * incrementalmente congelaria o primeiro valor visto.
+   */
   fechar(): TokensJob | null {
-    const nomes = Object.keys(this.porModelo);
-    if (nomes.length === 0) return null;
+    const voltas = this.todasAsVoltas;
+    if (voltas.length === 0) return null;
+
+    const porModelo: TokensJob["porModelo"] = {};
     const total: TokensJob = {
       entrada: 0,
       saida: 0,
       cacheLeitura: 0,
       cacheEscrita: 0,
-      porModelo: this.porModelo,
+      porModelo,
       porAgente: this.porAgente,
     };
-    for (const nome of nomes) {
-      const u = this.porModelo[nome];
-      if (u === undefined) continue;
-      total.entrada += u.entrada;
-      total.saida += u.saida;
-      total.cacheLeitura += u.cacheLeitura;
-      total.cacheEscrita += u.cacheEscrita;
+
+    for (const v of voltas) {
+      const m = (porModelo[v.modelo] ??= {
+        entrada: 0,
+        saida: 0,
+        cacheLeitura: 0,
+        cacheEscrita: 0,
+        custoUsd: 0,
+      });
+      m.entrada += v.entrada;
+      m.saida += v.saida;
+      m.cacheLeitura += v.cacheLeitura;
+      m.cacheEscrita += v.cacheEscrita;
+
+      const a = this.baldeAgente(v.agente);
+      a.entrada += v.entrada;
+      a.saida += v.saida;
+      a.cacheLeitura += v.cacheLeitura;
+      a.cacheEscrita += v.cacheEscrita;
+      a.voltas += 1;
+      if (!a.modelos.includes(v.modelo)) a.modelos.push(v.modelo);
+
+      total.entrada += v.entrada;
+      total.saida += v.saida;
+      total.cacheLeitura += v.cacheLeitura;
+      total.cacheEscrita += v.cacheEscrita;
     }
     return total;
   }
@@ -441,6 +491,16 @@ class AcumuladorDeUso {
 
 /** Nome do nível de topo do fluxo na atribuição por agente. */
 const ORQUESTRADOR = "orquestrador";
+
+/** Uso de UMA volta de API, antes de ser agregado por modelo e por agente. */
+interface VoltaUso {
+  modelo: string;
+  agente: string;
+  entrada: number;
+  saida: number;
+  cacheLeitura: number;
+  cacheEscrita: number;
+}
 
 export class RunnerClaude implements Runner {
   constructor(private readonly consulta: Consulta = consultaReal) {}

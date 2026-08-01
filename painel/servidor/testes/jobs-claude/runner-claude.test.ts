@@ -964,3 +964,87 @@ describe("RunnerClaude — rateio por agente e sua auto-verificação", () => {
     expect(textos.some((t) => t.includes("Rateio por agente NÃO funcionou"))).toBe(false);
   });
 });
+
+/**
+ * Regressão da rodada real `c6d8cede` (31/07): 176 voltas somaram 1.642 tokens de SAÍDA — 9
+ * por volta, impossível — enquanto a leitura de cache saiu plausível (34k–59k por volta).
+ *
+ * Causa: a deduplicação por `message.id` guardava a PRIMEIRA mensagem da volta. Entrada e
+ * cache já são finais ali (são conhecidos no instante da requisição), mas a saída ainda está
+ * sendo gerada. O lado de entrada saía certo e o de saída, zerado — o tipo de erro que passa
+ * despercebido porque o número grande continua parecendo razoável.
+ */
+describe("RunnerClaude — reconciliação de voltas repartidas pelo SDK", () => {
+  const parcial = (id: string, saida: number) => ({
+    type: "assistant",
+    message: {
+      id,
+      model: "claude-sonnet-5",
+      // Entrada/cache constantes na volta; saída cresce a cada pedaço.
+      usage: {
+        input_tokens: 50,
+        output_tokens: saida,
+        cache_read_input_tokens: 40_000,
+        cache_creation_input_tokens: 1_000,
+      },
+      content: [{ type: "text", text: "…" }],
+    },
+  });
+
+  it("fica com a saída FINAL da volta, não com a do primeiro pedaço", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        parcial("msg_1", 12), // primeiro pedaço: quase nada escrito ainda
+        parcial("msg_1", 340),
+        parcial("msg_1", 900), // volta terminou aqui
+        { type: "assistant", message: { content: [{ type: "text", text: "usage limit reached" }] } },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const erro = await runner.executar(jobFake(PARAMS), ctx).catch((e) => e);
+    const t = erro.resultado.tokens;
+
+    expect(t.saida).toBe(900);
+    // E o lado de entrada continua contado UMA vez, não três.
+    expect(t.cacheLeitura).toBe(40_000);
+    expect(t.entrada).toBe(50);
+    expect(erro.resultado.numTurnos).toBe(1);
+  });
+
+  it("soma voltas distintas e reconcilia dentro de cada uma", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        parcial("msg_1", 10),
+        parcial("msg_1", 500),
+        parcial("msg_2", 8),
+        parcial("msg_2", 700),
+        { type: "assistant", message: { content: [{ type: "text", text: "usage limit reached" }] } },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const erro = await runner.executar(jobFake(PARAMS), ctx).catch((e) => e);
+
+    expect(erro.resultado.tokens.saida).toBe(1200);
+    expect(erro.resultado.tokens.cacheLeitura).toBe(80_000);
+    expect(erro.resultado.numTurnos).toBe(2);
+  });
+
+  it("a saída por volta fica em ordem de grandeza plausível (guarda do sintoma)", async () => {
+    const msgs: unknown[] = [
+      { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+    ];
+    for (let i = 0; i < 20; i++) {
+      msgs.push(parcial(`m${i}`, 5), parcial(`m${i}`, 260));
+    }
+    msgs.push({ type: "assistant", message: { content: [{ type: "text", text: "usage limit reached" }] } });
+    const runner = new RunnerClaude(consultaDe(msgs));
+    const { ctx } = contexto(new AbortController().signal);
+    const erro = await runner.executar(jobFake(PARAMS), ctx).catch((e) => e);
+    const t = erro.resultado.tokens;
+
+    // O sintoma que denunciou o bug era saída/volta na casa de UM dígito.
+    expect(t.saida / erro.resultado.numTurnos).toBeGreaterThan(100);
+  });
+});
