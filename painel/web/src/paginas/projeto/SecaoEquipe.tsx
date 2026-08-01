@@ -30,6 +30,30 @@ function paraEdicao(a: AgenteEspecialista): AgenteEdicao {
   };
 }
 
+/**
+ * O DOMÍNIO decide a trilha da fábrica inteira, e antes ele não aparecia em lugar nenhum
+ * da tela — quem olhasse o painel de um projeto de apresentação veria "executor / testador"
+ * escrito em toda parte e não teria como saber que o pipeline dele é outro. Mostrar o
+ * domínio aqui, junto da equipe, é o lugar certo: é o mesmo arquivo (`equipe.json`) que
+ * carrega os dois, e é a única tela onde o usuário decide algo sobre agentes.
+ */
+function TrilhaDoProjeto({ dominio }: { dominio: string }) {
+  if (dominio === "software") {
+    return (
+      <p className="texto-suave secao-desc">
+        Trilha: <strong>software</strong> — executor · testador · revisor.
+      </p>
+    );
+  }
+  return (
+    <p className="texto-suave secao-desc">
+      Trilha: <strong>genérica</strong> (domínio <code>{dominio}</code>) — construtor ·
+      conferente · revisor-generico. O entregável é um artefato, não software que roda; a
+      doutrina desta trilha está em <code>_sistema/DOMINIOS.md</code>.
+    </p>
+  );
+}
+
 export function SecaoEquipe({
   projeto,
   equipe,
@@ -49,9 +73,11 @@ export function SecaoEquipe({
       <h3 className="secao-titulo">Equipe de especialistas</h3>
       <p className="texto-suave secao-desc">
         Quem o <strong>Trabalhar</strong> injeta como especialista neste projeto. As tarefas
-        apontam para eles pelo campo <code>agente:</code>. Executor, testador e revisor são
-        papéis fixos da fábrica e não moram aqui.
+        apontam para eles pelo campo <code>agente:</code>. Construtor, verificador e revisor
+        são papéis fixos da fábrica e não moram aqui.
       </p>
+
+      <TrilhaDoProjeto dominio={equipe.dominio} />
 
       {equipe.erros.length > 0 && (
         <div className="aviso aviso-erro aviso-compacto">
@@ -75,8 +101,8 @@ export function SecaoEquipe({
         <>
           {equipe.agentes.length === 0 ? (
             <p className="vazio">
-              Sem equipe própria — este projeto usa o <strong>executor genérico</strong>, que dá
-              conta de projeto pequeno. Não é erro nem pendência.
+              Sem equipe própria — este projeto usa o <strong>construtor genérico</strong> da
+              trilha dele, que dá conta de projeto pequeno. Não é erro nem pendência.
             </p>
           ) : (
             <ul className="lista-equipe">

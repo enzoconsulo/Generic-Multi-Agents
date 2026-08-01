@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { dirProjeto } from "../acoes/analise.js";
+import { lerEquipe } from "./equipe.js";
 
 /**
  * ESCRITA da equipe do projeto (T-035) — `projetos/<nome>/_gestao/equipe.json`.
@@ -129,10 +130,21 @@ export async function gravarEquipe(
     throw new ErroEquipe(400, "A equipe tem problemas que impedem a gravação.", problemas);
   }
 
+  // PRESERVE o `dominio` já declarado. O editor da UI manda só a lista de agentes; gravar
+  // `{ agentes }` puro apagaria o campo que ROTEIA a trilha da fábrica, e o projeto voltaria
+  // silenciosamente para o pipeline de software na próxima rodada — com o `testador`
+  // tentando subir um servidor que nunca existiu. É o mesmo tipo de perda silenciosa do
+  // `effort` que a T-042 pagou caro: o dado sumia e nada na tela dizia.
+  const atual = await lerEquipe(fabricaRaiz, projeto);
+
   const caminho = join(dir, "_gestao", "equipe.json");
   // `_gestao/` pode não existir: pasta clonada à mão é projeto válido para o leitor.
   // Isso já derrubou a config de CI com ENOENT/500 — armadilha registrada no CLAUDE.md.
   await mkdir(dirname(caminho), { recursive: true });
-  await writeFile(caminho, `${JSON.stringify({ agentes }, null, 2)}\n`, "utf8");
+  await writeFile(
+    caminho,
+    `${JSON.stringify({ dominio: atual.dominio, agentes }, null, 2)}\n`,
+    "utf8",
+  );
   return agentes;
 }

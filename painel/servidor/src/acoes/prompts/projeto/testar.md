@@ -6,7 +6,14 @@ rodando nele agora, a suíte roda sobre uma árvore com edições alheias e repr
 motivo falso — o desperdício mais caro da fábrica. Nesse caso, pare e diga isso ao
 usuário em vez de rodar assim mesmo.
 
-Despache o agente `testador` com este despacho:
+**Trilha do projeto — confira ANTES de despachar.** O campo `dominio` de
+`$DIR_PROJETO/_gestao/equipe.json` decide quem atende: ausente ou `software` →
+`testador` (executa o software); qualquer outro valor → `conferente` (gera o artefato e
+confere cada critério no degrau declarado). Ver CLAUDE.md, "As duas trilhas". Despachar o
+agente da trilha errada queima o fluxo inteiro — o `testador` vai tentar subir um servidor
+que não existe.
+
+Despache o verificador da trilha com este despacho:
 
 ```
 Projeto: $DIR_PROJETO

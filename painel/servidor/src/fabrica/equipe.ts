@@ -1,15 +1,19 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { AgenteEspecialista, EquipeProjeto } from "./tipos.js";
+import { DOMINIO_PADRAO, type AgenteEspecialista, type EquipeProjeto } from "./tipos.js";
 
 /**
  * Leitor da EQUIPE do projeto (agentes dinâmicos) — `projetos/<nome>/_gestao/equipe.json`.
  * Especialistas sintetizados pela ideia do projeto (gerados pelo planejador). Ausência do
- * arquivo é NORMAL (projeto usa o executor genérico); nunca lança — arquivo malformado ou
+ * arquivo é NORMAL (projeto usa o construtor genérico); nunca lança — arquivo malformado ou
  * agente inválido aparece com `erros` preenchido e o resto segue.
  *
  * Formato de `equipe.json`:
- *   { "agentes": [ { "id","nome","descricao","prompt","ferramentas": string[]? } ] }
+ *   { "dominio": "software"?, "agentes": [ { "id","nome","descricao","prompt","ferramentas": string[]? } ] }
+ *
+ * `dominio` é o campo que ROTEIA a trilha (CLAUDE.md, "As duas trilhas"). Ele é opcional
+ * de propósito: ausente = `software`, então nenhum projeto anterior à trilha genérica muda
+ * de comportamento por existir esse campo.
  */
 export async function lerEquipe(raiz: string, nomeProjeto: string): Promise<EquipeProjeto> {
   const caminho = join(raiz, "projetos", nomeProjeto, "_gestao", "equipe.json");
@@ -18,7 +22,8 @@ export async function lerEquipe(raiz: string, nomeProjeto: string): Promise<Equi
   try {
     texto = await readFile(caminho, "utf8");
   } catch {
-    return { agentes: [], erros: [] }; // sem equipe.json = sem especialistas (normal)
+    // sem equipe.json = sem especialistas e trilha de software (o normal)
+    return { dominio: DOMINIO_PADRAO, agentes: [], erros: [] };
   }
 
   let dados: unknown;
@@ -26,14 +31,17 @@ export async function lerEquipe(raiz: string, nomeProjeto: string): Promise<Equi
     dados = JSON.parse(texto);
   } catch (e) {
     return {
+      dominio: DOMINIO_PADRAO,
       agentes: [],
       erros: [`equipe.json inválido: ${e instanceof Error ? e.message : String(e)}`],
     };
   }
 
+  const dominio = lerDominio((dados as { dominio?: unknown }).dominio);
+
   const bruto = (dados as { agentes?: unknown }).agentes;
   if (!Array.isArray(bruto)) {
-    return { agentes: [], erros: ["equipe.json sem o array `agentes`"] };
+    return { dominio, agentes: [], erros: ["equipe.json sem o array `agentes`"] };
   }
 
   const agentes: AgenteEspecialista[] = [];
@@ -59,7 +67,23 @@ export async function lerEquipe(raiz: string, nomeProjeto: string): Promise<Equi
     agentes.push({ id: id !== "" ? id : `agente-${i}`, nome, descricao, prompt, ferramentas, erros });
   }
 
-  return { agentes, erros: [] };
+  return { dominio, agentes, erros: [] };
+}
+
+/**
+ * Normaliza o `dominio` declarado. Valor ausente, vazio ou de tipo errado cai no padrão —
+ * **nunca vira erro que bloqueia a leitura**: um typo no domínio não pode impedir o painel
+ * de mostrar o projeto, e cair em `software` é o desfecho conservador (é a trilha calibrada).
+ */
+function lerDominio(bruto: unknown): string {
+  if (typeof bruto !== "string") return DOMINIO_PADRAO;
+  const limpo = bruto.trim().toLowerCase();
+  return /^[a-z0-9-]+$/.test(limpo) ? limpo : DOMINIO_PADRAO;
+}
+
+/** `true` quando o projeto roda na trilha genérica (qualquer domínio != software). */
+export function ehTrilhaGenerica(equipe: EquipeProjeto): boolean {
+  return equipe.dominio !== DOMINIO_PADRAO;
 }
 
 /** Só os agentes prontos para injeção (id + prompt válidos, sem erros de validação). */

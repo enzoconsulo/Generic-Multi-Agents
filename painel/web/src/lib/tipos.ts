@@ -129,6 +129,12 @@ export interface AgenteEspecialista {
 }
 
 export interface EquipeProjeto {
+  /**
+   * Dominio do projeto — roteia a trilha da fabrica (CLAUDE.md, "As duas trilhas").
+   * "software" = executor/testador/revisor; qualquer outro valor =
+   * construtor/conferente/revisor-generico. Ausente no arquivo vira "software".
+   */
+  dominio: string;
   agentes: AgenteEspecialista[];
   erros: string[];
 }

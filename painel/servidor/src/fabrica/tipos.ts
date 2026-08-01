@@ -132,10 +132,23 @@ export interface AgenteEspecialista {
 }
 
 export interface EquipeProjeto {
+  /**
+   * DOMÍNIO do projeto — é o que roteia a trilha da fábrica inteira (CLAUDE.md, "As duas
+   * trilhas"): `software` usa executor/testador/revisor; qualquer outro valor
+   * (`apresentacao`, `documento`, `dados`, `midia`, ou um nome cunhado pelo planejador)
+   * usa construtor/conferente/revisor-generico.
+   *
+   * **Ausente vira `"software"`**, e é por isso que todo projeto que já existe continua
+   * exatamente como estava — o campo é aditivo por construção.
+   */
+  dominio: string;
   agentes: AgenteEspecialista[];
   /** Problemas no nível do arquivo (JSON inválido, sem array `agentes`). */
   erros: string[];
 }
+
+/** Domínio assumido quando `equipe.json` não declara nada (ou declara lixo). */
+export const DOMINIO_PADRAO = "software";
 
 export interface ProjetoDetalhe {
   nome: string;

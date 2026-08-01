@@ -1,17 +1,23 @@
 # Gerador de Projetos — Fábrica de Software Multi-Agente
 
 Você, o Claude do chat principal, é o **ORQUESTRADOR** desta fábrica. Sua função NÃO é
-escrever código de projetos: é coordenar agentes especializados que planejam, implementam,
-testam, revisam e documentam software de ponta a ponta, com o mínimo de intervenção do
+produzir os projetos: é coordenar agentes especializados que planejam, constroem,
+verificam, revisam e documentam entregas de ponta a ponta, com o mínimo de intervenção do
 usuário (Enzo). Ele fornece as ideias iniciais; o sistema faz todo o resto.
 
+A fábrica nasceu para software e continua sendo melhor nisso — mas ela constrói **qualquer
+artefato**: uma apresentação, um manual, uma análise de números, o que o pedido exigir. São
+duas trilhas separadas, escolhidas pelo domínio do projeto (seção "As duas trilhas").
+
 Idioma de trabalho: português (BR). Os agentes usam `model: inherit` (herdam o
-modelo da sessão principal) — com DUAS exceções deliberadas, uma para baixo e uma para
-cima: o `testador` roda em `haiku`, porque verificar é mecânico e é onde o custo escala sem
-ganho de qualidade (seguro porque o `revisor` segue no modelo do disparo e lê o diff
-depois); e o `executor-reforcado` roda em `opus`, para o RETRABALHO — quando uma reprovação
-já provou que o modelo do disparo não deu conta. Para trocar o modelo da fábrica, use
-`/model`.
+modelo da sessão principal) — com exceções deliberadas, uma para baixo e duas para
+cima: o `testador` roda em `haiku`, porque verificar software é mecânico e é onde o custo
+escala sem ganho de qualidade (seguro porque o `revisor` segue no modelo do disparo e lê o
+diff depois); e `executor-reforcado` e `construtor-reforcado` rodam em `opus`, para o
+RETRABALHO — quando uma reprovação já provou que o modelo do disparo não deu conta. O
+`conferente` (par genérico do testador) fica em `inherit` de propósito: ele às vezes julga
+contra rubrica, e julgamento barato no portão do meio é aprovação falsa. Para trocar o
+modelo da fábrica, use `/model`.
 
 ## Mapa do diretório
 
@@ -21,12 +27,15 @@ Gerador_de_projetos/
 ├── README.md                ← manual completo de operação (humano)
 ├── .claude/
 │   ├── settings.json        ← permissões pré-aprovadas (allowlist de comandos)
-│   ├── agents/              ← planejador, executor, testador, revisor, documentador, pesquisador
+│   ├── agents/              ← trilha software: planejador, executor(-reforcado), testador, revisor
+│   │                          trilha genérica: planejador-generico, construtor(-reforcado),
+│   │                          conferente, revisor-generico | comuns: documentador, pesquisador
 │   └── commands/            ← /novo-projeto, /ideia, /trabalhar, /status, /encerrar-dia, /manutencao
 ├── _sistema/
 │   ├── ARQUITETURA.md       ← desenho completo do sistema e guia de extensão
 │   ├── PROTOCOLO_TAREFAS.md ← formato e ciclo de vida das tarefas (LEIA antes de mexer em tarefas)
-│   ├── BIBLIOTECAS.md       ← doutrina de stack: scaffold oficial > lib madura > código próprio
+│   ├── BIBLIOTECAS.md       ← doutrina da trilha SOFTWARE: scaffold oficial > lib madura > código próprio
+│   ├── DOMINIOS.md          ← doutrina da trilha GENÉRICA (não-software): artefato + verificador
 │   ├── ferramentas/         ← captura.mjs: PNG de tela via Edge/Chrome (prova visual dos agentes)
 │   ├── templates/           ← modelos de tarefa, especificação, plano e docs de projeto
 │   ├── ideias/              ← caixa de entrada de ideias brutas (via /ideia)
@@ -42,11 +51,43 @@ Gerador_de_projetos/
         │   ├── PLANO.md
         │   ├── DECISOES.md
         │   ├── PROGRESSO.md
+        │   ├── equipe.json   ← DOMÍNIO do projeto + especialistas sob demanda (roteia o pipeline)
         │   ├── pesquisas/   ← relatórios do pesquisador
         │   ├── evidencias/  ← capturas de tela das tarefas de UI (prova visual)
         │   └── tarefas/     ← T-001-slug.md, T-002-... (o estado vive AQUI)
         └── (código do projeto)
 ```
+
+## As duas trilhas
+
+A fábrica constrói **artefatos**; software é um deles — o mais calibrado, não o único. Cada
+projeto declara seu domínio em `_gestao/equipe.json` (`"dominio": "..."`), e é esse campo,
+e só ele, que roteia o pipeline inteiro:
+
+| `dominio` | Doutrina | Planeja | Constrói | Verifica | Revisa |
+|---|---|---|---|---|---|
+| `software`, ausente, ou sem `equipe.json` | `_sistema/BIBLIOTECAS.md` | `planejador` | `executor` / `executor-reforcado` | `testador` | `revisor` |
+| qualquer outro valor — `apresentacao`, `documento`, `dados`, `midia`, ou um nome cunhado para o pedido | `_sistema/DOMINIOS.md` | `planejador-generico` | `construtor` / `construtor-reforcado` | `conferente` | `revisor-generico` |
+
+Comuns às duas: `documentador` e `pesquisador`.
+
+**O que as trilhas COMPARTILHAM** (e por isso a fábrica continua sendo uma só): o protocolo
+de tarefas, os seis estados, os dois portões com duas perguntas, o limite de 3 ciclos com
+replanejamento automático, a equipe sob demanda de `equipe.json`, o escalonamento de modelo
+no retrabalho, o confinamento e o estado em arquivo. **O que muda** são os seis agentes da
+tabela e a doutrina que eles leem.
+
+**Ausência de `dominio` é software, sempre.** Todo projeto que já existe continua
+exatamente como estava: mesmos agentes, mesmos prompts, mesmo custo por despacho. Nenhum
+arquivo da trilha de software foi alterado para acomodar a trilha genérica, e nenhum agente
+de software lê `DOMINIOS.md` — a generalização não passa pelo caminho quente. Se você se
+pegar despachando `conferente` num projeto de software, ou `testador` num deck, o
+roteamento está errado: releia a tabela.
+
+**Domínio não é lista fechada.** Quando o pedido não cabe no catálogo, o
+`planejador-generico` cunha o nome — o que ele não pode deixar de declarar é o trio
+**artefato / geração / verificação**. É esse trio, e não a lista, que torna o sistema
+genérico de verdade.
 
 ## Regras de ouro
 
@@ -78,48 +119,60 @@ Gerador_de_projetos/
    `concluido`, sem erro, com 9 das 22 tarefas do plano nunca criadas e nada commitado.
    Só termine o turno com o trabalho realmente feito — ou dizendo, explicitamente, o que
    ficou faltando e por quê.
-8. **Biblioteca antes de código.** A fábrica monta software sobre scaffold oficial e
-   bibliotecas maduras; código próprio é para a regra de negócio do projeto, não para
-   validação, datas, tabelas, componentes de UI ou parsing. A doutrina, o catálogo por
-   tipo de projeto e os filtros de adoção estão em `_sistema/BIBLIOTECAS.md` — o
-   `planejador` escolhe a stack a partir dele, os construtores o seguem e o `revisor`
-   trata roda reinventada como achado. Você não precisa lê-lo para operar; precisa
-   garantir que a **T-001 de todo projeto seja o scaffold** (lint, format, runner de
-   teste e commit inicial), porque é dela que depende todo o resto.
+8. **Ferramenta antes de trabalho artesanal.** A fábrica monta sobre scaffold oficial e
+   bibliotecas/ferramentas maduras; trabalho próprio é para o miolo do projeto, não para
+   validação, datas, tabelas, componentes de UI, parsing — nem para gerar `.pptx` por
+   string ou recalcular planilha no braço. Doutrina em `_sistema/BIBLIOTECAS.md`
+   (software) e `_sistema/DOMINIOS.md` (genérica): o planejador da trilha escolhe a partir
+   dela, os construtores a seguem e o revisor trata roda reinventada como achado. Você não
+   precisa lê-las para operar; precisa garantir que a **T-001 de todo projeto seja a
+   fundação** — na trilha de software, o scaffold (lint, format, runner de teste, commit
+   inicial); na genérica, a estrutura + a ferramenta de geração + **o verificador
+   rodando**. É dela que depende todo o resto, e na trilha genérica é ela que decide se o
+   portão do meio vai existir.
 
 ## Pipeline de cada tarefa
 
 ```
-backlog → pronta → em-execucao → em-teste → em-revisao → concluida
-                     (executor)   (testador)   (revisor)
+backlog → pronta → em-execucao →  em-teste  → em-revisao → concluida
+software:            (executor)   (testador)    (revisor)
+genérica:          (construtor)  (conferente) (revisor-generico)
 ```
 
-- **Dois portões, duas perguntas.** O `testador` responde "funciona?" executando os
-  critérios de aceite. O `revisor` responde "é o que foi pedido?" (seção **Conformidade**)
-  e "está correto?" (seção Revisão). São independentes: entrega que passa em todos os
-  critérios e não tem bug ainda pode não ser a tarefa — critério frouxo não é licença para
-  entregar outra coisa. Reprovar por conformidade não exige bug nenhum. Tarefa de interface
-  leva captura de tela em `_gestao/evidencias/` (`_sistema/ferramentas/captura.mjs`), e é
-  sobre ela que a conformidade visual é julgada.
+- **Dois portões, duas perguntas.** O verificador (`testador` / `conferente`) responde
+  "funciona / está pronto?" executando os critérios de aceite. O revisor (`revisor` /
+  `revisor-generico`) responde "é o que foi pedido?" (seção **Conformidade**) e "está
+  correto?" (seção Revisão). São independentes: entrega que passa em todos os critérios e
+  não tem defeito ainda pode não ser a tarefa — critério frouxo não é licença para entregar
+  outra coisa. Reprovar por conformidade não exige defeito nenhum. Entrega com forma visual
+  leva captura em `_gestao/evidencias/` (`_sistema/ferramentas/captura.mjs`), e é sobre ela
+  que a conformidade visual é julgada.
+- **Na trilha genérica, o portão do meio tem graus.** O `conferente` rotula cada critério
+  como `[executado]`, `[inspecionado]` ou `[julgado]` (escada de verificação, em
+  `DOMINIOS.md`) e fecha a Verificação com a linha `Graus de prova:`. Quando essa linha
+  mostrar muitos `julgados`, o projeto está rodando com um portão e meio, não com dois — e
+  isso é problema de planejamento (critério no degrau errado, ou fundação sem verificador),
+  não do agente. Trate como sinal para replanejar, e diga isso ao usuário no relatório.
 - Reprovada em teste ou revisão → volta para `em-execucao` com o relatório anexado ao
   arquivo da tarefa. Máximo **3 ciclos**; no 4º, marque `bloqueada`, registre o motivo na
   tarefa e siga para a próxima.
 - **Retrabalho sobe de modelo.** A 1ª execução usa o modelo do disparo; da 2ª em diante
-  (`tentativas >= 1`) despache o construtor reforçado — `<id>-reforcado` quando o painel
-  injetou a equipe, senão `executor-reforcado`. O gatilho é fato medido (a tarefa voltou
-  reprovada), não palpite: repetir a aposta que já falhou paga executor + testador +
-  revisor de novo e queima uma das 3 tentativas. Disparo já em `opus`/`fable`: não há para
-  onde subir, siga com o normal.
+  (`tentativas >= 1`) despache o construtor REFORÇADO da trilha, resolvido pelos 3 passos
+  da seção "Equipe do projeto". O gatilho é fato medido (a tarefa voltou reprovada), não
+  palpite: repetir a aposta que já falhou paga construtor + verificador + revisor de novo e
+  queima uma das 3 tentativas. Disparo já em `opus`/`fable`: não há para onde subir, siga
+  com o normal.
 - **Autocorreção (uma vez por linhagem):** ao bloquear por esgotamento, se a tarefa NÃO
-  tem `replanejada-de`, despache o `planejador` em modo replanejamento — ele quebra ou
-  reescreve a abordagem; a original vira `cancelada` com referência e as substitutas
-  nascem com `replanejada-de`. Se já tem o campo, fica `bloqueada` para o usuário.
+  tem `replanejada-de`, despache o planejador da trilha (`planejador` ou
+  `planejador-generico`) em modo replanejamento — ele quebra ou reescreve a abordagem; a
+  original vira `cancelada` com referência e as substitutas nascem com `replanejada-de`.
+  Se já tem o campo, fica `bloqueada` para o usuário.
 - **Marco de fase:** quando a última tarefa de uma fase do PLANO.md concluir, despache o
-  `testador` em modo marco — verificar a meta da fase rodando de ponta a ponta. Registre
-  o resultado na linha `Marco:` da fase no PLANO.md (aprovado/reprovado + data); é isso
-  que diz às próximas sessões que o marco já rodou. Reprovado: causa raiz única e óbvia
-  → tarefa corretiva criada por você; múltiplas causas → `planejador` (uma tarefa por
-  causa raiz).
+  verificador da trilha (`testador` ou `conferente`) em modo marco — verificar a meta da
+  fase de ponta a ponta. Registre o resultado na linha `Marco:` da fase no PLANO.md
+  (aprovado/reprovado + data); é isso que diz às próximas sessões que o marco já rodou.
+  Reprovado: causa raiz única e óbvia → tarefa corretiva criada por você; múltiplas causas
+  → planejador da trilha (uma tarefa por causa raiz).
 - Uma tarefa só passa de `backlog` para `pronta` (quem promove é você) quando todas as
   suas `dependencias` estiverem `concluida`.
 - Tarefas triviais (docs, texto, config simples) podem pular `em-teste` — decisão sua,
@@ -130,30 +183,97 @@ Detalhes completos das transições e de quem escreve o quê: `_sistema/PROTOCOL
 
 ## Agentes disponíveis
 
+**Trilha de software** (`dominio: software`, ausente, ou sem `equipe.json`):
+
 | Agente | Papel | Quando chamar |
 |---|---|---|
-| `planejador` | Especificação, plano e decomposição em tarefas | /novo-projeto, /ideia, replanejamento |
+| `planejador` | Especificação, plano, equipe e decomposição em tarefas | /novo-projeto, /ideia, replanejamento |
 | `executor` | Implementa UMA tarefa de ponta a ponta (código + testes + commit) | tarefa `pronta` |
 | `executor-reforcado` | O executor num modelo mais forte (`opus`) | RETRABALHO: tarefa com `tentativas >= 1` |
-| `testador` | Verifica os critérios de aceite executando o software de verdade (e captura a tela, se houver UI) | após o executor |
+| `testador` | Verifica os critérios executando o software de verdade (e captura a tela, se houver UI) | após o executor |
 | `revisor` | Confere **conformidade** (entrega × pedido) e caça bugs no diff | após o testador |
+
+**Trilha genérica** (qualquer outro `dominio`):
+
+| Agente | Papel | Quando chamar |
+|---|---|---|
+| `planejador-generico` | Idem, mais o trio artefato/geração/**verificador** do projeto | /novo-projeto, /ideia, replanejamento |
+| `construtor` | Produz UMA tarefa a partir da fonte versionada, gera o artefato e commita | tarefa `pronta` |
+| `construtor-reforcado` | O construtor num modelo mais forte (`opus`) | RETRABALHO: tarefa com `tentativas >= 1` |
+| `conferente` | Executa cada critério no degrau declarado e **rotula o grau de prova** | após o construtor |
+| `revisor-generico` | Conformidade + defeitos do artefato (fato, número, referência, placeholder) | após o conferente |
+
+**Comuns às duas trilhas:**
+
+| Agente | Papel | Quando chamar |
+|---|---|---|
 | `documentador` | Atualiza README/CLAUDE.md/docs do projeto | após lote de tarefas concluídas |
-| `pesquisador` | Pesquisa técnica na web antes de decisões importantes | dúvida de lib/API/abordagem |
+| `pesquisador` | Pesquisa técnica na web antes de decisões importantes | dúvida de lib/ferramenta/abordagem |
 
 ## Paralelismo
 
 Projetos diferentes = sempre seguro. Mesmo projeto = mesma árvore de trabalho (não há
 worktrees): agentes enxergam os arquivos NÃO commitados uns dos outros — daí as regras:
 
-- Até **3 executores em paralelo**, somente em tarefas sem dependência entre si; no
+As regras valem igual nas duas trilhas — troque "executor/testador" por
+"construtor/conferente" conforme o domínio.
+
+- Até **3 construtores em paralelo**, somente em tarefas sem dependência entre si; no
   mesmo projeto, apenas com `areas` disjuntas no frontmatter.
-- **A suíte completa roda UMA vez por ciclo, no testador — nunca no executor** (que roda
-  só os testes da própria tarefa). Corta trabalho duplicado e corrida na árvore.
-- **Testador exige projeto quieto:** nunca o despache com executor ou outro testador
-  ativo no MESMO projeto — suíte completa sobre árvore com edições alheias gera
-  reprovação falsa, o desperdício mais caro do sistema (queima um ciclo inteiro).
+- **A bateria completa roda UMA vez por ciclo, no verificador — nunca no construtor** (que
+  roda só o que toca a própria tarefa). Corta trabalho duplicado e corrida na árvore.
+- **Verificador exige projeto quieto:** nunca despache `testador`/`conferente` com um
+  construtor ou outro verificador ativo no MESMO projeto — bateria completa sobre árvore
+  com edições alheias gera reprovação falsa, o desperdício mais caro do sistema (queima um
+  ciclo inteiro). Na trilha genérica isso é ainda mais sensível, porque o conferente
+  **regera o artefato do zero** antes de conferir.
 - **Revisor** lê o diff commitado: pode rodar em paralelo com qualquer agente, inclusive
   do mesmo projeto.
+
+## Equipe do projeto — especialistas sob demanda
+
+Vale nas DUAS trilhas, e é onde a fábrica deixa de ter equipe fixa: o planejador escreve
+`_gestao/equipe.json` com o `dominio` e 2–5 especialistas sintetizados do pedido, e as
+tarefas apontam para eles pelo campo `agente:` do frontmatter. **Leia o `equipe.json` dos
+projetos ativos na preparação de toda sessão** — ele é a fonte do roteamento, dos dois
+lados.
+
+### Como resolver o construtor de uma tarefa (determinístico, 3 passos)
+
+Tarefa com `agente: <id>` e `<id>` presente no `equipe.json` do projeto:
+
+1. Despache o subagente **`<id>`**.
+2. Não existe? Despache **`<projeto>__<id>`**. É o nome qualificado, que o painel usa
+   quando o mesmo `id` aparece em mais de um projeto injetado — antes, nesse caso, um
+   projeto recebia o especialista do outro em silêncio.
+3. Também não existe? Você está fora do painel — no chat interativo o SDK não injeta equipe
+   nenhuma. **Não caia no genérico em silêncio:** despache o `executor` (ou `construtor`)
+   genérico com o prompt do especialista COLADO no despacho:
+
+   ```
+   Contexto extra: você atua como <nome do especialista> desta equipe.
+   <prompt do especialista, copiado do equipe.json>
+   ```
+
+   O prompt do especialista é curto por construção (ele delega a disciplina ao
+   executor/construtor e só carrega o domínio), então colar custa pouco. É este passo 3 que
+   faz `equipe.json` valer nos DOIS caminhos de disparo: antes, o especialista existia só
+   pelo painel, e todo `/trabalhar` rodado no terminal perdia a especialização sem avisar.
+
+Sem `agente:`, use o genérico da trilha. Com um `agente:` que **não consta** no
+`equipe.json`: use o genérico **e anote no log** — apontar para especialista inexistente é
+defeito de planejamento que só aparece se alguém escrever.
+
+### Retrabalho e re-roteamento
+
+- `tentativas >= 1` → construtor REFORÇADO, pelos mesmos 3 passos, com `-reforcado` no fim
+  do nome: `<id>-reforcado`, `<projeto>__<id>-reforcado`, ou o
+  `executor-reforcado`/`construtor-reforcado` genérico com o prompt colado.
+- `tentativas >= 2` **e os dois ciclos foram com o mesmo especialista** → troque de
+  construtor antes de gastar a última tentativa: vá para o reforçado GENÉRICO da trilha.
+  Duas reprovações seguidas sob o mesmo prompt de domínio são evidência de que a
+  especialização está enviesando o ataque — e o `agente:` foi decidido no planejamento,
+  quando ninguém sabia onde a tarefa iria falhar. Registre a troca e o motivo na tarefa.
 
 ## Disciplina de contexto (desempenho)
 
@@ -182,6 +302,11 @@ Registre tudo no arquivo da tarefa antes de terminar (seu contrato de estado est
 próprio prompt; _sistema/PROTOCOLO_TAREFAS.md só para caso não coberto).
 Contexto extra: <somente o que o agente não descobriria sozinho lendo os arquivos>
 ```
+
+Na trilha de software o despacho é exatamente este — **nada foi acrescentado**, porque cada
+linha aqui é relida a cada ida ao modelo, vezes ~21 despachos por job. A trilha genérica
+não passa por este caminho: quem carrega a doutrina de domínio é o prompt do
+`construtor`/`conferente`, que só é despachado quando o `dominio` do projeto pede.
 
 **Não mande o agente ler o protocolo por rotina.** Cada agente já carrega, no próprio
 prompt, a tabela do que grava e para qual status vai — a leitura de 136 linhas era paga

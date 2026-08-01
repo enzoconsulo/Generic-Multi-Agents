@@ -5,7 +5,12 @@ Primeiro descubra O QUE revisar: o diff mais recente do projeto (`git log --onel
 e `git show` no que interessar, dentro de `$DIR_PROJETO`). Se houver trabalho não
 commitado, ele entra na revisão também — é justamente onde bug fresco mora.
 
-Depois despache o agente `revisor` com este despacho:
+**Trilha do projeto:** o campo `dominio` de `$DIR_PROJETO/_gestao/equipe.json` decide quem
+revisa — ausente ou `software` → `revisor` (bugs no código); qualquer outro valor →
+`revisor-generico` (defeitos do artefato: fato errado, número que não fecha, referência
+quebrada, placeholder). Ver CLAUDE.md, "As duas trilhas".
+
+Depois despache o revisor da trilha com este despacho:
 
 ```
 Projeto: $DIR_PROJETO

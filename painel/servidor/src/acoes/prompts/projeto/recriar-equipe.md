@@ -8,7 +8,13 @@ A equipe vive em `$DIR_PROJETO/_gestao/equipe.json` e é o que faz este projeto 
 auto-estruturar: o `/trabalhar` injeta esses agentes como especialistas, e as tarefas
 apontam para eles pelo campo `agente:` do frontmatter.
 
-Despache o agente `planejador`:
+**Trilha do projeto:** o campo `dominio` de `$DIR_PROJETO/_gestao/equipe.json` decide quem
+redesenha a equipe — ausente ou `software` → `planejador`; qualquer outro valor →
+`planejador-generico`. Ver CLAUDE.md, "As duas trilhas". O `dominio` já gravado deve ser
+PRESERVADO no arquivo regravado: mudá-lo troca a trilha do projeto inteiro, e isso não é
+decisão de uma recriação de equipe.
+
+Despache o planejador da trilha:
 
 ```
 Projeto: $DIR_PROJETO

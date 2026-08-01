@@ -13,9 +13,29 @@ desempenho · 8. Solução de problemas · 9. Mapa de arquivos
 ## 1. Como funciona em um minuto
 
 Você abre o Claude Code **nesta pasta**. O chat principal vira o **Orquestrador** (regras
-no `CLAUDE.md`): ele não escreve código — decide e despacha 6 agentes especializados
-(planejador, executor, testador, revisor, documentador, pesquisador), cada tarefa
-passando pelo pipeline `executor → testador → revisor` antes de contar como concluída.
+no `CLAUDE.md`): ele não produz o trabalho — decide e despacha agentes especializados, e
+cada tarefa passa pelo pipeline `construtor → verificador → revisor` antes de contar como
+concluída.
+
+**A fábrica não é só de software.** Cada projeto declara um **domínio**, e ele escolhe a
+trilha:
+
+| Você pediu | Domínio | Quem trabalha |
+|---|---|---|
+| um app, uma API, um CLI, um jogo, um site | `software` | planejador · executor · testador · revisor |
+| uma apresentação, um documento, uma análise de números, um vídeo… | `apresentacao`, `documento`, `dados`, `midia`, ou um nome cunhado para o seu pedido | planejador-generico · construtor · conferente · revisor-generico |
+
+O `/novo-projeto` classifica o domínio a partir do que você escreveu (e pergunta quando
+fica genuinamente ambíguo). Em cima da trilha, o planejador ainda monta uma **equipe de
+2–5 especialistas sob demanda**, sintetizados do seu pedido e gravados em
+`_gestao/equipe.json` — é isso que faz um projeto de deck ter roteirista e designer de
+slides, e um projeto web ter frontend e API.
+
+A regra que sustenta a trilha genérica: **todo projeto precisa de um verificador**, um
+comando que prova que o artefato está pronto. A primeira tarefa de qualquer projeto o
+instala. Quando um critério só puder ser julgado (qualidade de texto, gosto visual), a
+fábrica avalia contra uma rubrica e **diz explicitamente que aquilo foi julgado, não
+executado** — em vez de fingir que verificou.
 
 Todo o estado vive em **arquivos** (tarefas com status no frontmatter, decisões, logs
 diários) e cada projeto é um repositório git próprio. Consequência prática: você pode

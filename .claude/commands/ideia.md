@@ -16,14 +16,19 @@ mesmo que o roteamento falhe, o arquivo fica na caixa de entrada.
      1 tarefa de escopo óbvio): crie você mesmo a tarefa pelo template, seguindo o
      protocolo, sem despachar o planejador.
    - **Pertence a um projeto existente** (o usuário citou, ou é inequívoco pelo
-     conteúdo): despache o `planejador` desse projeto para integrá-la — criar as
-     tarefas correspondentes (e atualizar ESPECIFICACAO/PLANO se o escopo mudar).
+     conteúdo): despache o planejador **da trilha desse projeto** para integrá-la — criar
+     as tarefas correspondentes (e atualizar ESPECIFICACAO/PLANO se o escopo mudar). A
+     trilha sai do campo `dominio` de `_gestao/equipe.json`: ausente ou `software` →
+     `planejador`; qualquer outro valor → `planejador-generico` (CLAUDE.md, "As duas
+     trilhas"). Leia esse campo ANTES de despachar.
    - Nos dois casos acima: promova a `pronta` o que ficou sem dependências, marque a
      ideia como `roteada` (anote os IDs das tarefas no arquivo da ideia) e commite o
      `_gestao/` do projeto (`chore: ideia integrada — T-XXX..`).
    - **É claramente um projeto novo:** não crie o projeto por conta própria — responda
      ao usuário propondo `/novo-projeto <nome-sugerido> — <descrição>` já pronto para
-     copiar. Criar projeto é decisão de escopo dele.
+     copiar. Criar projeto é decisão de escopo dele. Diga na proposta qual **domínio** você
+     classificaria (a ideia pode não ser software, e o `/novo-projeto` vai perguntar se
+     ficar ambíguo).
    - **Ambígua:** deixe `status: nova` e diga ao usuário o que faltou para rotear.
 3. **Registre** no log do dia (1 linha).
 

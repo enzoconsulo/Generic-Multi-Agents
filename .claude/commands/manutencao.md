@@ -6,10 +6,19 @@ Rodar a manutenção da fábrica. Você é o orquestrador (regras no CLAUDE.md r
 Corrija sozinho tudo que for mecânico e inequívoco; o que exigir julgamento de escopo,
 apenas reporte. Rodar tipicamente 1x por semana ou quando o /status parecer inconsistente.
 
-1. **Estrutura:** confirme que existem os 6 agentes em `.claude/agents/`, os 6 comandos
-   em `.claude/commands/`, os templates em `_sistema/templates/` e o
-   `PROTOCOLO_TAREFAS.md`. Arquivo faltando ou frontmatter de agente sem
+1. **Estrutura:** confirme que existem os **11 agentes** em `.claude/agents/` — trilha de
+   software (`planejador`, `executor`, `executor-reforcado`, `testador`, `revisor`), trilha
+   genérica (`planejador-generico`, `construtor`, `construtor-reforcado`, `conferente`,
+   `revisor-generico`) e os comuns (`documentador`, `pesquisador`) —, os 6 comandos em
+   `.claude/commands/`, os templates em `_sistema/templates/`, o `PROTOCOLO_TAREFAS.md`,
+   o `BIBLIOTECAS.md` e o `DOMINIOS.md`. Arquivo faltando ou frontmatter de agente sem
    `name/description/model` → reporte (não recrie por conta própria).
+
+   **Trilha de cada projeto:** leia o `dominio` de `_gestao/equipe.json`. Domínio diferente
+   de `software` num projeto cujas tarefas foram claramente construídas pelo pipeline de
+   software (ou o contrário) → reporte; trilha trocada no meio do caminho desperdiça todo
+   ciclo seguinte. `equipe.json` presente mas SEM o campo `dominio` num projeto que não é
+   software é o erro mais provável: o projeto está rodando na trilha errada em silêncio.
 2. **Tarefas** (escaneie os frontmatters via busca, projeto a projeto):
    - `status` fora do vocabulário do protocolo, `id` diferente do nome do arquivo,
      `projeto` errado → corrija o que for óbvio; o resto, reporte.

@@ -10,7 +10,11 @@ Antes de despachar, levante o estado real: escaneie os frontmatters de
 replanejamento é tarefa `bloqueada`, tarefa que já esgotou tentativas, ou fase cuja meta
 deixou de fazer sentido.
 
-Despache o agente `planejador` em modo replanejamento:
+**Trilha do projeto:** o campo `dominio` de `$DIR_PROJETO/_gestao/equipe.json` decide quem
+replaneja — ausente ou `software` → `planejador`; qualquer outro valor →
+`planejador-generico`. Ver CLAUDE.md, "As duas trilhas".
+
+Despache o planejador da trilha em modo replanejamento:
 
 ```
 Projeto: $DIR_PROJETO

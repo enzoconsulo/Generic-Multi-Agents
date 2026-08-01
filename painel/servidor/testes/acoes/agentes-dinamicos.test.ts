@@ -52,9 +52,17 @@ describe("agentesParaAcao — injeção da equipe do projeto no /trabalhar", () 
     expect(Object.keys(ag ?? {}).sort()).toEqual(["front", "texto"]);
   });
 
-  it("id repetido entre projetos: fica o primeiro alfabético, sem misturar prompts", async () => {
-    // O fluxo despacha pelo id NU que leu no equipe.json — não há como distinguir dois
-    // prompts sob o mesmo nome, então a escolha precisa ser determinística.
+  /**
+   * Antes: ficava o primeiro alfabético e o outro sumia com um `console.warn`. Isso quer
+   * dizer que, no disparo padrão do painel (sem projeto = todos), o `ui` do blog executava
+   * tarefas da loja com o prompt errado — silenciosamente, que é o pior desfecho possível
+   * para um despacho de construtor.
+   *
+   * Agora o id repetido é QUALIFICADO nos dois lados. O despacho pelo id nu passa a falhar
+   * de forma visível ("not found"), e o orquestrador tem a resolução em 3 passos
+   * (CLAUDE.md, "Equipe do projeto") para chegar ao nome qualificado.
+   */
+  it("id repetido entre projetos vira `<projeto>__<id>` nos dois, sem misturar prompts", async () => {
     const raiz = fabricaComEquipe([{ id: "ui", prompt: "prompt-do-blog" }], "blog");
     const gestao2 = join(raiz, "projetos", "loja", "_gestao");
     mkdirSync(gestao2, { recursive: true });
@@ -65,8 +73,50 @@ describe("agentesParaAcao — injeção da equipe do projeto no /trabalhar", () 
     );
 
     const ag = await agentesParaAcao(raiz, "trabalhar", "");
-    expect(Object.keys(ag ?? {})).toEqual(["ui"]);
-    expect(ag?.["ui"]?.prompt).toBe("prompt-do-blog");
+    expect(Object.keys(ag ?? {}).sort()).toEqual(["blog__ui", "loja__ui"]);
+    expect(ag?.["blog__ui"]?.prompt).toBe("prompt-do-blog");
+    expect(ag?.["loja__ui"]?.prompt).toBe("prompt-da-loja");
+    // O id nu NÃO existe: despachá-lo falha visivelmente em vez de rodar o prompt errado.
+    expect(ag?.["ui"]).toBeUndefined();
+    // A descrição diz de qual projeto é, senão o orquestrador escolhe no escuro.
+    expect(ag?.["loja__ui"]?.description).toContain("loja");
+  });
+
+  it("id único continua NU mesmo com vários projetos injetados", async () => {
+    // Qualificar sempre dobraria o contexto injetado sem resolver nada: o caso normal é id
+    // único, e é ele que precisa continuar barato e igual ao que sempre foi.
+    const raiz = fabricaComEquipe([{ id: "front", prompt: "p1" }], "loja");
+    const gestao2 = join(raiz, "projetos", "blog", "_gestao");
+    mkdirSync(gestao2, { recursive: true });
+    writeFileSync(
+      join(gestao2, "equipe.json"),
+      JSON.stringify({ dominio: "documento", agentes: [{ id: "redator", prompt: "p2" }] }),
+      "utf8",
+    );
+
+    const ag = await agentesParaAcao(raiz, "trabalhar", "");
+    expect(Object.keys(ag ?? {}).sort()).toEqual(["front", "redator"]);
+  });
+
+  it("colisão + reforço: os gêmeos também nascem qualificados", async () => {
+    const raiz = fabricaComEquipe([{ id: "ui", prompt: "p-blog" }], "blog");
+    const gestao2 = join(raiz, "projetos", "loja", "_gestao");
+    mkdirSync(gestao2, { recursive: true });
+    writeFileSync(
+      join(gestao2, "equipe.json"),
+      JSON.stringify({ agentes: [{ id: "ui", prompt: "p-loja" }] }),
+      "utf8",
+    );
+
+    const ag = await agentesParaAcao(raiz, "trabalhar", "", "opus");
+    expect(Object.keys(ag ?? {}).sort()).toEqual([
+      "blog__ui",
+      "blog__ui-reforcado",
+      "loja__ui",
+      "loja__ui-reforcado",
+    ]);
+    expect(ag?.["loja__ui-reforcado"]?.model).toBe("opus");
+    expect(ag?.["loja__ui-reforcado"]?.prompt).toBe("p-loja");
   });
 
   it("nenhum projeto com equipe válida → undefined (não injeta objeto vazio)", async () => {

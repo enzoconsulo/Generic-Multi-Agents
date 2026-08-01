@@ -9,22 +9,53 @@
                          │   regras no CLAUDE.md)  │  /manutencao
                          └─────┬───────────────────┘
                                │ despacha via Agent tool (1 tarefa = 1 pipeline)
-        ┌──────────┬───────────┼───────────┬─────────────┬─────────────┐
-        ▼          ▼           ▼           ▼             ▼             ▼
-   planejador   executor   testador    revisor    documentador   pesquisador
-   (spec+plano  (código+   (executa    (caça bugs (docs em dia)  (web research)
-    +tarefas)    testes+     critérios   no diff)
-                 commit)     de aceite)
-        │          │           │           │             │             │
-        └──────────┴───────────┴─────┬─────┴─────────────┴─────────────┘
-                                     ▼
+                               │ a TRILHA sai de _gestao/equipe.json → campo `dominio`
+        ┌──────────────────────┴──────────────────────┐
+        ▼ dominio: software (ou ausente)              ▼ qualquer outro dominio
+   planejador                                    planejador-generico
+   executor / executor-reforcado                 construtor / construtor-reforcado
+   testador  (haiku, executa o software)         conferente (gera o artefato e confere)
+   revisor   (bugs no diff)                      revisor-generico (defeitos do artefato)
+   doutrina: _sistema/BIBLIOTECAS.md             doutrina: _sistema/DOMINIOS.md
+        │                                             │
+        └──────────────────────┬──────────────────────┘
+                               │  comuns às duas: documentador, pesquisador
+                               ▼
                      ESTADO EM ARQUIVOS (sobrevive à sessão)
          projetos/<nome>/_gestao/tarefas/*.md   ← status no frontmatter
+         projetos/<nome>/_gestao/equipe.json    ← domínio + especialistas sob demanda
          projetos/<nome>/_gestao/{ESPECIFICACAO,PLANO,DECISOES,PROGRESSO}.md
          _sistema/logs/AAAA-MM-DD.md            ← memória diária
-         git (um repositório por projeto)       ← histórico do código
+         git (um repositório por projeto)       ← histórico do artefato
          git na raiz (projetos/ no .gitignore)  ← histórico da própria fábrica
 ```
+
+## As duas trilhas (2026-08-01)
+
+A fábrica constrói **artefatos**; software é um deles. O eixo que separa os dois casos não
+é "é código?" — é **como se prova que ficou pronto**. Em software a prova vem de graça: o
+programa roda e passa ou quebra. Fora dele não vem, e é aí que o desenho podia degenerar —
+um verificador sem nada a executar vira um segundo revisor, e dois julgamentos subjetivos
+sobre o mesmo artefato não são dois portões, são custo dobrado.
+
+A trilha genérica resolve isso com três peças, todas em `_sistema/DOMINIOS.md`:
+
+1. **A escada de verificação** — comando executável > inspeção programática do artefato >
+   rubrica declarada. O `conferente` **rotula** cada critério com o degrau usado
+   (`[executado]` / `[inspecionado]` / `[julgado]`), e é esse rótulo que impede a fábrica
+   de fingir dois portões quando tem um.
+2. **A T-001 instala o verificador.** É o análogo exato do scaffold: sem verificador na
+   fundação, todo critério do projeto desaba para rubrica.
+3. **A regra do binário.** `.pptx`/`.xlsx`/`.png` são GERADOS de fonte versionada em texto;
+   commitar o binário como fonte de verdade transforma o `git show` em `Bin 40213 bytes` e
+   apaga o portão da revisão para sempre.
+
+**A separação é dura, e é uma decisão de desempenho.** Nenhum arquivo da trilha de software
+foi alterado para acomodar a genérica: os prompts de `executor`, `testador` e `revisor`
+estão byte a byte como estavam, nenhum deles lê `DOMINIOS.md`, e o modelo de despacho no
+CLAUDE.md não ganhou uma linha. A generalização inteira mora em arquivos que só são
+carregados quando o `dominio` do projeto pede. O custo por despacho da trilha de software
+é o mesmo de antes da mudança.
 
 ## Princípios de projeto
 
@@ -82,7 +113,7 @@
   troca o modelo com `/model` (Fable enquanto disponível; Opus depois) e todos os agentes
   acompanham. O desenho não depende de recurso exclusivo de nenhum modelo.
 
-## Política de modelo: duas exceções deliberadas ao `inherit`
+## Política de modelo: três exceções deliberadas ao `inherit`
 
 **`testador` em `haiku` (para baixo, desde 2026-07-28).** Verificar é MECÂNICO: rodar os
 comandos dos critérios de aceite e comparar a saída com o que a tarefa pede. Não exige a
@@ -97,12 +128,22 @@ esperado** (regra dada ao planejador): critério vago vira interpretação, e in
 neste portão produz reprovação falsa, que custa um ciclo inteiro. Para voltar atrás,
 troque para `inherit`.
 
-**`executor-reforcado` em `opus` (para cima, desde 2026-07-31).** Faltava a exceção CARA:
-quando o modelo do disparo não dá conta, insistir com ele é o gasto mais previsível do
-sistema — cada ciclo perdido paga executor + testador + revisor de novo e ainda consome
-uma das 3 tentativas antes do bloqueio. O gatilho é FATO medido, não palpite: a tarefa
-voltou reprovada (`tentativas >= 1`). Se o disparo já era opus/fable, não há para onde
-subir e o orquestrador segue com o construtor normal.
+**`executor-reforcado` e `construtor-reforcado` em `opus` (para cima, desde 2026-07-31).**
+Faltava a exceção CARA: quando o modelo do disparo não dá conta, insistir com ele é o gasto
+mais previsível do sistema — cada ciclo perdido paga construtor + verificador + revisor de
+novo e ainda consome uma das 3 tentativas antes do bloqueio. O gatilho é FATO medido, não
+palpite: a tarefa voltou reprovada (`tentativas >= 1`). Se o disparo já era opus/fable, não
+há para onde subir e o orquestrador segue com o construtor normal.
+
+**`conferente` fica em `inherit` — a exceção que NÃO foi feita (2026-08-01).** O par
+genérico do testador seria o candidato óbvio a `haiku`, pela mesma lógica. Não foi, e o
+motivo é o degrau 3 da escada: quando um critério só pode ser JULGADO contra rubrica, o
+trabalho deixa de ser mecânico. O que torna o testador seguro em `haiku` é que ele só
+compara saída de comando com texto esperado — e é justamente essa propriedade que a trilha
+genérica nem sempre tem. Verificar barato ali seria comprar aprovação falsa no portão de
+que a fábrica inteira depende. Se um dia todos os critérios de um projeto genérico
+estiverem no degrau 1, o conferente daquele projeto pode cair para `haiku` sem perda — o
+que muda a decisão é a composição da linha `Graus de prova:`, não o domínio.
 
 ## Anatomia de um dia de trabalho
 

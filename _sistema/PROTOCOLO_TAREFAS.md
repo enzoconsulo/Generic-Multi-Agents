@@ -3,14 +3,20 @@
 Contrato obrigatório entre todos os agentes. Qualquer agente que ler, criar ou alterar uma
 tarefa segue este documento à risca.
 
-**Como ele é consumido:** executor, testador e revisor carregam a fatia que lhes cabe
-(o que gravam e para qual status vão) **dentro do próprio prompt de sistema** — eles
+**Este documento vale igual nas DUAS trilhas da fábrica.** O que muda entre elas são os
+agentes, não o contrato — onde se lê "executor / testador / revisor" (trilha de software),
+leia "construtor / conferente / revisor-generico" quando o projeto declara um `dominio`
+diferente de `software` em `_gestao/equipe.json`. O roteamento está no CLAUDE.md da raiz,
+seção "As duas trilhas".
+
+**Como ele é consumido:** os seis agentes de construção e portão carregam a fatia que lhes
+cabe (o que gravam e para qual status vão) **dentro do próprio prompt de sistema** — eles
 abrem este arquivo só quando aparece um caso que a fatia não cobre. Quem o lê sempre é o
-`planejador`, porque ele ESCREVE tarefas e precisa do formato inteiro. Isto é
-deliberado: a leitura por rotina custava ~2 mil tokens em cada agente de cada tarefa, e
-todo token lido cedo é relido em cada ida seguinte ao modelo. Este documento continua
-sendo a fonte de verdade — mudou algo aqui, propague para a fatia nos prompts dos
-agentes afetados.
+planejador da trilha (`planejador` ou `planejador-generico`), porque ele ESCREVE tarefas e
+precisa do formato inteiro. Isto é deliberado: a leitura por rotina custava ~2 mil tokens
+em cada agente de cada tarefa, e todo token lido cedo é relido em cada ida seguinte ao
+modelo. Este documento continua sendo a fonte de verdade — mudou algo aqui, propague para
+a fatia nos prompts dos agentes afetados.
 
 ## Onde vivem as tarefas
 
@@ -32,8 +38,10 @@ status: backlog
 prioridade: alta        # alta | media | baixa
 dependencias: []        # ex.: [T-002, T-003] — IDs que precisam estar concluida
 areas: []               # pastas/arquivos que a tarefa toca, ex.: [src/api/, src/db/schema.sql]
-tentativas: 0           # incrementado pelo executor a cada vez que pega a tarefa
-agente: <id>            # OPCIONAL: especialista da equipe (_gestao/equipe.json) que executa; vazio = executor genérico
+tentativas: 0           # incrementado pelo construtor a cada vez que pega a tarefa
+agente: <id>            # OPCIONAL: especialista da equipe (_gestao/equipe.json) que executa; vazio = construtor genérico
+verificacao: rubrica    # OPCIONAL (trilha genérica): ausente = critérios executáveis/inspecionáveis.
+                        # `rubrica` EXIGE a seção `## Rubrica` abaixo — ver regra 13.
 replanejada-de: T-NNN   # OPCIONAL: só em tarefas criadas por replanejamento automático
 criada: AAAA-MM-DD
 atualizada: AAAA-MM-DD  # atualizar em TODA mudança de status
@@ -46,8 +54,15 @@ O que deve existir/funcionar quando a tarefa terminar. 1–3 frases.
 O que o executor precisa saber: decisões já tomadas, arquivos relevantes, armadilhas.
 
 ## Critérios de aceite
-- [ ] Verificáveis e objetivos. O testador vai executar cada um literalmente.
+- [ ] Verificáveis e objetivos. O verificador vai executar cada um literalmente.
 - [ ] Ex.: "GET /api/usuarios retorna 200 com lista em JSON", não "API funciona".
+- [ ] Trilha genérica: "`uv run python verificar.py` → OK: 12 slides, 0 problemas",
+      não "o deck está pronto".
+
+## Rubrica
+(SÓ quando `verificacao: rubrica` — trilha genérica, critério que nenhum programa consegue
+ provar. Itens BINÁRIOS, nunca escala vaga: "cada seção abre com frase-tese", "nenhum slide
+ passa de 6 linhas". O conferente avalia item a item e marca o critério como `[julgado]`.)
 
 ## Notas de execução
 (preenchido pelo executor: o que fez, arquivos alterados, comandos de teste, hash do commit)
@@ -65,8 +80,11 @@ inútil: sem ele o revisor precisa descobrir os commits por `git log`, e uma rev
 chamadas de ferramenta vira uma de 70.
 
 ## Verificação
-(preenchido pelo testador: cada critério com PASSOU/FALHOU + evidência; se falhou, como reproduzir.
- Tarefa de interface: caminho da captura em _gestao/evidencias/)
+(preenchido pelo testador/conferente: cada critério com PASSOU/FALHOU + evidência; se falhou,
+ como reproduzir. Entrega com forma visual: caminho da captura em _gestao/evidencias/.
+ Trilha genérica: cada critério leva também o GRAU DE PROVA — [executado] | [inspecionado] |
+ [julgado] — e a seção fecha com a linha `Graus de prova: N executados, M inspecionados,
+ K julgados`. Ver regra 13.)
 
 ## Conformidade
 (preenchido pelo revisor: `Conformidade: cumpre | cumpre-parcial | nao-cumpre` + cada critério
@@ -137,9 +155,29 @@ Regras:
     `_sistema/ferramentas/captura.mjs`), e é sobre ela que a conformidade visual é julgada.
 12. **Escalonamento de modelo no retrabalho.** A 1ª execução vai no modelo do disparo. Da
     2ª em diante (`tentativas >= 1`, ou seja, a tarefa já voltou reprovada), o orquestrador
-    despacha o construtor REFORÇADO: `executor-reforcado` (ou, quando o painel injetou a
-    equipe, `<id>-reforcado` do especialista). O gatilho é fato medido — a tarefa falhou —,
-    não palpite sobre dificuldade. Insistir no mesmo modelo depois de uma reprovação gasta
-    executor + testador + revisor de novo e queima uma das 3 tentativas; subir a capacidade
-    custa menos que um ciclo perdido. Se o disparo já for `opus`/`fable`, não há para onde
-    escalar: siga com o construtor normal e registre isso.
+    despacha o construtor REFORÇADO da trilha — `executor-reforcado` ou
+    `construtor-reforcado`, e o gêmeo `-reforcado` do especialista quando há equipe
+    injetada (resolução em 3 passos no CLAUDE.md, seção "Equipe do projeto"). O gatilho é
+    fato medido — a tarefa falhou —, não palpite sobre dificuldade. Insistir no mesmo
+    modelo depois de uma reprovação gasta o ciclo inteiro de novo e queima uma das 3
+    tentativas; subir a capacidade custa menos que um ciclo perdido. Se o disparo já for
+    `opus`/`fable`, não há para onde escalar: siga com o construtor normal e registre isso.
+    **Duas reprovações seguidas sob o MESMO especialista** (`tentativas >= 2`) trocam o
+    construtor por prevenção: vá para o reforçado genérico da trilha e registre a troca —
+    o `agente:` foi decidido no planejamento, antes de se saber onde a tarefa falharia.
+13. **Grau de prova (trilha genérica).** Fora de software, "verificar" não é uma coisa só.
+    Todo critério fica num de três degraus, e o `conferente` **registra em qual**:
+    `[executado]` (um comando roda e a saída é o veredito), `[inspecionado]` (um script
+    abre o artefato entregue e afirma fatos sobre ele) ou `[julgado]` (avaliação item a
+    item contra a seção `## Rubrica`, que passa a ser obrigatória na tarefa junto com
+    `verificacao: rubrica` no frontmatter).
+
+    **PASSOU por julgamento nunca se escreve como PASSOU por execução.** O rótulo é o que
+    impede a fábrica de parecer ter dois portões independentes quando tem um: sem ele,
+    conferente e revisor viram dois julgamentos subjetivos sobre o mesmo artefato, e o
+    portão do meio deixa de valer o que custa. Suba de degrau sempre que der; descer é
+    decisão registrada, no Contexto da tarefa e em `DECISOES.md`. Critério escrito como
+    comando que o projeto não tem como rodar é **reprovação por critério impossível**, não
+    convite para o conferente julgar no lugar. A doutrina completa (escada de verificação,
+    fundação que instala o verificador, regra do binário gerado) está em
+    `_sistema/DOMINIOS.md`.

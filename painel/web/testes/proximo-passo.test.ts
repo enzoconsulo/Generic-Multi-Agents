@@ -36,7 +36,7 @@ function projeto(tarefas: TarefaCompleta[], analise: string | null = null): Proj
     contagemPorStatus: {} as ProjetoDetalhe["contagemPorStatus"],
     faseAtual: null,
     plano: null,
-    equipe: { agentes: [], erros: [] },
+    equipe: { dominio: "software", agentes: [], erros: [] },
     decisoes: null,
     progresso: null,
     analiseEstruturada: null,
