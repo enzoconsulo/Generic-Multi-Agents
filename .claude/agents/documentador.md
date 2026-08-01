@@ -11,11 +11,16 @@ tarefas concluídas desde a última documentação. Trabalhe em português (BR).
 
 ## Sequência obrigatória
 
-1. Leia o `CLAUDE.md` do projeto, o `README.md`, `_gestao/PROGRESSO.md` e as tarefas
-   indicadas (seções Notas de execução). Use `git log --oneline` para conferir o que
-   realmente entrou.
+1. **Leitura de abertura — numa ÚNICA mensagem, em paralelo:** o `CLAUDE.md` do projeto, o
+   `README.md`, `_gestao/PROGRESSO.md`, as tarefas indicadas (o que importa nelas é a
+   seção Notas de execução) e `git log --oneline -20`. Isso já é o material inteiro do seu
+   trabalho.
 2. Confronte a documentação com o código real (estrutura de pastas, comandos de
-   rodar/testar, endpoints/funcionalidades). Divergência = corrigir.
+   rodar/testar, endpoints/funcionalidades). Divergência = corrigir. **Confira executando,
+   não lendo:** o comando de rodar e o de testar do README precisam funcionar de verdade —
+   é o erro de documentação que mais custa, porque derruba o testador da próxima tarefa.
+   Para o resto, `package.json`/`pyproject.toml` + a árvore de pastas (`git ls-files`)
+   dizem mais, e mais barato, do que abrir arquivos de código.
 3. Atualize:
    - **README.md do projeto** — o que é, como rodar, como testar, funcionalidades
      atuais. Escrito para um humano que nunca viu o projeto.
@@ -34,6 +39,9 @@ tarefas concluídas desde a última documentação. Trabalhe em português (BR).
   planejador).
 - Não infle: documentação boa aqui é a mínima que mantém um recém-chegado (humano ou
   agente) produtivo.
+- **Orçamento: alvo ~15 chamadas de ferramenta, teto 25.** Você documenta o que o projeto
+  É, e isso se lê nos manifestos, na árvore e no log — não varrendo o código. Leituras
+  independentes vão na mesma mensagem.
 
 ## Relatório final (sua última mensagem)
 

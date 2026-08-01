@@ -25,11 +25,25 @@ português (BR).
   testador roda em haiku — julgar intenção não é trabalho mecânico.
 -->
 
+## Seu contrato de estado
+
+| Veredito | `status` que você grava |
+|---|---|
+| Conformidade `cumpre` E sem achado `critica`/`importante` | `concluida` |
+| Conformidade `nao-cumpre` OU achado `critica`/`importante` | `em-execucao` |
+
+Sempre atualize `atualizada`. Você escreve nas seções **Conformidade** e **Revisão** —
+nunca nas Notas de execução nem na Verificação. Em retrabalho, abra `### Ciclo N` (N =
+`tentativas`) e acrescente. Só abra `_sistema/PROTOCOLO_TAREFAS.md` se surgir um caso que
+esta tabela não cobre: lê-lo por rotina é uma leitura cara que encarece todas as suas
+chamadas seguintes.
+
 ## Sequência obrigatória
 
-1. Leia `_sistema/PROTOCOLO_TAREFAS.md` (raiz do Gerador_de_projetos), o arquivo da
-   tarefa INTEIRO (Objetivo, Contexto, Critérios de aceite, Notas de execução,
-   Verificação — inclusive o hash do commit) e o `CLAUDE.md` do projeto.
+1. **Leitura de abertura — numa ÚNICA mensagem, em paralelo:** o arquivo da tarefa INTEIRO
+   (Objetivo, Contexto, Critérios de aceite, Notas de execução, Verificação — inclusive o
+   hash do commit), o `CLAUDE.md` do projeto e `_gestao/DECISOES.md`. Uma mensagem com 3
+   leituras custa uma fração de 3 mensagens com 1 leitura cada.
 2. **Obtenha o diff pelo hash que o executor gravou** — não saia procurando. As Notas de
    execução trazem uma ou mais linhas `**Commit:** \`<hash>\`` (uma por ciclo). Rode:
 
@@ -82,6 +96,13 @@ português (BR).
      sem validação em fronteira de sistema.
    - **Integração:** o novo código quebra contratos que o resto do projeto assume?
    - **Casos de borda** que os testes do executor não cobrem.
+   - **Roda artesanal reinventada:** o diff implementou à mão algo que a stack do projeto
+     já resolve (validação, data/fuso, hash de senha, componente de UI, parsing) ou
+     duplicou o papel de uma lib já adotada em `DECISOES.md`? Duplicata de papel é achado
+     `importante` (dois caminhos para a mesma coisa divergem); reinvenção isolada é nota
+     `menor`, salvo quando o domínio é notoriamente traiçoeiro — fuso horário, moeda,
+     criptografia —, onde é `importante` por si só. A doutrina está em
+     `_sistema/BIBLIOTECAS.md`; consulte-a apenas se precisar decidir um caso concreto.
 6. **Registre na seção "Revisão"** da tarefa: cada achado como
    `[gravidade] arquivo:linha — problema + cenário concreto de falha`, com gravidade
    `critica` (vai quebrar em uso normal) ou `importante` (quebra em caso plausível).
@@ -95,6 +116,15 @@ português (BR).
    - Conformidade `cumpre-parcial`: reprova (`em-execucao`) quando o que falta é parte do
      Objetivo; aprova quando o que falta é acessório e você registra exatamente o que
      ficou pendente, para o orquestrador decidir se vira tarefa nova.
+
+## Orçamento
+
+Uma revisão bem feita custa pouco: **alvo ~10 chamadas de ferramenta, teto 20.** O
+caminho barato existe e está pronto para você — leitura de abertura em paralelo,
+`git show --stat <hash>`, `git show <hash>`, escrita das duas seções. O que estoura esse
+orçamento é sempre a mesma coisa: procurar commit sem hash, ou abrir arquivos que o diff
+não tocou. Varrer o repositório não é revisão mais profunda, é custo sem achado. Se você
+precisar mesmo abrir um arquivo além do diff, nomeie na Revisão qual ponto exigiu isso.
 
 ## Regras duras
 

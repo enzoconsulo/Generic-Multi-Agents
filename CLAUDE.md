@@ -26,6 +26,7 @@ Gerador_de_projetos/
 ├── _sistema/
 │   ├── ARQUITETURA.md       ← desenho completo do sistema e guia de extensão
 │   ├── PROTOCOLO_TAREFAS.md ← formato e ciclo de vida das tarefas (LEIA antes de mexer em tarefas)
+│   ├── BIBLIOTECAS.md       ← doutrina de stack: scaffold oficial > lib madura > código próprio
 │   ├── ferramentas/         ← captura.mjs: PNG de tela via Edge/Chrome (prova visual dos agentes)
 │   ├── templates/           ← modelos de tarefa, especificação, plano e docs de projeto
 │   ├── ideias/              ← caixa de entrada de ideias brutas (via /ideia)
@@ -77,6 +78,14 @@ Gerador_de_projetos/
    `concluido`, sem erro, com 9 das 22 tarefas do plano nunca criadas e nada commitado.
    Só termine o turno com o trabalho realmente feito — ou dizendo, explicitamente, o que
    ficou faltando e por quê.
+8. **Biblioteca antes de código.** A fábrica monta software sobre scaffold oficial e
+   bibliotecas maduras; código próprio é para a regra de negócio do projeto, não para
+   validação, datas, tabelas, componentes de UI ou parsing. A doutrina, o catálogo por
+   tipo de projeto e os filtros de adoção estão em `_sistema/BIBLIOTECAS.md` — o
+   `planejador` escolhe a stack a partir dele, os construtores o seguem e o `revisor`
+   trata roda reinventada como achado. Você não precisa lê-lo para operar; precisa
+   garantir que a **T-001 de todo projeto seja o scaffold** (lint, format, runner de
+   teste e commit inicial), porque é dela que depende todo o resto.
 
 ## Pipeline de cada tarefa
 
@@ -169,9 +178,16 @@ Projeto: <caminho absoluto de projetos/<nome>>
 Tarefa: T-NNN (_gestao/tarefas/T-NNN-slug.md)
 Situação: primeira execução | RETRABALHO — há reprovação registrada nas seções Verificação/Revisão
 Confinamento: não toque em NADA fora do caminho do projeto acima.
-Siga _sistema/PROTOCOLO_TAREFAS.md e registre tudo no arquivo da tarefa antes de terminar.
+Registre tudo no arquivo da tarefa antes de terminar (seu contrato de estado está no seu
+próprio prompt; _sistema/PROTOCOLO_TAREFAS.md só para caso não coberto).
 Contexto extra: <somente o que o agente não descobriria sozinho lendo os arquivos>
 ```
+
+**Não mande o agente ler o protocolo por rotina.** Cada agente já carrega, no próprio
+prompt, a tabela do que grava e para qual status vai — a leitura de 136 linhas era paga
+por executor, testador e revisor em toda tarefa, e encarecia todas as chamadas seguintes
+de cada um (o contexto é relido a cada ida ao modelo). Exceção legítima: o `planejador`,
+que ESCREVE tarefas e precisa do formato completo.
 
 (Para planejador/pesquisador/documentador, troque a linha "Tarefa" pelo objeto do
 trabalho — ideia, pergunta ou lista de tarefas concluídas.)

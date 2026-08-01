@@ -34,7 +34,11 @@ mínima):
    a sessão fecharia e ele seria cortado no meio da escrita das tarefas.
 5. **Valide o resultado:** confira que a especificação, o plano e as tarefas existem e
    seguem o protocolo (frontmatter completo, dependências sem ciclo, critérios de aceite
-   objetivos). **Confira um a um que TODO id citado nas fases do PLANO.md tem arquivo em
+   objetivos — comando + resultado esperado, não frase vaga). **A T-001 tem de ser o
+   scaffold** pelo gerador oficial do ecossistema, entregando lint + format, runner de
+   teste com um teste passando e commit inicial (CLAUDE.md regra 8; detalhe em
+   `_sistema/BIBLIOTECAS.md`). Não é? Devolva ao planejador antes de qualquer outra
+   validação: é dela que todas as outras dependem. **Confira um a um que TODO id citado nas fases do PLANO.md tem arquivo em
    `_gestao/tarefas/`** — id sem arquivo é tarefa que não existe para a fábrica: ninguém a
    promove, ninguém a executa, e ela não aparece no quadro do painel. Faltou algum →
    despache o planejador de novo, com a lista exata dos ids que faltam, e só siga quando a

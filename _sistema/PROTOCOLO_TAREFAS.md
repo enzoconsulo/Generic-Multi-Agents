@@ -3,6 +3,15 @@
 Contrato obrigatório entre todos os agentes. Qualquer agente que ler, criar ou alterar uma
 tarefa segue este documento à risca.
 
+**Como ele é consumido:** executor, testador e revisor carregam a fatia que lhes cabe
+(o que gravam e para qual status vão) **dentro do próprio prompt de sistema** — eles
+abrem este arquivo só quando aparece um caso que a fatia não cobre. Quem o lê sempre é o
+`planejador`, porque ele ESCREVE tarefas e precisa do formato inteiro. Isto é
+deliberado: a leitura por rotina custava ~2 mil tokens em cada agente de cada tarefa, e
+todo token lido cedo é relido em cada ida seguinte ao modelo. Este documento continua
+sendo a fonte de verdade — mudou algo aqui, propague para a fatia nos prompts dos
+agentes afetados.
+
 ## Onde vivem as tarefas
 
 `projetos/<nome>/_gestao/tarefas/T-NNN-slug-curto.md`

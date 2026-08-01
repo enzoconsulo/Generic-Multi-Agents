@@ -286,6 +286,7 @@ INICIAR.bat / iniciar.ps1          sobe o painel web (duplo-clique) edita: você
 .claude/agents/*.md                definição dos 6 agentes         edita: você (§6.1)
 .claude/commands/*.md              os 6 comandos /                 edita: você (§6.2)
 _sistema/PROTOCOLO_TAREFAS.md      contrato de tarefas             raramente muda
+_sistema/BIBLIOTECAS.md            doutrina de stack e catálogo    edita: você (cresce com o uso)
 _sistema/ARQUITETURA.md            desenho e racional do sistema   raramente muda
 _sistema/templates/                modelos de documentos           raramente muda
 _sistema/ideias/                   caixa de entrada                escreve: /ideia

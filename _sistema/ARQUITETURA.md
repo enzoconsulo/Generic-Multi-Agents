@@ -49,6 +49,22 @@
    (no testador, com o projeto quieto); o executor roda só os testes da própria tarefa.
    Reprovação falsa por interferência entre agentes queima um ciclo inteiro — é o
    desperdício mais caro, e as regras de paralelismo existem para zerá-lo.
+8. **O custo é quadrático nas idas ao modelo, e por isso é orçado.** Cada chamada de
+   ferramenta relê todo o contexto acumulado até ali: dobrar as chamadas quadruplica o
+   despacho. Três consequências no desenho — (a) todo agente carrega um **orçamento
+   explícito** de chamadas, com teto e ordem de parar e reportar em vez de arrastar;
+   (b) leituras independentes vão **numa mensagem só**, em paralelo (o planejador escreve
+   as tarefas em lotes de 4–6 `Write`, o que também reduz a janela em que uma queda de
+   sessão deixa o plano pela metade); (c) contexto que o agente vai usar sempre mora no
+   **prompt dele**, não num arquivo que ele precisa abrir — foi por isso que a fatia do
+   PROTOCOLO_TAREFAS foi embutida em executor/testador/revisor.
+9. **Biblioteca antes de código.** `_sistema/BIBLIOTECAS.md` é a doutrina de stack:
+   scaffold oficial > biblioteca madura > código próprio, com catálogo por tipo de projeto
+   e filtros de adoção de dependência. O planejador escolhe a stack a partir dele (e a
+   T-001 de todo projeto é o scaffold, com lint/format/runner de teste), os construtores
+   o seguem, o revisor trata roda reinventada como achado. Isso reduz simultaneamente o
+   código escrito (menos bug, menos teste, menos revisão) e o custo — e é o que faz a
+   saída da fábrica parecer profissional em vez de artesanal.
 
 ## Limitações conhecidas da plataforma (e como o desenho lida com elas)
 
@@ -65,6 +81,28 @@
 - **Modelo: herdado da sessão** (frontmatter `model: inherit` em cada agente). O usuário
   troca o modelo com `/model` (Fable enquanto disponível; Opus depois) e todos os agentes
   acompanham. O desenho não depende de recurso exclusivo de nenhum modelo.
+
+## Política de modelo: duas exceções deliberadas ao `inherit`
+
+**`testador` em `haiku` (para baixo, desde 2026-07-28).** Verificar é MECÂNICO: rodar os
+comandos dos critérios de aceite e comparar a saída com o que a tarefa pede. Não exige a
+capacidade de quem CONSTRÓI. Testador e revisor somam boa parte dos turnos de cada tarefa,
+então é aqui que o custo escala sem ganho. É seguro porque o `revisor` continua no modelo
+do disparo e lê o diff depois: aprovação frouxa do testador ainda esbarra nele. O caminho
+inverso (revisor barato) NÃO é seguro — bug que passa custa mais tarde do que se economiza
+agora. Contrapartida assumida no desenho: o prompt do testador é escrito em checklist, com
+comandos e formato de saída literais, porque modelo menor rende mais com instrução
+mecânica e menos com prosa. E os **critérios de aceite precisam ser comando + resultado
+esperado** (regra dada ao planejador): critério vago vira interpretação, e interpretação
+neste portão produz reprovação falsa, que custa um ciclo inteiro. Para voltar atrás,
+troque para `inherit`.
+
+**`executor-reforcado` em `opus` (para cima, desde 2026-07-31).** Faltava a exceção CARA:
+quando o modelo do disparo não dá conta, insistir com ele é o gasto mais previsível do
+sistema — cada ciclo perdido paga executor + testador + revisor de novo e ainda consome
+uma das 3 tentativas antes do bloqueio. O gatilho é FATO medido, não palpite: a tarefa
+voltou reprovada (`tentativas >= 1`). Se o disparo já era opus/fable, não há para onde
+subir e o orquestrador segue com o construtor normal.
 
 ## Anatomia de um dia de trabalho
 
