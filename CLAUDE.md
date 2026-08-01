@@ -110,15 +110,23 @@ genérico de verdade.
    genuína de escopo. Todo o resto: decida, registre em `DECISOES.md` do projeto, siga.
 6. **Fonte única de verdade do status** é o frontmatter do arquivo da tarefa. Nunca
    mantenha listas paralelas de status.
-7. **Despacho de agente é SÍNCRONO — espere o resultado.** Nunca despache em segundo plano
-   para encerrar o turno "aguardando a notificação", e nunca agende continuação futura
-   (wakeup/cron). Quando a fábrica roda pelo painel, o fluxo é um job headless do Agent
-   SDK: **não existe quem entregue notificação depois**. Você para de escrever, a sessão
-   fecha e todo agente em voo é cortado no meio. Foi assim que o `/novo-projeto
-   banco-imobiliario` (30/07) morreu com o `planejador` escrevendo as tarefas: o job ficou
-   `concluido`, sem erro, com 9 das 22 tarefas do plano nunca criadas e nada commitado.
+7. **Despacho de agente é SÍNCRONO — passe `run_in_background: false` e espere.**
+   Segundo plano é o **padrão** da ferramenta `Agent`: não basta "não pedir background",
+   é preciso pedir o contrário, explicitamente, em todo despacho. Nunca encerre o turno
+   "aguardando a notificação" e nunca agende continuação futura (wakeup/cron). Quando a
+   fábrica roda pelo painel, o fluxo é um job headless do Agent SDK: **não existe quem
+   entregue notificação depois**. Você para de escrever, a sessão fecha e todo agente em
+   voo é cortado no meio.
+   Aconteceu duas vezes. `/novo-projeto banco-imobiliario` (30/07) morreu com o
+   `planejador` escrevendo as tarefas — job `concluido`, sem erro, 9 das 22 tarefas nunca
+   criadas. E `/trabalhar banco-imobiliario` (01/08, job `f72534e8`) repetiu tudo mesmo com
+   a regra escrita: o orquestrador OMITIU o campo, encerrou o turno em 2min37, e o
+   `servidor` seguiu 10 min órfão até ser cortado — US$ 0,89 por zero tarefa. É por isso
+   que a regra hoje manda passar o campo em vez de proibir o oposto.
    Só termine o turno com o trabalho realmente feito — ou dizendo, explicitamente, o que
-   ficou faltando e por quê.
+   ficou faltando e por quê. **Se você está prestes a terminar o turno e algum agente que
+   você despachou ainda não devolveu resultado, você está prestes a destruir o trabalho
+   dele.**
 8. **Ferramenta antes de trabalho artesanal.** A fábrica monta sobre scaffold oficial e
    bibliotecas/ferramentas maduras; trabalho próprio é para o miolo do projeto, não para
    validação, datas, tabelas, componentes de UI, parsing — nem para gerar `.pptx` por

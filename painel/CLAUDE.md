@@ -220,6 +220,20 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   "terminou sem fazer" não tinha. Hoje o preâmbulo de `acoes/preambulo.ts` proíbe no prompt,
   o runner conta os `run_in_background` (`despachosFundo`) e a aba Jobs avisa. Ao criar
   caminho novo de disparo, passe pelo preâmbulo — job sem ele volta a poder se perder.
+- **Guarda que só pega a forma EXPLÍCITA da falha não pega a forma comum dela.** A proteção
+  acima falhou na primeira reincidência (`f72534e8`, 01/08, T-017a, US$ 0,89 por zero
+  tarefa). Motivo: `ehDespachoEmFundo` testava `run_in_background === true`, e **segundo
+  plano é o PADRÃO da ferramenta `Agent`** — o orquestrador nunca precisou ligar o flag,
+  bastou omitir. Cumpriu o preâmbulo ao pé da letra ("é proibido despachar em segundo
+  plano"), encerrou o turno em 2min37, e o `servidor` seguiu 10 min órfão. `despachosFundo`
+  leu 0, a aba Jobs não avisou, o job ficou verde. O teste "despacho normal (síncrono)`"
+  montava o caso seguro OMITINDO o campo: certificava o caminho perigoso como seguro.
+  Correções: a checagem virou `!== false`; o preâmbulo MANDA passar `run_in_background:
+  false` em vez de proibir `true`; e nasceu `despachosEmVoo`, que casa `tool_use.id` de
+  despacho com `tool_use_id` de `tool_result` e conta o que ficou em aberto quando a sessão
+  fechou — **dano observado, não risco inferido**, independente de flag, de texto do modelo
+  e da versão do SDK. Lição geral: ao proteger contra um modo de falha, pergunte qual é o
+  DEFAULT do mecanismo — e prefira medir a consequência a medir a intenção.
 - **Log que só existe em memória some justo quando é preciso.** O log de execução vivia no
   buffer do hub SSE — 500 eventos para a fábrica INTEIRA —, então abrir um job de ontem dava
   console vazio, e a única memória era o `resumos`, escrito por um modelo pequeno (numa
