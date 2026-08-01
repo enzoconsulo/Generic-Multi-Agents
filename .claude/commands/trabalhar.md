@@ -31,6 +31,17 @@ Trabalhe até esgotar as tarefas ou tudo estar bloqueado.
 1. **Selecione até 3 tarefas `pronta`** independentes entre si: prioridade `alta`
    primeiro; entre iguais, a que destrava mais dependentes. Mesmo projeto na mesma
    leva: só com `areas` disjuntas.
+
+   **Antes de despachar, cheque o TAMANHO.** Tarefa com **5 ou mais `areas`** não vai para
+   o construtor: despache o `planejador` em modo replanejamento para quebrá-la, e só então
+   siga com as partes. O custo de um agente cresce com o QUADRADO das idas ao modelo —
+   medido nesta fábrica: 2 `areas` ≈ 22 chamadas de ferramenta, 5 `areas` ≈ 70, o que sai
+   ~10× mais caro. Uma única tarefa de 5 `areas` (T-006 do `banco-imobiliario`) consumiu
+   **47% de um job inteiro**.
+
+   A conta fecha a favor de quebrar: o despacho do planejador custa ~US$ 0,30–0,50 e
+   economiza ~US$ 1 na tarefa. Com 4 `areas`, siga — mas não junte outra tarefa grande na
+   mesma leva.
 2. **Despache um construtor por tarefa** (em paralelo quando a regra acima permitir).
    Qual construtor — regra determinística, sem adivinhação: se a tarefa tem `agente: <id>`
    no frontmatter E `<id>` consta na equipe (`_gestao/equipe.json` que você leu na

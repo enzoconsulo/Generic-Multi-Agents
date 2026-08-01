@@ -234,9 +234,20 @@ vermelha — não o escopo. Delta real ~+3 voltas, não +11.
 | Custo extra em 6 tarefas | **+$0,33** |
 | Um ciclo de retrabalho evitado vale | $1,03 |
 
-**Equilíbrio: reduzir retrabalho em 5,3 pontos percentuais** (de 31,8% medidos — 7 de 22
-tarefas com `tentativas >= 1` — para 26,5%). Bar baixa o suficiente para aprovar, e o
-benefício de validade do teste vem de graça em cima.
+**Equilíbrio: reduzir retrabalho em 5,3 pontos percentuais.**
+
+> ⚠️ **CORREÇÃO (01/08).** A base de comparação que eu usei aqui estava errada: afirmei
+> "31,8% de retrabalho — 7 de 22 tarefas com `tentativas >= 1`". Mas `tentativas` é
+> incrementado pelo executor ao ASSUMIR a tarefa, então `tentativas: 1` significa
+> *executada uma vez*, não *reprovada uma vez*. Retrabalho é `tentativas >= 2`.
+>
+> Medição correta em 01/08: **13 tarefas executadas, 1 com segundo ciclo (T-005) = 7,7%**.
+>
+> Isso muda a conclusão: chegar ao equilíbrio exigiria cair de 7,7% para 2,4% — uma redução
+> RELATIVA de 69%, não os 17% que a base errada sugeria. **TDD não se justifica pelo custo.**
+> Continua justificado pelo argumento de validade (teste escrito depois afirma o que o
+> código faz), que era a razão original de quem o propôs — mas a economia não é o
+> argumento, e não deve ser usada como tal.
 
 **Onde NÃO aplicar, e isso é parte da decisão:** layout/estilo visual, configuração,
 documentação, e exploração cujo formato de saída ainda não está definido. Teste-primeiro
@@ -420,6 +431,47 @@ O custo real do corte não foi token perdido, foi **estado ambíguo**: 4 promoç
 sem commit até serem encontradas à mão um dia depois. Isso é problema de *encerramento*, não
 de tamanho do job. **Descarte como economia e como resiliência de token**; o que merece
 atenção é garantir commit de gestão antes de cada despacho longo.
+
+---
+
+## 9.4 Tamanho de tarefa — a alavanca que faltava (01/08)
+
+As duas rodadas reais deram o dado que o modelo não tinha: **quantas chamadas de ferramenta
+uma tarefa consome, em função de quantas `areas` ela declara.**
+
+| `areas` | chamadas/despacho | custo relativo | tarefas medidas |
+|---|---|---|---|
+| 2 | ~22 | 1× | T-008, T-009, T-010, T-011, T-014 |
+| 3 | ~29 | ~1,7× | T-012 |
+| **5** | **~70** | **~10×** | **T-006** |
+
+Superlinear em `areas`, e como o custo é quadrático nas chamadas, o efeito composto é
+brutal: **T-006 sozinha consumiu 47% do job `5d8fca81`** — mais que executor, testador e
+revisor de todas as outras tarefas somados.
+
+Isto é a mesma lei que reprovou o revisor em lote (§6.2), aplicada agora ao **tamanho da
+unidade de trabalho**. E é a alavanca mais barata que sobrou, porque não troca qualidade
+por custo: a mesma entrega, dividida, sai ~14% mais barata no job.
+
+**O que estava errado no processo:** o planejador *percebeu* que a T-017 seria a maior
+tarefa do projeto e **registrou isso no relatório** — e criou a tarefa assim mesmo. Perceber
+sem agir não muda nada. E a regra que existia (`escopo de 30–90 minutos de trabalho de
+agente`) era inaplicável: ninguém consegue estimar minutos de agente na hora de planejar.
+
+**Correções (01/08):**
+
+- `planejador.md`: limiar em `areas`, com a tabela acima. ≤3 normal; 4 exige justificativa;
+  **≥5 quebra obrigatória**, em partes nomeadas pelo que entregam
+  (`T-017a-turno-resolucao-casa`), não por número vazio. Se uma parte fica sem critério de
+  aceite verificável sozinha, a divisão está errada — reagrupar por comportamento, não por
+  arquivo.
+- `trabalhar.md`: checagem **antes do despacho**. Tarefa com ≥5 `areas` vai ao planejador
+  para quebra em vez de ir ao construtor. A conta fecha: despacho do planejador
+  ~US$ 0,30–0,50 contra ~US$ 1 economizado na tarefa.
+
+**No backlog atual do `banco-imobiliario`, disparam a regra:** T-017 (5 `areas`, 14
+critérios) e T-018 (5 `areas`). T-016 (4 `areas`) passa, mas não deve dividir leva com outra
+grande.
 
 ---
 
