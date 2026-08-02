@@ -36,7 +36,9 @@ Gerador_de_projetos/
 │   ├── PROTOCOLO_TAREFAS.md ← formato e ciclo de vida das tarefas (LEIA antes de mexer em tarefas)
 │   ├── BIBLIOTECAS.md       ← doutrina da trilha SOFTWARE: scaffold oficial > lib madura > código próprio
 │   ├── DOMINIOS.md          ← doutrina da trilha GENÉRICA (não-software): artefato + verificador
+│   ├── CUSTO_DE_CONTEXTO.md ← por que 80-90% da conta é contexto, e o que corta (leia antes de "otimizar")
 │   ├── ferramentas/         ← captura.mjs: PNG de tela via Edge/Chrome (prova visual dos agentes)
+│   │                          mapa.mjs: gera _gestao/MAPA.md, o índice denso do projeto
 │   ├── templates/           ← modelos de tarefa, especificação, plano e docs de projeto
 │   ├── ideias/              ← caixa de entrada de ideias brutas (via /ideia)
 │   └── logs/                ← um log por dia: AAAA-MM-DD.md
@@ -47,6 +49,8 @@ Gerador_de_projetos/
     └── <nome>/
         ├── CLAUDE.md        ← contexto específico do projeto
         ├── _gestao/
+        │   ├── MAPA.md       ← GERADO por mapa.mjs: índice denso (árvore + assinaturas).
+        │   │                    É por ele que os agentes se orientam em vez de varrer o código
         │   ├── ESPECIFICACAO.md
         │   ├── PLANO.md
         │   ├── DECISOES.md
@@ -284,6 +288,16 @@ defeito de planejamento que só aparece se alguém escrever.
   quando ninguém sabia onde a tarefa iria falhar. Registre a troca e o motivo na tarefa.
 
 ## Disciplina de contexto (desempenho)
+
+**Medido: 80-90% da conta de cada job é contexto, não produção** — os agentes recarregavam
+quase o projeto inteiro a cada despacho, pagando preço de ESCRITA de cache (17,5× o da
+leitura). O antídoto é `_gestao/MAPA.md`: índice gerado por `_sistema/ferramentas/mapa.mjs`
+(determinístico, sem modelo, ~5% do tamanho do fonte) com árvore + assinatura e propósito
+de cada símbolo público. Os agentes o leem na abertura e só abrem na íntegra o que vão
+mudar. Sua parte: **garantir que ele exista e esteja fresco** — /trabalhar regenera na
+preparação, executor e construtor regeneram ao commitar. Mapa velho desorienta todo mundo e
+é pior que mapa nenhum. Modelo de custo e as próximas intervenções (I2–I5):
+`_sistema/CUSTO_DE_CONTEXTO.md`.
 
 O que sustenta sessões longas de /trabalhar é o SEU contexto limpo. Regras:
 

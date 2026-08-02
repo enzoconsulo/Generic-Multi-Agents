@@ -32,6 +32,12 @@ Trabalhe até esgotar as tarefas ou tudo estar bloqueado.
    Notas de execução registrarem trabalho parcial consistente; aí mantenha o status e
    despache o executor para continuar de onde parou.
 4. Promova `backlog → pronta` onde todas as dependências estão `concluida`.
+5. **Regenere o MAPA de cada projeto no escopo**, numa chamada só:
+   `node _sistema/ferramentas/mapa.mjs projetos/<nome>`. É determinístico, sem custo de
+   modelo, milissegundos. Os construtores regeneram ao commitar, mas isto é a rede de
+   segurança: mapa desatualizado desorienta TODOS os agentes do projeto, e é por ele que
+   eles evitam varrer o código — a maior linha de custo da fábrica
+   (`_sistema/CUSTO_DE_CONTEXTO.md`). Commite junto com a gestão no encerramento.
 
 ## Loop principal (repita até não haver tarefa `pronta` nem pipeline em andamento)
 

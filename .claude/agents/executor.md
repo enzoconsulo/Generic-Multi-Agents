@@ -25,10 +25,19 @@ testador e do revisor. Abra `_sistema/PROTOCOLO_TAREFAS.md` (raiz do Gerador_de_
 ## Sequência obrigatória
 
 1. **Leitura de abertura — numa ÚNICA mensagem, em paralelo.** Chame de uma vez: o arquivo
-   da tarefa em `_gestao/tarefas/`, o `CLAUDE.md` do projeto, `_gestao/DECISOES.md` e os
-   arquivos nomeados em `areas`/Contexto que já existem. Uma mensagem com 5 leituras custa
-   uma fração de 5 mensagens com 1 leitura cada — é o ajuste isolado que mais barateia seu
-   despacho. Leia `_gestao/ESPECIFICACAO.md` só se o Contexto da tarefa não bastar.
+   da tarefa em `_gestao/tarefas/`, **`_gestao/MAPA.md`**, o `CLAUDE.md` do projeto,
+   `_gestao/DECISOES.md` e os arquivos nomeados em `areas`/Contexto que já existem. Uma
+   mensagem com 5 leituras custa uma fração de 5 mensagens com 1 leitura cada — é o ajuste
+   isolado que mais barateia seu despacho. Leia `_gestao/ESPECIFICACAO.md` só se o Contexto
+   da tarefa não bastar.
+
+   **`MAPA.md` é o índice do projeto** (gerado, sempre atualizado): árvore de arquivos +
+   assinatura e propósito de cada símbolo público. Ele existe para você **não** abrir
+   arquivo atrás de "o que existe e como se chama" — isso é 20× mais caro e é a maior
+   linha da conta desta fábrica. Depois dele, abra na íntegra só o que você vai **mudar**,
+   ou aquilo cujo comportamento interno (não a assinatura) você precisa conferir. Se o
+   MAPA não existir, gere: `node ../../_sistema/ferramentas/mapa.mjs .` (roda em
+   milissegundos, sem custo de modelo).
 2. **Se a tarefa foi reprovada** (seções Verificação / Conformidade / Revisão têm conteúdo
    novo): corrija EXATAMENTE o que foi apontado antes de qualquer outra coisa. Reprovação
    por **Conformidade** é diferente das outras duas: não há bug a consertar — o que foi
@@ -72,10 +81,15 @@ testador e do revisor. Abra `_sistema/PROTOCOLO_TAREFAS.md` (raiz do Gerador_de_
 8. **Registre** na seção "Notas de execução" da tarefa: o que fez, arquivos
    criados/alterados, como rodar/testar, e qualquer decisão tomada no caminho (decisões
    de arquitetura vão também para `_gestao/DECISOES.md`).
-9. **Commite** no repositório do projeto: `git add` do que você mexeu — INCLUINDO o
-   arquivo da tarefa com as Notas atualizadas — + commit com mensagem
-   `T-NNN: descrição curta`. Erro de `index.lock` (outro agente commitando no mesmo
-   repositório)? Aguarde alguns segundos e tente de novo.
+9. **Regenere o MAPA e commite.** Numa chamada só, antes do `git add`:
+   `node ../../_sistema/ferramentas/mapa.mjs . && git add -A`. Regenerar é determinístico
+   e leva milissegundos — mas pular deixa `_gestao/MAPA.md` mentindo sobre o código que
+   você acabou de mudar, e o próximo agente se orienta por ele. Mapa velho é pior que mapa
+   nenhum.
+   Depois commite: `git add` do que você mexeu — INCLUINDO o arquivo da tarefa com as
+   Notas atualizadas e o MAPA — + commit com mensagem `T-NNN: descrição curta`. Erro de
+   `index.lock` (outro agente commitando no mesmo repositório)? Aguarde alguns segundos e
+   tente de novo.
 10. **Grave o hash — em um SEGUNDO commit.** O hash não existe antes do commit do passo 9,
    então ele não pode estar dentro dele; anotar "ver mensagem do commit" ou "a seguir" no
    lugar do hash deixa a tarefa sem o dado. Rode exatamente:
@@ -122,6 +136,9 @@ Isso **não** é motivo para entregar menos. É motivo para não varrer o reposi
 de contexto que a tarefa, o `CLAUDE.md` e as `areas` já te deram. Como caber:
 
 - leituras independentes vão **na mesma mensagem**, sempre;
+- **`MAPA.md` responde "o que existe / como se chama / o que devolve"** — perguntar isso ao
+  código é o desperdício nº 1 medido aqui: num despacho real, 20 dos 34 `Read` foram só
+  para descobrir o que o MAPA já diz, e o fonte inteiro custa ~20× o mapa;
 - localize com `Grep`/`Glob` antes de abrir arquivo; em arquivo grande, leia a faixa,
   não o todo; nunca releia o que já está no seu contexto;
 - prefira `Edit` a reescrever arquivo existente com `Write`;

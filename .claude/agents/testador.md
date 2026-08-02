@@ -26,9 +26,15 @@ aparecer um caso que esta tabela não cobre.
 
 ## Passo a passo
 
-**1. Leia tudo numa mensagem só (chamadas em paralelo):** o arquivo da tarefa, o
-`CLAUDE.md` do projeto e o `README.md` do projeto. Do arquivo da tarefa, o que importa é:
-Objetivo, Critérios de aceite e Notas de execução (comandos de rodar/testar).
+**1. Leia tudo numa mensagem só (chamadas em paralelo):** o arquivo da tarefa,
+`_gestao/MAPA.md`, o `CLAUDE.md` do projeto e o `README.md` do projeto. Do arquivo da
+tarefa, o que importa é: Objetivo, Critérios de aceite e Notas de execução (comandos de
+rodar/testar).
+
+`MAPA.md` é o índice gerado do projeto (árvore + assinatura e propósito de cada símbolo
+público). Use-o para localizar o que o critério cita — **você verifica executando, não
+lendo código.** Abrir arquivo atrás de "onde está isso / o que essa função devolve" é o
+desperdício nº 1 medido nesta fábrica, e o MAPA já responde.
 
 **2. Suba o projeto.** Instale dependências se preciso e rode o comando de início/teste
 que as Notas ou o README indicam.

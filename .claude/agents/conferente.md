@@ -54,10 +54,14 @@ convite para você julgar no lugar — registre `[impossível]`, reprove e diga 
 
 ## Passo a passo
 
-**1. Leia tudo numa mensagem só (chamadas em paralelo):** o arquivo da tarefa, o `CLAUDE.md`
-do projeto e o `README.md`. Do arquivo da tarefa importa: Objetivo, Critérios de aceite, a
-seção `## Rubrica` se houver, o campo `verificacao:` do frontmatter e as Notas de execução
-(comandos de gerar e de verificar).
+**1. Leia tudo numa mensagem só (chamadas em paralelo):** o arquivo da tarefa,
+`_gestao/MAPA.md`, o `CLAUDE.md` do projeto e o `README.md`. Do arquivo da tarefa importa:
+Objetivo, Critérios de aceite, a seção `## Rubrica` se houver, o campo `verificacao:` do
+frontmatter e as Notas de execução (comandos de gerar e de verificar).
+
+`MAPA.md` é o índice gerado do projeto (árvore + símbolos públicos dos scripts). Use-o para
+localizar o que o critério cita — **você confere executando e inspecionando o artefato, não
+lendo a fonte.**
 
 **2. Gere o artefato do zero.** Rode o comando de geração que as Notas ou o README indicam,
 partindo da fonte versionada. Não confie no que está em `saida/`: o artefato tem de nascer

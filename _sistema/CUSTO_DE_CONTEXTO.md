@@ -138,14 +138,32 @@ ele. Registrado para não ser reproposto.
 Linha de base: job `7a1f9a45`, US$ 7,45 · 11 despachos · 211 voltas · 53,5k de contexto
 médio. Todas as projeções derivam do modelo da seção 1.
 
-### I1 — MAPA do projeto: índice denso no lugar da varredura de arquivos
-**A maior de todas, e não depende de nenhuma feature do SDK.**
+---
 
-Gerar `_gestao/MAPA.md` (determinístico, sem modelo, invalidado por hash do git): árvore de
-arquivos + assinaturas exportadas de cada módulo + uma linha de propósito por arquivo. Para
-o banco-imobiliario: ~4k tokens no lugar de 70k de código-fonte.
+### I1 — MAPA do projeto: índice denso no lugar da varredura  ✅ FEITO em 2026-08-01
 
-O agente recebe o MAPA já no contexto e lê na íntegra só os 2–3 arquivos que vai editar.
+`_sistema/ferramentas/mapa.mjs` gera `_gestao/MAPA.md`: árvore de arquivos + assinatura,
+tipo de retorno e frase de propósito de cada símbolo público. Determinístico, sem
+dependência, milissegundos.
+
+**Tamanho medido — a regra "denso ou nada" (seção 3) está sendo cumprida:**
+
+| projeto | mapa | fonte | razão |
+|---|---|---|---|
+| banco-imobiliario | ~5,8k tok | ~62,9k tok | **9,2%** |
+| ia-hibrida-limpa | ~7,8k tok | ~180,5k tok | **4,3%** |
+| painel (TS) | ~14,3k tok | ~266,6k tok | **5,4%** |
+
+**Onde ficou ligado:**
+- leitura de abertura de `executor`, `testador`, `revisor`, `construtor`, `conferente`,
+  `revisor-generico` — o MAPA entra na mesma mensagem paralela das outras aberturas;
+- `executor` e `construtor` **regeneram e commitam** o MAPA junto com a entrega (passos 9 e
+  11): mapa velho desorienta todo mundo e é pior que mapa nenhum;
+- `/trabalhar` regenera na preparação (rede de segurança);
+- `/novo-projeto` cria o MAPA já no commit inicial;
+- doutrina na "Disciplina de contexto" do `CLAUDE.md` da raiz.
+
+**Projeção (a confirmar no primeiro job real pós-mudança):**
 
 ```
 voltas       211  →  ~130   (some ~20 Read de orientação por despacho de construção)
@@ -156,15 +174,42 @@ escrita      4,73  →  2,02   (−2,71)
                              US$ 7,45 → ~3,4   (−54%)
 ```
 
-Condição de sucesso: o MAPA precisa ser **injetado**, não oferecido. Disciplina por prompt
-já falhou nesta fábrica; se o agente puder varrer o projeto, ele varre.
+**Risco conhecido, e é real:** o MAPA é *oferecido* na leitura de abertura, não *injetado*
+no prefixo. Disciplina por prompt já falhou nesta fábrica mais de uma vez. Se o próximo job
+mostrar o agente varrendo o projeto mesmo com o MAPA lido, a correção não é escrever a
+regra com mais ênfase — é a I2, que põe o MAPA no prefixo compartilhado, onde ele chega
+queira o agente ou não.
 
-### I2 — Prefixo compartilhado entre despachos
-`tools` unificado (omitir em toda `AgentDefinition`) + `excludeDynamicSections: true` +
-bloco estático idêntico antes do `SYSTEM_PROMPT_DYNAMIC_BOUNDARY`.
+**Como confirmar (grátis, no próximo job):** compare, no `.log.jsonl`, quantos `Read` o
+agente de construção faz ANTES da primeira escrita. A linha de base é 20 (job `f72534e8`,
+agente `servidor`). Alvo: ≤ 5.
 
-Bloco compartilhável ≈ ferramentas 12k + preset 4k + docs da fábrica 9k = **25k dos 35k**
-que sobram depois da I1.
+---
+
+### I2 — Prefixo compartilhado entre despachos  ⬜ PRONTA PARA COMEÇAR
+
+**Precede tudo:** o experimento da seção 6. Se ele falhar, esta intervenção morre e as
+outras três seguem valendo.
+
+**O que mudar**
+1. `painel/servidor/src/acoes/agentes-dinamicos.ts` — **omitir `tools`** em toda
+   `AgentDefinition` (o SDK documenta: "se omitido, herda todas as ferramentas do pai").
+   Alinhar também os agentes de disco: hoje `revisor` não tem `Write` e `executor` tem 10
+   ferramentas, enquanto os especialistas têm 7. Ferramentas vêm ANTES do systemPrompt na
+   chave de cache — **enquanto divergirem, nada depois pode compartilhar.**
+2. `painel/servidor/src/jobs/claude/runner-claude.ts` — `systemPrompt` passa a
+   `{ type: 'preset', preset: 'claude_code', excludeDynamicSections: true }`. Sem isso,
+   cwd/git-status/memória variam e quebram o prefixo logo no início.
+3. Bloco estático idêntico (constituição + protocolo + MAPA do projeto) antes de
+   `SYSTEM_PROMPT_DYNAMIC_BOUNDARY`, com o específico do agente depois.
+
+**Cuidado que decide o resultado:** o bloco compartilhado precisa ser **byte-idêntico**
+entre despachos. Data, hash de commit, caminho absoluto ou contagem dentro dele zeram o
+ganho sem avisar. O `MAPA.md` gerado tem `HEAD: <hash> · <data>` no cabeçalho — ou ele sai
+do bloco compartilhado, ou o hash/data saem do MAPA.
+
+**Ganho projetado:** bloco compartilhável ≈ ferramentas 12k + preset 4k + docs 9k = **25k
+dos 35k** que sobram depois da I1.
 
 ```
 escrita   11 × 35k  →  1 × 25k + 11 × 10k
@@ -173,38 +218,89 @@ escrita   11 × 35k  →  1 × 25k + 11 × 10k
                                            ~3,4 → ~2,1   (−72% do original)
 ```
 
-### I3 — Orquestrador determinístico
-Medido no `7a1f9a45`: o orquestrador consumiu 36 voltas, 106k de escrita e 2,44M de
-leitura = **US$ 1,29, 17% do job** — para fazer o que é uma máquina de estados: ler
-frontmatter, promover tarefa quando as dependências fecham, escolher o próximo agente pelos
-3 passos determinísticos do `equipe.json`, aplicar o escalonamento por `tentativas`.
+**Pronta quando:** dois despachos seguidos do mesmo agente, no mesmo job, mostrarem o
+segundo com `cacheEscrita` ≈ só a parte específica dele. O painel já grava isso por agente.
 
-Nada disso precisa de modelo. O painel já lê frontmatter (`fabrica/tarefas.ts`) e já tem o
-catálogo de ações. Sobra para o modelo o julgamento de verdade: replanejar, decidir marco
-reprovado, redigir relatório.
+---
 
-### I4 — Revisor sem o projeto
-O revisor julga o DIFF. Hoje carrega o mesmo contexto de quem escreve o código. Dar-lhe
-MAPA + diff + arquivo da tarefa derruba o contexto de ~35k para ~15k em 3 despachos por
-job.
+### I3 — Orquestrador determinístico  ⬜ PRONTA PARA COMEÇAR
 
-### I5 — Critérios de aceite com forma executável
+**Medido no `7a1f9a45`:** o orquestrador consumiu 36 voltas, 106k de escrita e 2,44M de
+leitura = **US$ 1,29, 17% do job** — para fazer o que é uma máquina de estados.
+
+**O que é determinístico e não precisa de modelo** (tudo já implementado em algum lugar do
+painel, em `fabrica/tarefas.ts` e `lib/gestao.ts`):
+- ler frontmatter e montar o painel de status;
+- promover `backlog → pronta` quando todas as `dependencias` estão `concluida`;
+- escolher o agente pelos 3 passos de "Equipe do projeto" (`<id>` → `<projeto>__<id>` →
+  genérico com prompt colado);
+- aplicar o escalonamento por `tentativas` (`>=1` reforçado; `>=2` sob o mesmo
+  especialista → reforçado genérico);
+- decidir a trilha pelo `dominio` do `equipe.json`;
+- respeitar as regras de paralelismo (`areas` disjuntas, verificador exige projeto quieto);
+- mover status entre as etapas e commitar a gestão.
+
+**O que continua no modelo:** replanejar, julgar marco reprovado (causa raiz única ou
+múltipla), redigir relatório, decidir pular `em-teste` numa tarefa trivial.
+
+**Forma sugerida:** um motor de pipeline em `painel/servidor/src/jobs/pipeline/`, que
+despacha um agente por vez via SDK e só chama o modelo-orquestrador nos pontos de
+julgamento. Cada despacho vira uma `query()` própria — o que, junto com a I2, é o desenho
+em que o prefixo compartilhado rende mais.
+
+**Efeito colateral que vale por si:** com o pipeline em código, o **teto de custo por job
+com parada limpa na fronteira de tarefa** (o freio que não existe hoje — ver
+`proximo_prompt_2.txt`, P1) fica trivial de implementar, e `maxTurns` deixa de ser o
+instrumento errado.
+
+---
+
+### I4 — Revisor sem o projeto  ⬜ PRONTA PARA COMEÇAR
+
+O revisor julga o DIFF; hoje carrega o mesmo contexto de quem escreve o código. Com MAPA +
+diff + arquivo da tarefa, o contexto cai de ~35k para ~15k, em 3 despachos por job.
+
+**O que mudar:** o prompt do `revisor`/`revisor-generico` já foi ajustado na I1 para dizer
+que o objeto de trabalho é o diff. Falta a parte mecânica: o despacho do revisor passar o
+`git show <hash>` **já no prompt**, em vez de o agente rodar o comando (economiza uma volta
+com contexto cheio) — e o orçamento de chamadas dele cair junto.
+
+**Pronta quando:** `cacheLeitura` do `revisor` por despacho cair pelo menos à metade da
+linha de base (1,78M / 3 despachos ≈ 594k).
+
+---
+
+### I5 — Critérios de aceite com forma executável  ⬜ PRONTA PARA COMEÇAR
+
 O `planejador` passa a escrever, ao lado do critério em prosa, o comando e o resultado
-esperado quando existir. O painel executa os mecânicos de graça e o verificador só é
-despachado para o que exige julgamento — que é exatamente a escada de verificação que
-`DOMINIOS.md` já define para a trilha genérica, aplicada também à de software.
+esperado **quando existir**. O painel executa os mecânicos de graça e o verificador só é
+despachado para o que exige julgamento.
+
+Não é conceito novo: é a **escada de verificação** que `_sistema/DOMINIOS.md` já define para
+a trilha genérica (`[executado]` / `[inspecionado]` / `[julgado]`), aplicada também à de
+software.
+
+**O que mudar:** template de tarefa (`_sistema/templates/`) ganha o campo opcional por
+critério; `planejador` e `planejador-generico` passam a preenchê-lo; o motor da I3 executa
+os `[executado]` antes de despachar o verificador e já entrega o resultado pronto no
+arquivo da tarefa.
+
+**Depende da I3** para valer de verdade (é o motor em código que roda os comandos de
+graça). Sem a I3, ainda ajuda: o verificador gasta menos voltas descobrindo COMO verificar.
+
+---
 
 ### Projeção acumulada
 
-| | US$/job | US$/tarefa |
-|---|---|---|
-| hoje | 7,45 | 2,14 |
-| I1 | ~3,4 | ~1,0 |
-| I1+I2 | ~2,1 | ~0,60 |
-| I1+I2+I3..I5 | ~1,5–1,8 | ~0,45–0,55 |
+| | US$/job | US$/tarefa | |
+|---|---|---|---|
+| linha de base | 7,45 | 2,14 | medido |
+| I1 | ~3,4 | ~1,0 | **feito**, a confirmar no próximo job |
+| I1+I2 | ~2,1 | ~0,60 | |
+| I1+I2+I3..I5 | ~1,5–1,8 | ~0,45–0,55 | |
 
-**−75% no cenário completo, −54% só com a I1.** As duas primeiras casas decimais são
-falsas precisão; o que a medição sustenta é a ordem de grandeza e o ranking.
+**−75% no cenário completo, −54% só com a I1.** As duas primeiras casas decimais são falsa
+precisão; o que a medição sustenta é a ordem de grandeza e o ranking.
 
 ---
 

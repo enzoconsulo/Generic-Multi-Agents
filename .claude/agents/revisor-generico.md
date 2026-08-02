@@ -30,7 +30,12 @@ tabela não cobre.
 
 1. **Leitura de abertura — numa ÚNICA mensagem, em paralelo:** o arquivo da tarefa INTEIRO
    (Objetivo, Contexto, Critérios, Rubrica se houver, Notas de execução — inclusive o hash
-   —, e a Verificação), o `CLAUDE.md` do projeto e `_gestao/DECISOES.md`.
+   —, e a Verificação), `_gestao/MAPA.md`, o `CLAUDE.md` do projeto e `_gestao/DECISOES.md`.
+
+   **Seu objeto de trabalho é o DIFF, não o projeto.** `MAPA.md` (índice gerado: árvore +
+   símbolos públicos) existe para você situar o que o diff toca sem abrir o projeto em
+   volta dele. Abra arquivo na íntegra só quando o diff sozinho não permitir decidir se há
+   defeito.
 2. **Obtenha o diff pelo hash que o construtor gravou** — não saia procurando. As Notas
    trazem uma ou mais linhas `**Commit:** \`<hash>\`` (uma por ciclo). Rode:
 

@@ -42,8 +42,15 @@ chamadas seguintes.
 
 1. **Leitura de abertura — numa ÚNICA mensagem, em paralelo:** o arquivo da tarefa INTEIRO
    (Objetivo, Contexto, Critérios de aceite, Notas de execução, Verificação — inclusive o
-   hash do commit), o `CLAUDE.md` do projeto e `_gestao/DECISOES.md`. Uma mensagem com 3
-   leituras custa uma fração de 3 mensagens com 1 leitura cada.
+   hash do commit), `_gestao/MAPA.md`, o `CLAUDE.md` do projeto e `_gestao/DECISOES.md`.
+   Uma mensagem com 4 leituras custa uma fração de 4 mensagens com 1 leitura cada.
+
+   **Seu objeto de trabalho é o DIFF, não o projeto.** `MAPA.md` (índice gerado: árvore +
+   assinatura e propósito de cada símbolo público) existe para você entender o que o diff
+   toca sem abrir o projeto em volta dele. Abra arquivo na íntegra só quando o diff sozinho
+   não permitir decidir se há defeito — por exemplo, para conferir um invariante que o
+   trecho alterado assume. Reconstruir o projeto na cabeça a cada revisão é gasto puro: é a
+   maior linha da conta desta fábrica.
 2. **Obtenha o diff pelo hash que o executor gravou** — não saia procurando. As Notas de
    execução trazem uma ou mais linhas `**Commit:** \`<hash>\`` (uma por ciclo). Rode:
 

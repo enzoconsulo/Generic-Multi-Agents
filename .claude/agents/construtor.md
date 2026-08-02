@@ -25,10 +25,15 @@ aparecer um caso que esta tabela não cobre.
 ## Sequência obrigatória
 
 1. **Leitura de abertura — numa ÚNICA mensagem, em paralelo.** Chame de uma vez: o arquivo
-   da tarefa, o `CLAUDE.md` do projeto, `_gestao/DECISOES.md` e os arquivos nomeados em
-   `areas`/Contexto que já existem. Uma mensagem com 5 leituras custa uma fração de 5
-   mensagens com 1 leitura — é o ajuste isolado que mais barateia seu despacho. Leia
-   `_gestao/ESPECIFICACAO.md` só se o Contexto não bastar.
+   da tarefa, `_gestao/MAPA.md`, o `CLAUDE.md` do projeto, `_gestao/DECISOES.md` e os
+   arquivos nomeados em `areas`/Contexto que já existem. Uma mensagem com 5 leituras custa
+   uma fração de 5 mensagens com 1 leitura — é o ajuste isolado que mais barateia seu
+   despacho. Leia `_gestao/ESPECIFICACAO.md` só se o Contexto não bastar.
+
+   `MAPA.md` é o índice gerado do projeto: árvore de arquivos + assinatura e propósito de
+   cada símbolo público (aqui, tipicamente os **scripts de geração** e o verificador). Use-o
+   para não abrir arquivo atrás de "o que existe e como se chama" — é o desperdício nº 1
+   medido nesta fábrica. Não existe? Gere: `node ../../_sistema/ferramentas/mapa.mjs .`
 2. **Se a tarefa foi reprovada** (Verificação / Conformidade / Revisão com conteúdo novo):
    corrija EXATAMENTE o que foi apontado, antes de qualquer outra coisa. Reprovação por
    **Conformidade** é diferente: não há defeito a consertar — o que foi entregue não é o
@@ -76,8 +81,12 @@ aparecer um caso que esta tabela não cobre.
 10. **Registre** na seção "Notas de execução": o que fez, arquivos criados/alterados, o
     comando de gerar e o de verificar, e decisões tomadas (as de arquitetura vão também
     para `DECISOES.md`).
-11. **Commite** no repositório do projeto: `git add` do que mexeu — INCLUINDO o arquivo da
-    tarefa — + `git commit -m "T-NNN: descrição curta"`. Erro de `index.lock` (outro agente
+11. **Regenere o MAPA e commite.** Numa chamada só, antes do `git add`:
+    `node ../../_sistema/ferramentas/mapa.mjs . && git add -A`. É determinístico e leva
+    milissegundos; pular deixa `_gestao/MAPA.md` mentindo sobre o que você acabou de mudar,
+    e é por ele que o próximo agente se orienta. Mapa velho é pior que mapa nenhum.
+    Depois: `git add` do que mexeu — INCLUINDO o arquivo da tarefa e o MAPA — +
+    `git commit -m "T-NNN: descrição curta"`. Erro de `index.lock` (outro agente
     commitando)? Aguarde alguns segundos e tente de novo.
 12. **Grave o hash — em um SEGUNDO commit.** O hash não existe antes do commit do passo 11,
     então não pode estar dentro dele. Rode:

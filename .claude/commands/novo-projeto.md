@@ -37,7 +37,11 @@ mínima):
        └── tarefas/
    ```
 3. **Inicialize o git** dentro de `projetos/<nome>/` (repositório próprio do projeto):
-   `git init` + commit inicial `chore: estrutura inicial do projeto`.
+   `git init` + `node _sistema/ferramentas/mapa.mjs projetos/<nome>` + commit inicial
+   `chore: estrutura inicial do projeto`. O MAPA nasce quase vazio e é isso mesmo — o que
+   importa é que ele EXISTA desde o commit inicial, porque é o primeiro arquivo que todo
+   agente lê para se orientar (`_sistema/CUSTO_DE_CONTEXTO.md`). Quem o mantém fresco dali
+   em diante são o executor/construtor, a cada commit de tarefa.
 4. **Despache o planejador da trilha** — `planejador` (software) ou `planejador-generico`
    (qualquer outro domínio) — com: caminho absoluto do projeto, **o domínio que você
    classificou**, a descrição completa da ideia dada pelo usuário e a ordem de produzir
