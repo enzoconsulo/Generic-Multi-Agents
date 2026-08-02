@@ -367,20 +367,36 @@ describe("rodarPipeline — marco de fase", () => {
   });
 
   /**
-   * A falha mais grave possível aqui seria registrar "aprovado" por não ter entendido a
-   * resposta — o registro é o que diz às próximas sessões que o marco já rodou, então um
-   * falso aprovado esconde a fase para sempre.
+   * Veredito ilegível NÃO para para perguntar: repete uma vez e, se continuar ilegível,
+   * registra REPROVADO. A direção não é arbitrária — `reprovado` gera correção, que é
+   * recuperável; `aprovado` esconderia a fase para sempre, porque o registro é o que diz às
+   * próximas sessões que o marco já rodou.
    */
-  it("veredito não identificado NÃO grava nada no PLANO.md", async () => {
-    const { dep, marcosGravados, logs } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
-      plano: plano([{ nome: "Fase 1", tarefas: ["T-001"] }]),
-      textoMarco: "Rodei tudo e achei umas coisas interessantes.",
-    });
+  it("veredito ilegível: repete uma vez, depois REPROVADO e abre correção", async () => {
+    const { dep, marcosGravados, despachos, logs } = mundo(
+      [tarefa({ id: "T-001", status: "pronta" })],
+      {
+        plano: plano([{ nome: "Fase 1", tarefas: ["T-001"] }]),
+        textoMarco: "Rodei tudo e achei umas coisas interessantes.",
+      },
+    );
     const rel = await rodarPipeline(ctxBase, dep);
 
-    expect(rel.marcos).toEqual([{ fase: "Fase 1", veredicto: "indefinido" }]);
-    expect(marcosGravados).toEqual([]);
-    expect(logs.some((l) => l.includes("NÃO foi alterado"))).toBe(true);
+    expect(despachos.filter((d) => d.papel === "marco")).toHaveLength(2); // 1 + 1 retentativa
+    expect(rel.marcos).toEqual([{ fase: "Fase 1", veredicto: "reprovado" }]);
+    expect(marcosGravados).toEqual([{ fase: "Fase 1", veredicto: "reprovado" }]);
+    // Reprovado abre correção sozinho, sem esperar ninguém.
+    expect(despachos.some((d) => d.papel === "planejador")).toBe(true);
+    expect(logs.some((l) => l.includes("lado recuperável"))).toBe(true);
+  });
+
+  it("marco reprovado explicitamente também abre correção sozinho", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      plano: plano([{ nome: "Fase 1", tarefas: ["T-001"] }]),
+      textoMarco: "MARCO: reprovado",
+    });
+    await rodarPipeline(ctxBase, dep);
+    expect(despachos.filter((d) => d.papel === "planejador")).toHaveLength(1);
   });
 
   it("sem PLANO.md, nenhum marco — projeto importado à mão é caso legítimo", async () => {
@@ -532,5 +548,50 @@ describe("teto de despachos por tarefa — o circuito que a guarda de progresso 
     expect(estados.get("T-002")).toBe("concluida");
     expect(despachos.filter((d) => d.tarefa.id === "T-001").length).toBeLessThanOrEqual(13);
     expect(logs.some((l) => l.includes("em circuito"))).toBe(true);
+  });
+});
+
+describe("autonomia — o que antes parava para perguntar", () => {
+  /**
+   * O objetivo do projeto é colocar para rodar e o sistema se organizar. Cada um destes já
+   * tinha REGRA escrita na constituição — parar para perguntar era eu não ter automatizado,
+   * não uma decisão de desenho.
+   */
+  it("tarefa esgotada dispara o PLANEJADOR sozinha (autocorreção)", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "pronta", tentativas: 4 })]);
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.paraReplanejar).toContain("T-001");
+    expect(despachos.some((d) => d.papel === "planejador")).toBe(true);
+    // E não fica girando: sai de circulação depois do replanejamento.
+    expect(despachos.filter((d) => d.papel === "planejador")).toHaveLength(1);
+  });
+
+  // Autocorreção vale UMA vez por linhagem: a substituta que esgota é problema para o
+  // usuário, senão um erro de dimensionamento gera replanejamentos em cascata.
+  it("substituta que esgota de novo é bloqueada, sem replanejar em cascata", async () => {
+    const { dep, despachos } = mundo([
+      tarefa({ id: "T-001a", status: "pronta", tentativas: 4, replanejadaDe: "T-001" }),
+    ]);
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.bloqueadas).toContain("T-001a");
+    expect(despachos.some((d) => d.papel === "planejador")).toBe(false);
+  });
+
+  it("tarefa só de documentação pula o verificador", async () => {
+    const { dep, despachos } = mundo([
+      tarefa({ id: "T-022", status: "em-teste", areas: ["README.md", "CLAUDE.md"] }),
+    ]);
+    await rodarPipeline(ctxBase, dep);
+    expect(despachos.some((d) => d.papel === "verificador")).toBe(false);
+    expect(despachos.some((d) => d.papel === "revisor")).toBe(true);
+  });
+
+  it("tarefa com código NÃO pula, mesmo com um .md junto", async () => {
+    const { dep, despachos } = mundo([
+      tarefa({ id: "T-010", status: "em-teste", areas: ["src/a.js", "README.md"] }),
+    ]);
+    await rodarPipeline(ctxBase, dep);
+    expect(despachos.some((d) => d.papel === "verificador")).toBe(true);
   });
 });

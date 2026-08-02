@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { readFile } from "node:fs/promises";
+import { appendFile, readFile } from "node:fs/promises";
 import { lerEquipe, lerResumosTarefas, parsearPlano, parsearTarefa } from "../fabrica/index.js";
 import { commitar } from "../fabrica/git.js";
 import { gravarMarco, textoDoMarco } from "./marco.js";
@@ -174,6 +174,28 @@ export class RunnerPipeline implements Runner {
     );
 
     const texto = montarRelatorio(p.projeto, relatorio);
+
+    // LOG DO DIA, escrito pelo motor. É o último automatismo que sobrava do orquestrador, e
+    // o único cuja parte cara — redigir prosa — não é necessária: o que a próxima sessão
+    // precisa ler são FATOS (o que rodou, o que fechou, o que travou, quanto custou), e
+    // esses o motor tem de graça. Prosa sobre eles é do `/encerrar-dia`, que continua no
+    // modelo.
+    try {
+      await appendFile(
+        join(p.raiz, "_sistema", "logs", `${new Date().toISOString().slice(0, 10)}.md`),
+        `
+## Pipeline — ${p.projeto} (${new Date().toISOString().slice(11, 16)} UTC)
+
+` +
+          `${texto}
+`,
+        "utf8",
+      );
+    } catch (e) {
+      // Nunca derruba a rodada: o relatório já está no job e no console.
+      ctx.emitir("log", { nivel: "erro", texto: `Log do dia não gravado: ${(e as Error).message}` });
+    }
+
     ctx.emitir("log", { nivel: "resultado", texto });
     return {
       ...relatorio,
@@ -220,9 +242,9 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
   // Os dois pedem AÇÃO e por isso vão por último, que é onde se olha.
   if (r.paraReplanejar.length > 0) {
     linhas.push(
-      `PRECISA DE JULGAMENTO — replanejar: ${r.paraReplanejar.join(", ")}. Rode` +
-        " `/trabalhar` no chat ou a ação 'Replanejar' do painel: quebrar ou reescrever uma" +
-        " tarefa é decisão, não regra.",
+      `Replanejadas automaticamente (esgotaram os ciclos): ${r.paraReplanejar.join(", ")}.` +
+        " O planejador quebrou ou reescreveu a abordagem; as substitutas entram na próxima" +
+        " rodada.",
     );
   }
   if (r.bloqueadas.length > 0) {

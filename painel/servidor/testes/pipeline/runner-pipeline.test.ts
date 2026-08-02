@@ -64,7 +64,7 @@ function contexto() {
   return { ctx, eventos, logs };
 }
 
-const AGENTES = ["executor", "executor-reforcado", "testador", "revisor"];
+const AGENTES = ["executor", "executor-reforcado", "testador", "revisor", "planejador", "documentador"];
 
 function fabricaFalsa(tarefas: { nome: string; conteudo: string }[], equipe?: object): string {
   const raiz = mkdtempSync(join(tmpdir(), "pipe-"));
@@ -302,18 +302,28 @@ describe("RunnerPipeline — desfechos", () => {
     expect(r.texto).toContain("TETO DE CUSTO");
   });
 
-  // Replanejar é DECISÃO, não regra: o motor sinaliza e o relatório diz o que fazer.
-  it("tarefa esgotada vira pedido de julgamento, não uma decisão automática", async () => {
+  /**
+   * Replanejar é AUTOMÁTICO — a constituição já define a autocorreção "uma vez por
+   * linhagem". A versão anterior deste teste travava o oposto (parar e pedir julgamento), e
+   * isso contrariava o objetivo do projeto: colocar para rodar e o sistema se organizar.
+   * Quem decide se replaneja é a regra; o que o modelo faz é o replanejamento em si.
+   */
+  it("tarefa esgotada é replanejada SOZINHA, sem parar para perguntar", async () => {
     const raiz = fabricaFalsa([
       { nome: "T-001-x.md", conteudo: tarefaMd({ id: "T-001", status: "pronta", tentativas: 4 }) },
     ]);
-    const { consulta } = sdkFalso(() => {});
+    const despachados: string[] = [];
+    const { consulta } = sdkFalso((p) => {
+      if (p.includes("PLANEJADOR")) despachados.push("planejador");
+    });
     const r = await new RunnerPipeline(consulta).executar(
       job({ raiz, projeto: "app", modelo: "sonnet" }),
       contexto().ctx,
     );
     expect(r.paraReplanejar).toContain("T-001");
-    expect(r.texto).toContain("PRECISA DE JULGAMENTO");
+    expect(despachados).toContain("planejador");
+    expect(r.texto).toContain("Replanejadas automaticamente");
+    expect(r.texto).not.toContain("PRECISA DE JULGAMENTO");
   });
 
   it("projeto sem tarefa despachável não gasta nada", async () => {

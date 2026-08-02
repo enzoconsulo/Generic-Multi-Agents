@@ -286,6 +286,31 @@ export function resolverAgente(
   };
 }
 
+/**
+ * Extensões que NÃO são código executável. Tarefa cujas `areas` são só isto pode pular o
+ * portão do meio: não há software para rodar, e o revisor confere conformidade do mesmo
+ * jeito. É a regra que o CLAUDE.md deixava como "decisão sua" — e ela cabe num teste, então
+ * é código.
+ *
+ * Conservador de propósito: `.json`, `.yml` e afins ficam de FORA da lista, porque config
+ * quebrada derruba software de verdade.
+ */
+const EXTENSOES_SEM_EXECUCAO: ReadonlySet<string> = new Set([".md", ".txt", ".rst", ".adoc"]);
+
+/**
+ * A tarefa é só de documentação/texto? Aí o verificador não tem o que executar.
+ *
+ * Tarefa SEM `areas` nunca pula: não declarar o que toca é o oposto de provar que não toca
+ * código.
+ */
+export function podePularVerificacao(tarefa: TarefaResumo): boolean {
+  if (tarefa.areas.length === 0) return false;
+  return tarefa.areas.every((a) => {
+    const ponto = a.lastIndexOf(".");
+    return ponto !== -1 && EXTENSOES_SEM_EXECUCAO.has(a.slice(ponto).toLowerCase());
+  });
+}
+
 /** A tarefa esgotou os 3 ciclos? (`tentativas` conta execuções, não reprovações.) */
 export function deveBloquear(tarefa: TarefaResumo): boolean {
   return tarefa.tentativas > MAX_TENTATIVAS;

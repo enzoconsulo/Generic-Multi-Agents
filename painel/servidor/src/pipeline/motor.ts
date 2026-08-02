@@ -4,6 +4,7 @@ import {
   AGENTE_GENERICO,
   deveBloquear,
   deveReplanejar,
+  podePularVerificacao,
   promoverProntas,
   proximosPassos,
   resolverAgente,
@@ -196,6 +197,8 @@ export async function rodarPipeline(
   const despachosPorTarefa = new Map<string, number>();
   /** Tarefas que estouraram o teto e saíram de circulação nesta rodada. */
   const emCircuito = new Set<string>();
+  /** Fases cujo marco já foi repetido uma vez por veredito ilegível. */
+  const marcosRetentados = new Set<string>();
   let orcamento = ctx.orcamento;
 
   // ---- SANEAMENTO DE ABERTURA ------------------------------------------------------
@@ -238,8 +241,30 @@ export async function rodarPipeline(
       if (!deveBloquear(t)) continue;
       if (rel.paraReplanejar.includes(t.id) || rel.bloqueadas.includes(t.id)) continue;
       if (deveReplanejar(t)) {
+        // AUTOCORREÇÃO — a constituição já define isto como automático ("uma vez por
+        // linhagem"): despache o planejador da trilha em modo replanejamento. Ele quebra ou
+        // reescreve a abordagem, cancela a original e cria as substitutas. Parar para
+        // perguntar aqui seria transformar uma regra escrita em intervenção manual.
         rel.paraReplanejar.push(t.id);
-        dep.log("erro", `${t.id} esgotou os ciclos — replanejamento (decisão do modelo).`);
+        dep.log("info", `${t.id} esgotou os ciclos — replanejando automaticamente.`);
+        const rp = await dep.despachar({
+          tarefa: t,
+          papel: "planejador",
+          agente: AGENTE_GENERICO[ctx.trilha].planejador,
+          modelo: null,
+          promptColado: null,
+          motivo: `replanejamento de ${t.id} (esgotou ${t.tentativas} ciclos)`,
+          notas: await dep.lerNotasDe(t),
+        });
+        rel.despachos += 1;
+        orcamento = comGasto(orcamento, orcamento.gastoUsd + rp.custoUsd);
+        // Sai de circulação de um jeito ou de outro: replanejada (o planejador a cancelou)
+        // ou não — e aí não pode voltar ao laço e girar de novo.
+        emCircuito.add(t.id);
+        if (!rp.concluiu) {
+          rel.encerrouPor = "agente-cortado";
+          break;
+        }
       } else {
         rel.bloqueadas.push(t.id);
         await dep.gravarStatus(t, "bloqueada");
@@ -294,20 +319,49 @@ export async function rodarPipeline(
       rel.despachos += 1;
       orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
 
-      const veredicto = r.concluiu ? lerVeredicto(r.texto ?? "") : "indefinido";
-      rel.marcos.push({ fase: alvo.fase.nome, veredicto });
+      let veredicto = r.concluiu ? lerVeredicto(r.texto ?? "") : "indefinido";
+
+      // Veredito ilegível: UMA retentativa, e depois REPROVADO — nunca "pergunte ao
+      // humano". A direção do palpite não é arbitrária: `reprovado` gera correção, que é
+      // recuperável; `aprovado` esconderia a fase para sempre, porque o registro é o que
+      // diz às próximas sessões que o marco já rodou.
+      if (veredicto === "indefinido" && r.concluiu && !marcosRetentados.has(alvo.fase.nome)) {
+        marcosRetentados.add(alvo.fase.nome);
+        dep.log("info", `Marco de "${alvo.fase.nome}": veredito ilegível — repetindo uma vez.`);
+        continue;
+      }
       if (veredicto === "indefinido") {
-        // NUNCA escrever "aprovado" por não ter entendido a resposta: seria a pior falha
-        // possível aqui, porque o registro é o que diz às próximas sessões que já rodou.
+        veredicto = "reprovado";
         dep.log(
           "erro",
-          `Marco da fase "${alvo.fase.nome}": veredito não identificado no relatório —` +
-            " PLANO.md NÃO foi alterado. Confira à mão.",
+          `Marco de "${alvo.fase.nome}": veredito continua ilegível — registrando REPROVADO` +
+            " (o lado recuperável) e abrindo correção.",
         );
-      } else {
-        await dep.gravarMarco(alvo.fase.nome, veredicto);
-        dep.log("info", `Marco da fase "${alvo.fase.nome}": ${veredicto.toUpperCase()}.`);
       }
+
+      rel.marcos.push({ fase: alvo.fase.nome, veredicto });
+      await dep.gravarMarco(alvo.fase.nome, veredicto as "aprovado" | "reprovado");
+      dep.log("info", `Marco da fase "${alvo.fase.nome}": ${veredicto.toUpperCase()}.`);
+
+      // Marco REPROVADO abre correção sozinho. A constituição distingue "causa raiz única"
+      // (tarefa corretiva) de "múltiplas causas" (planejador) — distinguir isso É
+      // julgamento, então vai sempre ao planejador, que é a generalização segura.
+      if (veredicto === "reprovado") {
+        const rc = await dep.despachar({
+          tarefa:
+            emAndamento.find((t) => t.id === alvo.tarefas[0]) ?? (emAndamento[0] as TarefaResumo),
+          papel: "planejador",
+          agente: AGENTE_GENERICO[ctx.trilha].planejador,
+          modelo: null,
+          promptColado: null,
+          motivo: `correções do marco reprovado da fase "${alvo.fase.nome}"`,
+          notas: r.texto ?? "",
+          fase: alvo.fase.nome,
+        });
+        rel.despachos += 1;
+        orcamento = comGasto(orcamento, orcamento.gastoUsd + rc.custoUsd);
+      }
+
       if (!r.concluiu) {
         rel.encerrouPor = "agente-cortado";
         break;
@@ -340,6 +394,19 @@ export async function rodarPipeline(
         `${passo.tarefa.id} BLOQUEADA: ${jaGastou} despachos nesta rodada sem concluir —` +
           " está em circuito (provavelmente o campo `tentativas` não está sendo" +
           " incrementado). As outras tarefas seguem.",
+      );
+      continue;
+    }
+
+    // Tarefa só de documentação não tem software para rodar: o portão do meio não tem o
+    // que fazer, e o revisor confere conformidade do mesmo jeito. Era a decisão que o
+    // CLAUDE.md deixava como "sua"; é uma regra sobre extensões, então é código.
+    if (passo.papel === "verificador" && podePularVerificacao(passo.tarefa)) {
+      await dep.gravarStatus(passo.tarefa, "em-revisao");
+      dep.log(
+        "info",
+        `${passo.tarefa.id}: só documentação (${passo.tarefa.areas.join(", ")}) — pula o` +
+          " verificador e vai direto à revisão.",
       );
       continue;
     }
