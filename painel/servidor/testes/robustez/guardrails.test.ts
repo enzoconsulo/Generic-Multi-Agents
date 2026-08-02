@@ -19,8 +19,16 @@ describe("guardrailsParaAcao", () => {
     expect(guardrailsParaAcao("acao-que-nao-existe")).toEqual(GUARDRAILS_PADRAO);
   });
 
-  it("maxBudgetUsd é null por default (informacional; assinatura não cobra por chamada)", () => {
-    expect(guardrailsParaAcao("trabalhar").maxBudgetUsd).toBeNull();
+  /**
+   * Invertido em 01/08. O teste antigo travava `maxBudgetUsd: null` com a justificativa de
+   * que "a assinatura não cobra por chamada, então não há o que cortar" — e isso confundia
+   * FATURA com recurso escasso. O que acaba é a cota, e o histórico foi categórico: dos 55
+   * jobs rodados, 10 falharam e os 10 falharam por cota, nenhum por bug. Sem teto por
+   * omissão não era neutralidade, era a causa.
+   */
+  it("todo fluxo tem teto de custo — nenhum sobe ilimitado por omissão", () => {
+    expect(guardrailsParaAcao("trabalhar").maxBudgetUsd).toBeGreaterThan(0);
+    expect(GUARDRAILS_PADRAO.maxBudgetUsd).toBeGreaterThan(0);
   });
 });
 

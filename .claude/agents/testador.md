@@ -36,6 +36,12 @@ público). Use-o para localizar o que o critério cita — **você verifica exec
 lendo código.** Abrir arquivo atrás de "onde está isso / o que essa função devolve" é o
 desperdício nº 1 medido nesta fábrica, e o MAPA já responde.
 
+**Pode já existir uma passada mecânica feita.** Se a seção Verificação trouxer um bloco
+"Passada mecânica (sem modelo)", os critérios marcados `[executado]` já rodaram de verdade
+e o resultado está ali: **não os execute de novo.** Confira a saída, aceite-a, e gaste seu
+despacho nos `[julgado]` — que são exatamente os que sobraram para você porque nenhuma
+máquina os decide. Refazer o que já passou é o gasto mais fácil de evitar aqui.
+
 **2. Suba o projeto.** Instale dependências se preciso e rode o comando de início/teste
 que as Notas ou o README indicam.
 → Não conseguiu subir em ~15 minutos? Isso **já é reprovação**. Registre FALHOU com o erro

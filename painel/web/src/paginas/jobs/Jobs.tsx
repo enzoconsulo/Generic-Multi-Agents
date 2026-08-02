@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ErroApi } from "../../lib/api";
 import { avisoLimiteDeUso } from "../../lib/limite-uso";
+import { avisoTetoCusto } from "../../lib/teto-custo";
 import { avisoDespachoEmVoo, avisoDespachoFundo } from "../../lib/avisos-job";
 import { useHistoricoLog } from "../../lib/useHistoricoLog";
 import { useJobsAoVivo } from "../../lib/useJobsAoVivo";
@@ -169,6 +170,7 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
   // Decisão e texto vivem em `lib/limite-uso` — os testes da web são de lógica pura, então
   // lógica dentro do componente seria lógica não verificada.
   const avisoCota = avisoLimiteDeUso(resultado);
+  const avisoTeto = avisoTetoCusto(resultado);
   const avisoFundo = avisoDespachoFundo(resultado);
   const avisoEmVoo = avisoDespachoEmVoo(resultado);
 
@@ -324,6 +326,13 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
       {avisoCota !== null && (
         <div className="aviso aviso-erro">
           <strong>Limite de uso da assinatura.</strong> {avisoCota}
+        </div>
+      )}
+
+      {/* Parada planejada: NÃO usa `aviso-erro`, porque não é erro. */}
+      {avisoTeto !== null && (
+        <div className="aviso">
+          <strong>Encerrado pelo teto de custo.</strong> {avisoTeto}
         </div>
       )}
 

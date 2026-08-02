@@ -102,10 +102,22 @@ export async function agentesParaAcao(
       const qualificar = (projetosPorId.get(a.id) ?? 0) > 1;
       const nome = nomeDoAgente(projeto, a.id, qualificar);
 
+      // `tools` OMITIDO de propósito → o SDK faz o agente herdar as ferramentas do pai.
+      //
+      // Não é economia de linha: **as definições de ferramenta vêm ANTES do systemPrompt na
+      // chave de cache**, então enquanto dois agentes declararem listas diferentes, nada
+      // depois delas pode ser compartilhado — o bloco de ferramentas sozinho é ~12k tokens,
+      // reescritos a cada despacho. Herdar torna esse bloco idêntico entre todos.
+      //
+      // O que se perde: o `equipe.json` pode declarar `ferramentas` por especialista, e
+      // isso passa a ser ignorado. É aceitável porque todo especialista da equipe é um
+      // CONSTRUTOR — mesmo papel, mesma necessidade — e a disciplina de cada um vive no
+      // prompt, que é onde ela pertence. Restrição de ferramenta como guarda de segurança
+      // continua valendo para os agentes de disco (o `revisor` não tem `Write`), que não
+      // passam por aqui.
       const base: AgenteSDK = {
         description: a.descricao !== "" ? a.descricao : `Especialista ${a.nome}`,
         prompt: a.prompt,
-        ...(a.ferramentas !== null && a.ferramentas.length > 0 ? { tools: a.ferramentas } : {}),
       };
       registro[nome] = qualificar
         ? { ...base, description: `[projeto ${projeto}] ${base.description}` }

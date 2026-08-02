@@ -92,6 +92,7 @@ export async function montarJobAnalise(
       ...(opcoes.fallback ? { fallback: opcoes.fallback } : {}),
       maxTurns: opcoes.maxTurns ?? guardrails.maxTurns,
       watchdogMs: guardrails.watchdogMs,
+      ...(guardrails.maxBudgetUsd !== null ? { tetoUsd: guardrails.maxBudgetUsd } : {}),
       ...(guardrails.esforco !== undefined ? { esforco: guardrails.esforco } : {}),
     },
   };

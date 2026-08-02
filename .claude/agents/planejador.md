@@ -63,6 +63,15 @@ contrato. Peça de uma vez:
      não "a API de usuários funciona"; `npm test src/carrinho.test.ts → 4 testes passam`,
      não "o carrinho está testado". Critério de UI nomeia a tela e o que precisa aparecer
      nela — é sobre a captura que o revisor julga conformidade visual;
+   - **quando o critério puder ser conferido por MÁQUINA, escreva o comando numa linha
+     indentada logo abaixo dele:** `` `verificar: npm test` ``. A fábrica executa esses
+     comandos de graça, antes de despachar o verificador, e anexa o resultado à tarefa —
+     critério que já falha aí volta direto ao construtor, sem pagar ~US$ 0,50 de despacho
+     para confirmar o óbvio.
+     A régua NÃO é "dá para automatizar", é **"a automação responde à MESMA pergunta"**:
+     um `grep` que acha a string no bundle não prova que a tela ficou boa (isso já deu
+     tarefa dada por pronta duas vezes nesta fábrica). Critério de julgamento fica SEM
+     comando, de propósito, e é o verificador que decide;
    - `dependencias` formando um grafo sem ciclos, com o máximo de tarefas independentes
      entre si (isso habilita paralelismo). Tudo depende da T-001 (scaffold);
    - `areas` preenchido com as pastas/arquivos que a tarefa deve tocar;

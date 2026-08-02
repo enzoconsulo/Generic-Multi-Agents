@@ -1249,3 +1249,31 @@ describe("RunnerClaude — teto de custo", () => {
     }
   });
 });
+
+/**
+ * Prefixo cacheável entre despachos (I2 de `_sistema/CUSTO_DE_CONTEXTO.md`).
+ *
+ * O preset do Claude Code carrega seções que mudam por sessão — diretório de trabalho,
+ * git status, caminho de memória. Como o git status muda a CADA commit de tarefa, o
+ * prefixo do systemPrompt nunca se repetia entre despachos e o cache não tinha o que
+ * reaproveitar: cada agente pagava ESCRITA (17,5× o preço da leitura) pelo mesmo conteúdo.
+ *
+ * O teste olha para as `options` porque as falhas desta família são todas MUDAS nesta base:
+ * `outputConfig.effort` com nome inexistente, `watchdogMs` que ninguém lia, `canUseTool`
+ * desligado no modo padrão. Nos três, tudo compilava e a economia simplesmente não
+ * acontecia.
+ */
+describe("RunnerClaude — prefixo cacheável", () => {
+  it("pede o preset SEM as seções dinâmicas, com os nomes exatos do SDK", async () => {
+    let opcoes: Record<string, unknown> | undefined;
+    await new RunnerClaude(
+      consultaDe([{ type: "result", is_error: false }], (o) => (opcoes = o)),
+    ).executar(jobFake(PARAMS), contexto(new AbortController().signal).ctx);
+
+    expect(opcoes?.["systemPrompt"]).toEqual({
+      type: "preset",
+      preset: "claude_code",
+      excludeDynamicSections: true,
+    });
+  });
+});

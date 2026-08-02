@@ -4,8 +4,20 @@
  * ações (`catalogo-acoes.ts`): para ajustar, edite SÓ a tabela abaixo.
  *
  * `maxTurns` vai para as options do SDK (o runner já lê `params.maxTurns`).
- * `maxBudgetUsd` é INFORMACIONAL: a assinatura não cobra por chamada, então não há o que
- * cortar — serve para a UI avisar. Fica `null` (sem teto) por default, de propósito.
+ *
+ * `maxBudgetUsd` DEIXOU DE SER INFORMACIONAL (01/08). O comentário antigo dizia "a
+ * assinatura não cobra por chamada, então não há o que cortar" — e isso estava errado por
+ * confundir fatura com recurso escasso. **O que acaba é a COTA**, e o custo estimado é o
+ * melhor proxy dela que existe aqui. O histórico decidiu a questão: dos 55 jobs já rodados,
+ * **10 falharam e os 10 falharam por cota**, nenhum por bug.
+ *
+ * `maxTurns` não substituía isso, e o histórico também prova: ele limita só o laço do
+ * orquestrador, enquanto `num_turns` é somado entre os `result` inclusive dos subagentes —
+ * jobs somaram 211 e 212 voltas com o teto configurado em 120.
+ *
+ * Hoje o valor vai para `params.tetoUsd` e o runner o aplica com parada limpa
+ * (`pipeline/orcamento.ts`). Há teste travando esse consumo: campo de tabela data-driven
+ * que ninguém lê é a armadilha da casa (`watchdogMs` existiu assim desde a T-019).
  */
 
 /**
@@ -39,6 +51,13 @@ export interface Guardrails {
    * execução que não faz nada é sempre a mais barata.
    */
   esforco?: Esforco;
+  /**
+   * Teto de custo do job em US$ (proxy da cota). `null` = sem teto.
+   *
+   * Vira `params.tetoUsd`; o runner para LIMPO ao atingi-lo — nunca cortando agente em voo,
+   * e recusando COMEÇAR tarefa que não caberia. Calibrado nos jobs reais: um ciclo completo
+   * de tarefa (construtor + verificador + revisor) custou ~US$ 2,14 no banco-imobiliario.
+   */
   maxBudgetUsd: number | null;
   /** Silêncio tolerado pelo watchdog neste tipo de fluxo (ms). */
   watchdogMs: number;
@@ -49,7 +68,10 @@ const MINUTO = 60_000;
 /** Teto para quem não tem entrada própria (ação nova nasce protegida, não ilimitada). */
 export const GUARDRAILS_PADRAO: Guardrails = {
   maxTurns: 80,
-  maxBudgetUsd: null,
+  // Uma ação de agente único não deveria passar disto. Ação nova nasce protegida — o
+  // default anterior era `null`, e "ilimitado por omissão" foi o que produziu os 10 jobs
+  // mortos por cota.
+  maxBudgetUsd: 3,
   watchdogMs: 15 * MINUTO,
 };
 
@@ -59,15 +81,22 @@ export const GUARDRAILS_PADRAO: Guardrails = {
  * um silêncio longo ali já é sintoma.
  */
 const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
-  trabalhar: { maxTurns: 200, watchdogMs: 20 * MINUTO },
-  "novo-projeto": { maxTurns: 150 },
-  manutencao: { maxTurns: 120 },
-  "encerrar-dia": { maxTurns: 100 },
-  ideia: { maxTurns: 100 },
+  /**
+   * US$ 8 ≈ 3 a 4 ciclos completos de tarefa pela medição atual (~US$ 2,14 cada). É o único
+   * fluxo que roda o pipeline inteiro, então é o único que precisa de folga para VÁRIAS
+   * tarefas — e mesmo assim com teto: as rodadas de 30/07 e 01/08 gastaram US$ 7,45 e
+   * US$ 6,55 SEM teto e morreram na parede da cota, deixando tarefa pela metade.
+   */
+  trabalhar: { maxTurns: 200, watchdogMs: 20 * MINUTO, maxBudgetUsd: 8 },
+  /** Planejar um projeto inteiro: especificação, plano, equipe e ~20 tarefas. */
+  "novo-projeto": { maxTurns: 150, maxBudgetUsd: 4 },
+  manutencao: { maxTurns: 120, maxBudgetUsd: 3 },
+  "encerrar-dia": { maxTurns: 100, maxBudgetUsd: 2 },
+  ideia: { maxTurns: 100, maxBudgetUsd: 3 },
   // /status é leitura e sumarização — mecânico pela mesma régua.
-  status: { maxTurns: 40, watchdogMs: 10 * MINUTO, esforco: "medium" },
+  status: { maxTurns: 40, watchdogMs: 10 * MINUTO, esforco: "medium", maxBudgetUsd: 1 },
   /** Análise não é um dos 6 comandos, mas é um fluxo Claude e também merece teto. */
-  analisar: { maxTurns: 100 },
+  analisar: { maxTurns: 100, maxBudgetUsd: 4 },
 
   /**
    * Ações de agente por projeto (T-033), com a chave prefixada `projeto:<id>` para não
@@ -79,7 +108,7 @@ const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
   "projeto:pesquisar": { maxTurns: 60, watchdogMs: 20 * MINUTO }, // espera de rede é normal aqui
   "projeto:revisar": { maxTurns: 80 },
   "projeto:testar": { maxTurns: 80, watchdogMs: 20 * MINUTO }, // suíte longa é silêncio legítimo
-  "projeto:replanejar": { maxTurns: 120 }, // reescreve plano e tarefas: mais fôlego
+  "projeto:replanejar": { maxTurns: 120, maxBudgetUsd: 4 }, // reescreve plano e tarefas
   /** T-034 — escopo de um projeto, então bem abaixo dos comandos globais equivalentes. */
   /**
    * Fica no PADRÃO, e isso foi medido (T-042), não suposto. Rodando a MESMA entrada duas
@@ -90,7 +119,7 @@ const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
    */
   "projeto:conferir": { maxTurns: 80 },
   /** Marco roda software de verdade e ainda promove tarefas: silêncio longo é legítimo. */
-  "projeto:marco": { maxTurns: 100, watchdogMs: 20 * MINUTO },
+  "projeto:marco": { maxTurns: 100, watchdogMs: 20 * MINUTO, maxBudgetUsd: 4 },
   /**
    * Aqui `medium` se pagou: mesma entrada, trabalho equivalente (commit de +33 linhas
    * contra +40 do padrão) por metade do custo e 2,6× mais rápido. Consolidar um

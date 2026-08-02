@@ -134,7 +134,11 @@ describe("agentesParaAcao — injeção da equipe do projeto no /trabalhar", () 
     expect(Object.keys(ag ?? {})).toEqual(["frontend"]);
     expect(ag?.["frontend"]?.description).toBe("UI");
     expect(ag?.["frontend"]?.prompt).toBe("faça UI");
-    expect(ag?.["frontend"]?.tools).toEqual(["Read"]);
+    // `tools` OMITIDO de propósito, mesmo com `ferramentas` declarado no equipe.json: o
+    // SDK faz o agente HERDAR as do pai, e é isso que torna o bloco de definições de
+    // ferramenta (~12k tokens) idêntico entre despachos. Como ele vem ANTES do systemPrompt
+    // na chave de cache, lista divergente impediria qualquer compartilhamento depois dela.
+    expect(ag?.["frontend"]?.tools).toBeUndefined();
   });
 
   it("projeto sem nenhum agente válido → undefined", async () => {
@@ -152,7 +156,7 @@ describe("agentesParaAcao — injeção da equipe do projeto no /trabalhar", () 
 describe("agentesParaAcao — gêmeos reforçados", () => {
   const equipe = [{ id: "frontend", descricao: "UI", prompt: "faça UI", ferramentas: ["Read"] }];
 
-  it("injeta `<id>-reforcado` com o modelo do reforço, mantendo prompt e ferramentas", async () => {
+  it("injeta `<id>-reforcado` com o modelo do reforço, mantendo o prompt", async () => {
     const raiz = fabricaComEquipe(equipe);
     const ag = await agentesParaAcao(raiz, "trabalhar", "app", "opus");
 
@@ -162,7 +166,8 @@ describe("agentesParaAcao — gêmeos reforçados", () => {
     // SILÊNCIO e o gêmeo rodaria no mesmo modelo do fluxo, sem ninguém notar.
     expect(reforcado?.model).toBe("opus");
     expect(reforcado?.prompt).toBe("faça UI");
-    expect(reforcado?.tools).toEqual(["Read"]);
+    // Herda as ferramentas do pai, como o normal — ver o teste de conversão acima.
+    expect(reforcado?.tools).toBeUndefined();
     expect(reforcado?.description).toContain("RETRABALHO");
     // O normal segue sem `model`: herda o do fluxo, que é o comportamento de sempre.
     expect(ag?.["frontend"]?.model).toBeUndefined();

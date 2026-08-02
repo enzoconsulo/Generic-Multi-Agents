@@ -22,7 +22,21 @@ atualizada: AAAA-MM-DD
 
 ## Critérios de aceite
 (comando + resultado esperado, nunca frase vaga)
-- [ ]
+
+Critério que uma MÁQUINA pode conferir leva, logo abaixo, uma linha indentada
+`` `verificar: <comando>` ``. A fábrica executa esses comandos de graça, antes de
+despachar o verificador, e anexa o resultado aqui — quem já falhou na passada mecânica
+volta direto ao construtor, sem pagar um despacho para confirmar o óbvio.
+
+A régua NÃO é "dá para automatizar", é **"a automação responde à MESMA pergunta"**.
+`grep` que acha uma string no bundle não prova que a tela ficou boa. Critério de
+julgamento fica sem comando, de propósito, e vai para o verificador.
+
+- [ ] `npm test` roda a suíte inteira sem falha.
+      `verificar: npm test`
+- [ ] O arquivo de teste da tarefa existe e roda isolado.
+      `verificar: node --test tests/<arquivo>.test.js`
+- [ ] (critério de julgamento — sem comando)
 
 ## Notas de execução
 

@@ -592,6 +592,25 @@ export class RunnerClaude implements Runner {
         ...(p.fallback !== undefined ? { fallbackModel: p.fallback } : {}),
         // Especialistas do projeto injetados como subagentes (options.agents do SDK).
         ...(p.agentes !== undefined ? { agents: p.agentes } : {}),
+        // Preset do Claude Code SEM as seções que variam por sessão (diretório de
+        // trabalho, git status, caminho de memória). O SDK reinjeta esse conteúdo como
+        // primeira mensagem de usuário, então o modelo continua tendo acesso — o que muda
+        // é que o systemPrompt vira ESTÁVEL e o prefixo passa a poder ser reaproveitado
+        // pelo cache entre despachos.
+        //
+        // Sem isto não existe prefixo compartilhado: basta o git status mudar (e ele muda a
+        // cada commit de tarefa) para o cache não casar mais, silenciosamente. O próprio
+        // sdk.d.ts rotula a opção como "Cacheable prompt for multi-user fleets".
+        //
+        // Custo da troca, declarado no SDK: cwd/memória/git ficam marginalmente menos
+        // autoritativos (aparecem em mensagem de usuário, não no sistema) e a primeira
+        // mensagem fica um pouco maior. Ambos irrelevantes aqui — o confinamento da fábrica
+        // vai explícito no texto do prompt, não depende dessa seção.
+        systemPrompt: {
+          type: "preset" as const,
+          preset: "claude_code" as const,
+          excludeDynamicSections: true,
+        },
         permissionMode,
         ...(aprovaPelaUI ? { canUseTool } : {}),
         abortController: controlador,

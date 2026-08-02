@@ -311,6 +311,10 @@ export async function montarJobAcaoProjeto(
       ...(opcoes.fallback ? { fallback: opcoes.fallback } : {}),
       maxTurns,
       watchdogMs: guardrails.watchdogMs,
+      // Teto de custo do job (proxy da cota). `null` na tabela = sem teto, e por isso o
+      // campo só entra quando existe: mandar `tetoUsd: null` seria indistinguível de um
+      // valor válido para quem lê `params` cru.
+      ...(guardrails.maxBudgetUsd !== null ? { tetoUsd: guardrails.maxBudgetUsd } : {}),
       ...(guardrails.esforco !== undefined ? { esforco: guardrails.esforco } : {}),
     },
   };
