@@ -24,6 +24,7 @@ import { trilhaDe } from "../src/pipeline/maquina.js";
 import { novoOrcamento } from "../src/pipeline/orcamento.js";
 import { rodarPipeline, type DependenciasMotor } from "../src/pipeline/motor.js";
 import { criarDespachante } from "../src/pipeline/despachante.js";
+import { temTrabalhoParcial } from "../src/pipeline/trabalho-parcial.js";
 import type { Consulta } from "../src/jobs/claude/runner-claude.js";
 import type { TarefaResumo } from "../src/fabrica/tipos.js";
 
@@ -100,6 +101,7 @@ const dep: DependenciasMotor = {
   anexarVerificacao: async (t, texto) => {
     escritas.push(`  [painel anexa] ${t.id}: +${texto.split("\n").length} linhas na Verificação`);
   },
+  temTrabalhoParcial: (t) => temTrabalhoParcial(dirProjeto, t.areas),
   lerCriteriosDe: (t) => secao(t, "criteriosAceite"),
   lerNotasDe: (t) => secao(t, "notasExecucao"),
   lerPlano: async () => {

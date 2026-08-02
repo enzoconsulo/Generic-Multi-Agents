@@ -3,6 +3,7 @@ import { appendFile, readFile } from "node:fs/promises";
 import { lerEquipe, lerResumosTarefas, parsearPlano, parsearTarefa } from "../fabrica/index.js";
 import { commitar } from "../fabrica/git.js";
 import { gravarMarco, textoDoMarco } from "./marco.js";
+import { temTrabalhoParcial } from "./trabalho-parcial.js";
 import { anexarNaSecao, gravarStatusTarefa } from "../fabrica/escrita-tarefas.js";
 import { consultaReal, type Consulta } from "../jobs/claude/runner-claude.js";
 import type { ContextoExecucao, Job, Runner } from "../jobs/tipos.js";
@@ -115,6 +116,7 @@ export class RunnerPipeline implements Runner {
         const r = await anexarNaSecao(join(dirTarefas, t.arquivo), "Verificação", texto);
         if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });
       },
+      temTrabalhoParcial: (t) => temTrabalhoParcial(dirProjeto, t.areas),
       lerCriteriosDe: (t) => secao(t, "criteriosAceite"),
       lerNotasDe: (t) => secao(t, "notasExecucao"),
       lerPlano: async () => {

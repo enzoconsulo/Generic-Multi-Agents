@@ -94,6 +94,8 @@ export interface DependenciasMotor {
   lerCriteriosDe(tarefa: TarefaResumo): Promise<string>;
   /** Seção `## Notas de execução`, crua. Consultada só quando o passo é do revisor. */
   lerNotasDe(tarefa: TarefaResumo): Promise<string>;
+  /** Há mudança não commitada nas `areas` da tarefa? Base do saneamento de abertura. */
+  temTrabalhoParcial(tarefa: TarefaResumo): Promise<boolean>;
   /** PLANO.md parseado, ou `null` se não existe. Base da detecção de marco de fase. */
   lerPlano(): Promise<Plano | null>;
   /** Grava a linha `Marco:` de uma fase. Só é chamado com veredito definido. */
@@ -202,25 +204,29 @@ export async function rodarPipeline(
   let orcamento = ctx.orcamento;
 
   // ---- SANEAMENTO DE ABERTURA ------------------------------------------------------
-  // Tarefa em `em-execucao` no INÍCIO da rodada é sobra: não há agente rodando ainda.
-  // A regra do protocolo é devolvê-la para `pronta`, EXCETO quando as Notas registram
-  // trabalho parcial consistente — aí o construtor continua de onde parou. Aqui isso vira
-  // um teste objetivo: **Notas vazias = nada foi registrado = recomeça.** Não é
-  // interpretação de prosa; é a ausência dela.
+  // Tarefa em `em-execucao` no INÍCIO da rodada é sobra: não há agente rodando ainda. O
+  // protocolo manda devolvê-la para `pronta`, EXCETO quando há trabalho parcial consistente
+  // — aí o construtor continua de onde parou.
+  //
+  // O sinal é a ÁRVORE GIT, não as Notas. A primeira versão perguntava "as Notas estão
+  // vazias?" e isso não sobrevive ao caso comum: quase toda tarefa retomada já tem Notas
+  // antigas (tentativa anterior, relatório de reprovação, registro do orquestrador). Numa
+  // rodada real a T-017a foi mantida em `em-execucao` por causa de uma nota escrita no dia
+  // anterior sobre uma tentativa que nem existia mais. Prosa é ambígua; `git status` não é.
   {
     const iniciais = await dep.lerTarefas();
     for (const t of iniciais) {
       if (t.status !== "em-execucao") continue;
-      const notas = (await dep.lerNotasDe(t)).trim();
-      if (notas === "") {
-        await dep.gravarStatus(t, "pronta");
-        rel.saneadas.push(t.id);
-        dep.log("info", `${t.id}: sobra de sessão anterior sem Notas — devolvida a pronta.`);
-      } else {
+      if (await dep.temTrabalhoParcial(t)) {
         dep.log(
           "info",
-          `${t.id}: em-execucao com Notas preenchidas — mantida, o construtor continua.`,
+          `${t.id}: em-execucao com mudanças não commitadas nas areas — mantida, o` +
+            " construtor continua de onde parou.",
         );
+      } else {
+        await dep.gravarStatus(t, "pronta");
+        rel.saneadas.push(t.id);
+        dep.log("info", `${t.id}: sobra de sessão anterior, árvore limpa — devolvida a pronta.`);
       }
     }
   }

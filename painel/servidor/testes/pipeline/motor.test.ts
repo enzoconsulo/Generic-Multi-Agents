@@ -38,6 +38,8 @@ function mundo(
     notas?: string;
     congelado?: boolean;
     plano?: Plano | null;
+    /** Há mudança não commitada nas areas? Base do saneamento. */
+    trabalhoParcial?: boolean;
     /** Texto que o agente de marco devolve — de onde sai o veredito. */
     textoMarco?: string;
   } = {},
@@ -63,6 +65,7 @@ function mundo(
     anexarVerificacao: async () => {},
     lerCriteriosDe: async () => opcoes.criterios ?? "",
     lerNotasDe: async () => opcoes.notas ?? "",
+    temTrabalhoParcial: async () => opcoes.trabalhoParcial ?? false,
     lerPlano: async () => opcoes.plano ?? null,
     gravarMarco: async (fase, veredicto) => {
       marcosGravados.push({ fase, veredicto });
@@ -307,15 +310,6 @@ describe("rodarPipeline — saneamento de abertura", () => {
     expect(tarefas.get("T-001")?.status).not.toBe("em-execucao");
   });
 
-  // Trabalho parcial registrado: o protocolo manda MANTER e deixar o construtor continuar.
-  it("em-execucao COM Notas é mantida — o construtor continua de onde parou", async () => {
-    const { dep } = mundo([tarefa({ id: "T-001", status: "em-execucao" })], {
-      notas: "**Commit:** `abc1234`\nFiz metade.",
-    });
-    const rel = await rodarPipeline(ctxBase, dep);
-    expect(rel.saneadas).toEqual([]);
-  });
-
   it("não mexe em tarefa que não está em-execucao", async () => {
     const { dep } = mundo([
       tarefa({ id: "T-001", status: "pronta" }),
@@ -518,6 +512,7 @@ describe("teto de despachos por tarefa — o circuito que a guarda de progresso 
       anexarVerificacao: async () => {},
       lerCriteriosDe: async () => "",
       lerNotasDe: async () => "",
+      temTrabalhoParcial: async () => false,
       lerPlano: async () => null,
       gravarMarco: async () => {},
       commitarGestao: async () => {},
