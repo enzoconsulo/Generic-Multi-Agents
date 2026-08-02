@@ -19,7 +19,7 @@
  */
 import { join, resolve } from "node:path";
 import { readFile } from "node:fs/promises";
-import { lerEquipe, lerResumosTarefas, parsearTarefa } from "../src/fabrica/index.js";
+import { lerEquipe, lerResumosTarefas, parsearPlano, parsearTarefa } from "../src/fabrica/index.js";
 import { trilhaDe } from "../src/pipeline/maquina.js";
 import { novoOrcamento } from "../src/pipeline/orcamento.js";
 import { rodarPipeline, type DependenciasMotor } from "../src/pipeline/motor.js";
@@ -102,6 +102,19 @@ const dep: DependenciasMotor = {
   },
   lerCriteriosDe: (t) => secao(t, "criteriosAceite"),
   lerNotasDe: (t) => secao(t, "notasExecucao"),
+  lerPlano: async () => {
+    try {
+      return parsearPlano(await readFile(join(dirProjeto, "_gestao", "PLANO.md"), "utf8"));
+    } catch {
+      return null;
+    }
+  },
+  gravarMarco: async (fase, veredicto) => {
+    escritas.push(`  [painel grava] PLANO.md · ${fase}: Marco → ${veredicto}`);
+  },
+  commitarGestao: async (mensagem) => {
+    escritas.push(`  [painel commita] ${mensagem}`);
+  },
   despachar: async (pedido) => {
     const r = await criarDespachante({
       raizFabrica: raiz,
@@ -115,10 +128,14 @@ const dep: DependenciasMotor = {
         if (nivel !== "ferramenta") console.log(`  ${texto}`);
       },
     })(pedido);
-    // O agente real gravaria o próprio status ao terminar; aqui a simulação faz por ele.
-    const atual = emMemoria.get(pedido.tarefa.id);
-    if (atual !== undefined) atual.status = proximo[atual.status] ?? "concluida";
-    return r;
+    // O agente real gravaria o próprio status ao terminar; aqui a simulação faz por ele —
+    // exceto nos papéis que não mexem em tarefa nenhuma.
+    if (pedido.papel !== "marco" && pedido.papel !== "documentador") {
+      const atual = emMemoria.get(pedido.tarefa.id);
+      if (atual !== undefined) atual.status = proximo[atual.status] ?? "concluida";
+    }
+    // Marco: devolve o veredito no formato de contrato, como o agente real faria.
+    return { ...r, texto: pedido.papel === "marco" ? "MARCO: aprovado" : r.texto };
   },
   log: (nivel, texto) => console.log(`${nivel === "erro" ? "  ! " : "  "}${texto}`),
 };
@@ -154,5 +171,10 @@ console.log(`  promovidas: ${rel.promovidas.join(", ") || "(nenhuma)"}`);
 console.log(`  critérios por comando: ${rel.criteriosExecutados}`);
 console.log(`  para replanejar: ${rel.paraReplanejar.join(", ") || "(nenhuma)"}`);
 console.log(`  bloqueadas: ${rel.bloqueadas.join(", ") || "(nenhuma)"}`);
+console.log(`  saneadas na abertura: ${rel.saneadas.join(", ") || "(nenhuma)"}`);
+console.log(
+  `  marcos: ${rel.marcos.map((m) => `${m.fase}=${m.veredicto}`).join(", ") || "(nenhum)"}`,
+);
+console.log(`  documentador rodou: ${rel.documentou ? "sim" : "não"}`);
 console.log(`  encerrou por: ${rel.encerrouPor}`);
 console.log(`  gasto simulado: US$ ${rel.orcamento.gastoUsd.toFixed(2)}\n`);

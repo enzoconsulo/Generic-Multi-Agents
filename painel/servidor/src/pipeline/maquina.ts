@@ -50,12 +50,18 @@ export const AGENTE_GENERICO: Readonly<Record<Trilha, Readonly<Record<PapelAgent
     verificador: "testador",
     revisor: "revisor",
     planejador: "planejador",
+    // Marco é o verificador da trilha em outro modo, não um agente novo — o prompt dele já
+    // tem a seção "Modo marco". Documentador é comum às duas trilhas.
+    marco: "testador",
+    documentador: "documentador",
   },
   generica: {
     construtor: "construtor",
     verificador: "conferente",
     revisor: "revisor-generico",
     planejador: "planejador-generico",
+    marco: "conferente",
+    documentador: "documentador",
   },
 };
 

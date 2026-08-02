@@ -51,12 +51,48 @@ const MAX_TURNS: Readonly<Record<string, number>> = {
   planejador: 60,
 };
 
+/** Quebra de linha usada para montar os blocos de despacho. */
+const QUEBRA = String.fromCharCode(10);
+
 /**
  * Instrução de confinamento e de contrato. Curta de propósito: o prompt do agente já traz a
  * disciplina inteira, e cada linha aqui é relida a cada volta da etapa.
  */
 function blocoDespacho(pedido: PedidoDespacho, dirProjeto: string): string {
   const t = pedido.tarefa;
+
+  // MARCO: não é sobre uma tarefa, é sobre a META da fase. E pede um veredito em FORMA DE
+  // CONTRATO — o motor precisa lê-lo para gravar o PLANO.md, e interpretar prosa aí seria a
+  // pior fragilidade possível: registrar "aprovado" por engano é irreversível na prática.
+  if (pedido.papel === "marco") {
+    return [
+      "<despacho>",
+      `Projeto: ${dirProjeto}`,
+      `MODO MARCO DE FASE — fase: "${pedido.fase ?? "?"}"`,
+      "Não verifique uma tarefa: leia a META desta fase em `_gestao/PLANO.md` e exercite-a",
+      "de ponta a ponta no software real. Não altere status de tarefa nenhuma.",
+      "Confinamento: não toque em NADA fora do caminho do projeto acima.",
+      "",
+      "TERMINE sua última mensagem com uma linha, sozinha, exatamente assim:",
+      "MARCO: aprovado",
+      "ou",
+      "MARCO: reprovado",
+      "Sem essa linha o resultado NÃO é registrado e o marco terá de ser refeito.",
+      "</despacho>",
+    ].join(QUEBRA);
+  }
+
+  if (pedido.papel === "documentador") {
+    return [
+      "<despacho>",
+      `Projeto: ${dirProjeto}`,
+      "Um lote de tarefas foi concluído. Atualize a documentação do projeto (README,",
+      "CLAUDE.md do projeto, PROGRESSO.md) para refletir o estado REAL do código.",
+      "Confinamento: não toque em NADA fora do caminho do projeto acima.",
+      "Commite o que alterar.",
+      "</despacho>",
+    ].join(QUEBRA);
+  }
   const situacao =
     t.tentativas >= 1
       ? "RETRABALHO — há reprovação registrada nas seções Verificação/Conformidade/Revisão"
@@ -159,6 +195,7 @@ export function criarDespachante(
     let custoUsd = 0;
     let erro = false;
     let terminou = false;
+    let textoFinal = "";
     const porModelo: Record<
       string,
       { entrada: number; saida: number; cacheLeitura: number; cacheEscrita: number; custoUsd: number }
@@ -196,11 +233,17 @@ export function criarDespachante(
           terminou = true;
           erro = msg.is_error === true;
           if (typeof msg.total_cost_usd === "number") custoUsd = msg.total_cost_usd;
+          const r = (msg as { result?: unknown }).result;
+          if (typeof r === "string") textoFinal = r;
         }
       }
     } catch (e) {
       o.emitir("erro", `Etapa ${pedido.agente} falhou: ${(e as Error).message}`);
-      return { custoUsd: custoUsd || (estimarCusto(porModelo)?.usd ?? 0), concluiu: false };
+      return {
+        custoUsd: custoUsd || (estimarCusto(porModelo)?.usd ?? 0),
+        concluiu: false,
+        texto: textoFinal,
+      };
     }
 
     // Custo real do SDK quando veio; senão a estimativa, para o orçamento nunca ficar cego
@@ -209,9 +252,9 @@ export function criarDespachante(
 
     if (!terminou || erro) {
       o.emitir("erro", `Etapa ${pedido.agente} terminou sem resultado válido.`);
-      return { custoUsd, concluiu: false };
+      return { custoUsd, concluiu: false, texto: textoFinal };
     }
-    return { custoUsd, concluiu: true };
+    return { custoUsd, concluiu: true, texto: textoFinal };
   };
 }
 

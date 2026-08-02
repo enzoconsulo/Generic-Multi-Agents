@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { rodarPipeline, type DependenciasMotor, type PedidoDespacho } from "../../src/pipeline/motor.js";
 import { novoOrcamento } from "../../src/pipeline/orcamento.js";
-import type { TarefaResumo } from "../../src/fabrica/tipos.js";
+import type { Plano, TarefaResumo } from "../../src/fabrica/tipos.js";
 
 function tarefa(p: Partial<TarefaResumo> & { id: string }): TarefaResumo {
   return {
@@ -32,11 +32,21 @@ function tarefa(p: Partial<TarefaResumo> & { id: string }): TarefaResumo {
  */
 function mundo(
   iniciais: TarefaResumo[],
-  opcoes: { custoPorDespacho?: number; criterios?: string; notas?: string; congelado?: boolean } = {},
+  opcoes: {
+    custoPorDespacho?: number;
+    criterios?: string;
+    notas?: string;
+    congelado?: boolean;
+    plano?: Plano | null;
+    /** Texto que o agente de marco devolve — de onde sai o veredito. */
+    textoMarco?: string;
+  } = {},
 ) {
   const tarefas = new Map(iniciais.map((t) => [t.id, { ...t }]));
   const despachos: PedidoDespacho[] = [];
   const logs: string[] = [];
+  const marcosGravados: { fase: string; veredicto: string }[] = [];
+  const commits: string[] = [];
   const proximoStatus: Record<string, string> = {
     pronta: "em-teste",
     "em-execucao": "em-teste",
@@ -53,6 +63,13 @@ function mundo(
     anexarVerificacao: async () => {},
     lerCriteriosDe: async () => opcoes.criterios ?? "",
     lerNotasDe: async () => opcoes.notas ?? "",
+    lerPlano: async () => opcoes.plano ?? null,
+    gravarMarco: async (fase, veredicto) => {
+      marcosGravados.push({ fase, veredicto });
+    },
+    commitarGestao: async (mensagem) => {
+      commits.push(mensagem);
+    },
     despachar: async (pedido) => {
       despachos.push(pedido);
       const atual = tarefas.get(pedido.tarefa.id);
@@ -61,12 +78,31 @@ function mundo(
       if (atual !== undefined && opcoes.congelado !== true) {
         atual.status = proximoStatus[atual.status] ?? "concluida";
       }
-      return { custoUsd: opcoes.custoPorDespacho ?? 0.5, concluiu: true };
+      return {
+        custoUsd: opcoes.custoPorDespacho ?? 0.5,
+        concluiu: true,
+        texto: pedido.papel === "marco" ? (opcoes.textoMarco ?? "MARCO: aprovado") : "",
+      };
     },
     log: (_n, texto) => logs.push(texto),
   };
 
-  return { dep, despachos, logs, tarefas };
+  return { dep, despachos, logs, tarefas, marcosGravados, commits };
+}
+
+/** PLANO.md de mentira com uma fase e as tarefas dela. */
+function plano(fases: { nome: string; tarefas: string[]; marco?: string }[]): Plano {
+  return {
+    titulo: "Plano",
+    visao: "",
+    fases: fases.map((f) => ({
+      nome: f.nome,
+      meta: `Meta da ${f.nome}`,
+      marco: { bruto: f.marco ?? "pendente", estado: (f.marco ?? "pendente") as never, data: null },
+      tarefas: f.tarefas,
+    })),
+    erros: [],
+  } as Plano;
 }
 
 const ctxBase = {
@@ -251,6 +287,250 @@ describe("rodarPipeline — guarda de progresso", () => {
   it("o relatório nomeia a tarefa e o status travado", async () => {
     const { dep, logs } = mundo([tarefa({ id: "T-007", status: "pronta" })], { congelado: true });
     await rodarPipeline(ctxBase, dep);
-    expect(logs.some((l) => l.includes("T-007") && l.includes("não gravou"))).toBe(true);
+    expect(logs.some((l) => l.includes("T-007") && l.includes("não está gravando"))).toBe(true);
+    expect(logs.some((l) => l.includes('"pronta"'))).toBe(true);
+  });
+});
+
+/**
+ * As três responsabilidades que o orquestrador-modelo tinha e que ficaram órfãs quando o
+ * laço virou código. Todas são detectáveis por regra — por isso voltaram como código, e não
+ * como "lembre de clicar no botão".
+ */
+describe("rodarPipeline — saneamento de abertura", () => {
+  // Sobra de sessão anterior: no INÍCIO da rodada não há agente nenhum rodando, então
+  // `em-execucao` só pode ser resto. Notas vazias = nada foi registrado = recomeça.
+  it("em-execucao SEM Notas volta para pronta", async () => {
+    const { dep, tarefas } = mundo([tarefa({ id: "T-001", status: "em-execucao" })], { notas: "" });
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.saneadas).toContain("T-001");
+    expect(tarefas.get("T-001")?.status).not.toBe("em-execucao");
+  });
+
+  // Trabalho parcial registrado: o protocolo manda MANTER e deixar o construtor continuar.
+  it("em-execucao COM Notas é mantida — o construtor continua de onde parou", async () => {
+    const { dep } = mundo([tarefa({ id: "T-001", status: "em-execucao" })], {
+      notas: "**Commit:** `abc1234`\nFiz metade.",
+    });
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.saneadas).toEqual([]);
+  });
+
+  it("não mexe em tarefa que não está em-execucao", async () => {
+    const { dep } = mundo([
+      tarefa({ id: "T-001", status: "pronta" }),
+      tarefa({ id: "T-002", status: "em-teste" }),
+    ]);
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.saneadas).toEqual([]);
+  });
+});
+
+describe("rodarPipeline — marco de fase", () => {
+  it("fase com todas as tarefas concluídas dispara o marco e grava o veredito", async () => {
+    const { dep, despachos, marcosGravados } = mundo(
+      [tarefa({ id: "T-001", status: "pronta" })],
+      { plano: plano([{ nome: "Fase 1", tarefas: ["T-001"] }]) },
+    );
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(despachos.some((d) => d.papel === "marco")).toBe(true);
+    expect(rel.marcos).toEqual([{ fase: "Fase 1", veredicto: "aprovado" }]);
+    expect(marcosGravados).toEqual([{ fase: "Fase 1", veredicto: "aprovado" }]);
+  });
+
+  it("o marco usa o verificador da trilha, em modo próprio", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      plano: plano([{ nome: "Fase 1", tarefas: ["T-001"] }]),
+    });
+    await rodarPipeline({ ...ctxBase, trilha: "generica" }, dep);
+    const marco = despachos.find((d) => d.papel === "marco");
+    expect(marco?.agente).toBe("conferente");
+    expect(marco?.fase).toBe("Fase 1");
+  });
+
+  it("fase com tarefa pendente NÃO dispara marco", async () => {
+    const { dep, despachos } = mundo(
+      [tarefa({ id: "T-001", status: "concluida" }), tarefa({ id: "T-002", status: "backlog", dependencias: ["T-999"] })],
+      { plano: plano([{ nome: "Fase 1", tarefas: ["T-001", "T-002"] }]) },
+    );
+    await rodarPipeline(ctxBase, dep);
+    expect(despachos.some((d) => d.papel === "marco")).toBe(false);
+  });
+
+  it("marco já aprovado não repete", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "concluida" })], {
+      plano: plano([{ nome: "Fase 1", tarefas: ["T-001"], marco: "aprovado" }]),
+    });
+    await rodarPipeline(ctxBase, dep);
+    expect(despachos.some((d) => d.papel === "marco")).toBe(false);
+  });
+
+  /**
+   * A falha mais grave possível aqui seria registrar "aprovado" por não ter entendido a
+   * resposta — o registro é o que diz às próximas sessões que o marco já rodou, então um
+   * falso aprovado esconde a fase para sempre.
+   */
+  it("veredito não identificado NÃO grava nada no PLANO.md", async () => {
+    const { dep, marcosGravados, logs } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      plano: plano([{ nome: "Fase 1", tarefas: ["T-001"] }]),
+      textoMarco: "Rodei tudo e achei umas coisas interessantes.",
+    });
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.marcos).toEqual([{ fase: "Fase 1", veredicto: "indefinido" }]);
+    expect(marcosGravados).toEqual([]);
+    expect(logs.some((l) => l.includes("NÃO foi alterado"))).toBe(true);
+  });
+
+  it("sem PLANO.md, nenhum marco — projeto importado à mão é caso legítimo", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "pronta" })], { plano: null });
+    await rodarPipeline(ctxBase, dep);
+    expect(despachos.some((d) => d.papel === "marco")).toBe(false);
+  });
+});
+
+describe("rodarPipeline — documentador e commit da gestão", () => {
+  it("3+ tarefas concluídas dispara o documentador UMA vez, no fecho", async () => {
+    const { dep, despachos } = mundo([
+      tarefa({ id: "T-001", areas: ["a.js"] }),
+      tarefa({ id: "T-002", areas: ["b.js"] }),
+      tarefa({ id: "T-003", areas: ["c.js"] }),
+    ]);
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.documentou).toBe(true);
+    expect(despachos.filter((d) => d.papel === "documentador")).toHaveLength(1);
+    // No FECHO: documentar a cada tarefa pagaria um despacho para reescrever o que a
+    // próxima muda de novo.
+    expect(despachos[despachos.length - 1]?.papel).toBe("documentador");
+  });
+
+  it("menos de 3 concluídas não gasta documentador", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001" })]);
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.documentou).toBe(false);
+    expect(despachos.some((d) => d.papel === "documentador")).toBe(false);
+  });
+
+  it("documentação é adiada quando o orçamento não comporta", async () => {
+    const { dep, despachos } = mundo(
+      [
+        tarefa({ id: "T-001", areas: ["a.js"] }),
+        tarefa({ id: "T-002", areas: ["b.js"] }),
+        tarefa({ id: "T-003", areas: ["c.js"] }),
+      ],
+      { custoPorDespacho: 1 },
+    );
+    await rodarPipeline({ ...ctxBase, orcamento: novoOrcamento(6) }, dep);
+    expect(despachos.some((d) => d.papel === "documentador")).toBe(false);
+  });
+
+  it("sempre commita a gestão no fim, mesmo sem tarefa concluída", async () => {
+    const { dep, commits } = mundo([tarefa({ id: "T-001", status: "concluida" })]);
+    await rodarPipeline(ctxBase, dep);
+    expect(commits).toHaveLength(1);
+    expect(commits[0]).toContain("gestão");
+  });
+
+  // Falhar o commit não pode apagar o relatório da rodada.
+  it("falha no commit não derruba a rodada", async () => {
+    const { dep } = mundo([tarefa({ id: "T-001", status: "concluida" })]);
+    dep.commitarGestao = async () => {
+      throw new Error("index.lock");
+    };
+    await expect(rodarPipeline(ctxBase, dep)).resolves.toBeDefined();
+  });
+});
+
+describe("guarda de progresso — não pode cortar retrabalho legítimo", () => {
+  /**
+   * O bug que este teste trava: a primeira versão da guarda contava repetições do par
+   * (tarefa, papel) na rodada inteira. Parecia equivalente e não é — um retrabalho legítimo
+   * despacha o construtor 3 vezes na MESMA tarefa (tentativas 1, 2 e 3), e a contagem
+   * cortaria a rodada na segunda, transformando a política de 3 ciclos em 1.
+   *
+   * O que caracteriza travamento é o STATUS não mudar depois de o agente dizer que terminou.
+   */
+  it("tarefa que volta reprovada 2 vezes NÃO é confundida com travamento", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "pronta" })]);
+    const tarefas = new Map([["T-001", { status: "pronta", ciclos: 0 }]]);
+
+    // Ciclo realista: construtor → verificador REPROVA (volta a em-execucao) → construtor…
+    dep.lerTarefas = async () => [
+      tarefa({ id: "T-001", status: tarefas.get("T-001")!.status, tentativas: tarefas.get("T-001")!.ciclos }),
+    ];
+    dep.despachar = async (p) => {
+      despachos.push(p);
+      const est = tarefas.get("T-001")!;
+      if (p.papel === "construtor") est.status = "em-teste";
+      else if (p.papel === "verificador") {
+        est.ciclos += 1;
+        est.status = est.ciclos < 3 ? "em-execucao" : "em-revisao";
+      } else est.status = "concluida";
+      return { custoUsd: 0.3, concluiu: true };
+    };
+
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.encerrouPor).not.toBe("sem-progresso");
+    // 3 construções + 3 verificações + 1 revisão.
+    expect(despachos.filter((d) => d.papel === "construtor")).toHaveLength(3);
+  });
+});
+
+describe("teto de despachos por tarefa — o circuito que a guarda de progresso não pega", () => {
+  /**
+   * Encontrado pelo simulador contra a fábrica REAL: 41 despachos na mesma tarefa, US$ 22,55
+   * numa rodada. O status oscilava `em-teste` ↔ `em-execucao` (a passada mecânica reprovava
+   * e devolvia ao construtor), então a guarda de progresso — que mede "o status mudou?" —
+   * via movimento e não acusava nada.
+   *
+   * O limite de 3 ciclos do protocolo não salvava porque depende do AGENTE incrementar
+   * `tentativas`. Confiar nisso é a família de suposição que já custou caro aqui.
+   */
+  it("tarefa em vaivém é BLOQUEADA e a rodada continua nas outras", async () => {
+    const estados = new Map([
+      ["T-001", "em-teste"],
+      ["T-002", "pronta"],
+    ]);
+    const despachos: PedidoDespacho[] = [];
+    const logs: string[] = [];
+    const dep: DependenciasMotor = {
+      lerTarefas: async () =>
+        [...estados].map(([id, status]) => tarefa({ id, status, areas: [`${id}.js`] })),
+      gravarStatus: async (t, status) => estados.set(t.id, status) as unknown as void,
+      anexarVerificacao: async () => {},
+      lerCriteriosDe: async () => "",
+      lerNotasDe: async () => "",
+      lerPlano: async () => null,
+      gravarMarco: async () => {},
+      commitarGestao: async () => {},
+      despachar: async (p) => {
+        despachos.push(p);
+        // T-001 oscila para sempre; T-002 anda normalmente.
+        if (p.tarefa.id === "T-001") {
+          estados.set("T-001", estados.get("T-001") === "em-teste" ? "em-execucao" : "em-teste");
+        } else {
+          const proximo: Record<string, string> = {
+            pronta: "em-teste",
+            "em-execucao": "em-teste",
+            "em-teste": "em-revisao",
+            "em-revisao": "concluida",
+          };
+          estados.set("T-002", proximo[estados.get("T-002") ?? ""] ?? "concluida");
+        }
+        return { custoUsd: 0.1, concluiu: true };
+      },
+      log: (_n, texto) => logs.push(texto),
+    };
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.bloqueadas).toContain("T-001");
+    expect(estados.get("T-001")).toBe("bloqueada");
+    // O teto é por tarefa, não da rodada: T-002 chegou ao fim.
+    expect(estados.get("T-002")).toBe("concluida");
+    expect(despachos.filter((d) => d.tarefa.id === "T-001").length).toBeLessThanOrEqual(13);
+    expect(logs.some((l) => l.includes("em circuito"))).toBe(true);
   });
 });

@@ -40,7 +40,15 @@ const exec = promisify(execFile);
  * fábrica tem duas trilhas com nomes diferentes para o mesmo papel e especialistas com
  * nomes cunhados por projeto.
  */
-export type PapelAgente = "construtor" | "verificador" | "revisor" | "planejador";
+export type PapelAgente =
+  | "construtor"
+  | "verificador"
+  | "revisor"
+  | "planejador"
+  /** Verifica a META de uma FASE de ponta a ponta, não uma tarefa. Ver `pipeline/marco.ts`. */
+  | "marco"
+  /** Atualiza README/CLAUDE.md/PROGRESSO depois de um lote de tarefas. */
+  | "documentador";
 
 /** Nomes fixos das duas trilhas. Qualquer outro nome é especialista, logo construtor. */
 const PAPEL_POR_NOME: Readonly<Record<string, PapelAgente>> = {
@@ -52,7 +60,7 @@ const PAPEL_POR_NOME: Readonly<Record<string, PapelAgente>> = {
   "revisor-generico": "revisor",
   planejador: "planejador",
   "planejador-generico": "planejador",
-  documentador: "planejador",
+  documentador: "documentador",
   pesquisador: "planejador",
 };
 
@@ -226,6 +234,12 @@ const INTENCAO: Readonly<Record<PapelAgente, string>> = {
     "Seu objeto de trabalho é o diff abaixo, não o projeto. Abra arquivo só quando o diff" +
     " sozinho não permitir decidir se há defeito.",
   planejador: "Nenhum fonte embutido: seu trabalho é sobre a especificação, não sobre o código.",
+  marco:
+    "Você verifica a META DA FASE de ponta a ponta, no software real — não uma tarefa. Use o" +
+    " MAPA para se situar e rode o projeto; nenhum fonte vai embutido de propósito.",
+  documentador:
+    "Nenhum fonte embutido: o MAPA acima já diz o que existe e com que assinatura, que é o" +
+    " que a documentação precisa refletir. Abra só o que for descrever em detalhe.",
 };
 
 /**
@@ -261,7 +275,11 @@ export async function montarEspecifico(pedido: PedidoContexto): Promise<{
         motivo: "diff ausente, hash inválido ou maior que o teto — rode `git show` você mesmo",
       });
     }
-  } else if (pedido.papel !== "planejador") {
+  } else if (
+    pedido.papel !== "planejador" &&
+    pedido.papel !== "marco" &&
+    pedido.papel !== "documentador"
+  ) {
     let usados = 0;
     for (const area of pedido.areas ?? []) {
       const caminho = resolverArea(pedido.dirProjeto, area);

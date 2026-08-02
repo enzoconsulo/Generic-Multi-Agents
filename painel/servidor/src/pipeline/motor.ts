@@ -1,6 +1,7 @@
-import type { TarefaResumo } from "../fabrica/tipos.js";
+import type { Plano, TarefaResumo } from "../fabrica/tipos.js";
 import type { PapelAgente } from "../contexto/montador.js";
 import {
+  AGENTE_GENERICO,
   deveBloquear,
   deveReplanejar,
   promoverProntas,
@@ -17,6 +18,7 @@ import {
   reprovouNaMecanica,
   type ResultadoCriterio,
 } from "./criterios.js";
+import { fasesProntasParaMarco, lerVeredicto, type VeredictoMarco } from "./marco.js";
 import {
   comAgentesEmVoo,
   comGasto,
@@ -61,6 +63,8 @@ export interface PedidoDespacho {
    * que este módulo existe para evitar.
    */
   notas: string;
+  /** Nome da fase — só no papel `marco`, para o despacho dizer QUAL meta exercitar. */
+  fase?: string;
 }
 
 export interface ResultadoDespacho {
@@ -68,6 +72,12 @@ export interface ResultadoDespacho {
   custoUsd: number;
   /** O agente devolveu resultado? `false` = foi cortado, e o laço PARA. */
   concluiu: boolean;
+  /**
+   * Texto final do agente. Só é consumido no papel `marco`, de onde sai o veredito — o
+   * único ponto em que o motor precisa LER o que o modelo disse, e por isso o despacho pede
+   * uma linha de contrato (`MARCO: aprovado`) em vez de interpretar prosa.
+   */
+  texto?: string;
 }
 
 export interface DependenciasMotor {
@@ -83,6 +93,12 @@ export interface DependenciasMotor {
   lerCriteriosDe(tarefa: TarefaResumo): Promise<string>;
   /** Seção `## Notas de execução`, crua. Consultada só quando o passo é do revisor. */
   lerNotasDe(tarefa: TarefaResumo): Promise<string>;
+  /** PLANO.md parseado, ou `null` se não existe. Base da detecção de marco de fase. */
+  lerPlano(): Promise<Plano | null>;
+  /** Grava a linha `Marco:` de uma fase. Só é chamado com veredito definido. */
+  gravarMarco(fase: string, veredicto: Exclude<VeredictoMarco, "indefinido">): Promise<void>;
+  /** Commita as pendências de `_gestao/` ao fim da rodada. */
+  commitarGestao(mensagem: string): Promise<void>;
   log(nivel: "info" | "erro", texto: string): void;
 }
 
@@ -110,6 +126,12 @@ export interface RelatorioMotor {
   bloqueadas: string[];
   /** Critérios resolvidos sem modelo — a economia da I5, medida. */
   criteriosExecutados: number;
+  /** Marcos de fase verificados nesta rodada. */
+  marcos: { fase: string; veredicto: VeredictoMarco }[];
+  /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
+  saneadas: string[];
+  /** O documentador rodou? */
+  documentou: boolean;
   /** Por que o laço parou. */
   encerrouPor:
     | "sem-trabalho"
@@ -122,6 +144,23 @@ export interface RelatorioMotor {
 
 /** Teto de voltas do laço — rede contra bug de estado que não avança (nunca deve disparar). */
 const MAX_VOLTAS = 200;
+
+/** Lote mínimo para valer um despacho de documentador (CLAUDE.md: "após lote de 3+"). */
+const MIN_TAREFAS_PARA_DOCUMENTAR = 3;
+
+/**
+ * Teto de despachos por tarefa NUMA rodada. 3 ciclos × 3 papéis = 9, mais folga.
+ *
+ * Existe porque o limite de 3 ciclos do protocolo depende do campo `tentativas`, e quem o
+ * incrementa é o AGENTE. Se ele não incrementar — bug, prompt mal seguido, modelo distraído
+ * — a tarefa entra num vaivém `em-teste` ↔ `em-execucao` que a guarda de progresso NÃO pega,
+ * porque o status muda a cada volta.
+ *
+ * O simulador encontrou exatamente isso: 41 despachos na mesma tarefa, US$ 22,55 numa
+ * rodada. Confiar no agente para respeitar o próprio teto é a família de suposição que já
+ * custou caro nesta fábrica; aqui a conta é do motor, e independe de qualquer arquivo.
+ */
+const MAX_DESPACHOS_POR_TAREFA = 12;
 
 /**
  * Roda o pipeline até acabar o trabalho, o orçamento, ou algo dar errado.
@@ -144,13 +183,44 @@ export async function rodarPipeline(
     paraReplanejar: [],
     bloqueadas: [],
     criteriosExecutados: 0,
+    marcos: [],
+    saneadas: [],
+    documentou: false,
     encerrouPor: "sem-trabalho",
     orcamento: ctx.orcamento,
   };
   const concluidasAntes = new Set<string>();
-  /** Quantas vezes cada par (tarefa, papel) foi despachado. Ver a guarda de progresso. */
+  /** Despachos seguidos SEM mudança de status, por tarefa. Ver a guarda de progresso. */
   const repeticoes = new Map<string, number>();
+  /** Despachos TOTAIS por tarefa nesta rodada. Ver `MAX_DESPACHOS_POR_TAREFA`. */
+  const despachosPorTarefa = new Map<string, number>();
+  /** Tarefas que estouraram o teto e saíram de circulação nesta rodada. */
+  const emCircuito = new Set<string>();
   let orcamento = ctx.orcamento;
+
+  // ---- SANEAMENTO DE ABERTURA ------------------------------------------------------
+  // Tarefa em `em-execucao` no INÍCIO da rodada é sobra: não há agente rodando ainda.
+  // A regra do protocolo é devolvê-la para `pronta`, EXCETO quando as Notas registram
+  // trabalho parcial consistente — aí o construtor continua de onde parou. Aqui isso vira
+  // um teste objetivo: **Notas vazias = nada foi registrado = recomeça.** Não é
+  // interpretação de prosa; é a ausência dela.
+  {
+    const iniciais = await dep.lerTarefas();
+    for (const t of iniciais) {
+      if (t.status !== "em-execucao") continue;
+      const notas = (await dep.lerNotasDe(t)).trim();
+      if (notas === "") {
+        await dep.gravarStatus(t, "pronta");
+        rel.saneadas.push(t.id);
+        dep.log("info", `${t.id}: sobra de sessão anterior sem Notas — devolvida a pronta.`);
+      } else {
+        dep.log(
+          "info",
+          `${t.id}: em-execucao com Notas preenchidas — mantida, o construtor continua.`,
+        );
+      }
+    }
+  }
 
   for (let volta = 0; volta < MAX_VOLTAS; volta++) {
     const tarefas = await dep.lerTarefas();
@@ -193,13 +263,86 @@ export async function rodarPipeline(
     }
 
     const emAndamento = promover.length > 0 ? await dep.lerTarefas() : tarefas;
-    const passos = proximosPassos(emAndamento, ctx.trilha);
+
+    // ---- MARCO DE FASE ---------------------------------------------------------------
+    // Vem ANTES de pegar a próxima tarefa: fechada a última tarefa de uma fase, a pergunta
+    // "o conjunto delas faz o que a fase prometia?" precisa ser respondida antes de a fase
+    // seguinte começar a empilhar em cima. Detectar e registrar é código; o veredito é do
+    // modelo, e vem por uma linha de contrato.
+    const pendentes = fasesProntasParaMarco(await dep.lerPlano(), emAndamento).filter(
+      (f) => !rel.marcos.some((m) => m.fase === f.fase.nome),
+    );
+    if (pendentes.length > 0) {
+      const alvo = pendentes[0]!;
+      const decisaoMarco = decidir(comAgentesEmVoo(orcamento, 0));
+      if (decisaoMarco.acao !== "seguir") {
+        dep.log("erro", `Marco da fase "${alvo.fase.nome}" adiado — ${decisaoMarco.motivo}`);
+        rel.encerrouPor = "orcamento";
+        break;
+      }
+      dep.log("info", `Fase "${alvo.fase.nome}" completa — verificando o marco.`);
+      const r = await dep.despachar({
+        tarefa: emAndamento.find((t) => t.id === alvo.tarefas[0]) ?? (emAndamento[0] as TarefaResumo),
+        papel: "marco",
+        agente: AGENTE_GENERICO[ctx.trilha].verificador,
+        modelo: null,
+        promptColado: null,
+        motivo: `marco da fase "${alvo.fase.nome}"`,
+        notas: "",
+        fase: alvo.fase.nome,
+      });
+      rel.despachos += 1;
+      orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
+
+      const veredicto = r.concluiu ? lerVeredicto(r.texto ?? "") : "indefinido";
+      rel.marcos.push({ fase: alvo.fase.nome, veredicto });
+      if (veredicto === "indefinido") {
+        // NUNCA escrever "aprovado" por não ter entendido a resposta: seria a pior falha
+        // possível aqui, porque o registro é o que diz às próximas sessões que já rodou.
+        dep.log(
+          "erro",
+          `Marco da fase "${alvo.fase.nome}": veredito não identificado no relatório —` +
+            " PLANO.md NÃO foi alterado. Confira à mão.",
+        );
+      } else {
+        await dep.gravarMarco(alvo.fase.nome, veredicto);
+        dep.log("info", `Marco da fase "${alvo.fase.nome}": ${veredicto.toUpperCase()}.`);
+      }
+      if (!r.concluiu) {
+        rel.encerrouPor = "agente-cortado";
+        break;
+      }
+      continue;
+    }
+
+    const passos = proximosPassos(
+      emAndamento.filter((t) => !emCircuito.has(t.id)),
+      ctx.trilha,
+    );
     if (passos.length === 0) {
       rel.encerrouPor = "sem-trabalho";
       break;
     }
 
     const passo = passos[0] as Passo;
+
+    // ---- TETO DE DESPACHOS POR TAREFA --------------------------------------------------
+    // O limite de 3 ciclos do protocolo depende de o AGENTE incrementar `tentativas`. Se
+    // ele não incrementar, a tarefa entra num vaivém `em-teste` ↔ `em-execucao` que a
+    // guarda de progresso não pega (o status MUDA a cada volta). Esta conta é do motor.
+    const jaGastou = despachosPorTarefa.get(passo.tarefa.id) ?? 0;
+    if (jaGastou >= MAX_DESPACHOS_POR_TAREFA) {
+      emCircuito.add(passo.tarefa.id);
+      rel.bloqueadas.push(passo.tarefa.id);
+      await dep.gravarStatus(passo.tarefa, "bloqueada");
+      dep.log(
+        "erro",
+        `${passo.tarefa.id} BLOQUEADA: ${jaGastou} despachos nesta rodada sem concluir —` +
+          " está em circuito (provavelmente o campo `tentativas` não está sendo" +
+          " incrementado). As outras tarefas seguem.",
+      );
+      continue;
+    }
 
     // Passada mecânica: acontece ANTES de gastar um despacho de verificador.
     if (passo.papel === "verificador") {
@@ -233,6 +376,14 @@ export async function rodarPipeline(
     });
     dep.log("info", `${passo.tarefa.id} → ${agente.nome} (${agente.motivo})`);
 
+    // Capturado ANTES do despacho, como STRING: `passo.tarefa` pode ser a mesma referência
+    // que `lerTarefas()` devolve, e aí comparar depois leria o valor já mudado — a guarda
+    // de progresso passaria a acusar travamento em toda rodada saudável.
+    const statusAntes = passo.tarefa.status;
+    // Conta AQUI, e não ao escolher o passo: quando a passada mecânica reprova, o fluxo
+    // volta ao topo SEM despachar — contar antes fazia cada ciclo consumir dois do teto,
+    // e o campo passava a medir iterações do laço em vez de despachos, que é o que custa.
+    despachosPorTarefa.set(passo.tarefa.id, (despachosPorTarefa.get(passo.tarefa.id) ?? 0) + 1);
     const r = await dep.despachar({
       tarefa: passo.tarefa,
       papel: passo.papel,
@@ -254,29 +405,90 @@ export async function rodarPipeline(
       break;
     }
 
-    // Guarda de PROGRESSO. Quem move o status de `em-execucao` para `em-teste` é o próprio
-    // agente, gravando no arquivo — é o contrato dele. Se ele terminar sem gravar, o motor
-    // releria o mesmo passo para sempre, pagando um despacho por volta até o orçamento
-    // acabar: um bug do agente viraria uma fatura. Duas repetições do mesmo par
-    // (tarefa, papel) encerram o laço com o que já foi entregue preservado.
-    const chave = `${passo.tarefa.id}:${passo.papel}`;
-    const vezes = (repeticoes.get(chave) ?? 0) + 1;
-    repeticoes.set(chave, vezes);
-    if (vezes >= 2) {
-      dep.log(
-        "erro",
-        `${passo.tarefa.id}: ${agente.nome} terminou mas o status continua` +
-          ` \`${passo.tarefa.status}\`. O agente não gravou seu estado — encerrando para` +
-          " não repetir o despacho indefinidamente.",
-      );
-      rel.encerrouPor = "sem-progresso";
-      break;
+    // ---- GUARDA DE PROGRESSO ---------------------------------------------------------
+    // Quem move o status de uma tarefa é o próprio agente, gravando no arquivo — é o
+    // contrato dele. Se ele terminar SEM gravar, o motor releria o mesmo passo para sempre,
+    // pagando um despacho por volta até o orçamento acabar: um bug do agente viraria uma
+    // fatura.
+    //
+    // A medida é o STATUS, não a contagem de despachos. Contar repetições do par
+    // (tarefa, papel) parecia equivalente e não é: um retrabalho legítimo despacha o
+    // construtor 3 vezes na MESMA tarefa (tentativas 1, 2, 3), e a contagem cortaria a
+    // rodada na segunda. O que caracteriza travamento é o status não mudar depois de o
+    // agente dizer que terminou.
+    const depois = (await dep.lerTarefas()).find((t) => t.id === passo.tarefa.id);
+    if (depois !== undefined && depois.status === statusAntes) {
+      const vezes = (repeticoes.get(passo.tarefa.id) ?? 0) + 1;
+      repeticoes.set(passo.tarefa.id, vezes);
+      if (vezes >= 2) {
+        dep.log(
+          "erro",
+          `${passo.tarefa.id}: ${agente.nome} terminou e o status continua` +
+            ` "${statusAntes}" pela ${vezes}ª vez. O agente não está gravando seu` +
+            " estado — encerrando para não repetir o despacho indefinidamente.",
+        );
+        rel.encerrouPor = "sem-progresso";
+        break;
+      }
+    } else {
+      // Avançou: a linhagem está saudável, zera o contador dela.
+      repeticoes.delete(passo.tarefa.id);
     }
   }
 
   if (rel.encerrouPor === "sem-trabalho" && rel.despachos >= MAX_VOLTAS) {
     rel.encerrouPor = "teto-de-voltas";
   }
+
+  // ---- DOCUMENTADOR ------------------------------------------------------------------
+  // A regra do CLAUDE.md é "após lote de tarefas concluídas (3+)". Vem no FECHO e não no
+  // meio de propósito: documentar o projeto a cada tarefa pagaria um despacho para
+  // reescrever o que a próxima tarefa muda de novo.
+  //
+  // Respeita o orçamento como qualquer outro despacho — documentação é importante e não é
+  // mais importante que terminar a tarefa que já começou.
+  if (rel.tarefasConcluidas.length >= MIN_TAREFAS_PARA_DOCUMENTAR) {
+    const decisao = decidir(comAgentesEmVoo(comGasto(orcamento, orcamento.gastoUsd), 0));
+    if (decisao.acao === "seguir") {
+      const tarefas = await dep.lerTarefas();
+      const alvo = tarefas.find((t) => rel.tarefasConcluidas.includes(t.id));
+      if (alvo !== undefined) {
+        dep.log(
+          "info",
+          `${rel.tarefasConcluidas.length} tarefas concluídas — atualizando a documentação.`,
+        );
+        const r = await dep.despachar({
+          tarefa: alvo,
+          papel: "documentador",
+          agente: "documentador",
+          modelo: null,
+          promptColado: null,
+          motivo: `lote de ${rel.tarefasConcluidas.length} tarefa(s) concluída(s)`,
+          notas: "",
+        });
+        rel.despachos += 1;
+        rel.documentou = r.concluiu;
+        orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
+      }
+    } else {
+      dep.log("info", `Documentação adiada: ${decisao.motivo}`);
+    }
+  }
+
+  // ---- COMMIT DA GESTÃO --------------------------------------------------------------
+  // O executor commita a própria tarefa; o que sobra solto é a gestão que o MOTOR escreveu
+  // (promoções, bloqueios, marcos, relatório mecânico). Deixar isso não commitado é como a
+  // fábrica perdeu trabalho antes: a próxima sessão encontra árvore suja que ninguém
+  // reconhece. Nunca lança — falhar o commit não pode apagar o relatório da rodada.
+  try {
+    await dep.commitarGestao(
+      `chore: gestão ${new Date().toISOString().slice(0, 10)} — pipeline` +
+        `${rel.tarefasConcluidas.length > 0 ? `: ${rel.tarefasConcluidas.join(", ")}` : ""}`,
+    );
+  } catch (e) {
+    dep.log("erro", `Commit da gestão falhou (o trabalho está no disco): ${(e as Error).message}`);
+  }
+
   rel.orcamento = orcamento;
   return rel;
 }

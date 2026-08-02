@@ -1,6 +1,8 @@
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
-import { lerEquipe, lerResumosTarefas, parsearTarefa } from "../fabrica/index.js";
+import { lerEquipe, lerResumosTarefas, parsearPlano, parsearTarefa } from "../fabrica/index.js";
+import { commitar } from "../fabrica/git.js";
+import { gravarMarco, textoDoMarco } from "./marco.js";
 import { anexarNaSecao, gravarStatusTarefa } from "../fabrica/escrita-tarefas.js";
 import { consultaReal, type Consulta } from "../jobs/claude/runner-claude.js";
 import type { ContextoExecucao, Job, Runner } from "../jobs/tipos.js";
@@ -115,6 +117,40 @@ export class RunnerPipeline implements Runner {
       },
       lerCriteriosDe: (t) => secao(t, "criteriosAceite"),
       lerNotasDe: (t) => secao(t, "notasExecucao"),
+      lerPlano: async () => {
+        try {
+          return parsearPlano(await readFile(join(dirProjeto, "_gestao", "PLANO.md"), "utf8"));
+        } catch {
+          // Projeto sem PLANO.md é caso legítimo (importado à mão): sem plano, sem marco.
+          return null;
+        }
+      },
+      gravarMarco: async (fase, veredicto) => {
+        const r = await gravarMarco(
+          join(dirProjeto, "_gestao", "PLANO.md"),
+          fase,
+          textoDoMarco(veredicto, new Date().toISOString().slice(0, 10)),
+        );
+        ctx.emitir("log", {
+          nivel: r.ok ? "assistente" : "erro",
+          texto: r.ok
+            ? `PLANO.md · ${fase}: Marco ${r.de} → ${r.para}`
+            : `Marco de ${fase}: ${r.motivo}`,
+        });
+      },
+      commitarGestao: async (mensagem) => {
+        try {
+          const hash = await commitar(dirProjeto, mensagem);
+          ctx.emitir("log", { nivel: "assistente", texto: `Gestão commitada: ${hash.slice(0, 7)}` });
+        } catch (e) {
+          // Árvore limpa é o caso NORMAL quando os agentes commitaram tudo — não é erro.
+          const msg = (e as Error).message;
+          ctx.emitir("log", {
+            nivel: /nada a commitar|no changes|nenhuma altera/i.test(msg) ? "assistente" : "erro",
+            texto: `Commit da gestão: ${msg}`,
+          });
+        }
+      },
       despachar,
       log: (nivel, texto) =>
         ctx.emitir("log", { nivel: nivel === "erro" ? "erro" : "assistente", texto }),
@@ -165,6 +201,17 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
   ];
   if (r.tarefasConcluidas.length > 0) linhas.push(`Concluídas: ${r.tarefasConcluidas.join(", ")}.`);
   if (r.promovidas.length > 0) linhas.push(`Promovidas: ${r.promovidas.join(", ")}.`);
+  if (r.saneadas.length > 0) {
+    linhas.push(`Saneadas na abertura (sobras sem Notas): ${r.saneadas.join(", ")}.`);
+  }
+  for (const m of r.marcos) {
+    linhas.push(
+      m.veredicto === "indefinido"
+        ? `MARCO da fase "${m.fase}": veredito não identificado — PLANO.md NÃO foi alterado, confira à mão.`
+        : `Marco da fase "${m.fase}": ${m.veredicto.toUpperCase()}.`,
+    );
+  }
+  if (r.documentou) linhas.push("Documentação atualizada.");
   if (r.criteriosExecutados > 0) {
     linhas.push(
       `${r.criteriosExecutados} critério(s) resolvidos por comando, sem gastar modelo.`,
