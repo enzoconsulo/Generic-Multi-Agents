@@ -2,6 +2,13 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { ContextoExecucao, Job, NovaPendencia, Runner } from "../tipos.js";
 import { ehEsforco, type Esforco } from "../robustez/guardrails.js";
 import { estimarCusto } from "./precos.js";
+import {
+  comAgentesEmVoo,
+  comGasto,
+  decidir,
+  novoOrcamento,
+  type SituacaoOrcamento,
+} from "../../pipeline/orcamento.js";
 
 /**
  * Runner que executa um fluxo da fábrica via Claude Agent SDK (T-008). O padrão de uso
@@ -30,6 +37,16 @@ export interface ParamsClaude {
   maxTurns?: number;
   /** Profundidade de raciocínio (`effort` do SDK); ausente = padrão do modelo. */
   esforco?: Esforco;
+  /**
+   * Teto de custo do job, em US$. Ausente/inválido = sem teto (comportamento antigo).
+   *
+   * É o freio que não existia: dos 55 jobs já rodados, **10 falharam e os 10 falharam por
+   * cota**. `maxTurns` não serve para isso e o histórico prova — ele limita só o laço do
+   * orquestrador, enquanto `num_turns` é somado entre os `result` inclusive dos subagentes;
+   * jobs somaram 211 e 212 voltas com o teto em 120. Aqui a unidade é dinheiro, que é o
+   * que acaba. Ver `pipeline/orcamento.ts` para a decisão e a parada limpa.
+   */
+  tetoUsd?: number;
 }
 
 /**
@@ -117,11 +134,15 @@ export interface ResultadoClaude {
    */
   modelosSemPreco?: string[];
   /**
-   * Causa da falha quando ela é RECONHECÍVEL (T-045). `limite-uso` é a única hoje e existe
-   * para a UI distinguir "a fábrica tem um bug" de "a assinatura acabou, volta às 14:40" —
-   * são reações opostas do usuário, e antes as duas apareciam como "falhou".
+   * Desfecho RECONHECÍVEL do fluxo (T-045), para a UI distinguir reações opostas do usuário
+   * — antes tudo aparecia como "falhou".
+   *
+   * - `limite-uso`: a assinatura acabou; volta às 14:40, não há o que decidir. É FALHA.
+   * - `teto-custo`: o orçamento do job acabou e ele parou limpo, sem agente cortado. **Não
+   *   é falha** — é o sistema funcionando, e o que foi entregue vale. A ação do usuário é
+   *   decidir se aumenta o teto, não redisparar às cegas.
    */
-  motivo?: "limite-uso";
+  motivo?: "limite-uso" | "teto-custo";
   /** Hora de reabertura anunciada pelo provedor, quando `motivo === "limite-uso"`. */
   reabreEm?: string | null;
   /**
@@ -621,6 +642,20 @@ export class RunnerClaude implements Runner {
      * Só o relógio abre essa porta — então paramos no primeiro sinal.
      */
     let limiteBatido: string | null = null;
+    /**
+     * Orçamento do job. `tetoUsd` ausente = `null` = comportamento antigo, sem freio —
+     * explícito, para ninguém achar que há teto onde não há.
+     */
+    let orcamento = novoOrcamento(p.tetoUsd ?? null);
+    /**
+     * Última SITUAÇÃO de orçamento já registrada, para não repetir o mesmo aviso a cada
+     * volta. É a situação e não a ação: "resta pouco" e "estourou, esperando agente" levam
+     * ambas a `nao-iniciar`, e esconder a segunda tiraria do log justo o aviso que importa.
+     * Também não é o texto — ele embute o gasto, que muda toda volta.
+     */
+    let avisoOrcamento: SituacaoOrcamento | "" = "";
+    /** Preenchido quando o fluxo foi encerrado PELO teto — desfecho planejado, não falha. */
+    let tetoAtingido: string | null = null;
 
     for await (const bruto of consulta) {
       const msg = bruto as MensagemSDK;
@@ -750,6 +785,33 @@ export class RunnerClaude implements Runner {
           // Tipos não mapeados (stream_event, rate_limit_event, user/tool_result…) são
           // ignorados de propósito — o consumidor nunca deve quebrar com tipo novo.
           break;
+      }
+
+      // ---- Teto de custo, com PARADA LIMPA -------------------------------------------
+      // Roda a cada mensagem porque é o único ponto em que o gasto é observável enquanto
+      // acontece (`fechar()` agrega o que já foi registrado, então vale no meio do voo).
+      //
+      // A decisão NUNCA corta agente em voo: enquanto houver despacho sem `tool_result`, o
+      // orçamento só avisa. Cortar ali destrói o trabalho que o agente não gravou — foi o
+      // desperdício de 30/07 e de 01/08, e seria perverso reproduzi-lo em nome de economia.
+      if (orcamento.tetoUsd !== null) {
+        const parciais = acumulador.fechar();
+        const gasto = parciais !== null ? (estimarCusto(parciais.porModelo)?.usd ?? 0) : 0;
+        orcamento = comAgentesEmVoo(comGasto(orcamento, gasto), despachosPendentes.size);
+        const decisao = decidir(orcamento);
+
+        // Deduplica pela AÇÃO, não pelo texto: o motivo embute o gasto corrente, que sobe a
+        // cada volta — comparar a frase faria o mesmo aviso reaparecer indefinidamente e
+        // afogaria o log justo quando ele mais importa.
+        if (decisao.acao !== "seguir" && decisao.situacao !== avisoOrcamento) {
+          avisoOrcamento = decisao.situacao;
+          ctx.emitir("log", { nivel: "erro", texto: `Orçamento: ${decisao.motivo}` });
+        }
+        if (decisao.acao === "encerrar") {
+          tetoAtingido = decisao.motivo;
+          controlador.abort();
+          break;
+        }
       }
 
       // Disjuntor: aborta o SDK e sai do laço ANTES de outra sessão nascer. `abort()` aqui
@@ -930,6 +992,27 @@ export class RunnerClaude implements Runner {
       );
     }
 
+    // Parada pelo TETO não é falha — é o sistema funcionando. Por isso RETORNA em vez de
+    // lançar: o job fica `concluido` com um motivo próprio, e o que foi entregue continua
+    // valendo. Tratar como erro (o caminho do `limiteBatido`) mandaria o usuário
+    // "redisparar quando voltar", que é o conselho errado: aqui não há nada a esperar,
+    // há um orçamento a decidir.
+    if (tetoAtingido !== null) {
+      ctx.emitir("log", {
+        nivel: "inicio",
+        texto:
+          `Encerrado pelo teto de custo — parada limpa, sem agente cortado. ${tetoAtingido}` +
+          " Para continuar de onde parou, redispare com um teto maior.",
+      });
+      return {
+        sessionId,
+        erro: false,
+        texto,
+        motivo: "teto-custo",
+        ...contabilidade,
+      };
+    }
+
     if (erro) {
       throw new ErroFluxoClaude(`Fluxo Claude terminou com erro. ${texto.slice(0, 800)}`.trim(), {
         sessionId,
@@ -1069,6 +1152,7 @@ function lerParams(params: Record<string, unknown>): ParamsClaude {
   const permissionMode = params["permissionMode"];
   const maxTurns = params["maxTurns"];
   const esforco = params["esforco"];
+  const tetoUsd = params["tetoUsd"];
   return {
     prompt,
     cwd,
@@ -1083,5 +1167,11 @@ function lerParams(params: Record<string, unknown>): ParamsClaude {
     // execução, então o que chega aqui é dado externo. Valor estranho é ignorado — cair no
     // padrão do modelo é degradação certa; mandar lixo ao SDK derruba o fluxo inteiro.
     ...(ehEsforco(esforco) ? { esforco } : {}),
+    // Mesma disciplina: teto torto (NaN, negativo, Infinity) tem de virar SEM teto
+    // explícito, nunca um teto quebrado que compararia falso e desligaria o freio em
+    // silêncio. `novoOrcamento` faz a validação; aqui só barramos o que não é número.
+    ...(typeof tetoUsd === "number" && Number.isFinite(tetoUsd) && tetoUsd > 0
+      ? { tetoUsd }
+      : {}),
   };
 }

@@ -1140,3 +1140,112 @@ describe("RunnerClaude — reconciliação de voltas repartidas pelo SDK", () =>
     expect(t.saida / erro.resultado.numTurnos).toBeGreaterThan(100);
   });
 });
+
+/**
+ * Teto de custo com PARADA LIMPA (I3 de `_sistema/CUSTO_DE_CONTEXTO.md`).
+ *
+ * Existe porque, dos 55 jobs já rodados pela fábrica, **10 falharam e os 10 falharam por
+ * cota** — nenhum por bug. Não havia freio: todo `/trabalhar` corria até a parede da
+ * assinatura. E o que parecia ser o freio não era: `maxTurns` limita só o laço do
+ * orquestrador, enquanto `num_turns` soma entre os `result` inclusive dos subagentes (jobs
+ * somaram 211 e 212 voltas com o teto em 120).
+ *
+ * A invariante que estes testes travam: **o teto nunca corta agente em voo.** Cortar
+ * destrói o que ele não gravou, que é exatamente o desperdício de 30/07 e 01/08 — economia
+ * que produz prejuízo não é economia.
+ */
+describe("RunnerClaude — teto de custo", () => {
+  /** Volta cara o bastante para estourar qualquer teto pequeno destes testes. */
+  const voltaCara = (id: string) => ({
+    type: "assistant",
+    message: {
+      id,
+      model: "claude-sonnet-5",
+      content: [{ type: "text", text: "trabalhando" }],
+      usage: {
+        input_tokens: 10,
+        output_tokens: 20_000,
+        cache_read_input_tokens: 2_000_000,
+        cache_creation_input_tokens: 400_000,
+      },
+    },
+  });
+  const despacho = (id: string) => ({
+    type: "assistant",
+    message: {
+      id: `m-${id}`,
+      content: [{ type: "tool_use", id, name: "Agent", input: { subagent_type: "executor" } }],
+    },
+  });
+  const resultadoDe = (id: string) => ({
+    type: "user",
+    message: { content: [{ type: "tool_result", tool_use_id: id }] },
+  });
+  const fim = { type: "result", is_error: false, total_cost_usd: 0.5, num_turns: 3 };
+  const logsDe = (eventos: readonly { tipo: string; dados?: unknown }[]) =>
+    eventos.filter((e) => e.tipo === "log").map((e) => (e.dados as { texto: string }).texto);
+
+  it("sem tetoUsd o fluxo corre até o fim — comportamento antigo preservado", async () => {
+    const { ctx } = contexto(new AbortController().signal);
+    const r = await new RunnerClaude(
+      consultaDe([voltaCara("v1"), voltaCara("v2"), fim]),
+    ).executar(jobFake(PARAMS), ctx);
+    expect(r.motivo).toBeUndefined();
+    expect(r.erro).toBe(false);
+  });
+
+  it("estourou o teto com a árvore quieta: encerra, e NÃO é falha", async () => {
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    const r = await new RunnerClaude(
+      consultaDe([voltaCara("v1"), voltaCara("v2"), voltaCara("v3"), fim]),
+    ).executar(jobFake({ ...PARAMS, tetoUsd: 0.5 }), ctx);
+
+    // Desfecho PLANEJADO: retorna, não lança. Job fica `concluido` com motivo próprio.
+    expect(r.motivo).toBe("teto-custo");
+    expect(r.erro).toBe(false);
+    expect(logsDe(eventos).some((t) => t.includes("parada limpa"))).toBe(true);
+  });
+
+  // O coração da coisa: com agente trabalhando, o teto AVISA e espera.
+  it("teto estourado com agente em voo NÃO corta — espera o tool_result", async () => {
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    const r = await new RunnerClaude(
+      consultaDe([
+        despacho("tu_1"),
+        voltaCara("v1"),
+        voltaCara("v2"),
+        voltaCara("v3"),
+        resultadoDe("tu_1"),
+        fim,
+      ]),
+    ).executar(jobFake({ ...PARAMS, tetoUsd: 0.5 }), ctx);
+
+    // O agente terminou (tool_result veio) antes de o fluxo encerrar: nada foi abandonado.
+    expect(r.despachosEmVoo).toBe(0);
+    const textos = logsDe(eventos);
+    expect(textos.some((t) => t.includes("ainda trabalhando"))).toBe(true);
+    expect(textos.some((t) => t.includes("TRABALHO ABANDONADO"))).toBe(false);
+  });
+
+  it("avisa uma vez por motivo, não a cada volta", async () => {
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    await new RunnerClaude(
+      consultaDe([despacho("tu_1"), voltaCara("v1"), voltaCara("v2"), voltaCara("v3"), fim]),
+    ).executar(jobFake({ ...PARAMS, tetoUsd: 0.5 }), ctx);
+    const avisos = logsDe(eventos).filter((t) => t.startsWith("Orçamento:"));
+    expect(avisos.length).toBeLessThanOrEqual(2);
+  });
+
+  // Teto torto é entrada externa (passa pelo disco em `dados/`): não pode virar NaN, que
+  // compararia sempre falso e desligaria o freio em silêncio.
+  it("teto inválido é ignorado em vez de virar freio quebrado", async () => {
+    for (const teto of [0, -1, Number.NaN, "muito", null]) {
+      const { ctx } = contexto(new AbortController().signal);
+      const r = await new RunnerClaude(consultaDe([voltaCara("v1"), fim])).executar(
+        jobFake({ ...PARAMS, tetoUsd: teto }),
+        ctx,
+      );
+      expect(r.motivo).toBeUndefined();
+    }
+  });
+});
