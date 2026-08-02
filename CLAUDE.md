@@ -152,15 +152,25 @@ O ciclo abaixo é o mesmo; quem o CONDUZ depende de como o trabalho foi disparad
 | `/trabalhar <projeto>` **pelo painel** | pipeline em CÓDIGO (`RunnerPipeline`) | máquina de estados |
 | `/trabalhar` sem projeto, ou este chat | você, o orquestrador | você |
 
-**O que o motor em código faz:** promove tarefa cujas dependências fecharam, ordena pelo
-paralelismo, resolve o agente pelos 3 passos, escala o modelo por `tentativas`, roda os
-critérios executáveis, despacha cada etapa como uma chamada própria e move os status. Ele
-existe porque tudo isso é regra escrita, e regra escrita executada por modelo custava
-US$ 1,29 por job (17%) e falhava de formas que código não falha.
+**O que o motor em código faz** (tudo isto era seu, e tudo isto é regra escrita):
+sanear sobras de sessão anterior · promover tarefa cujas dependências fecharam · ordenar
+pelo paralelismo · resolver o agente pelos 3 passos · escalar o modelo por `tentativas` ·
+rodar os critérios executáveis e a suíte antes do verificador · despachar cada etapa ·
+**verificar o marco quando uma fase fecha** · **chamar o documentador após 3+ tarefas** ·
+bloquear quem esgotou os ciclos · commitar a gestão no fim.
 
-**O que ele NÃO faz, e continua sendo seu:** replanejar, julgar marco de fase, decidir que
-uma tarefa é trivial o bastante para pular o teste, redigir o log do dia. Ele SINALIZA e o
-relatório diz o que ficou para decisão. **A fronteira é: cabe num teste? então é código.**
+**O que ele NÃO faz, e continua sendo seu:**
+- **replanejar** — quebrar ou reescrever uma tarefa é decisão, não regra. O motor marca a
+  tarefa e o relatório pede;
+- **o VEREDITO do marco** — ele detecta a fase pronta e grava a linha, mas quem diz
+  aprovado/reprovado é o agente que rodou o software;
+- decidir que uma tarefa é trivial o bastante para pular o teste;
+- redigir o log do dia e o `PROGRESSO.md`.
+
+**A fronteira é: cabe num teste? então é código.** E há um limite que o motor impõe sozinho,
+sem confiar em ninguém: teto de despachos por tarefa numa rodada. O limite de 3 ciclos do
+protocolo depende de o AGENTE incrementar `tentativas`; quando ele não incrementa, a tarefa
+entra num vaivém que já mediu 41 despachos e US$ 22,55 numa rodada só.
 
 Para você isso muda pouco — no chat interativo você continua conduzindo o pipeline etapa
 por etapa, como sempre. Muda o que você deve ESPERAR ao ler um job do painel: ali não há
