@@ -46,6 +46,15 @@ export interface PedidoAcao {
   reforco?: string | null;
   /** Guarda de custo opcional. */
   maxTurns?: number;
+  /**
+   * Qual motor roda o `/trabalhar`. Ausente = automático (ver `montarJobAcao`).
+   *
+   * - `"codigo"` — pipeline determinístico (`RunnerPipeline`): o laço é código, cada etapa
+   *   é uma `query()` controlada, não existe orquestrador-modelo. Exige UM projeto.
+   * - `"modelo"` — o caminho antigo, com o orquestrador em modelo. Escape hatch: existe
+   *   para o dia em que o pipeline não der conta de um caso, sem precisar de deploy.
+   */
+  motor?: "codigo" | "modelo";
 }
 
 /**
@@ -62,12 +71,57 @@ function escopoDaAcao(id: IdAcao, argumentos: string): EscopoLock {
   return "global";
 }
 
+/**
+ * Um `/trabalhar <projeto>` deve rodar pelo pipeline em CÓDIGO?
+ *
+ * Sim quando há exatamente um projeto no argumento — que é o caso comum e o caro. É o
+ * "meio termo" da virada: o laço mecânico (promover, ordenar, despachar, mover status) sai
+ * do modelo, enquanto **julgamento continua no modelo** e chega pelos outros caminhos
+ * (replanejar, marco, ideia, novo-projeto), que não mudaram.
+ *
+ * Não, sem projeto no argumento: aí o `/trabalhar` varre a fábrica inteira, decide entre
+ * projetos e escreve o log do dia — isso é orquestração de verdade, não uma máquina de
+ * estados, e continua com o modelo.
+ *
+ * `pedido.motor` sobrescreve nos dois sentidos. É escape hatch de propósito: trocar o
+ * caminho quente de uma fábrica que já falhou em silêncio duas vezes sem deixar como voltar
+ * seria imprudente.
+ */
+export function usaPipelineEmCodigo(id: string, argumentos: string, motor?: string): boolean {
+  if (motor === "codigo") return true;
+  if (motor === "modelo") return false;
+  if (id !== "trabalhar") return false;
+  const partes = argumentos.trim().split(/\s+/).filter((x) => x !== "");
+  return partes.length === 1 && /^[a-zA-Z0-9._-]+$/.test(partes[0] ?? "");
+}
+
 export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob {
   if (!(IDS_ACOES as readonly string[]).includes(pedido.id)) {
     throw new ErroAcaoDesconhecida(pedido.id);
   }
   const id = pedido.id as IdAcao;
   const args = (pedido.argumentos ?? "").trim();
+
+  // Pipeline em código: job de tipo próprio, com params próprios. Não passa por prompt
+  // nenhum — não há orquestrador para instruir.
+  if (usaPipelineEmCodigo(id, args, pedido.motor)) {
+    const g = guardrailsParaAcao(id);
+    return {
+      tipo: "pipeline",
+      titulo: `/trabalhar ${args}`,
+      escopo: `projeto:${args}`,
+      usaClaude: true,
+      params: {
+        raiz: fabricaRaiz,
+        projeto: args,
+        modelo: pedido.modelo,
+        ...(pedido.fallback ? { fallback: pedido.fallback } : {}),
+        ...(pedido.reforco ? { reforco: pedido.reforco } : {}),
+        ...(g.maxBudgetUsd !== null ? { tetoUsd: g.maxBudgetUsd } : {}),
+        watchdogMs: g.watchdogMs,
+      },
+    };
+  }
   const prompt = args === "" ? `/${id}` : `/${id} ${args}`;
 
   // Guardrails por tipo de ação (T-019): teto de turnos quando o disparo não pediu um

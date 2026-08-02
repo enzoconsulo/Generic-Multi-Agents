@@ -5,13 +5,21 @@ import { ErroProjetoInexistente, montarJobAnalise } from "../acoes/analise.js";
 import { agentesParaAcao } from "../acoes/agentes-dinamicos.js";
 import { obterGerenciador } from "../jobs/instancia.js";
 
-/** Traduz um erro de "runner claude ausente" no status HTTP certo, ou null se não for isso. */
+/**
+ * Traduz "runner ausente" no status HTTP certo, ou null se não for isso.
+ *
+ * A mensagem deixou de citar só o runner Claude em 02/08: `/trabalhar <projeto>` passou a
+ * gerar job do tipo `pipeline`, e uma mensagem que nomeia o runner errado manda quem
+ * diagnostica olhar para o lugar errado.
+ */
 function statusRunnerAusente(erro: unknown): { status: number; erro: string } | null {
   const mensagem = erro instanceof Error ? erro.message : String(erro);
   if (mensagem.includes("Tipo de job desconhecido")) {
     return {
       status: 503,
-      erro: "Execução de fluxos indisponível: runner Claude não registrado no servidor.",
+      erro:
+        "Execução de fluxos indisponível: runner não registrado no servidor" +
+        ` (${mensagem}). Os fluxos da fábrica precisam dos runners "claude" e "pipeline".`,
     };
   }
   return null;

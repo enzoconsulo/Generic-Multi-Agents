@@ -53,6 +53,13 @@ export interface PedidoDespacho {
   promptColado: string | null;
   /** Como se chegou neste agente — vai para o log, permite auditar roteamento errado. */
   motivo: string;
+  /**
+   * Seção `## Notas de execução` da tarefa. Só é lida para o papel `revisor`, que precisa
+   * do hash do commit ali registrado — é o que permite entregar a ele o DIFF em vez do
+   * projeto inteiro (I4). Vazia para os demais: ler seção que ninguém usa é o desperdício
+   * que este módulo existe para evitar.
+   */
+  notas: string;
 }
 
 export interface ResultadoDespacho {
@@ -73,6 +80,8 @@ export interface DependenciasMotor {
   despachar(pedido: PedidoDespacho): Promise<ResultadoDespacho>;
   /** Seção `## Critérios de aceite` de uma tarefa, crua. */
   lerCriteriosDe(tarefa: TarefaResumo): Promise<string>;
+  /** Seção `## Notas de execução`, crua. Consultada só quando o passo é do revisor. */
+  lerNotasDe(tarefa: TarefaResumo): Promise<string>;
   log(nivel: "info" | "erro", texto: string): void;
 }
 
@@ -96,7 +105,12 @@ export interface RelatorioMotor {
   /** Critérios resolvidos sem modelo — a economia da I5, medida. */
   criteriosExecutados: number;
   /** Por que o laço parou. */
-  encerrouPor: "sem-trabalho" | "orcamento" | "agente-cortado" | "teto-de-voltas";
+  encerrouPor:
+    | "sem-trabalho"
+    | "orcamento"
+    | "agente-cortado"
+    | "sem-progresso"
+    | "teto-de-voltas";
   orcamento: EstadoOrcamento;
 }
 
@@ -128,6 +142,8 @@ export async function rodarPipeline(
     orcamento: ctx.orcamento,
   };
   const concluidasAntes = new Set<string>();
+  /** Quantas vezes cada par (tarefa, papel) foi despachado. Ver a guarda de progresso. */
+  const repeticoes = new Map<string, number>();
   let orcamento = ctx.orcamento;
 
   for (let volta = 0; volta < MAX_VOLTAS; volta++) {
@@ -218,6 +234,7 @@ export async function rodarPipeline(
       modelo: agente.modelo,
       promptColado: agente.promptColado,
       motivo: agente.motivo,
+      notas: passo.papel === "revisor" ? await dep.lerNotasDe(passo.tarefa) : "",
     });
     rel.despachos += 1;
     orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
@@ -228,6 +245,25 @@ export async function rodarPipeline(
     if (!r.concluiu) {
       dep.log("erro", `${agente.nome} não devolveu resultado — encerrando o laço.`);
       rel.encerrouPor = "agente-cortado";
+      break;
+    }
+
+    // Guarda de PROGRESSO. Quem move o status de `em-execucao` para `em-teste` é o próprio
+    // agente, gravando no arquivo — é o contrato dele. Se ele terminar sem gravar, o motor
+    // releria o mesmo passo para sempre, pagando um despacho por volta até o orçamento
+    // acabar: um bug do agente viraria uma fatura. Duas repetições do mesmo par
+    // (tarefa, papel) encerram o laço com o que já foi entregue preservado.
+    const chave = `${passo.tarefa.id}:${passo.papel}`;
+    const vezes = (repeticoes.get(chave) ?? 0) + 1;
+    repeticoes.set(chave, vezes);
+    if (vezes >= 2) {
+      dep.log(
+        "erro",
+        `${passo.tarefa.id}: ${agente.nome} terminou mas o status continua` +
+          ` \`${passo.tarefa.status}\`. O agente não gravou seu estado — encerrando para` +
+          " não repetir o despacho indefinidamente.",
+      );
+      rel.encerrouPor = "sem-progresso";
       break;
     }
   }

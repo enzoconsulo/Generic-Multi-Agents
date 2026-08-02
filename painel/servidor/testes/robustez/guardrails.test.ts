@@ -35,9 +35,18 @@ describe("guardrailsParaAcao", () => {
 describe("montarJobAcao aplica os guardrails", () => {
   const base = { modelo: "haiku" };
 
+  // `/trabalhar alfa` virou job `pipeline` em 02/08: o teto que importa lá é o de CUSTO,
+  // não o de turnos (o pipeline não tem laço de orquestrador para limitar). O caso "claude"
+  // é exercitado por `/trabalhar` sem projeto, logo abaixo.
   it("sem maxTurns explícito, usa o teto da ação", () => {
-    const job = montarJobAcao({ ...base, id: "trabalhar", argumentos: "alfa" }, "/raiz");
+    const job = montarJobAcao({ ...base, id: "trabalhar", argumentos: "" }, "/raiz");
     expect(job.params?.maxTurns).toBe(200);
+  });
+
+  it("job de pipeline leva teto de CUSTO em vez de teto de turnos", () => {
+    const job = montarJobAcao({ ...base, id: "trabalhar", argumentos: "alfa" }, "/raiz");
+    expect(job.tipo).toBe("pipeline");
+    expect(job.params?.["tetoUsd"]).toBe(8);
   });
 
   it("maxTurns explícito do disparo vence o default", () => {

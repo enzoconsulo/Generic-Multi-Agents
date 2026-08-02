@@ -85,6 +85,7 @@ describe("POST /api/acoes/analisar (T-012)", () => {
       .post("/api/acoes/analisar")
       .send({ projeto: "alfa", estrategia: "haiku" });
     expect(resp.status).toBe(503);
-    expect(resp.body.erro).toMatch(/runner Claude/i);
+    // Mensagem generalizada em 02/08 (a fábrica passou a ter dois runners de fluxo).
+    expect(resp.body.erro).toMatch(/runner não registrado/i);
   });
 });

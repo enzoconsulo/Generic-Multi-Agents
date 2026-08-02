@@ -14,9 +14,12 @@ describe("montarJobAcao — comando, cwd e escopo de lock", () => {
     expect(job.params?.["modelo"]).toBe("sonnet");
   });
 
+  // Cobaia trocada para `/status` em 02/08: `/trabalhar <projeto>` deixou de ser job
+  // "claude" — passou a ser job `pipeline`, sem prompt nenhum, porque não há orquestrador
+  // para instruir. Ver `roteamento-pipeline.test.ts`.
   it("inclui os argumentos no prompt", () => {
-    const job = montarJobAcao({ id: "trabalhar", argumentos: "painel-fabrica", modelo: "opus" }, RAIZ);
-    expect(job.params?.["prompt"]).toBe(`${PREAMBULO_HEADLESS}/trabalhar painel-fabrica`);
+    const job = montarJobAcao({ id: "status", argumentos: "painel-fabrica", modelo: "opus" }, RAIZ);
+    expect(job.params?.["prompt"]).toBe(`${PREAMBULO_HEADLESS}/status painel-fabrica`);
   });
 
   // O preâmbulo é o que impede a falha da T-048 (agente despachado em segundo plano num
@@ -36,11 +39,13 @@ describe("montarJobAcao — comando, cwd e escopo de lock", () => {
    * eles EXISTEM. Anunciar agente não injetado é o erro que a T-045 já pagou — o fluxo
    * despacha, o SDK responde "not found" e o turno vai embora.
    */
+  // `/trabalhar` SEM projeto continua sendo o caminho do modelo (varre a fábrica, decide
+  // entre projetos) — é lá que o bloco de escalonamento no prompt segue valendo.
   it("anuncia o reforço só quando há reforço E especialistas injetados", () => {
     const comEquipe = montarJobAcao(
       {
         id: "trabalhar",
-        argumentos: "app",
+        argumentos: "",
         modelo: "sonnet",
         reforco: "opus",
         agentes: { frontend: {}, "frontend-reforcado": {} },

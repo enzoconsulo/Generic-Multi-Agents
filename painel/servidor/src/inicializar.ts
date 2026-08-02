@@ -2,6 +2,7 @@ import { reconciliarResultadosOrfaos } from "./ci/resultados.js";
 import { RunnerCi } from "./ci/runner-ci.js";
 import { config } from "./config.js";
 import { hub } from "./eventos/hub.js";
+import { RunnerPipeline } from "./pipeline/runner-pipeline.js";
 import { RunnerClaude } from "./jobs/claude/runner-claude.js";
 import { obterGerenciador } from "./jobs/instancia.js";
 import { GUARDRAILS_PADRAO } from "./jobs/robustez/guardrails.js";
@@ -22,6 +23,8 @@ let gerenteResumos: GerenteResumos | undefined;
 export function inicializarPainel(): void {
   const gerenciador = obterGerenciador();
   gerenciador.registrarRunner("claude", new RunnerClaude());
+  // Pipeline em código (I3): `/trabalhar <projeto>` roda por aqui, sem orquestrador-modelo.
+  gerenciador.registrarRunner("pipeline", new RunnerPipeline());
   gerenciador.registrarRunner("importar", new RunnerImportar());
   gerenciador.registrarRunner("ci", new RunnerCi());
   hub.conectar(gerenciador.emissor);

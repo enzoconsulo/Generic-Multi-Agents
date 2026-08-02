@@ -17,7 +17,12 @@ const runnerFake: Runner = {
 function reiniciarComTemp(comRunner: boolean) {
   const dir = mkdtempSync(join(tmpdir(), "acoes-"));
   reiniciarGerenciador({ dirJobs: dir, tetoClaude: 2 });
-  if (comRunner) obterGerenciador().registrarRunner("claude", runnerFake);
+  if (comRunner) {
+    obterGerenciador().registrarRunner("claude", runnerFake);
+    // `/trabalhar <projeto>` gera job `pipeline` desde 02/08 — sem este registro, a rota
+    // responderia 503 e o teste falaria de outra coisa.
+    obterGerenciador().registrarRunner("pipeline", runnerFake);
+  }
 }
 
 describe("POST /api/acoes/:id", () => {
@@ -68,6 +73,9 @@ describe("POST /api/acoes/:id", () => {
     const appSemRunner = await criarApp();
     const resp = await request(appSemRunner).post("/api/acoes/status").send({ estrategia: "haiku" });
     expect(resp.status).toBe(503);
-    expect(resp.body.erro).toMatch(/runner Claude/i);
+    // A mensagem deixou de nomear só o runner Claude: `/trabalhar <projeto>` usa o
+    // `pipeline`, e apontar o runner errado manda quem diagnostica para o lugar errado.
+    expect(resp.body.erro).toMatch(/runner não registrado/i);
+    expect(resp.body.erro).toMatch(/pipeline/i);
   });
 });

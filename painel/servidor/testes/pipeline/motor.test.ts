@@ -30,7 +30,10 @@ function tarefa(p: Partial<TarefaResumo> & { id: string }): TarefaResumo {
  * inteiro sem gastar a assinatura — e um laço de orquestração sem teste foi exatamente o
  * que produziu o abandono de agente em voo e o roteamento para especialista inexistente.
  */
-function mundo(iniciais: TarefaResumo[], opcoes: { custoPorDespacho?: number; criterios?: string } = {}) {
+function mundo(
+  iniciais: TarefaResumo[],
+  opcoes: { custoPorDespacho?: number; criterios?: string; notas?: string; congelado?: boolean } = {},
+) {
   const tarefas = new Map(iniciais.map((t) => [t.id, { ...t }]));
   const despachos: PedidoDespacho[] = [];
   const logs: string[] = [];
@@ -49,10 +52,15 @@ function mundo(iniciais: TarefaResumo[], opcoes: { custoPorDespacho?: number; cr
     },
     anexarVerificacao: async () => {},
     lerCriteriosDe: async () => opcoes.criterios ?? "",
+    lerNotasDe: async () => opcoes.notas ?? "",
     despachar: async (pedido) => {
       despachos.push(pedido);
       const atual = tarefas.get(pedido.tarefa.id);
-      if (atual !== undefined) atual.status = proximoStatus[atual.status] ?? "concluida";
+      // `congelado` simula o agente que TERMINA sem gravar o próprio status — o bug que
+      // faria o motor repetir o mesmo despacho até o orçamento acabar.
+      if (atual !== undefined && opcoes.congelado !== true) {
+        atual.status = proximoStatus[atual.status] ?? "concluida";
+      }
       return { custoUsd: opcoes.custoPorDespacho ?? 0.5, concluiu: true };
     },
     log: (_n, texto) => logs.push(texto),
@@ -219,5 +227,30 @@ describe("rodarPipeline — roteamento", () => {
     await rodarPipeline(ctxBase, dep);
     expect(despachos[0]?.agente).toBe("executor-reforcado");
     expect(despachos[0]?.modelo).toBe("opus");
+  });
+});
+
+describe("rodarPipeline — guarda de progresso", () => {
+  /**
+   * Quem move o status de uma tarefa é o próprio agente, gravando no arquivo (é o contrato
+   * dele). Se ele terminar SEM gravar, o motor releria o mesmo passo para sempre e pagaria
+   * um despacho por volta: um bug do agente viraria uma fatura. Esta guarda é o que
+   * transforma isso numa parada com relatório.
+   */
+  it("agente que termina sem gravar o status não faz o motor girar", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      congelado: true,
+    });
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.encerrouPor).toBe("sem-progresso");
+    // Dois despachos: o primeiro é legítimo, o segundo é o que revela a falta de progresso.
+    expect(despachos).toHaveLength(2);
+  });
+
+  it("o relatório nomeia a tarefa e o status travado", async () => {
+    const { dep, logs } = mundo([tarefa({ id: "T-007", status: "pronta" })], { congelado: true });
+    await rodarPipeline(ctxBase, dep);
+    expect(logs.some((l) => l.includes("T-007") && l.includes("não gravou"))).toBe(true);
   });
 });
