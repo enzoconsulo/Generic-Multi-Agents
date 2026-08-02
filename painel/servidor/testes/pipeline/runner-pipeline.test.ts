@@ -275,14 +275,17 @@ describe("RunnerPipeline — ciclo completo sem orquestrador-modelo", () => {
 });
 
 describe("RunnerPipeline — desfechos", () => {
-  it("etapa que não devolve result encerra o laço sem empilhar trabalho", async () => {
+  // Falha de etapa tira a TAREFA da rodada, não a rodada. Numa rodada real o testador
+  // morreu com erro de processo e o laço encerrava, levando junto tarefas sem relação.
+  it("etapa que não devolve result tira a tarefa da rodada, sem derrubar as outras", async () => {
     const raiz = fabricaFalsa([{ nome: "T-001-x.md", conteudo: tarefaMd({ id: "T-001", status: "pronta" }) }]);
     const { consulta } = sdkFalso(() => agenteGravaStatus(raiz, "T-001-x.md"), { falharNa: 2 });
     const r = await new RunnerPipeline(consulta).executar(
       job({ raiz, projeto: "app", modelo: "sonnet" }),
       contexto().ctx,
     );
-    expect(r.encerrouPor).toBe("agente-cortado");
+    expect(r.etapasFalhas.map((e) => e.tarefa)).toContain("T-001");
+    expect(r.encerrouPor).toBe("sem-trabalho");
   });
 
   it("teto de custo encerra de forma planejada, com o que foi feito preservado", async () => {

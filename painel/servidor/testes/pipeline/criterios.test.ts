@@ -231,3 +231,42 @@ describe("criterioDaSuite — o critério implícito de toda tarefa", () => {
     expect(avaliarComando(c?.comando ?? "").ok).toBe(true);
   });
 });
+
+describe("lerCriterios — critério multi-linha (bug de rodada real)", () => {
+  /**
+   * Numa rodada REAL, 11 dos 13 critérios saíram truncados no meio da frase — "emite ao
+   * jogador da vez uma", "parar em «Vá para a". A primeira versão lia só a linha do
+   * `- [ ]`. O estrago não era estético: esse relatório é o que o verificador lê para saber
+   * o que ainda precisa julgar.
+   */
+  it("junta a continuação indentada no texto do critério", () => {
+    const c = lerCriterios(
+      [
+        "- [ ] Parar numa propriedade livre emite ao jogador da vez uma",
+        "      decisão de compra; responder \"comprar\" debita o preço e marca a posse.",
+        "- [ ] Outro critério.",
+      ].join("\n"),
+    );
+    expect(c).toHaveLength(2);
+    expect(c[0]?.texto).toContain("decisão de compra");
+    expect(c[0]?.texto).not.toMatch(/uma$/);
+  });
+
+  it("colapsa espaço para o relatório caber numa linha", () => {
+    const c = lerCriterios(["- [ ] Um    critério", "      com     espaços."].join("\n"));
+    expect(c[0]?.texto).toBe("Um critério com espaços.");
+  });
+
+  it("junta o texto E acha o comando na continuação", () => {
+    const c = lerCriterios(
+      [
+        "- [ ] `tests/x.test.js` roda com `node --test tests/x.test.js`, sobe o servidor",
+        "      numa porta livre e verifica a compra.",
+        "      `verificar: node --test tests/x.test.js`",
+      ].join("\n"),
+    );
+    expect(c[0]?.comando).toBe("node --test tests/x.test.js");
+    expect(c[0]?.texto).toContain("verifica a compra");
+    expect(c[0]?.texto).not.toContain("verificar:");
+  });
+});

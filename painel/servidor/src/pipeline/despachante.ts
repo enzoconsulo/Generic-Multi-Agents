@@ -184,6 +184,17 @@ export function criarDespachante(
         // Nada de disco: o contexto é montado por nós, e carregar os CLAUDE.md da fábrica
         // aqui traria doutrina de ORQUESTRAÇÃO para dentro de um agente que não orquestra.
         settingSources: [],
+        // Canal de diagnóstico do processo `claude`. Sem ele, uma queda chega como a frase
+        // "Claude Code process exited with code 1" e não há o que investigar — foi
+        // exatamente o que aconteceu numa rodada real, com o testador morrendo aos 5min42
+        // sem deixar rastro. Guardamos as últimas linhas e só as mostramos SE houver falha.
+        stderr: (dado: string) => {
+          for (const linha of String(dado).split(QUEBRA)) {
+            if (linha.trim() === "") continue;
+            ultimasDoStderr.push(linha);
+            if (ultimasDoStderr.length > 20) ultimasDoStderr.shift();
+          }
+        },
         systemPrompt: {
           type: "preset" as const,
           preset: "claude_code" as const,
@@ -196,6 +207,8 @@ export function criarDespachante(
     let erro = false;
     let terminou = false;
     let textoFinal = "";
+    /** Últimas linhas de stderr do processo `claude` — só exibidas se a etapa falhar. */
+    const ultimasDoStderr: string[] = [];
     const porModelo: Record<
       string,
       { entrada: number; saida: number; cacheLeitura: number; cacheEscrita: number; custoUsd: number }
@@ -239,6 +252,9 @@ export function criarDespachante(
       }
     } catch (e) {
       o.emitir("erro", `Etapa ${pedido.agente} falhou: ${(e as Error).message}`);
+      if (ultimasDoStderr.length > 0) {
+        o.emitir("erro", `stderr do agente:${QUEBRA}${ultimasDoStderr.join(QUEBRA)}`);
+      }
       return {
         custoUsd: custoUsd || (estimarCusto(porModelo)?.usd ?? 0),
         concluiu: false,

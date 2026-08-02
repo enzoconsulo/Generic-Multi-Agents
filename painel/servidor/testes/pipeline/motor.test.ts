@@ -173,9 +173,10 @@ describe("rodarPipeline — orçamento", () => {
     expect(rel.despachos).toBeGreaterThanOrEqual(6);
   });
 
-  // Agente sem resultado = cortado. Continuar seria empilhar trabalho sobre estado
-  // desconhecido, que é como se produz reprovação falsa — o desperdício mais caro daqui.
-  it("agente que não devolve resultado ENCERRA o laço", async () => {
+  // Agente sem resultado tira a TAREFA de circulação (continuar nela seria empilhar
+  // trabalho sobre estado desconhecido), mas a rodada segue nas outras — ver o bloco
+  // "falha de etapa isolada".
+  it("agente que não devolve resultado tira a tarefa da rodada", async () => {
     const { dep } = mundo([tarefa({ id: "T-001" })]);
     const original = dep.despachar;
     let n = 0;
@@ -185,7 +186,9 @@ describe("rodarPipeline — orçamento", () => {
       return original(p);
     };
     const rel = await rodarPipeline(ctxBase, dep);
-    expect(rel.encerrouPor).toBe("agente-cortado");
+    expect(rel.etapasFalhas.map((e) => e.tarefa)).toContain("T-001");
+    // Era a única tarefa: sem mais trabalho, a rodada fecha normalmente.
+    expect(rel.encerrouPor).toBe("sem-trabalho");
   });
 });
 
@@ -588,5 +591,99 @@ describe("autonomia — o que antes parava para perguntar", () => {
     ]);
     await rodarPipeline(ctxBase, dep);
     expect(despachos.some((d) => d.papel === "verificador")).toBe(true);
+  });
+});
+
+describe("falha de etapa isolada — a rodada não pode morrer junto", () => {
+  /**
+   * Numa rodada REAL o `testador` morreu com "Claude Code process exited with code 1" e o
+   * laço encerrou, levando junto tarefas que não tinham nada a ver. Falha de etapa é quase
+   * sempre transitória; falha SISTÊMICA (cota, SDK, ambiente) é que justifica parar, e o
+   * sinal dela é a sequência.
+   */
+  it("uma etapa que falha tira SÓ aquela tarefa da rodada", async () => {
+    const estados = new Map([
+      ["T-001", "em-teste"],
+      ["T-002", "pronta"],
+    ]);
+    const dep: DependenciasMotor = {
+      lerTarefas: async () =>
+        [...estados].map(([id, status]) => tarefa({ id, status, areas: [`${id}.js`] })),
+      gravarStatus: async (t, s) => estados.set(t.id, s) as unknown as void,
+      anexarVerificacao: async () => {},
+      lerCriteriosDe: async () => "",
+      lerNotasDe: async () => "",
+      temTrabalhoParcial: async () => false,
+      lerPlano: async () => null,
+      gravarMarco: async () => {},
+      commitarGestao: async () => {},
+      despachar: async (p) => {
+        if (p.tarefa.id === "T-001") return { custoUsd: 0.1, concluiu: false };
+        const proximo: Record<string, string> = {
+          pronta: "em-teste",
+          "em-teste": "em-revisao",
+          "em-revisao": "concluida",
+        };
+        estados.set("T-002", proximo[estados.get("T-002") ?? ""] ?? "concluida");
+        return { custoUsd: 0.1, concluiu: true };
+      },
+      log: () => {},
+    };
+
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.etapasFalhas.map((e) => e.tarefa)).toContain("T-001");
+    // A outra tarefa chegou ao fim: a falha não contaminou a rodada.
+    expect(estados.get("T-002")).toBe("concluida");
+    expect(rel.encerrouPor).toBe("sem-trabalho");
+  });
+
+  it("3 falhas SEGUIDAS encerram — aí é sistêmico", async () => {
+    const { dep } = mundo([
+      tarefa({ id: "T-001", areas: ["a.js"] }),
+      tarefa({ id: "T-002", areas: ["b.js"] }),
+      tarefa({ id: "T-003", areas: ["c.js"] }),
+      tarefa({ id: "T-004", areas: ["d.js"] }),
+    ]);
+    dep.despachar = async () => ({ custoUsd: 0.1, concluiu: false });
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.encerrouPor).toBe("agente-cortado");
+    expect(rel.etapasFalhas).toHaveLength(3);
+  });
+
+  it("sucesso no meio ZERA a sequência — falhas espalhadas não param a rodada", async () => {
+    const estados = new Map([
+      ["T-001", "pronta"],
+      ["T-002", "pronta"],
+      ["T-003", "pronta"],
+    ]);
+    let n = 0;
+    const dep: DependenciasMotor = {
+      lerTarefas: async () =>
+        [...estados].map(([id, status]) => tarefa({ id, status, areas: [`${id}.js`] })),
+      gravarStatus: async (t, s) => estados.set(t.id, s) as unknown as void,
+      anexarVerificacao: async () => {},
+      lerCriteriosDe: async () => "",
+      lerNotasDe: async () => "",
+      temTrabalhoParcial: async () => false,
+      lerPlano: async () => null,
+      gravarMarco: async () => {},
+      commitarGestao: async () => {},
+      despachar: async (p) => {
+        n += 1;
+        // Falha alternada: nunca 3 seguidas.
+        if (n % 2 === 1) return { custoUsd: 0.1, concluiu: false };
+        const proximo: Record<string, string> = {
+          pronta: "em-teste",
+          "em-teste": "em-revisao",
+          "em-revisao": "concluida",
+        };
+        estados.set(p.tarefa.id, proximo[estados.get(p.tarefa.id) ?? ""] ?? "concluida");
+        return { custoUsd: 0.1, concluiu: true };
+      },
+      log: () => {},
+    };
+
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.encerrouPor).not.toBe("agente-cortado");
   });
 });

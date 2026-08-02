@@ -108,28 +108,26 @@ export function lerCriterios(secao: string): Criterio[] {
     const m = /^\s*[-*]\s*\[( |x|X)\]\s*(.+?)\s*$/.exec(linhas[i] ?? "");
     if (m === null) continue;
 
-    // O comando pode vir na mesma linha ou nas seguintes, enquanto elas forem continuação
-    // indentada (o planejador quebra linha o tempo todo, e o parser de markdown da casa já
-    // aprendeu isso do jeito difícil).
+    // O critério e o comando podem ocupar VÁRIAS linhas: o planejador quebra linha o tempo
+    // todo, e a continuação vem indentada. A primeira versão lia só a linha do `- [ ]`, e
+    // numa rodada real isso truncou 11 critérios no meio da frase ("emite ao jogador da vez
+    // uma") — inclusive no relatório que o verificador lê para saber o que julgar.
+    const partes: string[] = [m[2] ?? ""];
     let comando: string | null = null;
-    const naMesma = /`verificar:\s*([^`]+)`/.exec(m[2] ?? "");
-    if (naMesma !== null) comando = (naMesma[1] ?? "").trim();
-    else {
-      for (let j = i + 1; j < linhas.length; j++) {
-        const linha = linhas[j] ?? "";
-        if (/^\s*[-*]\s*\[/.test(linha)) break; // próximo critério
-        if (linha.trim() === "") continue;
-        if (!/^\s+/.test(linha)) break; // saiu da continuação indentada
-        const cont = /`verificar:\s*([^`]+)`/.exec(linha);
-        if (cont !== null) {
-          comando = (cont[1] ?? "").trim();
-          break;
-        }
-      }
+    for (let j = i + 1; j < linhas.length; j++) {
+      const linha = linhas[j] ?? "";
+      if (/^\s*[-*]\s*\[/.test(linha)) break; // próximo critério
+      if (linha.trim() === "") continue;
+      if (!/^\s+/.test(linha)) break; // saiu da continuação indentada
+      partes.push(linha.trim());
     }
 
+    const inteiro = partes.join(" ");
+    const cmd = /`verificar:\s*([^`]+)`/.exec(inteiro);
+    if (cmd !== null) comando = (cmd[1] ?? "").trim();
+
     criterios.push({
-      texto: (m[2] ?? "").replace(/`verificar:[^`]*`/, "").trim(),
+      texto: inteiro.replace(/`verificar:[^`]*`/, "").replace(/\s+/g, " ").trim(),
       comando,
       marcado: (m[1] ?? " ").toLowerCase() === "x",
     });

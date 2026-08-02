@@ -235,6 +235,12 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
         : `Marco da fase "${m.fase}": ${m.veredicto.toUpperCase()}.`,
     );
   }
+  if (r.etapasFalhas.length > 0) {
+    linhas.push(
+      'Etapas que falharam (tarefa fora desta rodada, as outras seguiram): ' +
+        r.etapasFalhas.map((e) => e.tarefa + ' no ' + e.agente).join('; ') + '.',
+    );
+  }
   if (r.documentou) linhas.push("Documentação atualizada.");
   if (r.criteriosExecutados > 0) {
     linhas.push(

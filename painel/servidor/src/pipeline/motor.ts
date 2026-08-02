@@ -133,6 +133,8 @@ export interface RelatorioMotor {
   marcos: { fase: string; veredicto: VeredictoMarco }[];
   /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
   saneadas: string[];
+  /** Etapas que falharam (agente sem resultado). A tarefa sai da rodada; as outras seguem. */
+  etapasFalhas: { tarefa: string; agente: string }[];
   /** O documentador rodou? */
   documentou: boolean;
   /** Por que o laço parou. */
@@ -166,6 +168,16 @@ const MIN_TAREFAS_PARA_DOCUMENTAR = 3;
 const MAX_DESPACHOS_POR_TAREFA = 12;
 
 /**
+ * Falhas de etapa EM SEQUÊNCIA que caracterizam problema sistêmico (cota, SDK, ambiente).
+ *
+ * Uma falha isolada é quase sempre transitória e não deve levar a rodada junto: numa rodada
+ * real o `testador` morreu com erro de processo e o laço encerrou, deixando 7 tarefas que
+ * não tinham nada a ver paradas. Três seguidas, sem nenhum sucesso no meio, já é outra
+ * história — aí insistir só queima despacho.
+ */
+const MAX_FALHAS_SEGUIDAS = 3;
+
+/**
  * Roda o pipeline até acabar o trabalho, o orçamento, ou algo dar errado.
  *
  * A ordem dentro de uma volta importa e não é arbitrária:
@@ -188,6 +200,7 @@ export async function rodarPipeline(
     criteriosExecutados: 0,
     marcos: [],
     saneadas: [],
+    etapasFalhas: [],
     documentou: false,
     encerrouPor: "sem-trabalho",
     orcamento: ctx.orcamento,
@@ -201,6 +214,8 @@ export async function rodarPipeline(
   const emCircuito = new Set<string>();
   /** Fases cujo marco já foi repetido uma vez por veredito ilegível. */
   const marcosRetentados = new Set<string>();
+  /** Etapas que falharam EM SEQUÊNCIA. Zera a cada sucesso. Ver `MAX_FALHAS_SEGUIDAS`. */
+  let falhasSeguidas = 0;
   let orcamento = ctx.orcamento;
 
   // ---- SANEAMENTO DE ABERTURA ------------------------------------------------------
@@ -470,13 +485,36 @@ export async function rodarPipeline(
     orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
     if (passo.papel === "revisor") orcamento = registrarTarefaConcluida(orcamento, r.custoUsd);
 
-    // Agente sem resultado = foi cortado. Continuar seria empilhar trabalho em cima de
-    // estado desconhecido, que é como se produz reprovação falsa.
+    // Agente sem resultado = foi cortado. A tarefa dele sai de circulação (continuar nela
+    // seria empilhar trabalho sobre estado desconhecido), mas **a rodada segue nas outras**.
+    //
+    // A primeira versão encerrava tudo. Numa rodada real o `testador` morreu com um erro do
+    // processo e levou junto 7 tarefas que não tinham nada a ver — uma falha pontual, quase
+    // sempre transitória, custando a rodada inteira.
+    //
+    // Falha SISTÊMICA é outra coisa: cota acabada, SDK quebrado, disco cheio. Aí insistir só
+    // queima despacho, e o sinal é a sequência — falhas seguidas, sem nenhum sucesso no meio.
     if (!r.concluiu) {
-      dep.log("erro", `${agente.nome} não devolveu resultado — encerrando o laço.`);
-      rel.encerrouPor = "agente-cortado";
-      break;
+      falhasSeguidas += 1;
+      emCircuito.add(passo.tarefa.id);
+      rel.etapasFalhas.push({ tarefa: passo.tarefa.id, agente: agente.nome });
+      if (falhasSeguidas >= MAX_FALHAS_SEGUIDAS) {
+        dep.log(
+          "erro",
+          `${falhasSeguidas} etapas falharam em sequência — parece falha sistêmica (cota,` +
+            " SDK, ambiente). Encerrando para não queimar despacho.",
+        );
+        rel.encerrouPor = "agente-cortado";
+        break;
+      }
+      dep.log(
+        "erro",
+        `${agente.nome} não devolveu resultado em ${passo.tarefa.id} — tarefa fora desta` +
+          " rodada; as outras seguem.",
+      );
+      continue;
     }
+    falhasSeguidas = 0;
 
     // ---- GUARDA DE PROGRESSO ---------------------------------------------------------
     // Quem move o status de uma tarefa é o próprio agente, gravando no arquivo — é o
