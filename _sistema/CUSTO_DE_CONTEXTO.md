@@ -186,12 +186,30 @@ agente `servidor`). Alvo: ≤ 5.
 
 ---
 
-### I2 — Prefixo compartilhado entre despachos  ⬜ PRONTA PARA COMEÇAR
+### I2 — Prefixo compartilhado entre despachos  🟡 PARCIAL em 2026-08-02
 
-**Precede tudo:** o experimento da seção 6. Se ele falhar, esta intervenção morre e as
-outras três seguem valendo.
+**Feito, e vale independente do experimento:**
+- `systemPrompt: { preset: "claude_code", excludeDynamicSections: true }` no runner. Sem
+  isso não existe prefixo estável — cwd e git status entram no systemPrompt, e o git status
+  muda a CADA commit de tarefa. O próprio `sdk.d.ts` rotula a opção como *"Cacheable prompt
+  for multi-user fleets"*. Há teste sobre as `options` que chegam ao SDK, porque as falhas
+  desta família nesta base foram todas mudas.
+- `agentes-dinamicos.ts` deixou de mandar `tools` (o SDK faz herdar do pai). O bloco de
+  definições vem ANTES do systemPrompt na chave de cache: enquanto dois agentes declararem
+  listas diferentes, **nada depois delas pode ser compartilhado**. Restrição como guarda de
+  segurança continua nos agentes de disco (o `revisor` não tem `Write`), que não passam por
+  aí.
+- `contexto/montador.ts` produz o bloco `compartilhado` byte-idêntico por projeto — com o
+  cabeçalho volátil do MAPA removido, que era a armadilha anunciada abaixo.
 
-**O que mudar**
+**O que falta, e por que não foi feito:** pôr o bloco compartilhado no prefixo de cada
+subagente. Isso **não é alcançável enquanto o orquestrador for um modelo** — `AgentDefinition.prompt`
+é `string` e quem monta o despacho é o modelo, não o painel. Prefixar o bloco a todo agente
+do `options.agents` foi considerado e REJEITADO: com 6 agentes × ~7k, o risco de inflar o
+contexto do orquestrador em ~42k é maior que o ganho. **A I2 completa depende da I3 ligada**
+— é lá que cada despacho vira uma `query()` cujo prefixo o painel controla.
+
+**O que mudar (quando a I3 estiver ligada)**
 1. `painel/servidor/src/acoes/agentes-dinamicos.ts` — **omitir `tools`** em toda
    `AgentDefinition` (o SDK documenta: "se omitido, herda todas as ferramentas do pai").
    Alinhar também os agentes de disco: hoje `revisor` não tem `Write` e `executor` tem 10
@@ -223,7 +241,24 @@ segundo com `cacheEscrita` ≈ só a parte específica dele. O painel já grava 
 
 ---
 
-### I3 — Orquestrador determinístico  ⬜ PRONTA PARA COMEÇAR
+### I3 — Orquestrador determinístico  🟡 NÚCLEO FEITO em 2026-08-02, não ligado
+
+**Feito e testado** (`pipeline/`, 60 testes):
+- `maquina.ts` — decisões puras: promover, ordenar, paralelismo (verificador roda sozinho,
+  3 construtores com `areas` disjuntas), resolver agente pelos 3 passos, escalonamento por
+  `tentativas`, bloqueio e autocorreção.
+- `orcamento.ts` + runner — **o freio, e este JÁ está no ar** para todo job do painel. Três
+  decisões, e a do meio é a que faltava: `nao-iniciar` impede COMEÇAR um ciclo que não dá
+  para terminar. Nunca corta agente em voo. Teto atingido retorna `motivo: "teto-custo"` em
+  vez de lançar — parar no orçamento é o sistema funcionando, não falha. Valores por ação em
+  `guardrails.ts`, com teste travando o consumo até `params.tetoUsd`.
+- `motor.ts` — o laço, com dependências injetadas e 14 testes.
+
+**Falta ligar:** um `RunnerPipeline` registrado em `inicializar.ts` e o `/trabalhar`
+passando a usá-lo. Deixado deliberadamente fora: é a troca que muda o caminho quente da
+fábrica, e trocar isso sem alguém acordado para ver a primeira rodada seria imprudente.
+
+**Referência do desenho original:**
 
 **Medido no `7a1f9a45`:** o orquestrador consumiu 36 voltas, 106k de escrita e 2,44M de
 leitura = **US$ 1,29, 17% do job** — para fazer o que é uma máquina de estados.
@@ -255,7 +290,21 @@ instrumento errado.
 
 ---
 
-### I4 — Revisor sem o projeto  ⬜ PRONTA PARA COMEÇAR
+### I4 — Revisor sem o projeto  🟡 MONTADOR FEITO em 2026-08-02, não ligado
+
+`contexto/montador.ts` já implementa a regra por papel — e generalizada, que é o pedido do
+Enzo de 02/08 ("um escalonador que indica o contexto de cada agente"): `construtor` e
+`verificador` recebem o conteúdo das `areas`; `revisor` recebe o **diff e nenhum fonte**;
+`planejador` não recebe fonte. Teto de 60 kB por bloco, porque conteúdo que o agente não usa
+é PIOR que ausente (é relido a cada volta). `areas` vem de um modelo, então travessia de
+caminho é barrada.
+
+O que o torna determinístico e não palpite: **a tarefa já declara o que vai tocar**. Não há
+adivinhação — e o que o montador não previu, o agente lê com `Read`: degrada, não quebra.
+
+**Falta ligar**, pelo mesmo motivo da I2: quem monta o despacho hoje é o modelo.
+
+**Referência do desenho original:**
 
 O revisor julga o DIFF; hoje carrega o mesmo contexto de quem escreve o código. Com MAPA +
 diff + arquivo da tarefa, o contexto cai de ~35k para ~15k, em 3 despachos por job.
@@ -270,7 +319,28 @@ linha de base (1,78M / 3 despachos ≈ 594k).
 
 ---
 
-### I5 — Critérios de aceite com forma executável  ⬜ PRONTA PARA COMEÇAR
+### I5 — Critérios de aceite com forma executável  ✅ FEITO em 2026-08-02
+
+`pipeline/criterios.ts` (20 testes) + template de tarefa + `planejador` + `testador`.
+
+O planejador escreve `` `verificar: <comando>` `` sob o critério; a fábrica executa de graça
+e anexa o resultado no formato da escada de `DOMINIOS.md`, fechando com `Graus de prova:`.
+Critério que falha na passada mecânica volta direto ao construtor, **sem pagar ~US$ 0,50 de
+despacho para confirmar o óbvio**. O `testador` foi instruído a NÃO reexecutar o que já
+saiu `[executado]`.
+
+Régua declarada no template e no prompt: não é "dá para automatizar", é **"a automação
+responde à MESMA pergunta"** — `grep` que acha a string no bundle não prova que a tela ficou
+boa, e isso já deu tarefa dada por pronta duas vezes aqui.
+
+Segurança, porque o comando vem de arquivo escrito por um modelo: allowlist de binário
+(nunca lista de proibições — `ext::` na URL de remoto já ensinou), recusa de encadeamento e
+substituição de shell, `git` só em leitura, confinado ao projeto. Recusado vira
+`nao-executado` e vai para o verificador: **nunca aprova por omissão**.
+
+O motor da I3 já o consome; no caminho atual ele ainda não roda automaticamente.
+
+**Referência do desenho original:**
 
 O `planejador` passa a escrever, ao lado do critério em prosa, o comando e o resultado
 esperado **quando existir**. O painel executa os mecânicos de graça e o verificador só é
@@ -292,12 +362,22 @@ graça). Sem a I3, ainda ajuda: o verificador gasta menos voltas descobrindo COM
 
 ### Projeção acumulada
 
-| | US$/job | US$/tarefa | |
+| | US$/job | US$/tarefa | estado em 2026-08-02 |
 |---|---|---|---|
 | linha de base | 7,45 | 2,14 | medido |
-| I1 | ~3,4 | ~1,0 | **feito**, a confirmar no próximo job |
-| I1+I2 | ~2,1 | ~0,60 | |
-| I1+I2+I3..I5 | ~1,5–1,8 | ~0,45–0,55 | |
+| I1 | ~3,4 | ~1,0 | **no ar**, a confirmar no próximo job |
+| I1+I2 | ~2,1 | ~0,60 | parcial — o que sobra depende da I3 ligada |
+| I1+I2+I3..I5 | ~1,5–1,8 | ~0,45–0,55 | núcleo pronto e testado, falta ligar |
+
+**O que já está no ar hoje, sem depender de mais nada:** a I1 (MAPA), o
+`excludeDynamicSections`, a unificação de ferramentas dos especialistas e o **teto de custo
+com parada limpa** — este último não corta custo por tarefa, mas acaba com a classe de falha
+que respondia por 10 dos 10 jobs falhos da fábrica.
+
+**O que está construído e testado mas NÃO ligado:** motor do pipeline, montador de contexto
+e a passada mecânica de critérios. Ligar é um `RunnerPipeline` registrado em
+`inicializar.ts` mais o `/trabalhar` apontando para ele. Ficou de fora de propósito: é a
+troca que muda o caminho quente da fábrica, e a primeira rodada precisa de alguém olhando.
 
 **−75% no cenário completo, −54% só com a I1.** As duas primeiras casas decimais são falsa
 precisão; o que a medição sustenta é a ordem de grandeza e o ranking.
