@@ -186,7 +186,7 @@ agente `servidor`). Alvo: ≤ 5.
 
 ---
 
-### I2 — Prefixo compartilhado entre despachos  🟡 PARCIAL em 2026-08-02
+### I2 — Prefixo compartilhado entre despachos  ✅ FEITO em 2026-08-02
 
 **Feito, e vale independente do experimento:**
 - `systemPrompt: { preset: "claude_code", excludeDynamicSections: true }` no runner. Sem
@@ -202,14 +202,14 @@ agente `servidor`). Alvo: ≤ 5.
 - `contexto/montador.ts` produz o bloco `compartilhado` byte-idêntico por projeto — com o
   cabeçalho volátil do MAPA removido, que era a armadilha anunciada abaixo.
 
-**O que falta, e por que não foi feito:** pôr o bloco compartilhado no prefixo de cada
-subagente. Isso **não é alcançável enquanto o orquestrador for um modelo** — `AgentDefinition.prompt`
-é `string` e quem monta o despacho é o modelo, não o painel. Prefixar o bloco a todo agente
-do `options.agents` foi considerado e REJEITADO: com 6 agentes × ~7k, o risco de inflar o
-contexto do orquestrador em ~42k é maior que o ganho. **A I2 completa depende da I3 ligada**
-— é lá que cada despacho vira uma `query()` cujo prefixo o painel controla.
+**RESOLVIDO pela I3.** A parte que faltava — pôr o bloco compartilhado no prefixo de cada
+etapa — não era alcançável enquanto o orquestrador fosse um modelo (`AgentDefinition.prompt`
+é `string`, e quem montava o despacho era o modelo). Com o pipeline em código cada etapa é
+uma `query()` que o painel monta por inteiro: mesmo `systemPrompt`, mesmas ferramentas, e o
+bloco compartilhado abrindo a mensagem. Há teste travando que as três coisas são idênticas
+entre etapas.
 
-**O que mudar (quando a I3 estiver ligada)**
+**Referência do desenho original:**
 1. `painel/servidor/src/acoes/agentes-dinamicos.ts` — **omitir `tools`** em toda
    `AgentDefinition` (o SDK documenta: "se omitido, herda todas as ferramentas do pai").
    Alinhar também os agentes de disco: hoje `revisor` não tem `Write` e `executor` tem 10
@@ -241,7 +241,7 @@ segundo com `cacheEscrita` ≈ só a parte específica dele. O painel já grava 
 
 ---
 
-### I3 — Orquestrador determinístico  🟡 NÚCLEO FEITO em 2026-08-02, não ligado
+### I3 — Orquestrador determinístico  ✅ FEITO E LIGADO em 2026-08-02
 
 **Feito e testado** (`pipeline/`, 60 testes):
 - `maquina.ts` — decisões puras: promover, ordenar, paralelismo (verificador roda sozinho,
@@ -254,9 +254,22 @@ segundo com `cacheEscrita` ≈ só a parte específica dele. O painel já grava 
   `guardrails.ts`, com teste travando o consumo até `params.tetoUsd`.
 - `motor.ts` — o laço, com dependências injetadas e 14 testes.
 
-**Falta ligar:** um `RunnerPipeline` registrado em `inicializar.ts` e o `/trabalhar`
-passando a usá-lo. Deixado deliberadamente fora: é a troca que muda o caminho quente da
-fábrica, e trocar isso sem alguém acordado para ver a primeira rodada seria imprudente.
+**LIGADO.** `RunnerPipeline` registrado em `inicializar.ts`; `/trabalhar <projeto>` gera job
+do tipo `pipeline`. `/trabalhar` sem projeto continua no modelo (varrer a fábrica e escolher
+entre projetos é orquestração, não máquina de estados), e `motor: "modelo"|"codigo"`
+sobrescreve nos dois sentidos.
+
+**A peça que destravou:** o painel LÊ `.claude/agents/<nome>.md` e usa aquilo como prompt da
+própria `query()`. Some o intermediário — a etapa deixa de ser "peça ao orquestrador que
+chame o executor" e passa a ser "rode o executor". A fonte continua sendo o mesmo arquivo do
+chat interativo, então não há prompt duplicado.
+
+**Três propriedades que vieram de graça:**
+- **não existe agente abandonado** — quem chama é um `for await` dentro de um `await`; o bug
+  de 30/07 e 01/08 fica impossível por construção, não por regra no prompt;
+- **o agente não pode despachar subagente** — `Agent`/`Task` não estão na lista de
+  ferramentas; "subagentes não criam subagentes" vira ausência de ferramenta;
+- **teto de custo com parada limpa** passa a valer por etapa, com fronteira natural.
 
 **Referência do desenho original:**
 
@@ -290,7 +303,7 @@ instrumento errado.
 
 ---
 
-### I4 — Revisor sem o projeto  🟡 MONTADOR FEITO em 2026-08-02, não ligado
+### I4 — Revisor sem o projeto  ✅ FEITO em 2026-08-02
 
 `contexto/montador.ts` já implementa a regra por papel — e generalizada, que é o pedido do
 Enzo de 02/08 ("um escalonador que indica o contexto de cada agente"): `construtor` e
@@ -302,7 +315,8 @@ caminho é barrada.
 O que o torna determinístico e não palpite: **a tarefa já declara o que vai tocar**. Não há
 adivinhação — e o que o montador não previu, o agente lê com `Read`: degrada, não quebra.
 
-**Falta ligar**, pelo mesmo motivo da I2: quem monta o despacho hoje é o modelo.
+**LIGADO** junto com a I3. Medido na simulação contra a fábrica real: o revisor sai com
+0 arquivos embutidos, contra 2–3 do construtor da mesma tarefa.
 
 **Referência do desenho original:**
 
@@ -338,7 +352,12 @@ Segurança, porque o comando vem de arquivo escrito por um modelo: allowlist de 
 substituição de shell, `git` só em leitura, confinado ao projeto. Recusado vira
 `nao-executado` e vai para o verificador: **nunca aprova por omissão**.
 
-O motor da I3 já o consome; no caminho atual ele ainda não roda automaticamente.
+**LIGADO** e com um reforço que não estava no plano: além dos `verificar:` escritos nas
+tarefas, o motor roda como critério IMPLÍCITO a suíte do projeto, detectada pelo mesmo
+`ci/ecossistemas.ts` do CI (Node, Python, Go, Rust, .NET, Maven, Gradle). "A suíte continua
+passando" nunca esteve escrito em tarefa nenhuma e mesmo assim era executado em TODA
+verificação — era o passo 3 do `testador`. Agora sai de graça, para qualquer stack, sem
+depender de o planejador lembrar de escrever nada.
 
 **Referência do desenho original:**
 

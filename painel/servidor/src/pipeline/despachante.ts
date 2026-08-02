@@ -124,11 +124,11 @@ export function criarDespachante(
     ].join("\n");
 
     const modelo = pedido.modelo ?? agente.modelo ?? o.modeloFluxo;
+    const tokens = ctx.medida.compartilhadoTok + ctx.medida.especificoTok;
     o.emitir(
       "info",
-      `${pedido.tarefa.id} · ${papel} · ${pedido.agente} · ${modelo} · contexto ` +
-        `${ctx.medida.compartilhadoTok + ctx.medida.especificoTok}k/4 tok ` +
-        `(${ctx.medida.arquivosIncluidos.length} arquivo(s) embutido(s))`,
+      `${pedido.tarefa.id} · ${papel} · ${pedido.agente} · ${modelo} · ~${tokens} tok de ` +
+        `contexto (${ctx.medida.arquivosIncluidos.length} arquivo(s) embutido(s))`,
     );
 
     const consulta = o.consulta({

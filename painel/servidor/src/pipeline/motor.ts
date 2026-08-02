@@ -10,6 +10,7 @@ import {
   type Trilha,
 } from "./maquina.js";
 import {
+  criterioDaSuite,
   executarCriterios,
   lerCriterios,
   relatorioCriterios,
@@ -87,6 +88,11 @@ export interface DependenciasMotor {
 
 export interface ContextoMotor {
   dirProjeto: string;
+  /**
+   * Comando de teste do projeto, vindo da detecção de ecossistema do CI. Vira um critério
+   * IMPLÍCITO da passada mecânica — ver `criterioDaSuite`. `null` desliga.
+   */
+  comandoTestes?: string | null;
   projeto: string;
   trilha: Trilha;
   equipe: Parameters<typeof resolverAgente>[2];
@@ -282,7 +288,10 @@ async function passadaMecanica(
   dep: DependenciasMotor,
 ): Promise<ResultadoCriterio[]> {
   const secao = await dep.lerCriteriosDe(passo.tarefa);
-  const criterios = lerCriterios(secao);
+  const suite = criterioDaSuite(ctx.comandoTestes ?? null);
+  // A suíte vai PRIMEIRO: se ela quebrou, o resto do relatório é ruído — o construtor
+  // precisa ver isso na primeira linha.
+  const criterios = [...(suite !== null ? [suite] : []), ...lerCriterios(secao)];
   if (!criterios.some((c) => c.comando !== null)) return [];
 
   const resultados = await executarCriterios(criterios, ctx.dirProjeto);

@@ -143,6 +143,30 @@ genérico de verdade.
    rodando**. É dela que depende todo o resto, e na trilha genérica é ela que decide se o
    portão do meio vai existir.
 
+## Dois motores para o mesmo pipeline (desde 2026-08-02)
+
+O ciclo abaixo é o mesmo; quem o CONDUZ depende de como o trabalho foi disparado:
+
+| disparo | motor | quem decide a ordem |
+|---|---|---|
+| `/trabalhar <projeto>` **pelo painel** | pipeline em CÓDIGO (`RunnerPipeline`) | máquina de estados |
+| `/trabalhar` sem projeto, ou este chat | você, o orquestrador | você |
+
+**O que o motor em código faz:** promove tarefa cujas dependências fecharam, ordena pelo
+paralelismo, resolve o agente pelos 3 passos, escala o modelo por `tentativas`, roda os
+critérios executáveis, despacha cada etapa como uma chamada própria e move os status. Ele
+existe porque tudo isso é regra escrita, e regra escrita executada por modelo custava
+US$ 1,29 por job (17%) e falhava de formas que código não falha.
+
+**O que ele NÃO faz, e continua sendo seu:** replanejar, julgar marco de fase, decidir que
+uma tarefa é trivial o bastante para pular o teste, redigir o log do dia. Ele SINALIZA e o
+relatório diz o que ficou para decisão. **A fronteira é: cabe num teste? então é código.**
+
+Para você isso muda pouco — no chat interativo você continua conduzindo o pipeline etapa
+por etapa, como sempre. Muda o que você deve ESPERAR ao ler um job do painel: ali não há
+orquestrador-modelo, e um `/trabalhar <projeto>` que parou traz o motivo pronto
+(`sem-trabalho`, `orcamento`, `agente-cortado`, `sem-progresso`).
+
 ## Pipeline de cada tarefa
 
 ```

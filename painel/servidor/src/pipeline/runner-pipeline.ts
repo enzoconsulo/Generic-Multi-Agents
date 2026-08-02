@@ -8,6 +8,7 @@ import type { TarefaResumo } from "../fabrica/tipos.js";
 import { criarDespachante } from "./despachante.js";
 import { rodarPipeline, type DependenciasMotor, type RelatorioMotor } from "./motor.js";
 import { trilhaDe } from "./maquina.js";
+import { detectarEcossistema } from "../ci/ecossistemas.js";
 import { novoOrcamento } from "./orcamento.js";
 
 /**
@@ -63,11 +64,17 @@ export class RunnerPipeline implements Runner {
 
     const equipe = await lerEquipe(p.raiz, p.projeto);
     const trilha = trilhaDe(equipe);
+    // Comando de teste do projeto, pela mesma detecção que o CI usa. Vira o critério
+    // implícito da passada mecânica: a suíte é o que o verificador roda em TODA tarefa, e
+    // rodar comando não deveria custar um despacho de modelo.
+    const eco = await detectarEcossistema(dirProjeto);
+    const comandoTestes = eco?.comandos.testes ?? null;
     ctx.emitir("log", {
       nivel: "inicio",
       texto:
         `Pipeline em código · projeto ${p.projeto} · trilha ${trilha} · modelo ${p.modelo}` +
-        `${p.tetoUsd !== undefined ? ` · teto US$ ${p.tetoUsd.toFixed(2)}` : " · SEM teto"}`,
+        `${p.tetoUsd !== undefined ? ` · teto US$ ${p.tetoUsd.toFixed(2)}` : " · SEM teto"}` +
+        `${comandoTestes !== null ? ` · suíte: \`${comandoTestes}\`` : " · sem suíte detectada"}`,
     });
 
     const despachar = criarDespachante({
@@ -118,6 +125,7 @@ export class RunnerPipeline implements Runner {
         dirProjeto,
         projeto: p.projeto,
         trilha,
+        comandoTestes,
         equipe,
         // Vazio de propósito: neste caminho NÃO existem subagentes injetados. O especialista
         // chega como "genérico + prompt colado" (passo 3 da resolução), que é uniforme e é

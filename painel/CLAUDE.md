@@ -93,11 +93,37 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
   placeholders é criado na fundação para as tarefas de UI só tocarem a própria pasta.
 - Raiz da fábrica resolvida a partir da localização do painel (`../../`), sobrescrevível
   por env `FABRICA_RAIZ` (testes usam fábricas falsas em pastas temporárias).
-- O painel NUNCA escreve status de tarefa/projeto: quem escreve nos arquivos da fábrica
-  são os fluxos Claude disparados; exceções deliberadas: `_gestao/ANALISE.md` (via job de
-  análise), `_gestao/ci.json` (editor de CI), `_gestao/equipe.json` (editor de equipe,
-  T-035) e a importação de projetos.
+- O painel escreve POUCO nos arquivos da fábrica: quem escreve são os fluxos Claude
+  disparados. Exceções deliberadas: `_gestao/ANALISE.md` (job de análise), `_gestao/ci.json`
+  (editor de CI), `_gestao/equipe.json` (editor de equipe, T-035), a importação de projetos
+  e — desde 02/08 — o **motor do pipeline**, que grava `pronta` (promoção) e `bloqueada`
+  (esgotamento) via `fabrica/escrita-tarefas.ts`. São os dois pontos que a máquina de
+  estados decide; todo o resto do arquivo continua sendo dos agentes.
+  A escrita é por substituição de LINHA, nunca parse-e-reserializa: reserializar com
+  `gray-matter` reescreveria aspas, ordem de chaves e formatação do arquivo inteiro, e o
+  diff da tarefa viraria ruído — matando a revisão humana, que é o principal uso do arquivo.
 - Textos de UI e mensagens de erro sempre em PT-BR.
+
+## O pipeline em código (T-051, 02/08)
+
+`/trabalhar <projeto>` **não passa mais por um orquestrador-modelo**. Vira um job do tipo
+`pipeline` (`src/pipeline/runner-pipeline.ts`), e o laço é código:
+
+- `pipeline/maquina.ts` — decisões puras (promover, ordenar, resolver agente, escalar
+  modelo). `pipeline/motor.ts` — o laço. `pipeline/orcamento.ts` — teto com parada limpa.
+- `pipeline/despachante.ts` — cada etapa vira UMA `query()` que o painel monta por inteiro.
+  O prompt do agente vem de `.claude/agents/<nome>.md`, o MESMO arquivo do chat interativo.
+- `contexto/montador.ts` — decide o que cada papel recebe: construtor/verificador levam o
+  conteúdo das `areas`; **revisor leva o diff e nenhum fonte**; planejador não leva fonte.
+- `pipeline/criterios.ts` — roda os `verificar:` das tarefas e, implicitamente, a suíte do
+  projeto (via `ci/ecossistemas.ts`) antes de despachar o verificador.
+
+**Para conferir sem gastar:** `npx tsx integracao/simular-pipeline.ts <projeto>` roda tudo
+contra os arquivos reais com um SDK falso e imprime o que aconteceria. Medido no
+banco-imobiliario: ~10,4k tokens de contexto por etapa, contra ~53,5k do caminho antigo.
+
+`/trabalhar` SEM projeto continua no modelo — varrer a fábrica e escolher entre projetos é
+orquestração, não máquina de estados. `motor: "modelo"|"codigo"` no disparo sobrescreve.
 
 ## Armadilhas conhecidas
 Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para descobrir.

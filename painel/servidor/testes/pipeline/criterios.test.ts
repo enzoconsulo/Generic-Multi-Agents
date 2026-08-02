@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   avaliarComando,
   BINARIOS_PERMITIDOS,
+  criterioDaSuite,
   executarCriterios,
   lerCriterios,
   relatorioCriterios,
@@ -196,5 +197,37 @@ describe("reprovouNaMecanica", () => {
         { texto: "b", estado: "nao-executado", comando: null },
       ]),
     ).toBe(false);
+  });
+});
+
+describe("criterioDaSuite — o critério implícito de toda tarefa", () => {
+  /**
+   * "A suíte continua passando" não está escrito em tarefa nenhuma e mesmo assim é
+   * executado em TODA verificação — é o passo 3 do `testador`. A fábrica já pagava por
+   * isso, num despacho de modelo, para rodar um comando. Torná-lo implícito é o que faz a
+   * I5 valer sem depender de o planejador lembrar de escrever `verificar:` em cada tarefa.
+   */
+  it("vira um critério com o comando do ecossistema", () => {
+    const c = criterioDaSuite("npm test");
+    expect(c?.comando).toBe("npm test");
+    expect(c?.texto).toContain("suíte");
+  });
+
+  it("funciona para qualquer stack, não só Node", () => {
+    expect(criterioDaSuite("pytest")?.comando).toBe("pytest");
+    expect(criterioDaSuite("go test ./...")?.comando).toBe("go test ./...");
+    expect(criterioDaSuite("cargo test")?.comando).toBe("cargo test");
+  });
+
+  // Ecossistema sem comando de teste: não há o que rodar, e o verificador julga como sempre.
+  it("sem comando de teste, não inventa critério", () => {
+    expect(criterioDaSuite(null)).toBeNull();
+    expect(criterioDaSuite("")).toBeNull();
+    expect(criterioDaSuite("   ")).toBeNull();
+  });
+
+  it("o comando passa pela mesma allowlist dos demais", () => {
+    const c = criterioDaSuite("npm test");
+    expect(avaliarComando(c?.comando ?? "").ok).toBe(true);
   });
 });

@@ -254,3 +254,29 @@ export function relatorioCriterios(resultados: readonly ResultadoCriterio[]): st
 export function reprovouNaMecanica(resultados: readonly ResultadoCriterio[]): boolean {
   return resultados.some((r) => r.estado === "falhou");
 }
+
+/**
+ * Critério IMPLÍCITO que vale para toda tarefa de software: **a suíte do projeto continua
+ * passando.**
+ *
+ * Não está escrito em tarefa nenhuma e mesmo assim é executado em TODA verificação — é o
+ * passo 3 do `testador` ("Rode a suíte completa do projeto. A tarefa não pode ter quebrado
+ * o que já existia"). Ou seja: a fábrica já paga por isso a cada tarefa, num despacho de
+ * modelo, para rodar um comando.
+ *
+ * Torná-lo implícito aqui é o que faz a I5 valer sem depender de o planejador lembrar de
+ * escrever `verificar:` em cada tarefa — e vale para qualquer stack, porque o comando sai
+ * da detecção de ecossistema que o CI já usa (Node, Python, Go, Rust, .NET, Maven, Gradle).
+ *
+ * `null` quando o ecossistema não tem comando de teste: aí não há o que rodar, e o
+ * verificador julga como sempre.
+ */
+export function criterioDaSuite(comandoTestes: string | null): Criterio | null {
+  const cmd = (comandoTestes ?? "").trim();
+  if (cmd === "") return null;
+  return {
+    texto: "A suíte do projeto continua passando (não quebrou o que já existia)",
+    comando: cmd,
+    marcado: false,
+  };
+}
