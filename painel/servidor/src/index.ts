@@ -1,6 +1,36 @@
+import { appendFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { criarApp } from "./app.js";
 import { config, fabricaRaizExiste } from "./config.js";
 import { inicializarPainel } from "./inicializar.js";
+
+/**
+ * CONTENÇÃO DE QUEDA. Sem isto, QUALQUER exceção assíncrona sem dono — um `res.write` num
+ * SSE cujo socket morreu, um `error` de stream sem listener, uma promessa rejeitada fora de
+ * cadeia — derruba o processo INTEIRO, em silêncio. Custo real: o job em voo é cortado no
+ * meio, e como o `<id>.log.jsonl` só é gravado no assentamento, ele nem log deixa. Foi assim
+ * que os jobs `67de2cb4` e `57cb7ac9` (08/08) sumiram sem uma linha de diagnóstico.
+ *
+ * Decisão deliberada: **registrar e SEGUIR**, em vez do `process.exit(1)` que a convenção
+ * recomenda. O painel é cockpit local de um usuário só, e aqui a troca é assimétrica —
+ * morrer destrói trabalho de agente já pago e sem evidência; seguir num estado talvez
+ * degradado, mas com o rastro em disco, é estritamente melhor. O rastro vai para
+ * `dados/quedas.log` justamente porque o console fecha junto com a janela.
+ */
+function registrarQueda(tipo: string, erro: unknown): void {
+  const detalhe = erro instanceof Error ? (erro.stack ?? erro.message) : String(erro);
+  const linha = `\n[${new Date().toISOString()}] ${tipo}\n${detalhe}\n`;
+  console.error(`[queda] ${tipo}: ${detalhe}`);
+  try {
+    mkdirSync(config.dirDados, { recursive: true });
+    appendFileSync(join(config.dirDados, "quedas.log"), linha, "utf8");
+  } catch {
+    // Se nem o log de queda dá para gravar, o console acima já é o que temos.
+  }
+}
+
+process.on("uncaughtException", (erro) => registrarQueda("uncaughtException", erro));
+process.on("unhandledRejection", (motivo) => registrarQueda("unhandledRejection", motivo));
 
 const app = await criarApp();
 

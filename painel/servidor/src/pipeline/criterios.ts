@@ -33,6 +33,7 @@
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { encerrarArvore } from "../ci/processo.js";
 
 const exec = promisify(execFile);
 
@@ -188,25 +189,47 @@ export async function executarCriterios(
       continue;
     }
     const [bin, ...args] = avaliacao.argv;
+    // O timeout é NOSSO, nunca o do `execFile`. O dele manda um SIGTERM só para o filho
+    // DIRETO — que no Windows é o `cmd.exe` do `shell: true` — e deixa `npm`, `node --test`
+    // e um processo por arquivo de teste vivos para sempre. Medido no banco-imobiliario:
+    // 8 `node.exe` órfãos por estouro, cada um segurando um servidor HTTP + Socket.IO. A
+    // suíte roda uma vez por tarefa por ciclo, então uma rodada de `/trabalhar` acumulava
+    // dezenas deles até a máquina (7,9 GB) não sustentar mais o painel — que morria sem
+    // deixar rastro, levando junto o job em voo. Ver `ci/processo.ts`.
+    let estourou = false;
+    const chamada = exec(bin as string, args, {
+      cwd: dirProjeto,
+      maxBuffer: 8 * 1024 * 1024,
+      windowsHide: true,
+      // Windows: `npm` é `npm.cmd` e precisa de shell para resolver. O comando já passou
+      // pela allowlist e pela recusa de metacaracteres, então não há o que injetar aqui.
+      shell: process.platform === "win32",
+    });
+    const cronometro = setTimeout(() => {
+      estourou = true;
+      const pid = chamada.child.pid;
+      if (pid !== undefined) encerrarArvore(pid);
+    }, timeout);
+
     try {
-      const r = await exec(bin as string, args, {
-        cwd: dirProjeto,
-        timeout,
-        maxBuffer: 8 * 1024 * 1024,
-        windowsHide: true,
-        // Windows: `npm` é `npm.cmd` e precisa de shell para resolver. O comando já passou
-        // pela allowlist e pela recusa de metacaracteres, então não há o que injetar aqui.
-        shell: process.platform === "win32",
-      });
+      const r = await chamada;
       saida.push({ texto: c.texto, estado: "passou", comando: c.comando, saida: cortar(r.stdout) });
     } catch (e) {
       const err = e as { stdout?: string; stderr?: string; message?: string };
+      // Estouro é falha de AMBIENTE, não do código da tarefa — dizer isso na saída evita que
+      // o construtor gaste um ciclo caçando um bug que não existe.
+      const detalhe = estourou
+        ? `Comando excedeu o teto de ${Math.round(timeout / 1000)}s e a árvore de processos` +
+          " foi encerrada. Isso é limite de tempo, não necessariamente defeito da tarefa."
+        : `${err.stdout ?? ""}\n${err.stderr ?? err.message ?? ""}`;
       saida.push({
         texto: c.texto,
         estado: "falhou",
         comando: c.comando,
-        saida: cortar(`${err.stdout ?? ""}\n${err.stderr ?? err.message ?? ""}`),
+        saida: cortar(detalhe),
       });
+    } finally {
+      clearTimeout(cronometro);
     }
   }
   return saida;

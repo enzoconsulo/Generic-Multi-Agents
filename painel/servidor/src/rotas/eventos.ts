@@ -24,24 +24,58 @@ router.get("/", (req, res) => {
   const cabecalho = req.header("Last-Event-ID");
   const ultimoId = cabecalho !== undefined && /^\d+$/.test(cabecalho) ? Number(cabecalho) : undefined;
 
-  const escrever = (id: number, evento: EventoJob): void => {
-    res.write(`id: ${id}\n`);
-    res.write("event: job\n");
-    res.write(`data: ${JSON.stringify(evento)}\n\n`);
+  // Uma limpeza só, idempotente: o encerramento pode chegar por `close` do request, por
+  // erro de socket ou pela própria escrita falhando.
+  let encerrado = false;
+  let remover: () => void = () => {};
+  let ping: ReturnType<typeof setInterval> | undefined;
+  const encerrar = (): void => {
+    if (encerrado) return;
+    encerrado = true;
+    if (ping !== undefined) clearInterval(ping);
+    remover();
+    try {
+      res.end();
+    } catch {
+      // Socket já morto: não há o que encerrar.
+    }
   };
 
+  /**
+   * Escrever num SSE cujo socket morreu LANÇA. Enquanto isso acontecia dentro do `publicar`
+   * do hub havia um `try/catch` em volta; no heartbeat abaixo não havia nada, e um `throw`
+   * dentro de callback de `setInterval` não tem quem o pegue — vira `uncaughtException` e
+   * derruba o painel inteiro, junto com o job em voo. Toda escrita passa por aqui.
+   */
+  const escreverSeguro = (pedaco: string): boolean => {
+    if (encerrado) return false;
+    try {
+      res.write(pedaco);
+      return true;
+    } catch {
+      encerrar();
+      return false;
+    }
+  };
+
+  const escrever = (id: number, evento: EventoJob): void => {
+    escreverSeguro(`id: ${id}\nevent: job\ndata: ${JSON.stringify(evento)}\n\n`);
+  };
+
+  // Sem listener de `error`, um ECONNRESET no socket é emitido como exceção sem dono — a
+  // mesma queda por outro caminho.
+  res.on("error", encerrar);
+  req.on("error", encerrar);
+  req.on("close", encerrar);
+
   // Comentário inicial destrava o EventSource imediatamente.
-  res.write(": conectado\n\n");
-  const remover = hub.adicionarCliente(escrever, ultimoId);
+  escreverSeguro(": conectado\n\n");
+  remover = hub.adicionarCliente(escrever, ultimoId);
+  // Registro tardio de cliente: se o socket já morreu entre a linha acima e esta, desfaz.
+  if (encerrado) remover();
 
   // Heartbeat: detecta conexão morta e mantém intermediários sem bufferizar.
-  const ping = setInterval(() => {
-    res.write(": ping\n\n");
+  ping = setInterval(() => {
+    escreverSeguro(": ping\n\n");
   }, 15000);
-
-  req.on("close", () => {
-    clearInterval(ping);
-    remover();
-    res.end();
-  });
 });

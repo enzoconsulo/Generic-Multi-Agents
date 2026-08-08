@@ -25,7 +25,16 @@ export interface OpcoesExecutarComando {
   aoLog: (linha: string, fluxo: "stdout" | "stderr") => void;
 }
 
-function encerrarArvore(pid: number): void {
+/**
+ * Mata a ÁRVORE de processos, não só o processo.
+ *
+ * Exportado porque não é exclusividade do CI: qualquer lugar que dê `spawn`/`execFile` num
+ * comando de ecossistema precisa disto no Windows — `npm` é `npm.cmd`, então o filho direto
+ * é um `cmd.exe` e matar só ele deixa o `node.exe` neto vivo para sempre. Foi exatamente o
+ * que aconteceu em `pipeline/criterios.ts`, que usava o `timeout` do `execFile` e vazava 8
+ * processos por estouro (medido).
+ */
+export function encerrarArvore(pid: number): void {
   if (process.platform === "win32") {
     try {
       execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });

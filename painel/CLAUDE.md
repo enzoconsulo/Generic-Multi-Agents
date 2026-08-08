@@ -146,7 +146,30 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   de 15s no `servidor/vitest.config.ts` e persistência não-fatal na fila.
 - **Windows: `npm` é `npm.cmd`.** Spawn precisa de `shell: true`, e matar o processo não
   basta — o `node.exe` filho fica órfão. Use `taskkill /PID <pid> /T /F` (é o que
-  `ci/processo.ts` faz).
+  `ci/processo.ts` faz, hoje exportado como `encerrarArvore` para não haver segunda cópia).
+- **O `timeout` do `execFile` NÃO mata a árvore — e foi isso que fechava o painel** (08/08).
+  `pipeline/criterios.ts` roda a suíte do projeto e entregava o teto de tempo ao próprio
+  `execFile`. Ele manda SIGTERM só para o filho DIRETO, que com `shell: true` é o `cmd.exe`:
+  `npm`, `node --test` e **um processo por arquivo de teste** sobreviviam. Medido no
+  banco-imobiliario: **8 `node.exe` órfãos por estouro**, cada um segurando servidor HTTP +
+  Socket.IO. Como a passada mecânica roda uma vez por tarefa POR CICLO, uma rodada de
+  `/trabalhar` acumulava dezenas deles até a máquina (7,9 GB) não sustentar mais o painel —
+  que morria levando junto o job em voo. É a mesma armadilha do item acima, num arquivo que
+  não recebeu a correção. Ao dar `spawn`/`execFile` em comando de ecossistema: o teto de
+  tempo é SEU, e o kill é de árvore.
+- **Diagnosticar queda exige que a queda deixe rastro.** Os jobs `67de2cb4` e `57cb7ac9`
+  sumiram sem UMA linha: o `<id>.log.jsonl` só é gravado no assentamento, então processo
+  morto no meio não deixa log — e o `index.ts` não tinha `uncaughtException` nem
+  `unhandledRejection`, então qualquer exceção assíncrona sem dono derrubava tudo em
+  silêncio. Hoje as duas são registradas em `dados/quedas.log` e **o processo segue**: num
+  cockpit local, morrer destrói trabalho de agente já pago, e seguir degradado com rastro é
+  estritamente melhor. Corolário: **ausência de `.log.jsonl` num job terminal é sintoma de
+  queda do processo**, não de job silencioso.
+- **`res.write` num SSE morto LANÇA — e dentro de `setInterval` não há quem pegue.** O
+  heartbeat de `rotas/eventos.ts` escrevia sem `try`, e o `res` não tinha listener de
+  `error`. O `try/catch` do hub protegia só o caminho do `publicar`. Um ECONNRESET no
+  socket viraria `uncaughtException`. Toda escrita passa por `escreverSeguro`, e o
+  encerramento é idempotente (pode chegar por `close`, por `error` ou pela escrita falhando).
 - **Eventos emitidos no construtor do gerenciador se perdem**: o hub SSE só conecta depois
   (`inicializar.ts`). Por isso o saneamento de boot é publicado por
   `publicarSaneamentoDeBoot()`, chamado APÓS `hub.conectar`.

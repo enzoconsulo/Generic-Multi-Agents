@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -151,6 +151,54 @@ describe("executarCriterios", () => {
     );
     expect(r[0]?.estado).toBe("falhou");
     expect(r[0]?.saida).toBeTypeOf("string");
+  });
+
+  /**
+   * REGRESSÃO da queda do painel de 08/08.
+   *
+   * O `timeout` do `execFile` manda SIGTERM só para o filho DIRETO. Com `shell: true` (que
+   * o Windows exige para `npm`), esse filho é o `cmd.exe` — e `npm`, `node --test` e um
+   * processo por arquivo de teste sobrevivem. Medido no banco-imobiliario: 8 `node.exe`
+   * órfãos por estouro, cada um segurando servidor HTTP + Socket.IO. A suíte roda uma vez
+   * por tarefa por ciclo, então os órfãos acumulavam até a máquina não sustentar o painel.
+   *
+   * O teste prova a NETA morta, não a filha: é a neta que vazava.
+   */
+  it("estouro de tempo mata a ÁRVORE, não só o filho direto", async () => {
+    const dir = projeto();
+    const batida = join(dir, "batida.txt");
+    // Neta: bate num arquivo sem parar. Se sobreviver ao estouro, a batida continua.
+    writeFileSync(
+      join(dir, "neta.js"),
+      `const { writeFileSync } = require("node:fs");
+       setInterval(() => writeFileSync(${JSON.stringify(batida)}, String(Date.now())), 50);
+       setTimeout(() => process.exit(0), 60000);`,
+      "utf8",
+    );
+    // Filha: só lança a neta e fica viva. É nela que o SIGTERM do execFile acertava.
+    writeFileSync(
+      join(dir, "filha.js"),
+      `require("node:child_process").spawn(process.execPath, ["neta.js"], {
+         cwd: __dirname, stdio: "ignore",
+       });
+       setInterval(() => {}, 1000);`,
+      "utf8",
+    );
+
+    const r = await executarCriterios(
+      [{ texto: "trava de proposito", comando: "node filha.js", marcado: false }],
+      dir,
+      { timeoutMs: 1500 },
+    );
+
+    expect(r[0]?.estado).toBe("falhou");
+    expect(r[0]?.saida).toContain("árvore de processos");
+
+    // A prova: depois do estouro a neta parou de bater.
+    await new Promise((r2) => setTimeout(r2, 600));
+    const marca = readFileSync(batida, "utf8");
+    await new Promise((r2) => setTimeout(r2, 900));
+    expect(readFileSync(batida, "utf8")).toBe(marca);
   });
 });
 
