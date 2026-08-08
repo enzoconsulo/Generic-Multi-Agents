@@ -157,6 +157,29 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   que morria levando junto o job em voo. É a mesma armadilha do item acima, num arquivo que
   não recebeu a correção. Ao dar `spawn`/`execFile` em comando de ecossistema: o teto de
   tempo é SEU, e o kill é de árvore.
+- **`git add -A` num commit de "gestão" faz código entrar sem revisão.** O pipeline fechava
+  a rodada com `commitar()`, que varre a árvore inteira: na rodada de 08/08 o
+  `chore: gestão` arrastou `public/js/painel-propriedades.js` (código da T-025) e um
+  `test-painel-harness.js` descartável. O estrago não é cosmético — o revisor julga o DIFF
+  DO HASH registrado nas Notas da tarefa, então código que entra por commit de gestão **não
+  é o diff de tarefa nenhuma e nunca é revisado**; e o `add -A` ainda MASCARA a falha real
+  (construtor que terminou sem commitar), deixando a árvore limpa. Hoje `commitarCaminhos`
+  limita ao `_gestao/` e `alteracoesForaDe` denuncia a sobra no relatório. O `commitar` com
+  `add -A` continua certo para o botão da aba Git, onde o usuário pediu justamente isso.
+- **Matar processo exige DUAS provas: propriedade e abandono.** A coleta de órfãos
+  (`pipeline/coleta-processos.ts`) nasceu com só uma — "órfão + nascido durante o job" — e o
+  dry-run contra a máquina real derrubou a ideia na hora: um comando que o PRÓPRIO USUÁRIO
+  rodou no terminal aparecia como alvo, porque o shell que o lançou já tinha saído e o pai
+  constava morto. Órfão prova ABANDONO, não propriedade. A propriedade tem de ser colhida
+  enquanto a cadeia existe (`RastreadorDescendentes`, amostra a cada 30s), porque ela é
+  perecível: quando o `claude` da etapa morre, o que ele deixou fica com o pai morto e o
+  vínculo com o painel some. As duas provas juntas dão de graça a segurança sob
+  PARALELISMO — descendente vivo do painel é trabalho de alguém e nunca é tocado.
+  Corolário: **antes de embarcar qualquer heurística que mata processo, rode o dry-run**
+  (`npx tsx integracao/dry-coleta.ts`), que imprime o pior caso ao lado do caso real.
+- **PID é reciclado — comparar só o número mente.** Um processo cujo pai morreu e cujo
+  número de pai foi reaproveitado parece bem-parentado. Por isso `paiVivo` exige que o pai
+  tenha nascido ANTES do filho. Sem isso, lixo escapa e (pior) árvore viva parece órfã.
 - **Diagnosticar queda exige que a queda deixe rastro.** Os jobs `67de2cb4` e `57cb7ac9`
   sumiram sem UMA linha: o `<id>.log.jsonl` só é gravado no assentamento, então processo
   morto no meio não deixa log — e o `index.ts` não tinha `uncaughtException` nem

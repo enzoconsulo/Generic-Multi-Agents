@@ -269,6 +269,80 @@ export async function commitar(dirRepo: string, mensagem: string): Promise<strin
   }
 }
 
+/**
+ * Commit LIMITADO a certos caminhos (`git add -- <caminhos>`), para quem não quer varrer a
+ * árvore inteira.
+ *
+ * POR QUE EXISTE. O `commitar` acima faz `add -A`, que é o certo para o botão de commit da
+ * aba Git — o usuário mandou commitar tudo. Mas o pipeline usa a mesma função para fechar
+ * as "pendências de gestão", e ali `add -A` é errado e caro: na rodada de 08/08 o commit
+ * `chore: gestão` arrastou `public/js/painel-propriedades.js` (código de tarefa) e um
+ * `test-painel-harness.js` descartável para dentro dele.
+ *
+ * O estrago não é cosmético. O revisor julga o DIFF DO HASH registrado nas Notas da tarefa;
+ * código que entra por um commit de gestão não é o diff de tarefa nenhuma, então **passa
+ * para o repositório sem nunca ter sido revisado**. E, de quebra, mascara a falha real do
+ * construtor (terminou sem commitar), que é justamente o que o motor precisa enxergar para
+ * relatar `sem-progresso`.
+ *
+ * Devolve `null` quando não havia nada a commitar NAQUELES caminhos — caso normal quando os
+ * agentes já commitaram tudo, e por isso não é erro.
+ */
+export async function commitarCaminhos(
+  dirRepo: string,
+  mensagem: string,
+  caminhos: readonly string[],
+): Promise<string | null> {
+  const texto = mensagem.trim();
+  if (texto === "") throw new ErroCommit(400, "A mensagem do commit não pode ficar vazia.");
+  if (!existsSync(join(dirRepo, ".git"))) {
+    throw new ErroCommit(409, "Esta pasta não é um repositório git.");
+  }
+  if (caminhos.length === 0) return null;
+
+  try {
+    // `--` separa caminhos de revisões: um caminho que por acaso se pareça com um nome de
+    // branch não pode ser interpretado como revisão.
+    await exec("git", ["add", "--", ...caminhos], { cwd: dirRepo, windowsHide: true });
+    // Só commita se houver algo EM STAGE — senão `git commit` falharia e viraria erro falso.
+    const { stdout: emStage } = await exec("git", ["diff", "--cached", "--name-only"], {
+      cwd: dirRepo,
+      windowsHide: true,
+    });
+    if (emStage.trim() === "") return null;
+
+    await exec("git", ["commit", "-m", texto], { cwd: dirRepo, windowsHide: true });
+    const { stdout } = await exec("git", ["rev-parse", "HEAD"], {
+      cwd: dirRepo,
+      windowsHide: true,
+    });
+    return stdout.trim();
+  } catch (erro) {
+    const bruto = erro instanceof Error ? erro.message : String(erro);
+    throw new ErroCommit(500, `git commit falhou: ${bruto}`);
+  }
+}
+
+/**
+ * Arquivos alterados FORA dos caminhos dados (relativos ao repositório).
+ *
+ * É o sinal de que um construtor terminou sem commitar: sobra de código na árvore depois de
+ * a etapa fechar. Antes isso era invisível, porque o `add -A` do commit de gestão engolia a
+ * sobra e o repositório ficava limpo — o defeito sumia junto com a evidência.
+ */
+export async function alteracoesForaDe(
+  dirRepo: string,
+  prefixos: readonly string[],
+): Promise<string[]> {
+  const alteracoes = await lerAlteracoes(dirRepo);
+  return alteracoes
+    // Renomeação vem como `antigo -> novo`; o que interessa é o destino.
+    .map((a) => (a.caminho.includes(" -> ") ? (a.caminho.split(" -> ").pop() ?? "") : a.caminho))
+    .map((caminho) => caminho.replace(/\\/g, "/").replace(/^"|"$/g, ""))
+    .filter((caminho) => caminho !== "")
+    .filter((caminho) => !prefixos.some((p) => caminho === p || caminho.startsWith(`${p}/`)));
+}
+
 export async function lerBranch(dirRepo: string): Promise<string> {
   try {
     const { stdout } = await exec("git", ["branch", "--show-current"], {

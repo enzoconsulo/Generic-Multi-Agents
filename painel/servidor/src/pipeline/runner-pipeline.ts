@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { appendFile, readFile } from "node:fs/promises";
 import { lerEquipe, lerResumosTarefas, parsearPlano, parsearTarefa } from "../fabrica/index.js";
-import { commitar } from "../fabrica/git.js";
+import { alteracoesForaDe, commitarCaminhos } from "../fabrica/git.js";
 import { gravarMarco, textoDoMarco } from "./marco.js";
 import { temTrabalhoParcial } from "./trabalho-parcial.js";
 import { anexarNaSecao, gravarStatusTarefa } from "../fabrica/escrita-tarefas.js";
@@ -13,6 +13,7 @@ import { rodarPipeline, type DependenciasMotor, type RelatorioMotor } from "./mo
 import { trilhaDe } from "./maquina.js";
 import { detectarEcossistema } from "../ci/ecossistemas.js";
 import { novoOrcamento } from "./orcamento.js";
+import { coletarOrfaos, RastreadorDescendentes } from "./coleta-processos.js";
 
 /**
  * Runner do PIPELINE EM CÓDIGO — o `/trabalhar` sem orquestrador-modelo.
@@ -57,6 +58,11 @@ export class RunnerPipeline implements Runner {
   constructor(private readonly consulta: Consulta = consultaReal) {}
 
   async executar(job: Job, ctx: ContextoExecucao): Promise<ResultadoPipeline> {
+    // Marco zero da coleta de órfãos: nada nascido ANTES disto é candidato. O rastreador
+    // começa junto porque a prova de propriedade é perecível — ver `coleta-processos.ts`.
+    const iniciouEmMs = Date.now();
+    const rastreador = new RastreadorDescendentes(process.pid);
+    rastreador.iniciar();
     const p = lerParams(job.params ?? {});
     const dirProjeto = join(p.raiz, "projetos", p.projeto);
     const dirTarefas = join(dirProjeto, "_gestao", "tarefas");
@@ -141,16 +147,40 @@ export class RunnerPipeline implements Runner {
         });
       },
       commitarGestao: async (mensagem) => {
+        // SÓ `_gestao/`. Antes isto era `git add -A`, e o commit de gestão arrastava código
+        // de tarefa para dentro de si — código que assim entra no repositório sem NUNCA
+        // passar pelo revisor (que julga o diff do hash registrado nas Notas) e que ainda
+        // por cima mascara a falha do construtor que não commitou. Ver `commitarCaminhos`.
         try {
-          const hash = await commitar(dirProjeto, mensagem);
-          ctx.emitir("log", { nivel: "assistente", texto: `Gestão commitada: ${hash.slice(0, 7)}` });
-        } catch (e) {
-          // Árvore limpa é o caso NORMAL quando os agentes commitaram tudo — não é erro.
-          const msg = (e as Error).message;
+          const hash = await commitarCaminhos(dirProjeto, mensagem, ["_gestao"]);
           ctx.emitir("log", {
-            nivel: /nada a commitar|no changes|nenhuma altera/i.test(msg) ? "assistente" : "erro",
-            texto: `Commit da gestão: ${msg}`,
+            nivel: "assistente",
+            texto:
+              hash === null
+                ? "Gestão: nada pendente para commitar."
+                : `Gestão commitada: ${hash.slice(0, 7)}`,
           });
+        } catch (e) {
+          ctx.emitir("log", { nivel: "erro", texto: `Commit da gestão: ${(e as Error).message}` });
+        }
+
+        // Sobra FORA de `_gestao/` = algum construtor terminou sem commitar. Com o `add -A`
+        // isso era invisível: a sobra era engolida e a árvore ficava limpa, então o defeito
+        // desaparecia junto com a evidência. Agora é dito em voz alta, com os arquivos.
+        try {
+          const sobras = await alteracoesForaDe(dirProjeto, ["_gestao"]);
+          if (sobras.length > 0) {
+            ctx.emitir("log", {
+              nivel: "erro",
+              texto:
+                `ATENÇÃO: ${sobras.length} arquivo(s) alterados fora de _gestao/ e NÃO ` +
+                `commitados — algum construtor terminou sem commitar. Este código não passou ` +
+                `pelo revisor: ${sobras.slice(0, 10).join(", ")}` +
+                `${sobras.length > 10 ? ` … (+${sobras.length - 10})` : ""}`,
+            });
+          }
+        } catch {
+          // Diagnóstico: nunca pode derrubar o fechamento da rodada.
         }
       },
       despachar,
@@ -158,22 +188,52 @@ export class RunnerPipeline implements Runner {
         ctx.emitir("log", { nivel: nivel === "erro" ? "erro" : "assistente", texto }),
     };
 
-    const relatorio = await rodarPipeline(
-      {
-        dirProjeto,
-        projeto: p.projeto,
-        trilha,
-        comandoTestes,
-        equipe,
-        // Vazio de propósito: neste caminho NÃO existem subagentes injetados. O especialista
-        // chega como "genérico + prompt colado" (passo 3 da resolução), que é uniforme e é
-        // o único modo que funciona quando quem despacha é código.
-        disponiveis: new Set<string>(),
-        reforco: p.reforco ?? null,
-        orcamento: novoOrcamento(p.tetoUsd ?? null),
-      },
-      dep,
-    );
+    let relatorio: RelatorioMotor;
+    try {
+      relatorio = await rodarPipeline(
+        {
+          dirProjeto,
+          projeto: p.projeto,
+          trilha,
+          comandoTestes,
+          equipe,
+          // Vazio de propósito: neste caminho NÃO existem subagentes injetados. O especialista
+          // chega como "genérico + prompt colado" (passo 3 da resolução), que é uniforme e é
+          // o único modo que funciona quando quem despacha é código.
+          disponiveis: new Set<string>(),
+          reforco: p.reforco ?? null,
+          orcamento: novoOrcamento(p.tetoUsd ?? null),
+        },
+        dep,
+      );
+    } catch (erro) {
+      // Rodada que morre no meio é justamente a que mais deixa processo de pé — parar o
+      // rastreador aqui evita que o temporizador sobreviva ao job que o criou.
+      rastreador.parar();
+      throw erro;
+    }
+
+    // COLETA DE ÓRFÃOS — depois do laço, quando nenhuma etapa desta rodada está mais em voo.
+    // Recolhe o que os agentes deixaram de pé (o clássico é `npm start` para a evidência
+    // visual). Só mexe em processo ÓRFÃO nascido durante este job, então agente de job
+    // paralelo — que continua pendurado no painel, vivo — nunca entra na conta.
+    rastreador.parar();
+    // Uma última amostra: a etapa final pode ter lançado algo depois da amostra anterior, e
+    // aqui a cadeia até o painel ainda costuma estar intacta.
+    await rastreador.amostrar();
+    const coleta = await coletarOrfaos({
+      painelPid: process.pid,
+      desdeMs: iniciouEmMs,
+      observados: rastreador.observados,
+    });
+    if (coleta.recolhidos > 0) {
+      ctx.emitir("log", {
+        nivel: "assistente",
+        texto:
+          `Coleta de processos: ${coleta.recolhidos} órfão(s) encerrado(s) — ` +
+          coleta.detalhes.join(" · "),
+      });
+    }
 
     const texto = montarRelatorio(p.projeto, relatorio);
 
