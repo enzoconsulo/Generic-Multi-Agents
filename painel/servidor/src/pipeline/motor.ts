@@ -21,6 +21,14 @@ import {
 } from "./criterios.js";
 import { fasesProntasParaMarco, lerVeredicto, type VeredictoMarco } from "./marco.js";
 import {
+  blocoDeFoco,
+  classificar,
+  politicaDe,
+  DIAGNOSTICO_DESCONHECIDO,
+  type PortaoQueReprovou,
+  type SecoesRevisao,
+} from "./diagnostico.js";
+import {
   comAgentesEmVoo,
   comGasto,
   decidir,
@@ -66,6 +74,16 @@ export interface PedidoDespacho {
   notas: string;
   /** Nome da fase — só no papel `marco`, para o despacho dizer QUAL meta exercitar. */
   fase?: string;
+  /**
+   * Teto de voltas desta etapa, vindo do diagnóstico do retrabalho. Ausente = padrão do
+   * papel. Retrabalho pontual não precisa das 60 voltas de uma construção do zero.
+   */
+  maxTurns?: number | null;
+  /**
+   * Bloco `<foco>` do retrabalho pontual: os achados nomeados a corrigir, com a instrução
+   * explícita de NÃO recomeçar. Vazio no despacho normal — nada é acrescentado ao prompt.
+   */
+  foco?: string;
 }
 
 export interface ResultadoDespacho {
@@ -102,6 +120,25 @@ export interface DependenciasMotor {
   gravarMarco(fase: string, veredicto: Exclude<VeredictoMarco, "indefinido">): Promise<void>;
   /** Commita as pendências de `_gestao/` ao fim da rodada. */
   commitarGestao(mensagem: string): Promise<void>;
+  /**
+   * Seções `## Conformidade` e `## Revisão`, cruas. Lidas SÓ quando quem reprovou foi o
+   * revisor — é o único caso em que o texto acrescenta informação (veredito de conformidade
+   * e gravidade dos achados). Nos outros o portão já decidiu a natureza, e ler seria I/O
+   * sem retorno. Opcional: quem não implementa cai no diagnóstico conservador (caro).
+   */
+  lerRevisaoDe?(tarefa: TarefaResumo): Promise<SecoesRevisao>;
+  /**
+   * Commita o trabalho de UMA tarefa em nome dela (`T-XXX: ...`), devolvendo o hash.
+   * `null` quando não havia nada a commitar.
+   *
+   * Existe para a recuperação de `sem-progresso`: quando o construtor faz o trabalho mas
+   * não registra nada, é o motor que fecha o ciclo — e fecha do jeito certo, com commit
+   * próprio da tarefa, para o revisor ter um DIFF para julgar. Opcional: sem ele, a
+   * recuperação não acontece e o motor para como antes.
+   */
+  commitarTarefa?(tarefa: TarefaResumo, mensagem: string): Promise<string | null>;
+  /** Anexa texto à seção `## Notas de execução` — usado para registrar o hash recuperado. */
+  anexarNotas?(tarefa: TarefaResumo, texto: string): Promise<void>;
   log(nivel: "info" | "erro", texto: string): void;
 }
 
@@ -146,6 +183,16 @@ export interface RelatorioMotor {
     | "teto-de-voltas";
   orcamento: EstadoOrcamento;
 }
+
+/**
+ * Portão que devolveu cada tarefa ao construtor, NESTA rodada. É a fonte do diagnóstico de
+ * retrabalho (`diagnostico.ts`), e é observado — o motor sabe porque foi ele que despachou o
+ * portão e viu o status mudar.
+ *
+ * Só vale dentro da rodada: tarefa herdada de uma sessão anterior não tem entrada aqui e
+ * cai, de propósito, no diagnóstico conservador (calibre máximo).
+ */
+type MapaDeRetornos = Map<string, PortaoQueReprovou>;
 
 /** Teto de voltas do laço — rede contra bug de estado que não avança (nunca deve disparar). */
 const MAX_VOLTAS = 200;
@@ -216,6 +263,8 @@ export async function rodarPipeline(
   const marcosRetentados = new Set<string>();
   /** Etapas que falharam EM SEQUÊNCIA. Zera a cada sucesso. Ver `MAX_FALHAS_SEGUIDAS`. */
   let falhasSeguidas = 0;
+  /** Portão que devolveu cada tarefa — a base do diagnóstico de retrabalho. */
+  const retornos: MapaDeRetornos = new Map();
   let orcamento = ctx.orcamento;
 
   // ---- SANEAMENTO DE ABERTURA ------------------------------------------------------
@@ -438,6 +487,9 @@ export async function rodarPipeline(
       rel.criteriosExecutados += executados.length;
       if (executados.length > 0 && reprovouNaMecanica(executados)) {
         await dep.gravarStatus(passo.tarefa, "em-execucao");
+        // Registra QUEM reprovou: falha mecânica é objetiva e localizada, e o próximo
+        // despacho pode ser barato e estreito em vez de subir para `opus`.
+        retornos.set(passo.tarefa.id, "mecanica");
         dep.log(
           "erro",
           `${passo.tarefa.id}: critério objetivo falhou na passada mecânica — volta ao` +
@@ -457,12 +509,39 @@ export async function rodarPipeline(
       break;
     }
 
+    // DIAGNÓSTICO DO RETRABALHO. Só para o construtor, e só quando há reprovação: é o que
+    // decide se esta etapa é uma construção de novo (calibre máximo) ou um conserto nomeado
+    // (barato e estreito). O portão que reprovou foi OBSERVADO nesta rodada; tarefa herdada
+    // de outra sessão não tem registro e cai, de propósito, no caminho caro.
+    const portao = passo.papel === "construtor" ? (retornos.get(passo.tarefa.id) ?? null) : null;
+    const diag =
+      portao === null
+        ? DIAGNOSTICO_DESCONHECIDO
+        : classificar(
+            portao,
+            // O texto só é lido quando quem reprovou foi o revisor — nos outros casos o
+            // portão já basta, e abrir o arquivo seria I/O que não muda decisão nenhuma.
+            portao === "revisor" && dep.lerRevisaoDe !== undefined
+              ? await dep.lerRevisaoDe(passo.tarefa)
+              : null,
+          );
+    const politica = politicaDe(diag, passo.tarefa.tentativas, ctx.reforco !== null);
+
     const agente = resolverAgente(passo, ctx.trilha, ctx.equipe, {
       disponiveis: ctx.disponiveis,
       projeto: ctx.projeto,
       reforco: ctx.reforco,
+      ...(passo.papel === "construtor" && portao !== null ? { politica } : {}),
     });
     dep.log("info", `${passo.tarefa.id} → ${agente.nome} (${agente.motivo})`);
+    if (portao !== null) {
+      dep.log(
+        "info",
+        `${passo.tarefa.id}: retrabalho ${diag.natureza} — ${politica.motivo}` +
+          `${politica.maxTurns !== null ? ` (teto ${politica.maxTurns} voltas)` : ""}` +
+          `${diag.achados.length > 0 ? `; ${diag.achados.length} achado(s) em foco` : ""}`,
+      );
+    }
 
     // Capturado ANTES do despacho, como STRING: `passo.tarefa` pode ser a mesma referência
     // que `lerTarefas()` devolve, e aí comparar depois leria o valor já mudado — a guarda
@@ -480,6 +559,8 @@ export async function rodarPipeline(
       promptColado: agente.promptColado,
       motivo: agente.motivo,
       notas: passo.papel === "revisor" ? await dep.lerNotasDe(passo.tarefa) : "",
+      ...(politica.maxTurns !== null ? { maxTurns: politica.maxTurns } : {}),
+      ...(politica.escopo === "pontual" ? { foco: blocoDeFoco(diag) } : {}),
     });
     rel.despachos += 1;
     orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
@@ -528,15 +609,47 @@ export async function rodarPipeline(
     // rodada na segunda. O que caracteriza travamento é o status não mudar depois de o
     // agente dizer que terminou.
     const depois = (await dep.lerTarefas()).find((t) => t.id === passo.tarefa.id);
+
+    // Portão que reprovou, OBSERVADO: o passo era de verificação/revisão e a tarefa voltou
+    // para `em-execucao`. É daqui que sai o diagnóstico do próximo retrabalho — fato visto,
+    // não prosa interpretada.
+    if (depois?.status === "em-execucao" && statusAntes !== "em-execucao") {
+      if (passo.papel === "verificador") retornos.set(passo.tarefa.id, "verificador");
+      else if (passo.papel === "revisor") retornos.set(passo.tarefa.id, "revisor");
+    }
+    // Avançou para além do construtor: o diagnóstico daquele ciclo cumpriu seu papel e não
+    // pode sobreviver para envenenar o próximo (o motivo da reprovação seguinte será outro).
+    if (passo.papel === "construtor" && depois?.status !== statusAntes) {
+      retornos.delete(passo.tarefa.id);
+    }
+
     if (depois !== undefined && depois.status === statusAntes) {
       const vezes = (repeticoes.get(passo.tarefa.id) ?? 0) + 1;
       repeticoes.set(passo.tarefa.id, vezes);
       if (vezes >= 2) {
+        // RECUPERAÇÃO ANTES DE DESISTIR. O agente pode ter feito o trabalho e falhado só no
+        // registro — foi exatamente o que aconteceu com a T-025 (dois ciclos de `opus`
+        // editando os arquivos certos, sem gravar `status`, sem commitar), e a rodada
+        // fechou com zero tarefa concluída enquanto o trabalho estava pronto no disco.
+        //
+        // O sinal é a ÁRVORE GIT, o mesmo do saneamento de abertura: mudou nas `areas`, o
+        // trabalho existe. Aí o motor fecha o ciclo em nome da tarefa — commit próprio, com
+        // hash registrado nas Notas, para o revisor ter um DIFF de verdade para julgar.
+        //
+        // Isto NÃO abre um laço infinito, e a razão é bonita: o commit deixa a árvore limpa,
+        // então uma segunda ocorrência não encontra trabalho parcial e cai direto no
+        // encerramento abaixo. A recuperação é auto-limitada por construção.
+        const recuperou = await recuperarTrabalhoNaoRegistrado(passo, depois, ctx, dep);
+        if (recuperou) {
+          repeticoes.delete(passo.tarefa.id);
+          continue;
+        }
         dep.log(
           "erro",
           `${passo.tarefa.id}: ${agente.nome} terminou e o status continua` +
             ` "${statusAntes}" pela ${vezes}ª vez. O agente não está gravando seu` +
-            " estado — encerrando para não repetir o despacho indefinidamente.",
+            " estado, e não há trabalho não commitado nas areas para recuperar —" +
+            " encerrando para não repetir o despacho indefinidamente.",
         );
         rel.encerrouPor = "sem-progresso";
         break;
@@ -602,6 +715,70 @@ export async function rodarPipeline(
 
   rel.orcamento = orcamento;
   return rel;
+}
+
+/**
+ * O construtor terminou sem registrar nada — mas fez o trabalho? Então FECHA o ciclo por ele.
+ *
+ * O caso real (T-025, 08/08): o `executor-reforcado` rodou duas vezes, editou os arquivos
+ * certos, escreveu Notas — e não gravou `status`, não registrou hash, não commitou. O motor
+ * encerrou por `sem-progresso` e a rodada fechou com ZERO tarefa concluída, com o trabalho
+ * pronto no disco. O código só não se perdeu porque o commit de gestão varria a árvore com
+ * `git add -A`, o que por sua vez fazia código entrar sem passar pelo revisor. Os dois
+ * defeitos se anulavam e escondiam um ao outro.
+ *
+ * O que esta função faz é o que o construtor deveria ter feito, e SÓ isso:
+ * commitar em nome da tarefa, registrar o hash nas Notas e mover para o próximo status.
+ * Nada de julgamento — se a entrega presta, quem decide são os dois portões seguintes, que
+ * agora vão poder rodar em vez de a rodada morrer aqui.
+ *
+ * Devolve `false` quando não há o que recuperar (aí o chamador encerra como antes) ou quando
+ * o driver não implementa as dependências opcionais — degrada, não quebra.
+ */
+async function recuperarTrabalhoNaoRegistrado(
+  passo: Passo,
+  atual: TarefaResumo,
+  ctx: ContextoMotor,
+  dep: DependenciasMotor,
+): Promise<boolean> {
+  // Só o construtor: verificador e revisor não produzem artefato para commitar, e "trabalho
+  // não commitado" na área deles seria justamente o que eles NÃO deviam ter feito.
+  if (passo.papel !== "construtor") return false;
+  if (dep.commitarTarefa === undefined) return false;
+  if (!(await dep.temTrabalhoParcial(atual))) return false;
+
+  const hash = await dep.commitarTarefa(
+    atual,
+    `${atual.id}: trabalho recuperado pelo motor (construtor não registrou o ciclo)`,
+  );
+  if (hash === null) return false;
+
+  // O hash nas Notas é o que dá ao revisor um DIFF para julgar — sem ele o revisor cai no
+  // projeto inteiro, que é o gasto que a I4 existe para evitar.
+  if (dep.anexarNotas !== undefined) {
+    await dep.anexarNotas(
+      atual,
+      [
+        "",
+        `**Commit:** \`${hash}\``,
+        "",
+        "Registrado pelo MOTOR, não pelo construtor: a etapa terminou com as `areas`" +
+          " modificadas e sem status, hash ou commit. O trabalho foi preservado e commitado" +
+          " em nome da tarefa para seguir aos portões de verificação e revisão. Se a entrega" +
+          " estiver incompleta, é lá que isso aparece — recuperar o trabalho não é aprová-lo.",
+      ].join("\n"),
+    );
+  }
+
+  // `em-teste` é o destino do construtor nas DUAS trilhas (o que muda é quem verifica, não
+  // o status). Pular a verificação, quando cabe, é decidido pelo laço na volta seguinte.
+  await dep.gravarStatus(atual, "em-teste");
+  dep.log(
+    "info",
+    `${atual.id}: construtor não registrou o ciclo, mas HÁ trabalho nas areas — commitado` +
+      ` como \`${hash.slice(0, 7)}\` e promovido a em-teste. A rodada continua.`,
+  );
+  return true;
 }
 
 /** Roda os critérios com comando e anexa o relatório à tarefa. Vazio quando não há nenhum. */

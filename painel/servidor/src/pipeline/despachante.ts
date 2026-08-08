@@ -107,6 +107,9 @@ function blocoDespacho(pedido: PedidoDespacho, dirProjeto: string): string {
     "Registre tudo no arquivo da tarefa antes de terminar; seu contrato de estado está no",
     "seu próprio prompt.",
     "</despacho>",
+    // Só existe no retrabalho PONTUAL, e é a diferença entre "refaça a tarefa" e "conserte
+    // isto": sem ele o construtor reabre o que já passou, e é aí que o retrabalho fica caro.
+    ...(pedido.foco !== undefined && pedido.foco !== "" ? ["", pedido.foco] : []),
   ].join("\n");
 }
 
@@ -209,7 +212,10 @@ export function criarDespachante(
           ],
         },
         abortController: o.abortController,
-        maxTurns: o.maxTurnsPorEtapa ?? MAX_TURNS[papel] ?? 40,
+        // Ordem: teto do PEDIDO (diagnóstico do retrabalho) > teto do despachante (testes) >
+        // padrão do papel. O do pedido vem primeiro porque é o único que sabe se esta etapa
+        // é uma construção do zero ou um conserto de três linhas.
+        maxTurns: pedido.maxTurns ?? o.maxTurnsPorEtapa ?? MAX_TURNS[papel] ?? 40,
         // Nada de disco: o contexto é montado por nós, e carregar os CLAUDE.md da fábrica
         // aqui traria doutrina de ORQUESTRAÇÃO para dentro de um agente que não orquestra.
         settingSources: [],

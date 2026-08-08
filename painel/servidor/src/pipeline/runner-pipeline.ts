@@ -7,7 +7,8 @@ import { temTrabalhoParcial } from "./trabalho-parcial.js";
 import { anexarNaSecao, gravarStatusTarefa } from "../fabrica/escrita-tarefas.js";
 import { consultaReal, type Consulta } from "../jobs/claude/runner-claude.js";
 import type { ContextoExecucao, Job, Runner } from "../jobs/tipos.js";
-import type { TarefaResumo } from "../fabrica/tipos.js";
+import type { SecoesTarefa, TarefaResumo } from "../fabrica/tipos.js";
+import { resolverArea } from "../contexto/montador.js";
 import { criarDespachante } from "./despachante.js";
 import { rodarPipeline, type DependenciasMotor, type RelatorioMotor } from "./motor.js";
 import { trilhaDe } from "./maquina.js";
@@ -100,7 +101,7 @@ export class RunnerPipeline implements Runner {
     });
 
     /** Seção crua de uma tarefa, lendo o arquivo completo só quando é preciso. */
-    async function secao(t: TarefaResumo, qual: "criteriosAceite" | "notasExecucao"): Promise<string> {
+    async function secao(t: TarefaResumo, qual: keyof SecoesTarefa): Promise<string> {
       try {
         const texto = await readFile(join(dirTarefas, t.arquivo), "utf8");
         return parsearTarefa(t.arquivo, texto).secoes[qual] ?? "";
@@ -123,6 +124,30 @@ export class RunnerPipeline implements Runner {
         if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });
       },
       temTrabalhoParcial: (t) => temTrabalhoParcial(dirProjeto, t.areas),
+      // Só é chamado quando o REVISOR reprovou — o único caso em que o texto acrescenta
+      // informação (veredito de conformidade e gravidade dos achados).
+      lerRevisaoDe: async (t) => ({
+        conformidade: await secao(t, "conformidade"),
+        revisao: await secao(t, "revisao"),
+      }),
+      // Commit em nome da TAREFA: `areas` + o arquivo da própria tarefa, nunca a árvore
+      // inteira (o `git add -A` já provou o estrago que faz — código entrando sem revisão).
+      commitarTarefa: async (t, mensagem) => {
+        const caminhos = [
+          ...t.areas.filter((a) => resolverArea(dirProjeto, a) !== null),
+          `_gestao/tarefas/${t.arquivo}`,
+        ];
+        try {
+          return await commitarCaminhos(dirProjeto, mensagem, caminhos);
+        } catch (e) {
+          ctx.emitir("log", { nivel: "erro", texto: `${t.id}: commit de recuperação — ${(e as Error).message}` });
+          return null;
+        }
+      },
+      anexarNotas: async (t, texto) => {
+        const r = await anexarNaSecao(join(dirTarefas, t.arquivo), "Notas de execução", texto);
+        if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });
+      },
       lerCriteriosDe: (t) => secao(t, "criteriosAceite"),
       lerNotasDe: (t) => secao(t, "notasExecucao"),
       lerPlano: async () => {

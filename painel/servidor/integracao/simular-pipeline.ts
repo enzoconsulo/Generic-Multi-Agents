@@ -104,6 +104,20 @@ const dep: DependenciasMotor = {
   temTrabalhoParcial: (t) => temTrabalhoParcial(dirProjeto, t.areas),
   lerCriteriosDe: (t) => secao(t, "criteriosAceite"),
   lerNotasDe: (t) => secao(t, "notasExecucao"),
+  // Diagnóstico de retrabalho: leitura pura, roda igual à produção.
+  lerRevisaoDe: async (t) => ({
+    conformidade: await secao(t, "conformidade"),
+    revisao: await secao(t, "revisao"),
+  }),
+  // Recuperação de trabalho não registrado: aqui só ANUNCIA, nunca commita — o simulador
+  // não pode sujar o repositório. O hash é falso, e é o bastante para o laço seguir.
+  commitarTarefa: async (t, mensagem) => {
+    escritas.push(`  [painel commitaria] ${t.id}: ${mensagem}`);
+    return "0000000simulado";
+  },
+  anexarNotas: async (t) => {
+    escritas.push(`  [painel anexa] ${t.id}: +Commit nas Notas de execução`);
+  },
   lerPlano: async () => {
     try {
       return parsearPlano(await readFile(join(dirProjeto, "_gestao", "PLANO.md"), "utf8"));

@@ -209,11 +209,23 @@ export function resolverAgente(
     projeto: string;
     /** Modelo do retrabalho; null = a estratégia já está no topo. */
     reforco: string | null;
+    /**
+     * Decisão do diagnóstico sobre ESTE retrabalho (ver `diagnostico.ts`). Ausente = a
+     * regra antiga, `tentativas >= 1` sempre reforça.
+     *
+     * Opcional de propósito: quem não diagnostica — testes antigos, simulador, qualquer
+     * chamador novo — continua caindo no comportamento caro de sempre. Barateamento é
+     * opt-in e exige sinal explícito; nunca é o que acontece por omissão.
+     */
+    politica?: { reforcar: boolean } | undefined;
   },
 ): AgenteResolvido {
   const generico = AGENTE_GENERICO[trilha][passo.papel];
   const tentativas = passo.tarefa.tentativas;
-  const reforcar = tentativas >= 1 && opcoes.reforco !== null;
+  const reforcar =
+    opcoes.politica !== undefined
+      ? opcoes.politica.reforcar && opcoes.reforco !== null
+      : tentativas >= 1 && opcoes.reforco !== null;
   const sufixo = reforcar ? SUFIXO_REFORCO : "";
   const modelo = reforcar ? opcoes.reforco : null;
 

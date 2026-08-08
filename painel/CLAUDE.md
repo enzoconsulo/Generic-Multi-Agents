@@ -118,6 +118,45 @@ protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em po
 - `pipeline/criterios.ts` — roda os `verificar:` das tarefas e, implicitamente, a suíte do
   projeto (via `ci/ecossistemas.ts`) antes de despachar o verificador.
 
+### Retrabalho diagnosticado (T-053)
+
+Reprovação não é uma coisa só, e tratar todas igual era caro. `pipeline/diagnostico.ts`
+classifica **por que** a tarefa voltou e deriva disso o modelo, o teto de voltas e o escopo
+do prompt:
+
+| natureza | de onde vem | reforça? | voltas | escopo |
+|---|---|---|---|---|
+| `mecanica` | critério `verificar:` falhou | **não** | 25 | pontual |
+| `defeito` (só `menor`) | achados do revisor | **não** | 25 | pontual |
+| `defeito` grave | achado `critica`/`importante` | sim | 40 | pontual |
+| `funcional` | verificador reprovou executando | sim | 40 | pontual |
+| `conformidade` | `Conformidade: nao-cumpre`/`cumpre-parcial` | **sempre** | padrão | completo |
+
+**A natureza vem do PORTÃO OBSERVADO, não de leitura de prosa.** O motor sabe quem reprovou
+porque foi ele que despachou o portão e viu o status mudar. As seções acumulam ciclos, e um
+veredito velho envenenaria a decisão seguinte — o texto só é lido para medir GRAVIDADE, e só
+quando quem reprovou foi o revisor.
+
+Duas travas impedem economia burra, e valem mais que a tabela: **`tentativas >= 2` é sempre
+calibre máximo** (a próxima reprovação bloqueia a tarefa — poupar centavos e arriscar
+queimá-la é péssimo negócio) e **conformidade nunca barateia** (o modelo barato já provou
+que não entendeu o pedido). A regra geral do módulo é **na dúvida, o caro**: qualquer
+incerteza — tarefa herdada de outra rodada, seção ilegível, portão desconhecido — cai no
+comportamento antigo. Barateamento é opt-in e exige sinal explícito.
+
+O despacho pontual leva um bloco `<foco>` com os achados nomeados e a instrução de **não
+recomeçar** — é a diferença entre "refaça a tarefa" e "conserte isto", e é onde o retrabalho
+ficava caro.
+
+### Recuperação de trabalho não registrado
+
+Quando o construtor termina sem gravar status, o motor pergunta à **árvore git** (não às
+Notas) se as `areas` mudaram. Se mudaram, ele fecha o ciclo pelo agente: commita **em nome da
+tarefa**, registra o hash nas Notas — para o revisor ter um DIFF — e promove a `em-teste`.
+Não é aprovação: os dois portões seguintes é que julgam, e agora podem rodar em vez de a
+rodada morrer. **É auto-limitado por construção**: o commit limpa a árvore, então uma segunda
+ocorrência não acha trabalho parcial e cai no encerramento por `sem-progresso`.
+
 **Para conferir sem gastar:** `npx tsx integracao/simular-pipeline.ts <projeto>` roda tudo
 contra os arquivos reais com um SDK falso e imprime o que aconteceria. Medido no
 banco-imobiliario: ~10,4k tokens de contexto por etapa, contra ~53,5k do caminho antigo.
@@ -157,6 +196,19 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   que morria levando junto o job em voo. É a mesma armadilha do item acima, num arquivo que
   não recebeu a correção. Ao dar `spawn`/`execFile` em comando de ecossistema: o teto de
   tempo é SEU, e o kill é de árvore.
+- **Parar por "sem progresso" pode estar jogando fora trabalho PRONTO.** A T-025 gastou dois
+  ciclos de `opus` que editaram os arquivos certos e escreveram Notas — e não gravaram
+  `status`, hash nem commit. O motor encerrou por `sem-progresso` e a rodada fechou com ZERO
+  tarefa concluída, com a entrega inteira no disco. O sinal para distinguir "agente travado"
+  de "agente esquecido" é a ÁRVORE GIT, o mesmo do saneamento de abertura. Corolário geral:
+  **antes de desistir de um agente, pergunte se ele produziu alguma coisa** — parar é certo,
+  descartar não.
+- **Guarda de progresso e commit varredor se anulavam, escondendo um ao outro.** O trabalho
+  da T-025 só não se perdeu porque o `git add -A` do commit de gestão o arrastou — o que por
+  sua vez fazia código entrar sem passar pelo revisor. Dois defeitos que se cancelavam:
+  corrigir só um deles teria PIORADO o sistema (escopar o commit sem a recuperação passaria a
+  perder trabalho de verdade). Ao corrigir defeito que convive com outro, verifique se um não
+  está mascarando o outro.
 - **`git add -A` num commit de "gestão" faz código entrar sem revisão.** O pipeline fechava
   a rodada com `commitar()`, que varre a árvore inteira: na rodada de 08/08 o
   `chore: gestão` arrastou `public/js/painel-propriedades.js` (código da T-025) e um
