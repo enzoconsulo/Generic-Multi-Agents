@@ -343,6 +343,27 @@ export async function alteracoesForaDe(
     .filter((caminho) => !prefixos.some((p) => caminho === p || caminho.startsWith(`${p}/`)));
 }
 
+/**
+ * Hash do HEAD, ou `null` se não der para ler (pasta sem git, repositório sem commit).
+ *
+ * Serve de MARCO: comparado antes e depois de uma etapa, diz se o agente commitou. É o sinal
+ * que faltava na recuperação de trabalho não registrado — ver `motor.ts`. Nunca lança:
+ * quem pergunta está diagnosticando, e diagnóstico não pode derrubar a rodada.
+ */
+export async function lerHead(dirRepo: string): Promise<string | null> {
+  if (!existsSync(join(dirRepo, ".git"))) return null;
+  try {
+    const { stdout } = await exec("git", ["rev-parse", "HEAD"], {
+      cwd: dirRepo,
+      windowsHide: true,
+    });
+    const hash = stdout.trim();
+    return hash === "" ? null : hash;
+  } catch {
+    return null;
+  }
+}
+
 export async function lerBranch(dirRepo: string): Promise<string> {
   try {
     const { stdout } = await exec("git", ["branch", "--show-current"], {

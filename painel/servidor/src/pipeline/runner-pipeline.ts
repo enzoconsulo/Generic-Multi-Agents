@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { appendFile, readFile } from "node:fs/promises";
 import { lerEquipe, lerResumosTarefas, parsearPlano, parsearTarefa } from "../fabrica/index.js";
-import { alteracoesForaDe, commitarCaminhos } from "../fabrica/git.js";
+import { alteracoesForaDe, commitarCaminhos, lerHead } from "../fabrica/git.js";
 import { gravarMarco, textoDoMarco } from "./marco.js";
 import { temTrabalhoParcial } from "./trabalho-parcial.js";
 import { anexarNaSecao, gravarStatusTarefa } from "../fabrica/escrita-tarefas.js";
@@ -144,6 +144,7 @@ export class RunnerPipeline implements Runner {
           return null;
         }
       },
+      hashHead: () => lerHead(dirProjeto),
       anexarNotas: async (t, texto) => {
         const r = await anexarNaSecao(join(dirTarefas, t.arquivo), "Notas de execução", texto);
         if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });

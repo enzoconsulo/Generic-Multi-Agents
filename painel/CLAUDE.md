@@ -151,8 +151,16 @@ ficava caro.
 ### Recuperação de trabalho não registrado
 
 Quando o construtor termina sem gravar status, o motor pergunta à **árvore git** (não às
-Notas) se as `areas` mudaram. Se mudaram, ele fecha o ciclo pelo agente: commita **em nome da
-tarefa**, registra o hash nas Notas — para o revisor ter um DIFF — e promove a `em-teste`.
+Notas) se houve trabalho. São **dois sinais, e o primeiro é o comum**:
+
+1. **HEAD andou durante a etapa** → o agente commitou. Durante um despacho só o agente
+   commita (o de gestão é no fim da rodada), então HEAD ter mudado é prova direta de entrega.
+   O motor só corrige o status — não há o que commitar.
+2. **Mudança não commitada nas `areas`** → o agente editou e não commitou. Aí o motor fecha
+   o ciclo pelo agente: commita **em nome da tarefa** e registra o hash nas Notas, para o
+   revisor ter um DIFF.
+
+Em ambos, promove a `em-teste`.
 Não é aprovação: os dois portões seguintes é que julgam, e agora podem rodar em vez de a
 rodada morrer. **É auto-limitado por construção**: o commit limpa a árvore, então uma segunda
 ocorrência não acha trabalho parcial e cai no encerramento por `sem-progresso`.
@@ -196,6 +204,15 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   que morria levando junto o job em voo. É a mesma armadilha do item acima, num arquivo que
   não recebeu a correção. Ao dar `spawn`/`execFile` em comando de ecossistema: o teto de
   tempo é SEU, e o kill é de árvore.
+- **O sinal óbvio de "houve trabalho" era o menos comum.** A primeira versão da recuperação
+  só perguntava "há mudança NÃO commitada nas `areas`?", calibrada no caso da T-025. A rodada
+  de validação `3732d414` reprovou isso na hora: o `executor-reforcado` da T-026 commitou o
+  trabalho (`51c9ff5`) E o hash da revisão, e só não mexeu no `status:` — e a árvore estava
+  limpa **justamente porque ele commitou**, então a recuperação recusou o caso em que o agente
+  fez tudo certo menos uma linha. Commitar está bem treinado no prompt dos construtores;
+  frontmatter não. Hoje o sinal principal é HEAD ter andado durante a etapa. Lição geral:
+  **ao inferir "houve trabalho", enumere as formas de entrega antes de escolher a sonda** —
+  a que você viu primeiro pode ser a exceção.
 - **Parar por "sem progresso" pode estar jogando fora trabalho PRONTO.** A T-025 gastou dois
   ciclos de `opus` que editaram os arquivos certos e escreveram Notas — e não gravaram
   `status`, hash nem commit. O motor encerrou por `sem-progresso` e a rodada fechou com ZERO

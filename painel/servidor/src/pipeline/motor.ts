@@ -139,6 +139,12 @@ export interface DependenciasMotor {
   commitarTarefa?(tarefa: TarefaResumo, mensagem: string): Promise<string | null>;
   /** Anexa texto à seção `## Notas de execução` — usado para registrar o hash recuperado. */
   anexarNotas?(tarefa: TarefaResumo, texto: string): Promise<void>;
+  /**
+   * Hash do HEAD do repositório do projeto. Comparado ANTES e DEPOIS de uma etapa, diz se o
+   * agente commitou — o sinal mais forte de "houve trabalho", e o mais comum na prática:
+   * commitar está bem treinado no prompt dos construtores, mexer no frontmatter nem tanto.
+   */
+  hashHead?(): Promise<string | null>;
   log(nivel: "info" | "erro", texto: string): void;
 }
 
@@ -547,6 +553,10 @@ export async function rodarPipeline(
     // que `lerTarefas()` devolve, e aí comparar depois leria o valor já mudado — a guarda
     // de progresso passaria a acusar travamento em toda rodada saudável.
     const statusAntes = passo.tarefa.status;
+    // Marco do repositório ANTES da etapa: se HEAD andar, o agente commitou. Só é lido para
+    // o construtor — é o único papel que entrega artefato — e custa um `git rev-parse`.
+    const headAntes =
+      passo.papel === "construtor" && dep.hashHead !== undefined ? await dep.hashHead() : null;
     // Conta AQUI, e não ao escolher o passo: quando a passada mecânica reprova, o fluxo
     // volta ao topo SEM despachar — contar antes fazia cada ciclo consumir dois do teto,
     // e o campo passava a medir iterações do laço em vez de despachos, que é o que custa.
@@ -639,7 +649,7 @@ export async function rodarPipeline(
         // Isto NÃO abre um laço infinito, e a razão é bonita: o commit deixa a árvore limpa,
         // então uma segunda ocorrência não encontra trabalho parcial e cai direto no
         // encerramento abaixo. A recuperação é auto-limitada por construção.
-        const recuperou = await recuperarTrabalhoNaoRegistrado(passo, depois, ctx, dep);
+        const recuperou = await recuperarTrabalhoNaoRegistrado(passo, depois, ctx, dep, headAntes);
         if (recuperou) {
           repeticoes.delete(passo.tarefa.id);
           continue;
@@ -740,10 +750,34 @@ async function recuperarTrabalhoNaoRegistrado(
   atual: TarefaResumo,
   ctx: ContextoMotor,
   dep: DependenciasMotor,
+  headAntes: string | null,
 ): Promise<boolean> {
   // Só o construtor: verificador e revisor não produzem artefato para commitar, e "trabalho
   // não commitado" na área deles seria justamente o que eles NÃO deviam ter feito.
   if (passo.papel !== "construtor") return false;
+
+  // SINAL 1 — O AGENTE COMMITOU. É o caso COMUM, e o que a primeira versão desta função não
+  // cobria: ela só olhava trabalho NÃO commitado, e por isso recusava exatamente quando o
+  // agente tinha feito tudo certo menos o frontmatter. Medido na rodada 3732d414 (08/08): o
+  // `executor-reforcado` da T-026 commitou `51c9ff5` E o hash da revisão, e mesmo assim a
+  // rodada morreu por `sem-progresso` — a árvore estava limpa JUSTAMENTE porque ele commitou.
+  //
+  // Durante uma etapa, só o agente commita (o commit de gestão é no fim da rodada), então
+  // HEAD ter andado é prova direta de trabalho entregue.
+  if (headAntes !== null && dep.hashHead !== undefined) {
+    const headDepois = await dep.hashHead();
+    if (headDepois !== null && headDepois !== headAntes) {
+      await dep.gravarStatus(atual, "em-teste");
+      dep.log(
+        "info",
+        `${atual.id}: construtor commitou \`${headDepois.slice(0, 7)}\` mas não gravou o` +
+          " status — trabalho entregue, promovido a em-teste. A rodada continua.",
+      );
+      return true;
+    }
+  }
+
+  // SINAL 2 — trabalho NÃO commitado nas `areas` (o caso da T-025).
   if (dep.commitarTarefa === undefined) return false;
   if (!(await dep.temTrabalhoParcial(atual))) return false;
 

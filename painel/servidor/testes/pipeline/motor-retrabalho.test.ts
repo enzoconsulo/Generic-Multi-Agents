@@ -60,6 +60,8 @@ function mundo(
     /** Construtor termina sem gravar status (o bug da T-025). */
     construtorMudo?: boolean;
     trabalhoParcial?: boolean;
+    /** O construtor mudo COMMITA (HEAD anda) — o caso comum, medido na rodada 3732d414. */
+    construtorCommita?: boolean;
     /** Driver sem as deps opcionais de recuperação. */
     semRecuperacao?: boolean;
   } = {},
@@ -71,6 +73,8 @@ function mundo(
   const notasAnexadas: { id: string; texto: string }[] = [];
   let jaReprovou = false;
   let arvoreSuja = opcoes.trabalhoParcial ?? false;
+  let head = "head0000";
+  let nHead = 0;
 
   const proximoStatus: Record<string, string> = {
     pronta: "em-teste",
@@ -105,13 +109,16 @@ function mundo(
     anexarNotas: async (t, texto) => {
       notasAnexadas.push({ id: t.id, texto });
     },
+    hashHead: async () => head,
     despachar: async (pedido) => {
       despachos.push(pedido);
       const atual = tarefas.get(pedido.tarefa.id);
       if (atual === undefined) return { custoUsd: 0.1, concluiu: true };
 
       if (pedido.papel === "construtor" && opcoes.construtorMudo === true) {
-        return { custoUsd: 0.1, concluiu: true }; // termina e NÃO grava status
+        // O agente commita (HEAD anda) mas NÃO grava o status — o caso comum.
+        if (opcoes.construtorCommita === true) head = `head${++nHead}`;
+        return { custoUsd: 0.1, concluiu: true };
       }
       if (pedido.papel === opcoes.reprovarEm && !jaReprovou) {
         jaReprovou = true;
@@ -138,6 +145,41 @@ function construtores(despachos: PedidoDespacho[]): PedidoDespacho[] {
 }
 
 describe("recuperação de trabalho não registrado (o caso T-025)", () => {
+  /**
+   * REGRESSÃO da rodada de validação `3732d414` (08/08), que reprovou a PRIMEIRA versão
+   * desta recuperação. O `executor-reforcado` da T-026 commitou o trabalho E o hash da
+   * revisão, e só não mexeu no `status:`. Como ele commitou, a árvore ficou LIMPA — e o
+   * critério original ("há trabalho não commitado?") recusou exatamente o caso em que o
+   * agente tinha feito tudo certo menos uma linha de frontmatter.
+   *
+   * Commitar está bem treinado no prompt dos construtores; mexer no frontmatter, nem tanto.
+   * Este é o caso COMUM, e o da T-025 é o raro.
+   */
+  it("construtor que COMMITA mas não grava status: HEAD andou, logo houve trabalho", async () => {
+    const { dep, logs, commitsDeTarefa } = mundo([tarefa({ id: "T-110", status: "pronta" })], {
+      construtorMudo: true,
+      construtorCommita: true,
+      trabalhoParcial: false, // árvore limpa JUSTAMENTE porque ele commitou
+    });
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.encerrouPor).not.toBe("sem-progresso");
+    // Nada a commitar: o agente já fez isso. O motor só corrige o status.
+    expect(commitsDeTarefa).toHaveLength(0);
+    expect(logs.some((l) => l.includes("commitou") && l.includes("não gravou o status"))).toBe(
+      true,
+    );
+  });
+
+  it("HEAD parado e árvore limpa: não houve trabalho, encerra como antes", async () => {
+    const { dep } = mundo([tarefa({ id: "T-111", status: "pronta" })], {
+      construtorMudo: true,
+      construtorCommita: false,
+      trabalhoParcial: false,
+    });
+    expect((await rodarPipeline(ctxBase, dep)).encerrouPor).toBe("sem-progresso");
+  });
+
   it("construtor mudo COM trabalho na árvore: commita, promove e a rodada segue", async () => {
     const { dep, logs, commitsDeTarefa, notasAnexadas } = mundo(
       [tarefa({ id: "T-100", status: "pronta" })],
