@@ -1,4 +1,5 @@
 import { appendFileSync, mkdirSync } from "node:fs";
+import { freemem, totalmem } from "node:os";
 import { join } from "node:path";
 import { criarApp } from "./app.js";
 import { config, fabricaRaizExiste } from "./config.js";
@@ -31,6 +32,45 @@ function registrarQueda(tipo: string, erro: unknown): void {
 
 process.on("uncaughtException", (erro) => registrarQueda("uncaughtException", erro));
 process.on("unhandledRejection", (motivo) => registrarQueda("unhandledRejection", motivo));
+
+/**
+ * PULSO DE VIDA — o que separa "morri de memória" de "me mataram".
+ *
+ * As quedas de 08/08 não deixaram NADA: nem `quedas.log` (logo não foi exceção de JS), nem
+ * evento de falha do Windows (logo não foi abort). As duas explicações que sobram são
+ * indistinguíveis pelo que existe hoje: (a) o processo foi terminado de fora — e agentes
+ * desta fábrica comprovadamente rodam `taskkill`, com o painel sendo *também* um `node.exe`;
+ * (b) a máquina (7,9 GB, limite de commit ~9,7 GB) ficou sem memória.
+ *
+ * O pulso resolve isso sem custo relevante: uma linha a cada 30s com memória livre e uso do
+ * processo. Se o arquivo terminar com memória saudável, foi morte externa. Se terminar com a
+ * memória despencando, foi esgotamento. `SIGTERM`/`SIGINT` também são anotados, então um
+ * encerramento pedido nunca é confundido com queda.
+ */
+function pulso(evento: string): void {
+  const livreMb = Math.round(freemem() / 1024 / 1024);
+  const totalMb = Math.round(totalmem() / 1024 / 1024);
+  const rssMb = Math.round(process.memoryUsage().rss / 1024 / 1024);
+  const linha =
+    `[${new Date().toISOString()}] ${evento} pid=${process.pid} ` +
+    `rss=${rssMb}MB livre=${livreMb}/${totalMb}MB\n`;
+  try {
+    mkdirSync(config.dirDados, { recursive: true });
+    appendFileSync(join(config.dirDados, "pulso.log"), linha, "utf8");
+  } catch {
+    // Diagnóstico é conveniência: nunca pode atrapalhar o painel.
+  }
+}
+
+pulso("subiu");
+// `unref` para o pulso jamais segurar o processo vivo sozinho.
+setInterval(() => pulso("vivo"), 30_000).unref();
+for (const sinal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"] as const) {
+  process.on(sinal, () => {
+    pulso(`encerrado por ${sinal}`);
+    process.exit(0);
+  });
+}
 
 const app = await criarApp();
 

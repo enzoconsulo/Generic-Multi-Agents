@@ -26,6 +26,13 @@ import {
   type Runner,
 } from "./tipos.js";
 
+/**
+ * De quanto em quanto tempo o log de um job em curso é despejado em disco. 10s é o ponto
+ * em que a escrita some no ruído (um job dura minutos a horas) e a perda numa morte súbita
+ * ainda é pequena o bastante para o log servir de diagnóstico.
+ */
+const INTERVALO_DESPEJO_MS = 10_000;
+
 /** Job referenciado não existe (a rota traduz para 404). */
 export class ErroJobNaoEncontrado extends Error {
   constructor(id: string) {
@@ -47,6 +54,11 @@ export interface OpcoesGerenciador {
   dirJobs: string;
   /** Teto de jobs `usaClaude` executando ao mesmo tempo (>= 1). */
   tetoClaude: number;
+  /**
+   * Intervalo do despejo do log em disco. Existe para o teste não esperar 10s de verdade —
+   * mesma razão do relógio injetável do watchdog.
+   */
+  intervaloDespejoMs?: number;
 }
 
 export interface NovoJob {
@@ -99,11 +111,26 @@ export class GerenciadorJobs {
    * teto de execuções simultâneas.
    */
   private readonly logsEmCurso = new Map<string, HistoricoLog>();
+  /**
+   * Instante do último despejo em disco de cada log em curso (T-052).
+   *
+   * O log só ia para o disco no ASSENTAMENTO, e por isso todo processo morto no meio
+   * deixava zero evidência — foi o que travou o diagnóstico das quedas de 08/08: três jobs
+   * seguidos sem uma linha sequer. Agora ele é despejado a cada `INTERVALO_DESPEJO_MS`,
+   * então uma morte súbita perde no máximo esse intervalo.
+   *
+   * Por que periódico e não por linha: este repositório vive sob OneDrive, onde I/O por
+   * arquivo é lento e intermitente (já causou EBUSY/EPERM), e um `/trabalhar` passa de 10
+   * mil linhas. Uma escrita a cada 10s é ruído no perfil; 10 mil escritas não são.
+   */
+  private readonly ultimoDespejo = new Map<string, number>();
   private readonly dirJobs: string;
   private readonly tetoClaude: number;
+  private readonly intervaloDespejoMs: number;
 
   constructor(opcoes: OpcoesGerenciador) {
     this.dirJobs = opcoes.dirJobs;
+    this.intervaloDespejoMs = opcoes.intervaloDespejoMs ?? INTERVALO_DESPEJO_MS;
     if (!Number.isInteger(opcoes.tetoClaude) || opcoes.tetoClaude < 1) {
       throw new Error(`Teto Claude inválido: ${opcoes.tetoClaude}. Use um inteiro >= 1.`);
     }
@@ -505,12 +532,21 @@ export class GerenciadorJobs {
     if (historico === undefined) {
       historico = historicoVazio();
       this.logsEmCurso.set(jobId, historico);
+      this.ultimoDespejo.set(jobId, Date.now());
     }
     empurrarLinha(historico, {
       em,
       nivel: typeof d.nivel === "string" ? d.nivel : "log",
       texto,
     });
+
+    // Despejo periódico: o que já aconteceu fica no disco mesmo que o processo morra agora.
+    // `salvarHistorico` nunca lança, então isto não entra no caminho de erro de ninguém.
+    const agoraMs = Date.now();
+    if (agoraMs - (this.ultimoDespejo.get(jobId) ?? 0) >= this.intervaloDespejoMs) {
+      this.ultimoDespejo.set(jobId, agoraMs);
+      salvarHistorico(this.dirJobs, jobId, historico);
+    }
   }
 
   /**
@@ -520,6 +556,7 @@ export class GerenciadorJobs {
   private fecharHistoricoDeLog(jobId: string): void {
     const historico = this.logsEmCurso.get(jobId);
     this.logsEmCurso.delete(jobId);
+    this.ultimoDespejo.delete(jobId);
     if (historico !== undefined) salvarHistorico(this.dirJobs, jobId, historico);
   }
 

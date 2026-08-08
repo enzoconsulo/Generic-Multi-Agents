@@ -69,4 +69,52 @@ describe("gerenciador — histórico de log do job", () => {
   it("job sem log nenhum devolve lista vazia, não erro", () => {
     expect(ger.historicoDeLog("nao-existe")).toEqual({ linhas: [], descartadas: 0 });
   });
+
+  /**
+   * REGRESSÃO das quedas de 08/08.
+   *
+   * O log só ia ao disco no ASSENTAMENTO, então processo morto no meio — que é exatamente o
+   * caso que se precisa diagnosticar — não deixava UMA linha. Três jobs seguidos caíram
+   * assim e o diagnóstico teve de sair de fora do painel. O teste simula a morte súbita da
+   * única forma honesta: lê o arquivo com o job AINDA executando.
+   */
+  it("o log chega ao disco ENQUANTO o job executa (sobrevive a morte súbita)", async () => {
+    const dir2 = dirTemporario();
+    // Despejo imediato: o teste não pode depender de esperar 10s reais.
+    const ger2 = new GerenciadorJobs({ dirJobs: dir2, tetoClaude: 2, intervaloDespejoMs: 0 });
+
+    let liberar: () => void = () => {};
+    const travado = new Promise<void>((r) => {
+      liberar = r;
+    });
+    ger2.registrarRunner("travado", {
+      async executar(_job: Job, ctx: ContextoExecucao) {
+        ctx.emitir("log", { nivel: "inicio", texto: "comecei" });
+        ctx.emitir("log", { nivel: "ferramenta", texto: "Bash: npm test" });
+        await travado; // nunca assenta enquanto o teste não mandar
+        return { ok: true };
+      },
+    });
+
+    const job = ger2.criarJob({
+      tipo: "travado",
+      titulo: "/trabalhar",
+      escopo: "global",
+      usaClaude: true,
+    });
+    await aguardarEstado(ger2, job.id, "executando");
+    await new Promise((r) => setTimeout(r, 50));
+
+    // A prova: um gerenciador NOVO (= painel reaberto após a queda) acha o log no disco,
+    // com o job da sessão anterior ainda sem ter assentado.
+    const outroProcesso = new GerenciadorJobs({ dirJobs: dir2, tetoClaude: 2 });
+    expect(outroProcesso.historicoDeLog(job.id).linhas.map((l) => l.texto)).toEqual([
+      "comecei",
+      "Bash: npm test",
+    ]);
+
+    liberar();
+    await aguardarEstado(ger2, job.id, "concluido");
+    rmSync(dir2, { recursive: true, force: true });
+  });
 });
