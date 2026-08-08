@@ -3,6 +3,7 @@ import { estimarCusto } from "../jobs/claude/precos.js";
 import { montarContexto, papelDoAgente } from "../contexto/montador.js";
 import type { EquipeProjeto } from "../fabrica/tipos.js";
 import { carregarAgente, FERRAMENTAS_PIPELINE } from "./prompts-agente.js";
+import { avaliarComandoDeProcesso, comandoDoToolInput } from "./guarda-processos.js";
 import type { PedidoDespacho, ResultadoDespacho } from "./motor.js";
 
 /**
@@ -179,6 +180,34 @@ export function criarDespachante(
         // ferramenta em vez de pedido no prompt.
         allowedTools: [...FERRAMENTAS_PIPELINE],
         permissionMode: "bypassPermissions",
+        // A ÚNICA conferência de comando neste caminho. `bypassPermissions` desliga o
+        // `canUseTool`, mas o `sdk.d.ts` garante que o PreToolUse decide mesmo sob bypass.
+        // Barra o agente de matar o painel que o executa — ver `guarda-processos.ts`.
+        hooks: {
+          PreToolUse: [
+            {
+              hooks: [
+                async (entrada: unknown) => {
+                  const i = entrada as { tool_name?: string; tool_input?: unknown };
+                  const veredicto = avaliarComandoDeProcesso(comandoDoToolInput(i.tool_input));
+                  if (veredicto.permitido) return { continue: true };
+                  o.emitir(
+                    "erro",
+                    `GUARDA: comando de kill recusado para ${pedido.agente} — ${veredicto.motivo ?? ""}`,
+                  );
+                  return {
+                    continue: true,
+                    hookSpecificOutput: {
+                      hookEventName: "PreToolUse" as const,
+                      permissionDecision: "deny" as const,
+                      permissionDecisionReason: veredicto.motivo ?? "recusado",
+                    },
+                  };
+                },
+              ],
+            },
+          ],
+        },
         abortController: o.abortController,
         maxTurns: o.maxTurnsPorEtapa ?? MAX_TURNS[papel] ?? 40,
         // Nada de disco: o contexto é montado por nós, e carregar os CLAUDE.md da fábrica
