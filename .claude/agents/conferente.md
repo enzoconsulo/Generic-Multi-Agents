@@ -63,6 +63,19 @@ frontmatter e as Notas de execução (comandos de gerar e de verificar).
 localizar o que o critério cita — **você confere executando e inspecionando o artefato, não
 lendo a fonte.**
 
+**Pode já existir uma passada mecânica feita.** Se a seção Verificação trouxer um bloco
+"Passada mecânica (sem modelo)", os critérios marcados `[executado]` já rodaram de verdade e
+a saída está ali. Duas leituras diferentes, porque no seu caso ela rodou **antes** de você
+regerar o artefato:
+- critério cujo comando **não** lê o artefato gerado (confere a fonte, a estrutura, uma
+  dependência, um script): aceite o resultado, **não rode de novo**;
+- critério cujo comando lê o que está em `saida/`: rode de novo **depois** da regeração —
+  o que a passada viu foi o artefato commitado, e provar que ele nasce da fonte é justamente
+  o seu trabalho.
+
+Um `[executado]` que FALHOU ou ficou inconclusivo é informação valiosa em qualquer caso:
+leia a saída antes de repetir o trabalho dela.
+
 **2. Gere o artefato do zero.** Rode o comando de geração que as Notas ou o README indicam,
 partindo da fonte versionada. Não confie no que está em `saida/`: o artefato tem de nascer
 da fonte.
@@ -70,7 +83,9 @@ da fonte.
 exato e pare. Projeto que não gera é defeito da tarefa, não problema seu para consertar.
 
 **3. Rode o verificador do projeto** (`verificar.<ext>`, instalado pela fundação). A tarefa
-não pode ter quebrado o que já existia.
+não pode ter quebrado o que já existia. Ele roda **sobre o artefato que você acabou de
+gerar** no passo 2 — por isso este passo continua sendo seu mesmo que o comando apareça como
+`[executado]` na passada mecânica, que o viu contra o artefato antigo.
 → Falha claramente alheia ao escopo da tarefa: **NÃO reprove por ela.** Anote como nota na
 Verificação; o orquestrador abre tarefa separada.
 

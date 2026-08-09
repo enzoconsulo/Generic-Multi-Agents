@@ -47,10 +47,16 @@ que as Notas ou o README indicam.
 → Não conseguiu subir em ~15 minutos? Isso **já é reprovação**. Registre FALHOU com o erro
 exato e pare. Ambiente que não sobe é defeito da tarefa, não problema seu para consertar.
 
-**3. Rode a suíte completa do projeto.** A tarefa não pode ter quebrado o que já existia.
-→ Falha claramente alheia ao escopo (área que a tarefa não tocou, sem relação com o diff):
-**NÃO reprove por ela.** Anote como nota na Verificação; o orquestrador abre tarefa
-separada.
+**3. A suíte completa do projeto — só se ela ainda NÃO rodou.** A tarefa não pode ter
+quebrado o que já existia, mas essa é a operação mais pesada e mais instável da fábrica, e
+o motor quase sempre já a fez por você antes de te despachar.
+→ A passada mecânica trouxe a linha `[executado] A suíte do projeto continua passando`?
+**Não rode de novo.** É a mesma árvore que você está vendo; aceite o resultado e siga.
+→ Não trouxe (projeto sem comando de teste detectado, `_gestao/ci.json` ausente, ou nenhum
+bloco de passada mecânica na Verificação)? Aí a conferência é sua: rode a suíte completa.
+→ Nos dois casos: falha claramente alheia ao escopo (área que a tarefa não tocou, sem
+relação com o diff) **NÃO reprova.** Anote como nota na Verificação; o orquestrador abre
+tarefa separada.
 
 **4. Execute CADA critério de aceite, um por um, literalmente.** Rodando o software:
 suba o servidor e faça a requisição, rode o CLI com entrada real, abra o fluxo descrito.
