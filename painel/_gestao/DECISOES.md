@@ -599,3 +599,31 @@ Página de Jobs: 3 requisições. Custo por cartão: **6–7× mais rápido** (1
 metade "não cortar" é a parte que costuma faltar: sem ela, a próxima auditoria refaz o
 trabalho e acaba cortando onde dói.
 **Quem:** usuário + orquestrador
+
+## 2026-08-09 — A régua da Fase 4 estava mal calibrada (n=1, primeira medição)
+
+**Decisão:** manter a Fase 4 como está e NÃO acrescentar mecanismo por causa da primeira
+medição, mas corrigir a régua: o alvo de "≤ US$ 3 por tarefa concluída" foi derivado
+errado e não é o teste da fase.
+
+**Motivo:** o alvo saiu da auditoria que mediu ~75-80% do gasto como retrabalho, e eu o
+escrevi como se TODO o retrabalho fosse desaparecer. Não é o que a fase ataca: ela ataca
+a fatia FALSA do retrabalho (instrumento mentindo), não a legítima. A primeira rodada
+depois da fase (job `3cbf5769`) mostra exatamente isso — T-031 concluída por US$ 4,37 em
+2 ciclos, contra ~US$ 7,30 e 2,4 ciclos de média na Fase 4, com **zero reprovação falsa**:
+`criteriosQuebrados` vazio, nenhum `inconclusivo`, nenhuma reexecução por ambiente, 4
+critérios resolvidos por comando sem reprovar. A única reprovação foi de CONFORMIDADE — o
+revisor viu que a entrega não era o pedido, o reforçado corrigiu com os achados em foco e
+passou. Isso é o sistema funcionando, e custa caro por construção (conformidade sempre roda
+no calibre máximo).
+
+A régua honesta não é o custo absoluto: é **a fatia de retrabalho que não achou defeito**.
+Essa foi a zero nesta rodada. O custo por tarefa cai como consequência, até onde o
+retrabalho legítimo permitir.
+
+**O que esta medição NÃO prova, e por isso nada muda ainda:** n=1 em tarefa concluída; as
+guardas novas (T-054, T-055, T-057) **não dispararam nenhuma vez** — não havia o que pegar,
+o que é consistente com a tese mas não é prova; e a rodada foi truncada pelo limite de conta
+do usuário no testador da T-032, então T-032/T-033 ficaram sem medição.
+
+**Quem:** orquestrador (a pedido do usuário, após disparar a Fase 5 para medir)
