@@ -17,6 +17,7 @@ import {
   lerCriterios,
   relatorioCriterios,
   criteriosComFerramentaQuebrada,
+  reexecucoesPorAmbiente,
   reprovouNaMecanica,
   type ResultadoCriterio,
 } from "./criterios.js";
@@ -505,6 +506,17 @@ export async function rodarPipeline(
       rel.criteriosExecutados += executados.filter(
         (r) => r.estado === "passou" || r.estado === "falhou",
       ).length;
+
+      // Termômetro da máquina (T-055): cada reexecução é, no melhor caso, uma reprovação
+      // falsa que não aconteceu. Sem registro, a instabilidade volta a ser folclore.
+      const reexecucoes = reexecucoesPorAmbiente(executados);
+      if (reexecucoes > 0) {
+        dep.log(
+          "info",
+          `${passo.tarefa.id}: ${reexecucoes} comando(s) precisaram de 2ª execução por falha` +
+            " de ambiente (a 1ª não valeu). Sinal de contenção nesta máquina, não da tarefa.",
+        );
+      }
 
       // Critério quebrado não reprova, mas não pode passar em silêncio: quem corrige critério
       // é o planejador, e ele só age se alguém contar.

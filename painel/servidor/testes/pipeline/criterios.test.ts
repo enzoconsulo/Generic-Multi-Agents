@@ -10,6 +10,7 @@ import {
   criteriosComFerramentaQuebrada,
   executarCriterios,
   lerCriterios,
+  reexecucoesPorAmbiente,
   relatorioCriterios,
   reprovouNaMecanica,
 } from "../../src/pipeline/criterios.js";
@@ -546,5 +547,106 @@ describe("executarCriterios — a T-030 ponta a ponta, com processo de verdade",
 
     expect(r[0]?.estado).toBe("falhou");
     expect(reprovouNaMecanica(r)).toBe(true);
+  }, 30_000);
+});
+
+describe("retentativa única para falha de AMBIENTE (T-055)", () => {
+  /**
+   * Script que se comporta diferente na 1ª e na 2ª execução, contando num arquivo. É o único
+   * jeito honesto de testar retentativa: um mock diria que o código chama duas vezes, não que
+   * o resultado da segunda é o que vale.
+   *
+   * `comoFalha` decide o que a PRIMEIRA execução faz — e com isso o teste cobre as três
+   * decisões da T-055 com o mesmo aparato.
+   */
+  function projetoInstavel(comoFalha: "ambiente" | "falha" | "trava"): string {
+    const dir = mkdtempSync(join(tmpdir(), "t055-"));
+    const contador = join(dir, "contador.txt");
+    const primeira =
+      comoFalha === "ambiente"
+        ? // ENOMEM na saída → classe `ambiente` (o padrão vale para qualquer stack).
+          'process.stderr.write("ENOMEM: sem memoria\\n"); process.exit(1);'
+        : comoFalha === "falha"
+          ? // Reprovação legítima: nada de ambiente na saída, só código não-zero.
+            'process.stderr.write("2 testes falharam\\n"); process.exit(1);'
+          : // Trava para estourar o NOSSO teto de tempo.
+            "setInterval(() => {}, 1000);";
+    // A saída antecipada vem PRIMEIRO, e o ramo da 1ª execução é a última coisa do arquivo.
+    // Escrito ao contrário (`if (!existe) { ...primeira } process.exit(0)`) o caso "trava"
+    // não travava: `setInterval` não bloqueia, o script seguia para o `exit(0)` e o teste
+    // media um comando que passou de primeira em vez de um que estourou o tempo.
+    writeFileSync(
+      join(dir, "instavel.js"),
+      `const { existsSync, writeFileSync } = require("node:fs");
+       const contador = ${JSON.stringify(contador)};
+       if (existsSync(contador)) process.exit(0);
+       writeFileSync(contador, "1");
+       ${primeira}`,
+      "utf8",
+    );
+    return dir;
+  }
+
+  /**
+   * O caso que paga a tarefa: a 1ª execução caiu por contenção, a 2ª passou. Antes da T-054
+   * isso reprovava a tarefa e queimava uma das 3 fichas; antes da T-055 ficava inconclusivo e
+   * ia para julgamento do verificador. Agora é o que sempre foi: um comando que passa.
+   */
+  it("caiu por ambiente na 1ª e passou na 2ª → PASSOU, com o registro da reexecução", async () => {
+    const dir = projetoInstavel("ambiente");
+    const r = await executarCriterios(
+      [{ texto: "a suíte passa", comando: "node instavel.js", marcado: false }],
+      dir,
+    );
+
+    expect(r[0]?.estado).toBe("passou");
+    expect(r[0]?.reexecutado).toBe(true);
+    expect(reprovouNaMecanica(r)).toBe(false);
+    expect(reexecucoesPorAmbiente(r)).toBe(1);
+    // O registro tem de sobreviver até o relatório: é ele que mede a máquina.
+    expect(relatorioCriterios(r)).toContain("na 2ª execução; a 1ª caiu por ambiente");
+  }, 30_000);
+
+  /**
+   * A trava contra economia burra: reprovação legítima NÃO é retentada. O script passaria na
+   * segunda execução — se houvesse uma. Não há, então o resultado é `falhou`, e é isso que
+   * prova que o retry não é cego.
+   */
+  it("reprovação legítima não é retentada — segue reprovando", async () => {
+    const dir = projetoInstavel("falha");
+    const r = await executarCriterios(
+      [{ texto: "a suíte passa", comando: "node instavel.js", marcado: false }],
+      dir,
+    );
+
+    expect(r[0]?.estado).toBe("falhou");
+    expect(r[0]?.reexecutado).toBeUndefined();
+    expect(reprovouNaMecanica(r)).toBe(true);
+    expect(reexecucoesPorAmbiente(r)).toBe(0);
+  }, 30_000);
+
+  /**
+   * ESTOURO DE TEMPO NÃO É RETENTADO — desvio deliberado ao plano da fase, travado aqui.
+   *
+   * O argumento que autoriza retentar ambiente é "custa segundos": verdadeiro para crash, que
+   * falha rápido, e falso para estouro, que já consumiu o teto inteiro. Retentar dobraria o
+   * pior caso de tempo justamente na máquina onde a suíte é o gargalo.
+   *
+   * A prova não é cronômetro (que seria frágil): o script PASSARIA na segunda execução, então
+   * um `passou` aqui denunciaria a retentativa. O `inconclusivo` é a prova de que não houve.
+   */
+  it("estouro de tempo NÃO é retentado, mesmo sendo ambiente", async () => {
+    const dir = projetoInstavel("trava");
+    const r = await executarCriterios(
+      [{ texto: "a suíte passa", comando: "node instavel.js", marcado: false }],
+      dir,
+      { timeoutMs: 1200 },
+    );
+
+    expect(r[0]?.estado).toBe("inconclusivo");
+    expect(r[0]?.classe).toBe("ambiente");
+    expect(r[0]?.reexecutado).toBeUndefined();
+    // E o principal: mesmo sem retentativa, estouro deixou de reprovar a tarefa.
+    expect(reprovouNaMecanica(r)).toBe(false);
   }, 30_000);
 });

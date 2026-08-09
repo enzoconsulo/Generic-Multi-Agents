@@ -177,6 +177,12 @@ export interface ResultadoCriterio {
   recusa?: MotivoRecusa;
   /** Por que não decidiu, quando `inconclusivo`. */
   classe?: ClasseFalha;
+  /**
+   * O comando rodou DUAS vezes: a primeira caiu por ambiente e foi reexecutada (T-055). Vale
+   * para qualquer desfecho da segunda — inclusive `passou`, que é o caso interessante, porque
+   * é exatamente uma reprovação falsa que deixou de acontecer.
+   */
+  reexecutado?: boolean;
   /** Saída relevante (cortada) quando falhou — é o que o construtor precisa ler. */
   saida?: string;
 }
@@ -380,80 +386,139 @@ export async function executarCriterios(
       });
       continue;
     }
-    const [bin, ...args] = avaliacao.argv;
-    // O timeout é NOSSO, nunca o do `execFile`. O dele manda um SIGTERM só para o filho
-    // DIRETO — que no Windows é o `cmd.exe` do `shell: true` — e deixa `npm`, `node --test`
-    // e um processo por arquivo de teste vivos para sempre. Medido no banco-imobiliario:
-    // 8 `node.exe` órfãos por estouro, cada um segurando um servidor HTTP + Socket.IO. A
-    // suíte roda uma vez por tarefa por ciclo, então uma rodada de `/trabalhar` acumulava
-    // dezenas deles até a máquina (7,9 GB) não sustentar mais o painel — que morria sem
-    // deixar rastro, levando junto o job em voo. Ver `ci/processo.ts`.
-    let estourou = false;
-    const chamada = exec(bin as string, args, {
-      cwd: dirProjeto,
-      maxBuffer: 8 * 1024 * 1024,
-      windowsHide: true,
-      // Windows: `npm` é `npm.cmd` e precisa de shell para resolver. O comando já passou
-      // pela allowlist e pela recusa de metacaracteres, então não há o que injetar aqui.
-      shell: process.platform === "win32",
-    });
-    const cronometro = setTimeout(() => {
-      estourou = true;
-      const pid = chamada.child.pid;
-      if (pid !== undefined) encerrarArvore(pid);
-    }, timeout);
+    const primeira = await rodarUmaVez(avaliacao.argv, dirProjeto, timeout);
 
-    try {
-      const r = await chamada;
-      saida.push({ texto: c.texto, estado: "passou", comando: c.comando, saida: cortar(r.stdout) });
-    } catch (e) {
-      const err = e as {
-        stdout?: string;
-        stderr?: string;
-        message?: string;
-        code?: number | string;
-        signal?: string;
-      };
-      const bruta = `${err.stdout ?? ""}\n${err.stderr ?? err.message ?? ""}`;
-      const classe = classificarFalha({
-        argv: avaliacao.argv,
-        saida: bruta,
-        code: err.code ?? null,
-        signal: err.signal ?? null,
-        estourouNossoTeto: estourou,
-        existeNoDisco: (caminho) =>
-          existsSync(isAbsolute(caminho) ? caminho : resolve(dirProjeto, caminho)),
-      });
+    /**
+     * RETENTATIVA ÚNICA PARA FALHA DE AMBIENTE (T-055).
+     *
+     * Regressão real falha as DUAS vezes; crash por contenção normalmente não. A troca é
+     * assimétrica em ordens de magnitude: a reexecução custa segundos de CPU e zero token,
+     * enquanto uma reprovação falsa custa ~US$ 1,5-3 **mais uma das 3 fichas da tarefa** — e
+     * a ficha é o recurso escasso, porque na terceira a tarefa bloqueia.
+     *
+     * ESTOURO DE TEMPO FICA FORA, e é uma correção deliberada ao plano da fase. O argumento
+     * que autoriza retentar ("custa segundos") é verdadeiro para crash, que falha rápido, e
+     * FALSO para estouro: ele já consumiu o teto inteiro, então retentar dobra 10 min para 20
+     * por critério — na máquina onde a suíte já é o gargalo. Um estouro segue `inconclusivo`,
+     * que por si só já é o ganho grande: ele deixou de reprovar a tarefa.
+     *
+     * `ferramenta` também não se retenta: comando impossível continua impossível.
+     */
+    const retentar = !primeira.ok && primeira.classe === "ambiente" && !primeira.estourou;
+    const r = retentar ? await rodarUmaVez(avaliacao.argv, dirProjeto, timeout) : primeira;
+    // Só é verdade quando houve DUAS execuções — é o que permite medir a instabilidade da
+    // máquina depois, em vez de esquecê-la.
+    const marca = retentar ? { reexecutado: true } : {};
 
-      if (classe === "falha") {
-        saida.push({ texto: c.texto, estado: "falhou", comando: c.comando, saida: cortar(bruta) });
-        continue;
-      }
-
-      // Inconclusivo: o comando não respondeu à pergunta. Dizer POR QUE na própria saída é o
-      // que impede o desperdício de sempre — o construtor gastando um ciclo atrás de um bug
-      // que não existe, ou o verificador tomando ruído de máquina por veredito.
-      const explicacao = estourou
-        ? `Comando excedeu o teto de ${Math.round(timeout / 1000)}s e a árvore de processos` +
-          " foi encerrada. Isso é limite de tempo, não defeito da tarefa."
-        : classe === "ferramenta"
-          ? "O COMANDO DO CRITÉRIO não conseguiu executar (binário ausente, opção inválida ou" +
-            " alvo que existe mas ele não sabe consumir). Isso é defeito do critério, não da" +
-            " entrega — nenhum construtor conserta, quem corrige critério é o planejador."
-          : "A máquina atrapalhou (processo morto, crash nativo ou recurso esgotado). Não diz" +
-            " nada sobre a entrega.";
+    if (r.ok) {
       saida.push({
         texto: c.texto,
-        estado: "inconclusivo",
-        classe,
+        estado: "passou",
         comando: c.comando,
-        saida: cortar(`${explicacao}\n\n${bruta}`),
+        ...marca,
+        saida: cortar(r.stdout),
       });
-    } finally {
-      clearTimeout(cronometro);
+      continue;
     }
+
+    if (r.classe === "falha") {
+      saida.push({
+        texto: c.texto,
+        estado: "falhou",
+        comando: c.comando,
+        ...marca,
+        saida: cortar(r.bruta),
+      });
+      continue;
+    }
+
+    // Inconclusivo: o comando não respondeu à pergunta. Dizer POR QUE na própria saída é o
+    // que impede o desperdício de sempre — o construtor gastando um ciclo atrás de um bug
+    // que não existe, ou o verificador tomando ruído de máquina por veredito.
+    const explicacao = r.estourou
+      ? `Comando excedeu o teto de ${Math.round(timeout / 1000)}s e a árvore de processos` +
+        " foi encerrada. Isso é limite de tempo, não defeito da tarefa."
+      : r.classe === "ferramenta"
+        ? "O COMANDO DO CRITÉRIO não conseguiu executar (binário ausente, opção inválida ou" +
+          " alvo que existe mas ele não sabe consumir). Isso é defeito do critério, não da" +
+          " entrega — nenhum construtor conserta, quem corrige critério é o planejador."
+        : "A máquina atrapalhou (processo morto, crash nativo ou recurso esgotado) nas DUAS" +
+          " execuções. Não diz nada sobre a entrega.";
+    saida.push({
+      texto: c.texto,
+      estado: "inconclusivo",
+      classe: r.classe,
+      comando: c.comando,
+      ...marca,
+      saida: cortar(`${explicacao}\n\n${r.bruta}`),
+    });
   }
   return saida;
+}
+
+/** Desfecho de UMA execução do comando. */
+type Execucao =
+  | { ok: true; stdout: string }
+  | { ok: false; classe: ClasseFalha; bruta: string; estourou: boolean };
+
+/**
+ * Roda o comando UMA vez e classifica o desfecho. Extraído do laço para a retentativa da
+ * T-055 poder chamá-lo de novo sem duplicar nada — inclusive o kill de árvore, que é a parte
+ * que não pode divergir entre as duas execuções.
+ */
+async function rodarUmaVez(
+  argv: readonly string[],
+  dirProjeto: string,
+  timeout: number,
+): Promise<Execucao> {
+  const [bin, ...args] = argv;
+  // O timeout é NOSSO, nunca o do `execFile`. O dele manda um SIGTERM só para o filho
+  // DIRETO — que no Windows é o `cmd.exe` do `shell: true` — e deixa `npm`, `node --test`
+  // e um processo por arquivo de teste vivos para sempre. Medido no banco-imobiliario:
+  // 8 `node.exe` órfãos por estouro, cada um segurando um servidor HTTP + Socket.IO. A
+  // suíte roda uma vez por tarefa por ciclo, então uma rodada de `/trabalhar` acumulava
+  // dezenas deles até a máquina (7,9 GB) não sustentar mais o painel — que morria sem
+  // deixar rastro, levando junto o job em voo. Ver `ci/processo.ts`.
+  let estourou = false;
+  const chamada = exec(bin as string, args, {
+    cwd: dirProjeto,
+    maxBuffer: 8 * 1024 * 1024,
+    windowsHide: true,
+    // Windows: `npm` é `npm.cmd` e precisa de shell para resolver. O comando já passou
+    // pela allowlist e pela recusa de metacaracteres, então não há o que injetar aqui.
+    shell: process.platform === "win32",
+  });
+  const cronometro = setTimeout(() => {
+    estourou = true;
+    const pid = chamada.child.pid;
+    if (pid !== undefined) encerrarArvore(pid);
+  }, timeout);
+
+  try {
+    const r = await chamada;
+    return { ok: true, stdout: r.stdout };
+  } catch (e) {
+    const err = e as {
+      stdout?: string;
+      stderr?: string;
+      message?: string;
+      code?: number | string;
+      signal?: string;
+    };
+    const bruta = `${err.stdout ?? ""}\n${err.stderr ?? err.message ?? ""}`;
+    const classe = classificarFalha({
+      argv,
+      saida: bruta,
+      code: err.code ?? null,
+      signal: err.signal ?? null,
+      estourouNossoTeto: estourou,
+      existeNoDisco: (caminho) =>
+        existsSync(isAbsolute(caminho) ? caminho : resolve(dirProjeto, caminho)),
+    });
+    return { ok: false, classe, bruta, estourou };
+  } finally {
+    clearTimeout(cronometro);
+  }
 }
 
 /**
@@ -487,7 +552,11 @@ export function relatorioCriterios(resultados: readonly ResultadoCriterio[]): st
       continue;
     }
     const marca = r.estado === "passou" ? "PASSOU" : "FALHOU";
-    linhas.push(`- [executado] ${r.texto} — \`${r.comando}\` → **${marca}**`);
+    // A nota da reexecução importa mesmo quando o comando passou — talvez MAIS: é o registro
+    // de uma reprovação falsa que a T-055 evitou, e sem ele a instabilidade da máquina volta
+    // a ser folclore em vez de número.
+    const nota = r.reexecutado === true ? " (na 2ª execução; a 1ª caiu por ambiente)" : "";
+    linhas.push(`- [executado] ${r.texto} — \`${r.comando}\` → **${marca}**${nota}`);
     if (r.estado === "falhou" && (r.saida ?? "") !== "") {
       linhas.push("", "```", r.saida ?? "", "```", "");
     }
@@ -527,6 +596,17 @@ export function criteriosComFerramentaQuebrada(
   resultados: readonly ResultadoCriterio[],
 ): ResultadoCriterio[] {
   return resultados.filter((r) => r.estado === "inconclusivo" && r.classe === "ferramenta");
+}
+
+/**
+ * Quantos comandos precisaram de uma segunda execução por falha de ambiente (T-055).
+ *
+ * É o termômetro da máquina. Cada unidade aqui é, no melhor caso, uma reprovação falsa que
+ * não aconteceu — e a soma ao longo das rodadas é o dado que a T-061 precisa para dizer se a
+ * instabilidade está melhorando ou piorando, em vez de se discutir por impressão.
+ */
+export function reexecucoesPorAmbiente(resultados: readonly ResultadoCriterio[]): number {
+  return resultados.filter((r) => r.reexecutado === true).length;
 }
 
 /**
