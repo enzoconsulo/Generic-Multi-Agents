@@ -830,3 +830,66 @@ describe("linha-base do critério, antes do primeiro despacho (T-057)", () => {
     expect(anexos, "a tarefa nem foi despachada; nada a anexar").toHaveLength(0);
   }, 60_000);
 });
+
+describe("contabilidade por tarefa (T-060)", () => {
+  it("atribui o custo dos despachos à tarefa e marca a entrega", async () => {
+    const { dep } = mundo([tarefa({ id: "T-001", status: "pronta" })], { custoPorDespacho: 0.5 });
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.custoPorTarefa).toHaveLength(1);
+    const c = rel.custoPorTarefa[0];
+    expect(c?.tarefa).toBe("T-001");
+    // construtor + verificador + revisor, a US$ 0,50 cada.
+    expect(c?.despachos).toBe(3);
+    expect(c?.custoUsd).toBeCloseTo(1.5, 5);
+    expect(c?.concluiu, "sem isto o custo não quer dizer nada").toBe(true);
+    expect(c?.retrabalhoUsd).toBe(0);
+  });
+
+  /**
+   * O rótulo de retrabalho sai de `tentativas` COMO ERA no momento do despacho — fato
+   * observado. Tarefa que entra com `tentativas: 1` está em retrabalho desde o primeiro
+   * despacho desta rodada.
+   */
+  it("separa a fatia de retrabalho do custo total", async () => {
+    const { dep } = mundo([tarefa({ id: "T-001", status: "em-execucao", tentativas: 1 })], {
+      custoPorDespacho: 0.5,
+    });
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    const c = rel.custoPorTarefa[0];
+    expect(c?.retrabalhoDespachos).toBe(c?.despachos);
+    expect(c?.retrabalhoUsd).toBeCloseTo(c?.custoUsd ?? 0, 5);
+  });
+
+  it("ordena pela maior fatura", async () => {
+    const { dep } = mundo(
+      [
+        tarefa({ id: "T-001", status: "pronta", areas: ["a"] }),
+        tarefa({ id: "T-002", status: "em-revisao", areas: ["b"] }),
+      ],
+      { custoPorDespacho: 0.5 },
+    );
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    // T-001 faz os três papéis; T-002 entra já em revisão e faz um só.
+    expect(rel.custoPorTarefa.map((c) => c.tarefa)).toEqual(["T-001", "T-002"]);
+  });
+
+  /**
+   * Contabilidade que só existe no caminho feliz esconde justamente o job caro — foi assim que
+   * uma rodada de 21 despachos apareceu como US$ 0,00 (armadilha registrada em CLAUDE.md).
+   */
+  it("conta o despacho mesmo quando o agente não devolve resultado", async () => {
+    const { dep } = mundo([tarefa({ id: "T-001", status: "pronta" })], { custoPorDespacho: 0.7 });
+    const depCortado: DependenciasMotor = {
+      ...dep,
+      despachar: async (pedido) => ({ custoUsd: 0.7, concluiu: false, texto: "" }),
+    };
+
+    const rel = await rodarPipeline(ctxBase, depCortado);
+
+    expect(rel.custoPorTarefa[0]?.custoUsd).toBeCloseTo(0.7, 5);
+    expect(rel.custoPorTarefa[0]?.concluiu).toBe(false);
+  });
+});

@@ -28,6 +28,7 @@ import {
   classificar,
   politicaDe,
   DIAGNOSTICO_DESCONHECIDO,
+  type NaturezaFalha,
   type PortaoQueReprovou,
   type SecoesRevisao,
 } from "./diagnostico.js";
@@ -166,6 +167,35 @@ export interface ContextoMotor {
   orcamento: EstadoOrcamento;
 }
 
+/**
+ * CUSTO DE UMA TAREFA NESTA RODADA (T-060).
+ *
+ * Existe porque a fábrica não sabia responder "quanto custou a T-030?". Descobrir que foram
+ * US$ 12,90 exigiu abrir cinco JSONs de job à mão, cruzar com o git e ler as Notas de cinco
+ * ciclos — e o que não é medido não é otimizado. A fase inteira nasceu de o usuário estranhar
+ * uma fatura; ele não deveria ter precisado estranhar.
+ *
+ * `concluiu` não é enfeite: é o DENOMINADOR. A armadilha já registrada em `painel/CLAUDE.md`
+ * diz que **execução que não faz nada é sempre a mais barata** — uma métrica de custo que
+ * ignora a entrega premiaria a rodada que não entregou nada. Custo só se lê ao lado do que
+ * saiu.
+ */
+export interface CustoDeTarefa {
+  tarefa: string;
+  custoUsd: number;
+  despachos: number;
+  /**
+   * Fatia gasta em RETRABALHO: despachos feitos quando a tarefa já tinha `tentativas >= 1`.
+   * O rótulo sai do fato observado no momento do despacho, não de estimativa depois.
+   */
+  retrabalhoUsd: number;
+  retrabalhoDespachos: number;
+  /** Naturezas de reprovação observadas, na ordem — `diagnostico.ts` já as classifica. */
+  naturezas: NaturezaFalha[];
+  /** A tarefa chegou a `concluida` nesta rodada? Sem isto o custo não quer dizer nada. */
+  concluiu: boolean;
+}
+
 export interface RelatorioMotor {
   despachos: number;
   tarefasConcluidas: string[];
@@ -186,6 +216,8 @@ export interface RelatorioMotor {
     /** Pego na linha-base (T-057), antes do primeiro despacho: nada foi gasto nesta tarefa. */
     antesDeGastar?: boolean;
   }[];
+  /** Quanto cada tarefa custou nesta rodada, e quanto disso foi retrabalho (T-060). */
+  custoPorTarefa: CustoDeTarefa[];
   /** Marcos de fase verificados nesta rodada. */
   marcos: { fase: string; veredicto: VeredictoMarco }[];
   /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
@@ -266,6 +298,7 @@ export async function rodarPipeline(
     bloqueadas: [],
     criteriosExecutados: 0,
     criteriosQuebrados: [],
+    custoPorTarefa: [],
     marcos: [],
     saneadas: [],
     etapasFalhas: [],
@@ -282,6 +315,8 @@ export async function rodarPipeline(
   const emCircuito = new Set<string>();
   /** Tarefas cuja linha-base de critérios já rodou nesta rodada (T-057). Uma vez por tarefa. */
   const comLinhaBase = new Set<string>();
+  /** Contabilidade por tarefa (T-060), montada despacho a despacho. */
+  const custosPorTarefa = new Map<string, CustoDeTarefa>();
   /** Fases cujo marco já foi repetido uma vez por veredito ilegível. */
   const marcosRetentados = new Set<string>();
   /** Etapas que falharam EM SEQUÊNCIA. Zera a cada sucesso. Ver `MAX_FALHAS_SEGUIDAS`. */
@@ -665,6 +700,16 @@ export async function rodarPipeline(
     orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
     if (passo.papel === "revisor") orcamento = registrarTarefaConcluida(orcamento, r.custoUsd);
 
+    // CONTABILIDADE POR TAREFA (T-060). O rótulo "retrabalho" sai de `tentativas` COMO ERA no
+    // momento do despacho — fato observado, não estimativa feita depois. Contabiliza mesmo
+    // quando o agente é cortado (`!r.concluiu`, tratado abaixo): agente cortado no meio já
+    // gastou, e contabilidade que só existe no caminho feliz esconde justamente o job caro.
+    contabilizar(custosPorTarefa, passo.tarefa.id, {
+      custoUsd: r.custoUsd,
+      retrabalho: passo.tarefa.tentativas >= 1,
+      ...(diag.natureza !== "nenhuma" ? { natureza: diag.natureza } : {}),
+    });
+
     // Agente sem resultado = foi cortado. A tarefa dele sai de circulação (continuar nela
     // seria empilhar trabalho sobre estado desconhecido), mas **a rodada segue nas outras**.
     //
@@ -812,6 +857,13 @@ export async function rodarPipeline(
     dep.log("erro", `Commit da gestão falhou (o trabalho está no disco): ${(e as Error).message}`);
   }
 
+  // Contabilidade por tarefa, fechada com o DENOMINADOR (T-060): custo só quer dizer algo ao
+  // lado do que foi entregue. Ordenada pela maior fatura, que é onde se olha primeiro.
+  const concluidas = new Set(rel.tarefasConcluidas);
+  rel.custoPorTarefa = [...custosPorTarefa.values()]
+    .map((c) => ({ ...c, concluiu: concluidas.has(c.tarefa) }))
+    .sort((a, b) => b.custoUsd - a.custoUsd);
+
   rel.orcamento = orcamento;
   return rel;
 }
@@ -905,6 +957,39 @@ async function recuperarTrabalhoNaoRegistrado(
 }
 
 /** Roda os critérios com comando e anexa o relatório à tarefa. Vazio quando não há nenhum. */
+/**
+ * Soma um despacho à contabilidade da tarefa (T-060). Cria a entrada na primeira vez.
+ *
+ * `natureza` só entra quando houve reprovação diagnosticada — repetir a mesma natureza a cada
+ * despacho do mesmo ciclo transformaria a lista num histograma de despachos em vez de um
+ * histórico de reprovações.
+ */
+function contabilizar(
+  mapa: Map<string, CustoDeTarefa>,
+  tarefa: string,
+  d: { custoUsd: number; retrabalho: boolean; natureza?: NaturezaFalha },
+): void {
+  const atual: CustoDeTarefa = mapa.get(tarefa) ?? {
+    tarefa,
+    custoUsd: 0,
+    despachos: 0,
+    retrabalhoUsd: 0,
+    retrabalhoDespachos: 0,
+    naturezas: [],
+    concluiu: false,
+  };
+  atual.custoUsd += d.custoUsd;
+  atual.despachos += 1;
+  if (d.retrabalho) {
+    atual.retrabalhoUsd += d.custoUsd;
+    atual.retrabalhoDespachos += 1;
+  }
+  if (d.natureza !== undefined && atual.naturezas.at(-1) !== d.natureza) {
+    atual.naturezas.push(d.natureza);
+  }
+  mapa.set(tarefa, atual);
+}
+
 /**
  * Teto de tempo da linha-base. Curto de propósito: aqui só interessa saber se o comando
  * CONSEGUE executar, não esperar que ele conclua. Estouro cai em `ambiente` e é ignorado, então

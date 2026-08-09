@@ -34,6 +34,8 @@ import { AcoesProjeto, jobAtivoDoProjeto } from "./AcoesProjeto";
 import { EspecialistasProjeto } from "./EspecialistasProjeto";
 import { SecaoEquipe } from "./SecaoEquipe";
 import { SecaoGestao } from "./SecaoGestao";
+import { CustoPorTarefa } from "./CustoPorTarefa";
+import { jobsDoProjeto } from "../../lib/gestao";
 import { PainelAnalise } from "./PainelAnalise";
 import { EquipeAoVivo } from "./EquipeAoVivo";
 import { MapaPlano } from "./MapaPlano";
@@ -232,6 +234,11 @@ function DetalheProjeto({
             jobs={aoVivo.jobs}
             aoSelecionar={selecionarTarefa}
           />
+
+          {/* Ao lado do kanban, que é onde se olha o estado das tarefas — a pergunta "quanto
+              esta custou" nasce justamente ali. Recebe os jobs por prop: uma conexão SSE por
+              página é invariante da casa. */}
+          <CustoPorTarefa jobs={jobsDoProjeto(aoVivo.jobs, projeto.nome)} />
 
           <div ref={refQuadro}>
             <QuadroTarefas
