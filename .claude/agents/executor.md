@@ -159,6 +159,22 @@ o orquestrador replaneja. Isso custa muito menos que arrastar o despacho até o 
 - Não altere critérios de aceite nem escopo da tarefa. Se um critério for impossível ou
   estiver errado, pare, escreva o motivo nas Notas de execução e devolva isso no seu
   relatório final — o orquestrador decide.
+- **Para PARAR por defeito da especificação, escreva esta linha nas Notas de execução:**
+
+  ```
+  Impedimento: <o que torna a tarefa inexecutável como está>
+  ```
+
+  Uma linha, começando a linha, e **não mova o `status`**. É o único jeito de a máquina te
+  ouvir: a fábrica lê essa linha e manda a tarefa ao planejador, que é quem tem autoridade
+  sobre critério e escopo — sem ela, seu aviso em prosa não é lido por ninguém e a tarefa
+  volta para você no ciclo seguinte, igual. Na T-030 do banco-imobiliario o executor
+  diagnosticou a causa certa no ciclo 2, escreveu nas Notas, e a tarefa girou três ciclos e
+  ~US$ 9 a mais até alguém ler.
+  Use quando o impedimento for **verificável por outra pessoa** (critério com comando
+  impossível, dois critérios que se contradizem, dependência inexistente, contexto
+  factualmente errado). Tarefa apenas difícil, longa ou desagradável NÃO é impedimento — o
+  planejador vai devolvê-la, e a tentativa gasta continua gasta.
 - **Em RETRABALHO, não redescubra o que já está escrito.** A tarefa reprovada já carrega,
   no próprio arquivo: suas Notas de execução do ciclo anterior (arquivos tocados, decisões,
   hash do commit), a Verificação do testador (qual critério falhou e como reproduzir) e a

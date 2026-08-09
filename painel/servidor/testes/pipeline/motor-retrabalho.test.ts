@@ -72,6 +72,10 @@ function mundo(
   iniciais: TarefaResumo[],
   opcoes: {
     reprovarEm?: "verificador" | "revisor";
+    /** Quantas vezes esse papel reprova antes de deixar passar (padrão 1). */
+    reprovarVezes?: number;
+    /** Notas de execução que o motor lê — é onde vive a linha `Impedimento:` (T-058). */
+    notas?: string;
     conformidade?: string;
     revisao?: string;
     criterios?: string;
@@ -89,7 +93,7 @@ function mundo(
   const logs: string[] = [];
   const commitsDeTarefa: { id: string; mensagem: string }[] = [];
   const notasAnexadas: { id: string; texto: string }[] = [];
-  let jaReprovou = false;
+  let reprovacoes = 0;
   let arvoreSuja = opcoes.trabalhoParcial ?? false;
   let head = "head0000";
   let nHead = 0;
@@ -109,7 +113,7 @@ function mundo(
     },
     anexarVerificacao: async () => {},
     lerCriteriosDe: async () => opcoes.criterios ?? "",
-    lerNotasDe: async () => "",
+    lerNotasDe: async () => opcoes.notas ?? "",
     temTrabalhoParcial: async () => arvoreSuja,
     lerPlano: async () => null,
     gravarMarco: async () => {},
@@ -138,8 +142,8 @@ function mundo(
         if (opcoes.construtorCommita === true) head = `head${++nHead}`;
         return { custoUsd: 0.1, concluiu: true };
       }
-      if (pedido.papel === opcoes.reprovarEm && !jaReprovou) {
-        jaReprovou = true;
+      if (pedido.papel === opcoes.reprovarEm && reprovacoes < (opcoes.reprovarVezes ?? 1)) {
+        reprovacoes += 1;
         atual.status = "em-execucao";
         atual.tentativas += 1; // o agente real incrementa ao reprovar
         return { custoUsd: 0.1, concluiu: true };
@@ -320,5 +324,160 @@ describe("retrabalho diagnosticado — calibre proporcional à falha", () => {
     expect(c?.modelo).toBe("opus");
     expect(c?.maxTurns).toBeUndefined();
     expect(c?.foco ?? "").toBe("");
+  });
+});
+
+describe("replanejamento precoce (T-058)", () => {
+  /** Despachos de planejador — é onde o replanejamento aparece. */
+  function planejadores(despachos: PedidoDespacho[]): PedidoDespacho[] {
+    return despachos.filter((d) => d.papel === "planejador");
+  }
+
+  describe("gatilho A — impedimento declarado pelo construtor", () => {
+    /**
+     * A lacuna que isto fecha, medida na T-030: o executor diagnosticou a causa certa no ciclo
+     * 2 e escreveu nas Notas. O motor não lia prosa, então a tarefa girou três ciclos e ~US$ 9
+     * a mais para chegar à mesma conclusão.
+     */
+    it("roteia ao planejador em vez de gastar outro construtor", async () => {
+      const { dep, despachos, logs } = mundo([tarefa({ id: "T-200", status: "pronta" })], {
+        construtorMudo: true, // para e NÃO move o status, como o contrato manda
+        notas: "Impedimento: o critério 2 exige um endpoint que o projeto não tem",
+      });
+
+      const rel = await rodarPipeline(ctxBase, dep);
+
+      expect(planejadores(despachos)).toHaveLength(1);
+      expect(rel.paraReplanejar).toContain("T-200");
+      expect(rel.impedimentos).toHaveLength(1);
+      expect(rel.impedimentos[0]?.motivo).toContain("endpoint");
+      // Um construtor só: o segundo é justamente o que se economiza.
+      expect(construtores(despachos)).toHaveLength(1);
+      expect(logs.some((l) => l.includes("declarou IMPEDIMENTO"))).toBe(true);
+    });
+
+    /**
+     * A ORDEM é o ponto mais fácil de errar: o construtor que faz a coisa certa (para, escreve
+     * o motivo, não move o status) é indistinguível, para a guarda de progresso, de um agente
+     * travado. Se a guarda rodasse primeiro, o comportamento honesto encerraria a rodada por
+     * `sem-progresso` — puniríamos exatamente o que queremos.
+     */
+    it("é lido ANTES da guarda de progresso", async () => {
+      const { dep } = mundo([tarefa({ id: "T-200", status: "pronta" })], {
+        construtorMudo: true,
+        notas: "Impedimento: dois critérios se contradizem",
+      });
+
+      const rel = await rodarPipeline(ctxBase, dep);
+
+      expect(rel.encerrouPor).not.toBe("sem-progresso");
+      expect(rel.impedimentos).toHaveLength(1);
+    });
+
+    /** Sem a linha, nada muda: a guarda de progresso segue sendo o caminho. */
+    it("construtor mudo SEM a linha continua caindo na guarda de progresso", async () => {
+      const { dep, despachos } = mundo([tarefa({ id: "T-200", status: "pronta" })], {
+        construtorMudo: true,
+        notas: "Trabalhei bastante mas não consegui terminar.",
+      });
+
+      const rel = await rodarPipeline(ctxBase, dep);
+
+      expect(rel.impedimentos).toHaveLength(0);
+      expect(planejadores(despachos)).toHaveLength(0);
+    });
+
+    /**
+     * Uma vez por LINHAGEM, mesma trava da autocorreção que já existia: sem isso uma tarefa mal
+     * dimensionada geraria replanejamento em cascata, cada um custando um despacho.
+     */
+    it("tarefa que já era replanejamento vira BLOQUEADA, não outro replanejamento", async () => {
+      const { dep, despachos } = mundo(
+        [tarefa({ id: "T-201", status: "pronta", replanejadaDe: "T-200" })],
+        {
+          construtorMudo: true,
+          notas: "Impedimento: o escopo continua impossível",
+        },
+      );
+
+      const rel = await rodarPipeline(ctxBase, dep);
+
+      expect(planejadores(despachos)).toHaveLength(0);
+      expect(rel.bloqueadas).toContain("T-201");
+      // O motivo não se perde ao bloquear — é o que o usuário precisa ler.
+      expect(rel.impedimentos[0]?.motivo).toContain("escopo");
+    });
+  });
+
+  describe("gatilho B — conformidade reprovada duas vezes seguidas", () => {
+    /**
+     * "Entregou outra coisa" já roda SEMPRE no calibre máximo com escopo completo
+     * (`politicaDe` → `completoCaro`). Uma segunda reprovação idêntica não diz que o agente é
+     * fraco — ele já estava no melhor calibre, com o pedido inteiro. Diz que o TEXTO é ambíguo.
+     *
+     * O gatilho substitui o ÚLTIMO construtor, que ia ser gasto de qualquer jeito e que, ao
+     * falhar, dispararia replanejamento no ciclo seguinte: o destino é o mesmo, o que se
+     * economiza é um despacho de `opus` que o histórico da tarefa diz que vai falhar.
+     */
+    it("pula o último construtor e vai ao planejador", async () => {
+      const { dep, despachos, logs } = mundo(
+        [tarefa({ id: "T-210", status: "em-revisao", tentativas: 1 })],
+        {
+          reprovarEm: "revisor",
+          reprovarVezes: 2,
+          conformidade: "Conformidade: nao-cumpre",
+          revisao: "",
+        },
+      );
+
+      const rel = await rodarPipeline(ctxBase, dep);
+
+      expect(planejadores(despachos)).toHaveLength(1);
+      expect(rel.paraReplanejar).toContain("T-210");
+      // Um construtor entre as duas reprovações; o segundo é o economizado.
+      expect(construtores(despachos)).toHaveLength(1);
+      expect(logs.some((l) => l.includes("CONFORMIDADE duas vezes"))).toBe(true);
+    });
+
+    /**
+     * A trava contra replanejar cedo demais: reprovação por DEFEITO não é evidência sobre o
+     * texto da tarefa — o agente entendeu o pedido e errou o código, que é o que o retrabalho
+     * normal resolve.
+     */
+    it("duas reprovações por defeito NÃO disparam replanejamento", async () => {
+      const { dep, despachos } = mundo(
+        [tarefa({ id: "T-211", status: "em-revisao", tentativas: 1 })],
+        {
+          reprovarEm: "revisor",
+          reprovarVezes: 2,
+          conformidade: "Conformidade: cumpre",
+          revisao: "[importante] src/a.js:10 — troca invertida",
+        },
+      );
+
+      const rel = await rodarPipeline(ctxBase, dep);
+
+      expect(planejadores(despachos)).toHaveLength(0);
+      expect(rel.paraReplanejar).not.toContain("T-211");
+      expect(construtores(despachos).length).toBeGreaterThanOrEqual(2);
+    });
+
+    /** UMA reprovação de conformidade é retrabalho normal, no calibre máximo. */
+    it("uma reprovação de conformidade não basta", async () => {
+      const { dep, despachos } = mundo(
+        [tarefa({ id: "T-212", status: "em-revisao", tentativas: 1 })],
+        {
+          reprovarEm: "revisor",
+          reprovarVezes: 1,
+          conformidade: "Conformidade: nao-cumpre",
+          revisao: "",
+        },
+      );
+
+      const rel = await rodarPipeline(ctxBase, dep);
+
+      expect(planejadores(despachos)).toHaveLength(0);
+      expect(construtores(despachos)).toHaveLength(1);
+    });
   });
 });

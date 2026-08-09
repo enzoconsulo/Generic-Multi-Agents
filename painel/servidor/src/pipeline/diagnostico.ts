@@ -123,6 +123,30 @@ export function lerAchados(secao: string): Achado[] {
   return achados;
 }
 
+/**
+ * IMPEDIMENTO DECLARADO PELO CONSTRUTOR (T-058).
+ *
+ * A lacuna que isto fecha: **um agente que identifica corretamente um defeito de especificação
+ * não tinha como dizer isso à máquina.** O contrato do executor já manda parar e avisar quando um
+ * critério é impossível ou o escopo está errado (`.claude/agents/executor.md`) — e na T-030 ele
+ * fez exatamente isso, no ciclo 2, escrevendo nas Notas a recomendação que acabou destravando a
+ * tarefa. Ninguém estava ouvindo: o motor não lê prosa, e não havia campo para "travado pela
+ * especificação". Custou mais três ciclos e ~US$ 9 para chegar à mesma conclusão.
+ *
+ * A T-054 e a T-057 cobrem só "o comando não executa". Não cobrem critério executável mas ERRADO,
+ * escopo impossível, dependência faltando ou contexto factualmente falso — e para esses o único
+ * que sabe é quem leu a tarefa inteira.
+ *
+ * Formato FIXO de propósito: uma linha, no começo dela. Sinal de máquina não se infere de prosa —
+ * é a mesma doutrina de `lerConformidade` e `lerAchados`. Vale a ÚLTIMA ocorrência, porque as
+ * Notas acumulam ciclos.
+ */
+export function lerImpedimento(notas: string): string | null {
+  const m = ultimaOcorrencia(notas, /^[^\S\n]*Impedimento:[^\S\n]*(.+)$/gim);
+  const motivo = (m?.[1] ?? "").trim();
+  return motivo === "" ? null : motivo;
+}
+
 export interface SecoesRevisao {
   conformidade: string;
   revisao: string;

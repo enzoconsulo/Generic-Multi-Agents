@@ -107,6 +107,7 @@ chamadas de ferramenta vira uma de 70.
 | `em-teste` | `em-execucao` | testador | algum critério FALHOU (relatório na seção Verificação) |
 | `em-revisao` | `concluida` | revisor | conformidade `cumpre` E sem bugs relevantes |
 | `em-revisao` | `em-execucao` | revisor | bugs encontrados (seção Revisão) OU conformidade `nao-cumpre` (seção Conformidade) |
+| `em-execucao` | `em-execucao` | construtor | **impedimento declarado**: escreve `Impedimento: <motivo>` nas Notas e NÃO move o status — a tarefa vai ao planejador (ver abaixo) |
 | `em-execucao` | `pronta` | orquestrador | saneamento: sessão anterior caiu sem concluir a etapa (notas parciais preservadas) |
 | qualquer | `bloqueada` | orquestrador | 3 tentativas esgotadas, ou impedimento externo (motivo na tarefa) |
 | `bloqueada` | `pronta` | orquestrador | impedimento resolvido (zera `tentativas`) |
@@ -114,6 +115,21 @@ chamadas de ferramenta vira uma de 70.
 
 Regras:
 
+0. **`Impedimento: <motivo>` é o canal do construtor para dizer "a tarefa está travada pela
+   ESPECIFICAÇÃO, não pela execução".** Uma linha, começando a linha, nas Notas de execução, e
+   o `status` **não** se move. A fábrica lê a linha e roteia a tarefa ao **planejador** — que é
+   quem tem autoridade sobre critério e escopo; o construtor nunca teve. Vale para impedimento
+   **verificável por outra pessoa**: critério com comando impossível, critérios que se
+   contradizem, dependência inexistente, contexto factualmente errado. Tarefa apenas difícil
+   não é impedimento.
+   Duas travas: **uma vez por linhagem** (tarefa que já nasceu de replanejamento e alega
+   impedimento de novo vira `bloqueada` para o usuário) e **nada de punição embutida** — a
+   `tentativa` já foi contada pelo próprio construtor ao começar, e é o planejador quem a zera
+   ao reescrever a tarefa. Se o planejador discordar e devolver a tarefa como está, a tentativa
+   gasta continua gasta: é esse o desincentivo contra usar o canal como rota de fuga.
+   Nasceu da T-030 do banco-imobiliario, em que o executor diagnosticou a causa certa no ciclo
+   2 e escreveu nas Notas — e a tarefa girou três ciclos e ~US$ 9 a mais porque ninguém lia
+   prosa.
 1. **O frontmatter é a fonte única de verdade.** Nenhum outro arquivo lista status de
    tarefas. Painéis (/status) são sempre gerados escaneando os arquivos na hora.
 2. Quem muda `status` também atualiza `atualizada` e escreve na seção correspondente

@@ -26,6 +26,7 @@ import { fasesProntasParaMarco, lerVeredicto, type VeredictoMarco } from "./marc
 import {
   blocoDeFoco,
   classificar,
+  lerImpedimento,
   politicaDe,
   DIAGNOSTICO_DESCONHECIDO,
   type NaturezaFalha,
@@ -218,6 +219,12 @@ export interface RelatorioMotor {
   }[];
   /** Quanto cada tarefa custou nesta rodada, e quanto disso foi retrabalho (T-060). */
   custoPorTarefa: CustoDeTarefa[];
+  /**
+   * Impedimentos DECLARADOS pelo construtor (T-058) — a tarefa está travada pela especificação,
+   * não pela execução. Vão para o relatório com o motivo: é assim que o canal fica auditável, e
+   * é como um construtor que o use como rota de fuga aparece.
+   */
+  impedimentos: { tarefa: string; motivo: string }[];
   /** Marcos de fase verificados nesta rodada. */
   marcos: { fase: string; veredicto: VeredictoMarco }[];
   /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
@@ -299,6 +306,7 @@ export async function rodarPipeline(
     criteriosExecutados: 0,
     criteriosQuebrados: [],
     custoPorTarefa: [],
+    impedimentos: [],
     marcos: [],
     saneadas: [],
     etapasFalhas: [],
@@ -317,6 +325,18 @@ export async function rodarPipeline(
   const comLinhaBase = new Set<string>();
   /** Contabilidade por tarefa (T-060), montada despacho a despacho. */
   const custosPorTarefa = new Map<string, CustoDeTarefa>();
+  /**
+   * Naturezas de reprovação na ORDEM em que ocorreram, por tarefa (T-058, gatilho B). Sem
+   * deduplicar vizinhas — é justamente a repetição consecutiva que carrega o sinal, ao contrário
+   * da lista de `custoPorTarefa`, que existe para leitura humana e colapsa repetição.
+   */
+  const naturezasPorTarefa = new Map<string, NaturezaFalha[]>();
+  /**
+   * Tarefas cujo impedimento já foi roteado ao planejador nesta rodada (T-058, gatilho A). Teto
+   * de um por tarefa por rodada: a linha `Impedimento:` fica nas Notas para sempre, e sem isto um
+   * construtor que trave de novo por outro motivo reabriria o mesmo replanejamento.
+   */
+  const impedimentosAtendidos = new Set<string>();
   /** Fases cujo marco já foi repetido uma vez por veredito ilegível. */
   const marcosRetentados = new Set<string>();
   /** Etapas que falharam EM SEQUÊNCIA. Zera a cada sucesso. Ver `MAX_FALHAS_SEGUIDAS`. */
@@ -373,22 +393,13 @@ export async function rodarPipeline(
         // linhagem"): despache o planejador da trilha em modo replanejamento. Ele quebra ou
         // reescreve a abordagem, cancela a original e cria as substitutas. Parar para
         // perguntar aqui seria transformar uma regra escrita em intervenção manual.
-        rel.paraReplanejar.push(t.id);
         dep.log("info", `${t.id} esgotou os ciclos — replanejando automaticamente.`);
-        const rp = await dep.despachar({
-          tarefa: t,
-          papel: "planejador",
-          agente: AGENTE_GENERICO[ctx.trilha].planejador,
-          modelo: null,
-          promptColado: null,
-          motivo: `replanejamento de ${t.id} (esgotou ${t.tentativas} ciclos)`,
-          notas: await dep.lerNotasDe(t),
-        });
-        rel.despachos += 1;
-        orcamento = comGasto(orcamento, orcamento.gastoUsd + rp.custoUsd);
-        // Sai de circulação de um jeito ou de outro: replanejada (o planejador a cancelou)
-        // ou não — e aí não pode voltar ao laço e girar de novo.
-        emCircuito.add(t.id);
+        const rp = await replanejar(
+          t,
+          `replanejamento de ${t.id} (esgotou ${t.tentativas} ciclos)`,
+          { ctx, dep, rel, orcamento, emCircuito },
+        );
+        orcamento = rp.orcamento;
         if (!rp.concluiu) {
           rel.encerrouPor = "agente-cortado";
           break;
@@ -657,6 +668,51 @@ export async function rodarPipeline(
           );
     const politica = politicaDe(diag, passo.tarefa.tentativas, ctx.reforco !== null);
 
+    // ---- GATILHO B: CONFORMIDADE REPROVADA DUAS VEZES (T-058) -------------------------
+    // "Entregou outra coisa" já roda SEMPRE no calibre máximo, com escopo completo
+    // (`politicaDe` → `completoCaro`, sem exceção). Então uma segunda reprovação idêntica não
+    // diz que o agente é fraco — ele já estava no melhor calibre disponível, com o pedido
+    // inteiro em mão. Diz que o TEXTO da tarefa é ambíguo, e texto de tarefa é do planejador.
+    //
+    // Só em `tentativas >= 2`, ou seja: substitui o ÚLTIMO despacho de construtor, que ia ser
+    // gasto de qualquer jeito e que, ao falhar, dispararia replanejamento no ciclo seguinte. O
+    // destino é o mesmo; o que se economiza é a passagem — um despacho de `opus` que o
+    // histórico da própria tarefa diz que vai falhar.
+    //
+    // Memória por RODADA, e isso é uma limitação assumida: entre rodadas `tentativas` sobrevive
+    // e o histórico de naturezas não. Contar `Conformidade: nao-cumpre` na seção acumulada
+    // resolveria — e é exatamente o que `diagnostico.ts` alerta para não fazer, porque decidir
+    // por seção acumulada foi o que envenenaria o ciclo seguinte.
+    if (
+      passo.papel === "construtor" &&
+      passo.tarefa.tentativas >= 2 &&
+      diag.natureza === "conformidade" &&
+      naturezasPorTarefa.get(passo.tarefa.id)?.at(-1) === "conformidade"
+    ) {
+      dep.log(
+        "erro",
+        `${passo.tarefa.id}: reprovada por CONFORMIDADE duas vezes seguidas no calibre máximo —` +
+          " o problema é o texto da tarefa, não a execução. Vai ao planejador em vez de gastar" +
+          " o último construtor.",
+      );
+      const rp = await replanejar(
+        passo.tarefa,
+        `replanejamento de ${passo.tarefa.id} (conformidade reprovada 2× no calibre máximo)`,
+        { ctx, dep, rel, orcamento, emCircuito },
+      );
+      orcamento = rp.orcamento;
+      if (!rp.concluiu) {
+        rel.encerrouPor = "agente-cortado";
+        break;
+      }
+      continue;
+    }
+    if (passo.papel === "construtor" && diag.natureza !== "nenhuma") {
+      const lista = naturezasPorTarefa.get(passo.tarefa.id) ?? [];
+      lista.push(diag.natureza);
+      naturezasPorTarefa.set(passo.tarefa.id, lista);
+    }
+
     const agente = resolverAgente(passo, ctx.trilha, ctx.equipe, {
       disponiveis: ctx.disponiveis,
       projeto: ctx.projeto,
@@ -765,6 +821,60 @@ export async function rodarPipeline(
     // pode sobreviver para envenenar o próximo (o motivo da reprovação seguinte será outro).
     if (passo.papel === "construtor" && depois?.status !== statusAntes) {
       retornos.delete(passo.tarefa.id);
+    }
+
+    // ---- GATILHO A: IMPEDIMENTO DECLARADO (T-058) ------------------------------------
+    // VEM ANTES DA GUARDA DE PROGRESSO, e a ordem é o ponto mais fácil de errar aqui.
+    //
+    // O construtor que faz a coisa certa — para, escreve o motivo e NÃO move o status, como o
+    // contrato dele manda — é indistinguível, para a guarda, de um agente travado. Se a guarda
+    // rodasse primeiro, o comportamento honesto seria classificado como travamento e a rodada
+    // encerraria por `sem-progresso`: puniríamos exatamente o que queremos que aconteça.
+    //
+    // Não mexemos em `tentativas`. O agente já o incrementou ao começar (contrato dele), e é o
+    // planejador quem o zera ao reescrever a tarefa. Se o planejador DISCORDAR do impedimento e
+    // devolver a tarefa como está, a tentativa gasta continua gasta — e é esse o desincentivo
+    // contra usar o canal como rota de fuga, sem precisar de punição embutida no motor.
+    if (
+      passo.papel === "construtor" &&
+      depois?.status === statusAntes &&
+      !impedimentosAtendidos.has(passo.tarefa.id)
+    ) {
+      const motivo = lerImpedimento(await dep.lerNotasDe(passo.tarefa));
+      if (motivo !== null) {
+        impedimentosAtendidos.add(passo.tarefa.id);
+        // Uma vez por LINHAGEM, mesma trava da autocorreção que já existe: tarefa que já nasceu
+        // de replanejamento e alega impedimento de novo vira problema seu, não outro ciclo.
+        if ((passo.tarefa.replanejadaDe ?? "") !== "") {
+          rel.impedimentos.push({ tarefa: passo.tarefa.id, motivo });
+          rel.bloqueadas.push(passo.tarefa.id);
+          emCircuito.add(passo.tarefa.id);
+          await dep.gravarStatus(passo.tarefa, "bloqueada");
+          dep.log(
+            "erro",
+            `${passo.tarefa.id} BLOQUEADA: já era replanejamento e o construtor declarou` +
+              ` impedimento de novo — ${motivo}`,
+          );
+          continue;
+        }
+        rel.impedimentos.push({ tarefa: passo.tarefa.id, motivo });
+        dep.log(
+          "erro",
+          `${passo.tarefa.id}: o construtor declarou IMPEDIMENTO — ${motivo}. Isso é defeito de` +
+            " especificação, não de execução: vai ao planejador em vez de mais um construtor.",
+        );
+        const rp = await replanejar(
+          passo.tarefa,
+          `replanejamento de ${passo.tarefa.id} (impedimento declarado: ${motivo})`,
+          { ctx, dep, rel, orcamento, emCircuito },
+        );
+        orcamento = rp.orcamento;
+        if (!rp.concluiu) {
+          rel.encerrouPor = "agente-cortado";
+          break;
+        }
+        continue;
+      }
     }
 
     if (depois !== undefined && depois.status === statusAntes) {
@@ -957,6 +1067,47 @@ async function recuperarTrabalhoNaoRegistrado(
 }
 
 /** Roda os critérios com comando e anexa o relatório à tarefa. Vazio quando não há nenhum. */
+/**
+ * Despacha o PLANEJADOR em modo replanejamento e tira a tarefa de circulação.
+ *
+ * Extraído porque a T-058 acrescentou duas portas de entrada para o mesmo mecanismo (impedimento
+ * declarado e conformidade reprovada duas vezes) e três cópias do mesmo bloco divergiriam. As
+ * Notas vão no despacho — é por elas que o planejador recebe o motivo, e é onde o construtor
+ * escreve a linha `Impedimento:`.
+ *
+ * A tarefa sai de circulação de um jeito ou de outro: replanejada (o planejador a cancelou) ou
+ * não — e aí não pode voltar ao laço e girar de novo.
+ */
+async function replanejar(
+  t: TarefaResumo,
+  motivo: string,
+  ambiente: {
+    ctx: ContextoMotor;
+    dep: DependenciasMotor;
+    rel: RelatorioMotor;
+    orcamento: EstadoOrcamento;
+    emCircuito: Set<string>;
+  },
+): Promise<{ orcamento: EstadoOrcamento; concluiu: boolean }> {
+  const { ctx, dep, rel, emCircuito } = ambiente;
+  rel.paraReplanejar.push(t.id);
+  const rp = await dep.despachar({
+    tarefa: t,
+    papel: "planejador",
+    agente: AGENTE_GENERICO[ctx.trilha].planejador,
+    modelo: null,
+    promptColado: null,
+    motivo,
+    notas: await dep.lerNotasDe(t),
+  });
+  rel.despachos += 1;
+  emCircuito.add(t.id);
+  return {
+    orcamento: comGasto(ambiente.orcamento, ambiente.orcamento.gastoUsd + rp.custoUsd),
+    concluiu: rp.concluiu,
+  };
+}
+
 /**
  * Soma um despacho à contabilidade da tarefa (T-060). Cria a entrada na primeira vez.
  *

@@ -354,6 +354,13 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
         ` planejador antes da próxima rodada.${economia}`,
     );
   }
+  if (r.impedimentos.length > 0) {
+    // O motivo vai junto: sem ele isto é só "o agente desistiu", e é justamente o motivo que
+    // permite julgar se o impedimento procede ou se o canal está virando rota de fuga.
+    for (const i of r.impedimentos) {
+      linhas.push(`IMPEDIMENTO declarado em ${i.tarefa} — ${i.motivo}`);
+    }
+  }
   if (r.paraReplanejar.length > 0) {
     linhas.push(
       `Replanejadas automaticamente (esgotaram os ciclos): ${r.paraReplanejar.join(", ")}.` +

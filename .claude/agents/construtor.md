@@ -137,6 +137,20 @@ muito menos que arrastar o despacho até o dobro.
 - Uma tarefa por vez. Descobriu trabalho novo? NÃO o faça: anote a sugestão nas Notas.
 - Não altere critérios de aceite nem escopo. Critério impossível ou errado: pare, escreva o
   motivo nas Notas e devolva no relatório — o orquestrador decide.
+- **Para PARAR por defeito da especificação, escreva esta linha nas Notas de execução:**
+
+  ```
+  Impedimento: <o que torna a tarefa inexecutável como está>
+  ```
+
+  Uma linha, começando a linha, e **não mova o `status`**. É o único jeito de a máquina te
+  ouvir: a fábrica lê essa linha e manda a tarefa ao planejador, que é quem tem autoridade
+  sobre critério e escopo — sem ela, seu aviso em prosa não é lido por ninguém e a tarefa
+  volta para você no ciclo seguinte, igual.
+  Use quando o impedimento for **verificável por outra pessoa** (critério com comando
+  impossível, dois critérios que se contradizem, fonte de dados inexistente, contexto
+  factualmente errado). Tarefa apenas difícil ou longa NÃO é impedimento — o planejador vai
+  devolvê-la, e a tentativa gasta continua gasta.
 - **Em RETRABALHO, não redescubra o que já está escrito.** A tarefa reprovada carrega suas
   Notas do ciclo anterior (arquivos, decisões, hash), a Verificação do conferente (qual
   critério falhou e como reproduzir) e a Revisão (`arquivo:linha` + cenário). Leia essas

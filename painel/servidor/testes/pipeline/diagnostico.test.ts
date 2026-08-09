@@ -3,6 +3,7 @@ import {
   blocoDeFoco,
   classificar,
   lerAchados,
+  lerImpedimento,
   lerConformidade,
   politicaDe,
   VOLTAS_MEDIO,
@@ -247,5 +248,37 @@ describe("blocoDeFoco", () => {
     expect(
       blocoDeFoco({ natureza: "conformidade", achados: [], grave: true, conformidade: null }),
     ).toBe("");
+  });
+});
+
+describe("lerImpedimento — o canal do construtor para a máquina (T-058)", () => {
+  it("lê a linha e devolve o motivo", () => {
+    expect(lerImpedimento("Impedimento: o critério 2 pede um endpoint inexistente")).toBe(
+      "o critério 2 pede um endpoint inexistente",
+    );
+  });
+
+  it("aceita indentação e a linha no meio das Notas", () => {
+    const notas = ["## Notas de execução", "", "Tentei X e Y.", "  Impedimento: escopo impossível", ""].join("\n");
+    expect(lerImpedimento(notas)).toBe("escopo impossível");
+  });
+
+  // As Notas ACUMULAM ciclos: o que vale é o aviso mais recente, nunca o do ciclo 1.
+  it("vale a ÚLTIMA ocorrência", () => {
+    const notas = "Impedimento: motivo antigo\n\n### Ciclo 2\n\nImpedimento: motivo novo";
+    expect(lerImpedimento(notas)).toBe("motivo novo");
+  });
+
+  /**
+   * Sinal de máquina não se infere de prosa. Linha sem motivo é ruído, e menção ao conceito
+   * dentro de uma frase não é uma declaração — tratar como declaração faria o construtor
+   * disparar replanejamento só por explicar o que é um impedimento.
+   */
+  it("não confunde prosa nem linha vazia com declaração", () => {
+    expect(lerImpedimento("")).toBeNull();
+    expect(lerImpedimento("Impedimento:")).toBeNull();
+    expect(lerImpedimento("Impedimento:   ")).toBeNull();
+    expect(lerImpedimento("Não houve impedimento: tudo rodou bem.")).toBeNull();
+    expect(lerImpedimento("O revisor citou um Impedimento: mas era engano.")).toBeNull();
   });
 });
