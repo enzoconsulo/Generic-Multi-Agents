@@ -343,6 +343,28 @@ cruza custo por projeto), `painel/web/src/paginas/projeto/`.
 sempre a mais barata"** — a métrica tem de ser custo POR TRABALHO ENTREGUE, senão otimizar
 por ela premia não fazer nada.
 
+> **Entregue em 09/08 (`589a524`).** O motor grava `custoPorTarefa` por rodada; a web soma ao
+> longo dos jobs (`lib/custo-tarefas.ts`) e a seção "Custo por tarefa" fica ao lado do kanban.
+> O `concluiu` viaja do motor até a linha da tela, e a média é por tarefa CONCLUÍDA — devolve
+> `null` em vez de `Infinity` quando nada concluiu.
+>
+> **Jobs antigos entram por rateio explícito**, marcado e prefixado com `~`, porque não
+> mostrá-los apagaria a evidência que motivou a fase. Retrabalho não é rateado: sem rótulo por
+> despacho não há como saber, e zero mentiria para baixo na única coluna que a fase vigia.
+>
+> **O defeito desta tarefa foi pego OLHANDO A TELA, não pelos testes** — os 162 testes da web
+> passavam. Na primeira versão a T-030 aparecia por ~$5,09 contra os US$ 12,90 medidos à mão,
+> porque o rateio só lia `tarefasConcluidas` e `etapasFalhas` e o job do replanejamento registra
+> a tarefa em `paraReplanejar`. Hoje lê as quatro pontas em que o relatório nomeia tarefa que
+> consumiu despacho, e a T-030 aparece por ~$8,93 (3ª mais cara do projeto). **É a justificativa
+> viva da regra da casa**: teste verde não prova que o número na tela está certo — só um número
+> conhecido de fora prova. Para os itens restantes: quando a entrega é um NÚMERO, tenha um valor
+> medido por outro caminho para conferir contra.
+>
+> **Ganho imediato, já legível na tela sem rodar nada:** o projeto está em ~$6,36 por tarefa
+> concluída — contra a régua de ≤ US$ 3 que esta fase estabeleceu. A linha-base ruim agora é
+> visível sozinha, que era o ponto.
+
 ---
 
 ## T-061 — Investigar a pressão de memória da máquina (raiz da instabilidade)
@@ -372,7 +394,7 @@ mate processo — regra dura já registrada em `painel/CLAUDE.md`.
 | 3 | **T-055** retentativa de ambiente | T-054 | baixo | alto | **feita** 09/08 (`53d5cce`) |
 | 4 | **T-059** dedupe + doutrina | — | baixo | médio (impede a recaída) | **feita** 09/08 (`acde1e3`) |
 | 5 | **T-057** linha-base na promoção | T-054 | médio | alto | **feita** 09/08 (`a0cd3ae`) |
-| 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) | pronta para começar |
+| 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) | **feita** 09/08 (`589a524`) |
 | 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | pronta para começar |
 | 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido | pronta para começar |
 
