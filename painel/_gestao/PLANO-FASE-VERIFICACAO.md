@@ -267,6 +267,34 @@ escrevi.
 `_sistema/PROTOCOLO_TAREFAS.md`, `_sistema/templates/`, `.claude/agents/planejador*.md`,
 `CLAUDE.md`.
 
+> **Entregue em 09/08 (`acde1e3`), com desenho diferente do que está escrito aqui.**
+>
+> A causa era mais funda do que "alguém vai escrever de novo": **o template oficial ENSINAVA
+> a duplicata** — seu exemplo de abertura era `` - [ ] `npm test` roda a suíte inteira.
+> `verificar: npm test` ``. Medido no disco: T-023 a T-029 (a Fase 4 inteira do
+> banco-imobiliario) e T-031 declaram exatamente isso, idêntico ao canônico do `ci.json`.
+> Com a T-056, a suíte de 212 testes rodava até **3× por ciclo**; só na Fase 4 são ~17
+> execuções inteiras desperdiçadas, cada uma um sorteio novo do crash nativo.
+>
+> **Descartar o critério redundante (o que este plano pedia) estava errado**: descarta a
+> pergunta, não a duplicata — na T-030 o critério repetido tinha conteúdo próprio com uma
+> checagem de suíte enxertada no fim. A regra implementada é mais simples e mais geral: *o
+> mesmo comando, no mesmo lote, sobre a mesma árvore, não pode dar resposta diferente* — roda
+> uma vez, veredito compartilhado, `espelho: true` no resultado. Serve para qualquer
+> duplicação entre critérios e não precisa de caso especial para a suíte.
+>
+> Limite assumido e conhecido: a equivalência SEMÂNTICA não é resolvida (`npm test` expandido
+> à mão como `node --test`, que é o caso da T-030 hoje, ainda roda duas vezes). Resolver
+> exigiria interpretar manifesto de cada ecossistema, e chave de deduplicação que erra para o
+> lado de "é o mesmo" faria um critério herdar veredito de outro — aprovar sem conferir é o
+> pior desfecho possível aqui. A doutrina passa a impedir que a forma expandida seja escrita.
+>
+> **Armadilha que quase entrou:** o critério espelhado herda os campos do original, então
+> `reexecucoesPorAmbiente` passaria a contar critérios afetados em vez de execuções perdidas
+> — inflando o termômetro da máquina exatamente onde a T-061 vai usá-lo. Corolário para os
+> itens restantes: **ao copiar um resultado, pergunte quais métricas o leem** — as duas que
+> existiam hoje mentiriam em silêncio.
+
 ---
 
 ## T-060 — O painel precisa ver o próprio desperdício
@@ -317,7 +345,7 @@ mate processo — regra dura já registrada em `painel/CLAUDE.md`.
 | 1 | **T-054** estado `inconclusivo` | — | médio | alto — é o que parou o dinheiro | **feita** 09/08 (`f52d901`) |
 | 2 | **T-056** suíte uma vez por ciclo | — | **baixo** | alto — corta a exposição pela metade | **feita** 09/08 (`cc9bfcf`) |
 | 3 | **T-055** retentativa de ambiente | T-054 | baixo | alto | **feita** 09/08 (`53d5cce`) |
-| 4 | **T-059** dedupe + doutrina | — | baixo | médio (impede a recaída) | pronta para começar |
+| 4 | **T-059** dedupe + doutrina | — | baixo | médio (impede a recaída) | **feita** 09/08 (`acde1e3`) |
 | 5 | **T-057** linha-base na promoção | T-054 | médio | alto | pronta para começar |
 | 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) | pronta para começar |
 | 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | pronta para começar |
