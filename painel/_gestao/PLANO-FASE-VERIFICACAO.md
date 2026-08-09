@@ -413,6 +413,41 @@ mate processo — regra dura já registrada em `painel/CLAUDE.md`.
 
 ---
 
+---
+
+## T-062 — A recuperação de trabalho não registrado dispara um ciclo tarde demais
+
+**Achado na primeira medição real da fase (job `fc211543`), não em teste.** Custo observado:
+**um despacho de `opus` inteiro (~US$ 1,5) desperdiçado numa única rodada.**
+
+**O que aconteceu.** T-032, ciclo 3: o `executor-reforcado` corrigiu o achado do revisor e
+**commitou** (`e6f4aa7`), mas não moveu o `status`. O motor contou repetição 1 e despachou
+`opus` de novo; o segundo agente encontrou o problema já resolvido, escreveu "não há nada a
+corrigir" e também não gravou status. Aí, na repetição 2, a recuperação rodou — e não achou
+nada. A rodada encerrou por `sem-progresso` com a entrega pronta no repositório.
+
+**A causa.** `recuperarTrabalhoNaoRegistrado` só é consultada em `vezes >= 2`, e o `headAntes`
+que ela compara é o do passo em que ELA roda. O commit aconteceu no passo anterior, então o
+sinal principal — *"HEAD andou durante a etapa, logo o agente entregou"* — já tinha passado
+sem ser lido. A recuperação existe exatamente para este caso e chega um ciclo atrasada.
+
+Ironia útil: a armadilha de `painel/CLAUDE.md` que diz **"o sinal óbvio de 'houve trabalho'
+era o menos comum"** foi corrigida pondo o sinal certo no lugar errado do laço.
+
+**O que fazer.** Consultar o sinal de HEAD na repetição **1** — logo após um passo de
+construtor que não moveu o status. HEAD andou durante aquele passo? O agente entregou:
+corrige o status, promove e segue, sem pagar o segundo despacho. A repetição 2 continua
+existindo para o resto (agente que não fez nada mesmo).
+
+**Cuidado.** Não confundir com o canal de impedimento (T-058), que já roda antes da guarda e
+tem precedência: agente que declara impedimento não é agente que entregou sem registrar. E a
+auto-limitação por commit continua valendo — promover deixa o passo seguinte diferente, então
+não há laço.
+
+**Como verificar.** Teste no `motor-retrabalho.test.ts` com `construtorMudo: true` +
+`construtorCommita: true`: hoje ele custa dois despachos de construtor, e deve passar a custar
+um. O fixture já tem as duas opções.
+
 ## Ordem recomendada
 
 | # | item | depende de | esforço | ganho | estado |
@@ -424,7 +459,8 @@ mate processo — regra dura já registrada em `painel/CLAUDE.md`.
 | 5 | **T-057** linha-base na promoção | T-054 | médio | alto | **feita** 09/08 (`a0cd3ae`) |
 | 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) | **feita** 09/08 (`589a524`) |
 | 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | **feita** 09/08 (`2976976`) |
-| 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido | pronta para começar |
+| 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido |
+| 9 | **T-062** recuperação dispara 1 ciclo tarde | — | baixo | alto — custou US$ 1,5 numa rodada | pronta para começar |
 
 ### O que a T-054 mudou nas premissas dos itens seguintes
 
