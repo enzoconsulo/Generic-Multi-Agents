@@ -448,6 +448,22 @@ não há laço.
 `construtorCommita: true`: hoje ele custa dois despachos de construtor, e deve passar a custar
 um. O fixture já tem as duas opções.
 
+> **Entregue em 09/08 (`e764880`), e o conserto NÃO foi mover os dois sinais.**
+>
+> Ao implementar ficou claro que eles não têm o mesmo valor probatório, e tratar iguais teria
+> criado um defeito novo no lugar do antigo:
+> - **commit é uma DECLARAÇÃO do agente** — pelo contrato do construtor, commitar significa
+>   "terminei", e ninguém commita trabalho pela metade de propósito. Passa a ser consultado na
+>   1ª repetição;
+> - **árvore suja é AMBÍGUA** — entrega pronta sem registro (T-025) ou agente cortado no meio de
+>   uma edição. Continua esperando a 2ª repetição, porque promover código pela metade gastaria
+>   uma das 3 fichas da tarefa numa reprovação evitável, e o segundo despacho pode ser
+>   justamente o que termina o trabalho.
+>
+> Dois testes travam a assimetria (um despacho no caso do commit, dois no da árvore suja).
+> **Lição geral: ao consertar "o sinal é lido tarde demais", pergunte se todos os sinais daquele
+> ponto merecem a mesma pressa.**
+
 ## Ordem recomendada
 
 | # | item | depende de | esforço | ganho | estado |
@@ -460,7 +476,7 @@ um. O fixture já tem as duas opções.
 | 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) | **feita** 09/08 (`589a524`) |
 | 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | **feita** 09/08 (`2976976`) |
 | 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido |
-| 9 | **T-062** recuperação dispara 1 ciclo tarde | — | baixo | alto — custou US$ 1,5 numa rodada | pronta para começar |
+| 9 | **T-062** recuperação dispara 1 ciclo tarde | — | baixo | alto — custou US$ 1,5 numa rodada | **feita** 09/08 (`e764880`) |
 
 ### O que a T-054 mudou nas premissas dos itens seguintes
 
