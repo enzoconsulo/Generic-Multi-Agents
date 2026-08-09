@@ -17,6 +17,7 @@ import {
   lerCriterios,
   relatorioCriterios,
   criteriosComFerramentaQuebrada,
+  mesmoComando,
   reexecucoesPorAmbiente,
   reprovouNaMecanica,
   type ResultadoCriterio,
@@ -179,7 +180,12 @@ export interface RelatorioMotor {
    * aparecer: nenhum construtor os conserta, e sem alguém dizer em voz alta a tarefa queima
    * as 3 tentativas em silêncio até bloquear — foi o que custou US$ 12,90 na T-030.
    */
-  criteriosQuebrados: { tarefa: string; comando: string }[];
+  criteriosQuebrados: {
+    tarefa: string;
+    comando: string;
+    /** Pego na linha-base (T-057), antes do primeiro despacho: nada foi gasto nesta tarefa. */
+    antesDeGastar?: boolean;
+  }[];
   /** Marcos de fase verificados nesta rodada. */
   marcos: { fase: string; veredicto: VeredictoMarco }[];
   /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
@@ -274,6 +280,8 @@ export async function rodarPipeline(
   const despachosPorTarefa = new Map<string, number>();
   /** Tarefas que estouraram o teto e saíram de circulação nesta rodada. */
   const emCircuito = new Set<string>();
+  /** Tarefas cuja linha-base de critérios já rodou nesta rodada (T-057). Uma vez por tarefa. */
+  const comLinhaBase = new Set<string>();
   /** Fases cujo marco já foi repetido uma vez por veredito ilegível. */
   const marcosRetentados = new Set<string>();
   /** Etapas que falharam EM SEQUÊNCIA. Zera a cada sucesso. Ver `MAX_FALHAS_SEGUIDAS`. */
@@ -494,6 +502,48 @@ export async function rodarPipeline(
           " verificador e vai direto à revisão.",
       );
       continue;
+    }
+
+    // ---- LINHA-BASE DO CRITÉRIO (T-057) ----------------------------------------------
+    // Roda os `verificar:` da tarefa contra a árvore INTOCADA, antes do primeiro despacho.
+    // A pergunta não é "os critérios passam?" — na linha-base quase todo critério legítimo
+    // falha, porque a tarefa ainda não foi feita. A pergunta é: **este comando é capaz de
+    // falhar por causa DESTA tarefa?** Comando que nem executa na árvore limpa nunca vai
+    // provar nada, e nenhum construtor conserta critério.
+    //
+    // O sinal é a CLASSE, não a falha (`classificarFalha`): `ferramenta` = critério quebrado;
+    // `falha` = critério saudável, é exatamente o que a tarefa vai fazer passar; `ambiente` =
+    // ruído de máquina, ignora.
+    //
+    // Só na PRIMEIRA execução da tarefa (`tentativas === 0`): em retrabalho a árvore já tem a
+    // entrega, e "intocada" deixaria de ser verdade — a linha-base perderia o sentido.
+    if (
+      passo.papel === "construtor" &&
+      passo.tarefa.tentativas === 0 &&
+      !comLinhaBase.has(passo.tarefa.id)
+    ) {
+      comLinhaBase.add(passo.tarefa.id);
+      const quebrados = await linhaBaseDeCriterios(passo, ctx, dep);
+      if (quebrados.length > 0) {
+        for (const q of quebrados) {
+          rel.criteriosQuebrados.push({
+            tarefa: passo.tarefa.id,
+            comando: q.comando ?? "",
+            antesDeGastar: true,
+          });
+        }
+        // Fora desta rodada, e as outras tarefas seguem (mesma doutrina de `emCircuito`).
+        // Sem escrever status: quando o critério for corrigido, a tarefa volta a andar
+        // sozinha na rodada seguinte, sem ninguém precisar desbloqueá-la à mão.
+        emCircuito.add(passo.tarefa.id);
+        dep.log(
+          "erro",
+          `${passo.tarefa.id} NÃO despachada: ${quebrados.length} critério(s) com comando que` +
+            " não executa nem na árvore intocada — é defeito do critério, e nenhum construtor" +
+            " o conserta. Nada foi gasto nesta tarefa; peça a correção ao planejador.",
+        );
+        continue;
+      }
     }
 
     // Passada mecânica: acontece ANTES de gastar um despacho de verificador.
@@ -855,6 +905,42 @@ async function recuperarTrabalhoNaoRegistrado(
 }
 
 /** Roda os critérios com comando e anexa o relatório à tarefa. Vazio quando não há nenhum. */
+/**
+ * Teto de tempo da linha-base. Curto de propósito: aqui só interessa saber se o comando
+ * CONSEGUE executar, não esperar que ele conclua. Estouro cai em `ambiente` e é ignorado, então
+ * um comando legitimamente longo não vira alarme falso — só não é conferido nesta passada.
+ */
+const TETO_LINHA_BASE_MS = 60_000;
+
+/**
+ * Roda os critérios da tarefa contra a árvore intocada e devolve só os que têm COMANDO
+ * QUEBRADO. Ver o bloco que a chama para o porquê.
+ *
+ * Duas coisas que ela deliberadamente NÃO faz:
+ * - **não roda a suíte do projeto** (nem o critério implícito, nem um `verificar:` que repita o
+ *   canônico): custaria a bateria inteira por tarefa, reintroduzindo o desperdício que T-056 e
+ *   T-059 cortaram, e suíte quebrada é problema do PROJETO, não do critério daquela tarefa;
+ * - **não escreve na seção Verificação.** Linha-base é pré-voo, não verificação: gravar ali
+ *   colocaria resultado de "antes do trabalho" no lugar onde o próximo agente lê o veredito
+ *   da entrega.
+ */
+async function linhaBaseDeCriterios(
+  passo: Passo,
+  ctx: ContextoMotor,
+  dep: DependenciasMotor,
+): Promise<ResultadoCriterio[]> {
+  const canonico = (ctx.comandoTestes ?? "").trim();
+  const criterios = lerCriterios(await dep.lerCriteriosDe(passo.tarefa)).filter(
+    (c) => c.comando !== null && (canonico === "" || !mesmoComando(c.comando, canonico)),
+  );
+  if (criterios.length === 0) return [];
+
+  const resultados = await executarCriterios(criterios, ctx.dirProjeto, {
+    timeoutMs: TETO_LINHA_BASE_MS,
+  });
+  return criteriosComFerramentaQuebrada(resultados);
+}
+
 async function passadaMecanica(
   passo: Passo,
   ctx: ContextoMotor,

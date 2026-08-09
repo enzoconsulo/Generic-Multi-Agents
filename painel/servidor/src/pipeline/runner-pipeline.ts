@@ -337,11 +337,21 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
   if (r.criteriosQuebrados.length > 0) {
     // Primeiro do grupo de propósito: enquanto o critério não for corrigido, toda rodada
     // seguinte volta a bater nele, e a tarefa caminha para o bloqueio sem defeito nenhum.
-    const lista = r.criteriosQuebrados.map((c) => `${c.tarefa} (\`${c.comando}\`)`).join("; ");
+    const lista = r.criteriosQuebrados
+      .map((c) => `${c.tarefa} (\`${c.comando}\`)`)
+      .join("; ");
+    // Quantas foram pegas ANTES de gastar: é a economia da linha-base, e some se não for dita.
+    const naLinhaBase = r.criteriosQuebrados.filter((c) => c.antesDeGastar === true);
+    const economia =
+      naLinhaBase.length > 0
+        ? ` ${naLinhaBase.length} pego(s) na linha-base, antes do primeiro despacho —` +
+          ` ${[...new Set(naLinhaBase.map((c) => c.tarefa))].join(", ")} não foi despachada e` +
+          " nada foi gasto nela."
+        : "";
     linhas.push(
       `CRITÉRIO QUEBRADO — o comando não executa nesta máquina, é defeito do critério e não` +
         ` da entrega: ${lista}. Nenhum construtor conserta isso; peça a correção ao` +
-        " planejador antes da próxima rodada.",
+        ` planejador antes da próxima rodada.${economia}`,
     );
   }
   if (r.paraReplanejar.length > 0) {

@@ -686,6 +686,22 @@ export function reexecucoesPorAmbiente(resultados: readonly ResultadoCriterio[])
 }
 
 /**
+ * Dois comandos escritos diferente são o MESMO comando? Usa a chave da deduplicação, então a
+ * resposta é consistente com o que `executarCriterios` faz — se aqui dá "igual", lá o segundo
+ * teria reaproveitado o veredito do primeiro.
+ *
+ * Existe para a linha-base (T-057) poder pular o comando canônico da suíte: rodá-lo antes de
+ * cada tarefa custaria a bateria inteira, e suíte quebrada é problema do PROJETO, não do
+ * critério daquela tarefa.
+ */
+export function mesmoComando(a: string, b: string): boolean {
+  const avA = avaliarComando(a);
+  const avB = avaliarComando(b);
+  if (!avA.ok || !avB.ok) return false;
+  return chaveDeComando(avA.argv) === chaveDeComando(avB.argv);
+}
+
+/**
  * Critério IMPLÍCITO que vale para toda tarefa de software: **a suíte do projeto continua
  * passando.**
  *

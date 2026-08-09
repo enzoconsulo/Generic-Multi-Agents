@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -686,4 +686,147 @@ describe("falha de etapa isolada — a rodada não pode morrer junto", () => {
     const rel = await rodarPipeline(ctxBase, dep);
     expect(rel.encerrouPor).not.toBe("agente-cortado");
   });
+});
+
+describe("linha-base do critério, antes do primeiro despacho (T-057)", () => {
+  /**
+   * Projeto real em disco, porque a decisão da linha-base depende do DISCO: alvo que existe e
+   * não carrega é critério quebrado; alvo que não existe é critério saudável, e a tarefa é
+   * justamente quem vai criá-lo. Fixture com caminho falso responderia sempre a mesma coisa.
+   */
+  function projeto(comSuite?: string) {
+    const dir = mkdtempSync(join(tmpdir(), "t057-"));
+    mkdirSync(join(dir, "tests"));
+    writeFileSync(join(dir, "tests", "existente.test.js"), "", "utf8");
+    const contador = join(dir, "execucoes.txt");
+    writeFileSync(
+      join(dir, "conta.js"),
+      `const { existsSync, readFileSync, writeFileSync } = require("node:fs");
+       const c = ${JSON.stringify(contador)};
+       writeFileSync(c, String((existsSync(c) ? Number(readFileSync(c, "utf8")) : 0) + 1));
+       process.exit(0);`,
+      "utf8",
+    );
+    return {
+      ctx: {
+        ...ctxBase,
+        dirProjeto: dir,
+        ...(comSuite !== undefined ? { comandoTestes: comSuite } : {}),
+      },
+      execucoes: () => (existsSync(contador) ? Number(readFileSync(contador, "utf8")) : 0),
+    };
+  }
+
+  /**
+   * O caso T-030: `node --test tests` num projeto onde `tests/` EXISTE. O runner não sabe
+   * consumir diretório nu, então o comando nunca vai provar nada — e o construtor, por
+   * contrato, não pode consertar critério. Antes desta guarda, isso custava o despacho do
+   * construtor + a passada mecânica antes de alguém notar.
+   */
+  it("critério que não executa nem na árvore intocada NÃO é despachado", async () => {
+    const { ctx } = projeto();
+    const { dep, despachos, logs } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      criterios: "- [ ] a suíte roda\n      `verificar: node --test tests`",
+    });
+
+    const rel = await rodarPipeline(ctx, dep);
+
+    expect(despachos, "não devia gastar despacho nenhum").toHaveLength(0);
+    expect(rel.criteriosQuebrados).toHaveLength(1);
+    expect(rel.criteriosQuebrados[0]?.tarefa).toBe("T-001");
+    expect(rel.criteriosQuebrados[0]?.antesDeGastar).toBe(true);
+    expect(rel.tarefasConcluidas).not.toContain("T-001");
+    expect(logs.join("\n")).toContain("Nada foi gasto nesta tarefa");
+  }, 60_000);
+
+  /**
+   * O outro lado, e é o que impede a guarda de virar um portão que trava tudo: na linha-base
+   * quase todo critério legítimo FALHA, porque a tarefa ainda não foi feita. Falhar não é o
+   * sinal — a classe é.
+   */
+  it("critério que falha porque a tarefa ainda não foi feita segue normalmente", async () => {
+    const { ctx } = projeto();
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      // O arquivo NÃO existe: é exatamente o que a tarefa vai criar (formato de T-017a).
+      criterios: "- [ ] o teste passa\n      `verificar: node --test tests/novo.test.js`",
+    });
+
+    // O construtor falso CUMPRE a tarefa. Sem isto o critério seguiria falhando para sempre e
+    // o teste mediria o teto de despachos em vez da linha-base — foi o que ele fez na primeira
+    // versão. O ciclo completo só é observável se o agente de mentira entregar de mentira.
+    const depEntregando: DependenciasMotor = {
+      ...dep,
+      despachar: async (pedido) => {
+        if (pedido.papel === "construtor") {
+          writeFileSync(
+            join(ctx.dirProjeto, "tests", "novo.test.js"),
+            'require("node:test").test("ok", () => {});',
+            "utf8",
+          );
+        }
+        return dep.despachar(pedido);
+      },
+    };
+
+    const rel = await rodarPipeline(ctx, depEntregando);
+
+    expect(despachos.map((d) => d.papel)).toEqual(["construtor", "verificador", "revisor"]);
+    expect(rel.criteriosQuebrados).toHaveLength(0);
+    expect(rel.tarefasConcluidas).toContain("T-001");
+  }, 60_000);
+
+  /**
+   * A linha-base não pode custar a bateria do projeto por tarefa — seria reintroduzir o
+   * desperdício que T-056 e T-059 cortaram. O critério idêntico ao canônico é pulado aqui e
+   * roda uma única vez depois, na passada mecânica.
+   */
+  it("não roda a suíte do projeto na linha-base", async () => {
+    const { ctx, execucoes } = projeto("node conta.js");
+    const { dep } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      criterios: "- [ ] a suíte inteira passa\n      `verificar: node conta.js`",
+    });
+
+    await rodarPipeline(ctx, dep);
+
+    // 1 = só a passada mecânica (critério implícito da suíte; o `verificar:` duplicado
+    // reaproveita o veredito por T-059). 2 significaria linha-base rodando a bateria.
+    expect(execucoes(), "a suíte devia rodar UMA vez na rodada").toBe(1);
+  }, 60_000);
+
+  /** Em retrabalho a árvore já tem a entrega — "intocada" deixaria de ser verdade. */
+  it("não faz linha-base em retrabalho (tentativas >= 1)", async () => {
+    const { ctx } = projeto();
+    const { dep, despachos } = mundo(
+      [tarefa({ id: "T-001", status: "em-execucao", tentativas: 1 })],
+      { criterios: "- [ ] a suíte roda\n      `verificar: node --test tests`" },
+    );
+
+    const rel = await rodarPipeline(ctx, dep);
+
+    expect(despachos.length, "retrabalho deve seguir sendo despachado").toBeGreaterThan(0);
+    expect(rel.criteriosQuebrados.some((c) => c.antesDeGastar === true)).toBe(false);
+  }, 60_000);
+
+  /**
+   * Linha-base é PRÉ-VOO, não verificação. Gravar o resultado dela na seção Verificação poria
+   * um veredito de "antes do trabalho" no lugar onde o próximo agente lê o veredito da
+   * entrega.
+   */
+  it("não escreve na seção Verificação da tarefa", async () => {
+    const { ctx } = projeto();
+    const { dep } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      criterios: "- [ ] a suíte roda\n      `verificar: node --test tests`",
+    });
+    const anexos: string[] = [];
+    const depEspiao: DependenciasMotor = {
+      ...dep,
+      anexarVerificacao: async (_t, texto) => {
+        anexos.push(texto);
+      },
+    };
+
+    await rodarPipeline(ctx, depEspiao);
+
+    expect(anexos, "a tarefa nem foi despachada; nada a anexar").toHaveLength(0);
+  }, 60_000);
 });
