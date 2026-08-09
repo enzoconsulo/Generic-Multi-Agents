@@ -32,6 +32,8 @@
  * como sempre. Degrada, não abre buraco.
  */
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
 import { promisify } from "node:util";
 import { encerrarArvore } from "../ci/processo.js";
 
@@ -136,6 +138,28 @@ export function lerCriterios(secao: string): Criterio[] {
   return criterios;
 }
 
+/**
+ * POR QUE UM COMANDO NÃO PASSOU — e esta distinção é a razão de ser da T-054.
+ *
+ * Até aqui havia dois desfechos, `passou` e `falhou`, e tudo que não passava devolvia a
+ * tarefa ao construtor. Isso trata "o teste reprovou" e "o comando não existe" como a mesma
+ * coisa. Medido: a T-030 do banco-imobiliario gastou **4 ciclos e US$ 12,90** porque o
+ * critério dizia `node --test tests` — forma que o Node 22 não aceita (diretório nu vira
+ * módulo de entrada) — e o construtor, que por contrato NÃO pode alterar critério, era
+ * despachado de novo a cada volta para consertar um `.bat` que já estava correto desde o
+ * primeiro ciclo.
+ *
+ * Nenhum construtor conserta um comando quebrado, e nenhum modelo mais forte faz uma máquina
+ * sem memória parar de derrubar processo.
+ */
+export type ClasseFalha =
+  /** O comando não chegou a avaliar NADA: binário ausente, opção inválida, alvo ilegível. */
+  | "ferramenta"
+  /** A máquina atrapalhou: morte por sinal, crash nativo, teto de tempo, recurso esgotado. */
+  | "ambiente"
+  /** O comando rodou e reprovou de verdade. O ÚNICO que devolve a tarefa ao construtor. */
+  | "falha";
+
 /** Resultado de um critério depois da passada mecânica. */
 export interface ResultadoCriterio {
   texto: string;
@@ -143,13 +167,181 @@ export interface ResultadoCriterio {
    * - `passou` / `falhou`: o comando rodou e decidiu — grau `[executado]`, de graça;
    * - `nao-executado`: não havia comando ou ele foi recusado. **Vai para o verificador**,
    *   que é o comportamento de sempre. Nunca é aprovação por omissão.
+   * - `inconclusivo`: o comando não conseguiu responder à pergunta (ferramenta quebrada ou
+   *   ambiente hostil). **Nunca reprova e nunca aprova** — vai para julgamento, e quando a
+   *   classe é `ferramenta` o que precisa de conserto é o CRITÉRIO, não a entrega.
    */
-  estado: "passou" | "falhou" | "nao-executado";
+  estado: "passou" | "falhou" | "nao-executado" | "inconclusivo";
   comando: string | null;
   /** Motivo da recusa, quando `nao-executado` por causa do comando. */
   recusa?: MotivoRecusa;
+  /** Por que não decidiu, quando `inconclusivo`. */
+  classe?: ClasseFalha;
   /** Saída relevante (cortada) quando falhou — é o que o construtor precisa ler. */
   saida?: string;
+}
+
+/**
+ * Exit codes que dizem "não consegui nem começar" — e sempre amarrados ao BINÁRIO, porque
+ * fora de contexto eles não significam nada: um programa qualquer pode sair com 9 querendo
+ * dizer outra coisa. 127 e 9009 são do interpretador de comandos, não do programa, e por
+ * isso valem para qualquer binário.
+ */
+const CODIGOS_DE_USO_INDEVIDO: ReadonlyMap<string, ReadonlySet<number>> = new Map([
+  ["*", new Set([127, 9009])], // POSIX: command not found · cmd.exe: não reconhecido
+  ["node", new Set([9])], //     bad option
+  ["git", new Set([129])], //    uso indevido (git responde com o usage)
+]);
+
+/**
+ * Crash nativo no Windows chega como NTSTATUS de erro no exit code — qualquer valor a partir
+ * de 0xC0000000. Cobre de uma vez o `0xC0000409` (stack buffer overrun) e o `0xC0000005`
+ * (access violation) que aparecem nas Notas de T-024, T-027, T-029 e T-030 sempre que a
+ * suíte roda com a máquina sem memória. Em POSIX o equivalente não é código: é `signal`.
+ */
+const PISO_NTSTATUS_ERRO = 0xc0000000;
+
+/** A máquina atrapalhou. `EBUSY`/`EPERM` entram porque o repositório vive sob OneDrive. */
+const SINAIS_DE_AMBIENTE: readonly RegExp[] = [
+  /\bENOMEM\b/,
+  /\bEMFILE\b/,
+  /\bENFILE\b/,
+  /\bEAGAIN\b/,
+  /\bEADDRINUSE\b/,
+  /\bECONNRESET\b/,
+  /\bETIMEDOUT\b/,
+  /\bEBUSY\b/,
+  /\bEPERM\b/,
+  /JavaScript heap out of memory/i,
+  /runtime: out of memory/i, // Go
+  /\bMemoryError\b/, // Python
+];
+
+/** O binário não existe. Mensagem do shell, não do programa — vale para qualquer stack. */
+const SINAIS_DE_BINARIO_AUSENTE: readonly RegExp[] = [
+  /\bcommand not found\b/i,
+  /is not recognized as an internal or external command/i,
+  /n[ãa]o [ée] reconhecido como um comando/i, // Windows em PT-BR
+  /\bspawn\b[^\n]*\bENOENT\b/i,
+];
+
+/** O binário existe, mas não entendeu o que você pediu. */
+const SINAIS_DE_OPCAO_INVALIDA: readonly RegExp[] = [
+  /\bbad option\b/i,
+  /\bunknown option\b/i,
+  /\bunrecognized option\b/i,
+  /\binvalid option\b/i,
+  /\bMissing script\b/i, // npm run <script que não existe>
+];
+
+/**
+ * O ALVO que o comando não conseguiu abrir, quando o erro nomeia um. Um padrão por
+ * ecossistema — reconhecer só o do Node repetiria, num arquivo novo, o defeito que
+ * `ci/ecossistemas.ts` já corrigiu duas vezes.
+ */
+const PADROES_DE_ALVO: readonly RegExp[] = [
+  /Cannot find module ['"]([^'"]+)['"]/, //            Node (CommonJS)
+  /Cannot find package ['"]([^'"]+)['"]/, //           Node (ESM)
+  /can't open file ['"]([^'"]+)['"]/i, //              Python
+  /No such file or directory: ['"]([^'"]+)['"]/i, //   Python / POSIX
+  /no Go files in (\S+)/, //                           Go
+  /MSB1009[^\n]*?([^\s"']+\.(?:sln|csproj|fsproj|vbproj))/i, // MSBuild/.NET
+];
+
+function primeiroAlvo(saida: string): string | null {
+  for (const p of PADROES_DE_ALVO) {
+    const m = p.exec(saida ?? "");
+    const alvo = (m?.[1] ?? "").trim();
+    if (alvo !== "") return alvo;
+  }
+  return null;
+}
+
+/** Compara caminhos sem depender do separador do sistema nem de barra final. */
+function normalizarCaminho(bruto: string): string {
+  return bruto.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+export interface ContextoDeFalha {
+  /** O comando já quebrado em argumentos, como foi executado. */
+  argv: readonly string[];
+  /** stdout + stderr do processo. */
+  saida: string;
+  /** Exit code numérico, ou o código textual do spawn (`ENOENT`). */
+  code: number | string | null;
+  /** Sinal que matou o processo (POSIX). */
+  signal: string | null;
+  /** NOSSO teto de tempo estourou (não o do `execFile`). */
+  estourouNossoTeto: boolean;
+  /**
+   * O caminho existe no disco? É o que separa "critério malformado" de "a tarefa não
+   * entregou" — ver `classificarFalha`. Recebe caminho já resolvido contra o projeto.
+   */
+  existeNoDisco: (caminho: string) => boolean;
+}
+
+/**
+ * Classifica POR QUE o comando não passou.
+ *
+ * O CASO DIFÍCIL, e é o que quase fez esta função nascer errada: "não achei o alvo" tem
+ * exatamente a mesma cara nos dois cenários opostos.
+ *
+ * - `node --test tests` → `Cannot find module '.../tests'`: o diretório EXISTE, o runner é
+ *   que não sabe consumi-lo naquela forma. **O critério está quebrado** (T-030).
+ * - `node --test tests/turno.test.js` → mesma mensagem: o arquivo NÃO existe porque a tarefa
+ *   deveria tê-lo criado e não criou. **A tarefa falhou** (é o formato de T-017a/b/c).
+ *
+ * O discriminador não é a mensagem, é o disco: **alvo que existe e não carrega é ferramenta;
+ * alvo que não existe é falha de verdade.** Casar só o nome do argumento — que foi a
+ * primeira tentativa — teria transformado toda tarefa que esquece de criar o próprio arquivo
+ * de teste num "critério suspeito", e o portão pararia de pegar justamente o defeito comum.
+ *
+ * Na dúvida, `falha`: errar para o lado de reprovar é o comportamento de hoje e no máximo
+ * gasta um ciclo; errar para o lado de não reprovar deixa defeito passar.
+ */
+export function classificarFalha(ctx: ContextoDeFalha): ClasseFalha {
+  // 1. Ambiente que não deixa medir. Vem primeiro porque é inequívoco: nada disso é opinião.
+  if (ctx.estourouNossoTeto) return "ambiente";
+  if ((ctx.signal ?? "") !== "") return "ambiente";
+  if (typeof ctx.code === "number" && ctx.code >= PISO_NTSTATUS_ERRO) return "ambiente";
+
+  const saida = ctx.saida ?? "";
+  const bin = (ctx.argv[0] ?? "").toLowerCase().replace(/\.(exe|cmd|bat)$/, "");
+
+  // 2. O binário não existe. `ENOENT` textual vem do spawn, antes de qualquer execução.
+  if (ctx.code === "ENOENT") return "ferramenta";
+  if (SINAIS_DE_BINARIO_AUSENTE.some((p) => p.test(saida))) return "ferramenta";
+
+  // 3. Exit code de uso indevido, sempre amarrado ao binário que o emitiu.
+  if (typeof ctx.code === "number") {
+    const universais = CODIGOS_DE_USO_INDEVIDO.get("*");
+    const doBinario = CODIGOS_DE_USO_INDEVIDO.get(bin);
+    if (universais?.has(ctx.code) === true) return "ferramenta";
+    if (doBinario?.has(ctx.code) === true && SINAIS_DE_OPCAO_INVALIDA.some((p) => p.test(saida))) {
+      return "ferramenta";
+    }
+  }
+  if (SINAIS_DE_OPCAO_INVALIDA.some((p) => p.test(saida))) return "ferramenta";
+
+  // 4. O alvo nomeado no erro: existe no disco mas não carrega? Então é o comando que está
+  //    errado. Só vale quando o alvo é ARGUMENTO do próprio comando — um módulo qualquer que
+  //    um teste não conseguiu importar é falha da tarefa, não do critério.
+  const alvo = primeiroAlvo(saida);
+  if (alvo !== null) {
+    const normalizado = normalizarCaminho(alvo);
+    const ehArgumento = ctx.argv.slice(1).some((arg) => {
+      if (arg.startsWith("-")) return false; // flag não é alvo
+      const a = normalizarCaminho(arg);
+      return a !== "" && (normalizado === a || normalizado.endsWith(`/${a}`));
+    });
+    if (ehArgumento && ctx.existeNoDisco(alvo)) return "ferramenta";
+  }
+
+  // 5. Recurso esgotado só é consultado AQUI: a mensagem pode aparecer dentro da saída de uma
+  //    suíte que rodou inteira e reprovou por outro motivo, e aí quem manda é a reprovação.
+  if (SINAIS_DE_AMBIENTE.some((p) => p.test(saida))) return "ambiente";
+
+  return "falha";
 }
 
 /** Corta a saída para caber num relatório sem virar parede de texto. */
@@ -215,18 +407,47 @@ export async function executarCriterios(
       const r = await chamada;
       saida.push({ texto: c.texto, estado: "passou", comando: c.comando, saida: cortar(r.stdout) });
     } catch (e) {
-      const err = e as { stdout?: string; stderr?: string; message?: string };
-      // Estouro é falha de AMBIENTE, não do código da tarefa — dizer isso na saída evita que
-      // o construtor gaste um ciclo caçando um bug que não existe.
-      const detalhe = estourou
+      const err = e as {
+        stdout?: string;
+        stderr?: string;
+        message?: string;
+        code?: number | string;
+        signal?: string;
+      };
+      const bruta = `${err.stdout ?? ""}\n${err.stderr ?? err.message ?? ""}`;
+      const classe = classificarFalha({
+        argv: avaliacao.argv,
+        saida: bruta,
+        code: err.code ?? null,
+        signal: err.signal ?? null,
+        estourouNossoTeto: estourou,
+        existeNoDisco: (caminho) =>
+          existsSync(isAbsolute(caminho) ? caminho : resolve(dirProjeto, caminho)),
+      });
+
+      if (classe === "falha") {
+        saida.push({ texto: c.texto, estado: "falhou", comando: c.comando, saida: cortar(bruta) });
+        continue;
+      }
+
+      // Inconclusivo: o comando não respondeu à pergunta. Dizer POR QUE na própria saída é o
+      // que impede o desperdício de sempre — o construtor gastando um ciclo atrás de um bug
+      // que não existe, ou o verificador tomando ruído de máquina por veredito.
+      const explicacao = estourou
         ? `Comando excedeu o teto de ${Math.round(timeout / 1000)}s e a árvore de processos` +
-          " foi encerrada. Isso é limite de tempo, não necessariamente defeito da tarefa."
-        : `${err.stdout ?? ""}\n${err.stderr ?? err.message ?? ""}`;
+          " foi encerrada. Isso é limite de tempo, não defeito da tarefa."
+        : classe === "ferramenta"
+          ? "O COMANDO DO CRITÉRIO não conseguiu executar (binário ausente, opção inválida ou" +
+            " alvo que existe mas ele não sabe consumir). Isso é defeito do critério, não da" +
+            " entrega — nenhum construtor conserta, quem corrige critério é o planejador."
+          : "A máquina atrapalhou (processo morto, crash nativo ou recurso esgotado). Não diz" +
+            " nada sobre a entrega.";
       saida.push({
         texto: c.texto,
-        estado: "falhou",
+        estado: "inconclusivo",
+        classe,
         comando: c.comando,
-        saida: cortar(detalhe),
+        saida: cortar(`${explicacao}\n\n${bruta}`),
       });
     } finally {
       clearTimeout(cronometro);
@@ -254,6 +475,17 @@ export function relatorioCriterios(resultados: readonly ResultadoCriterio[]): st
       linhas.push(`- [julgado] ${r.texto} — ${porque}; fica para o verificador.`);
       continue;
     }
+    if (r.estado === "inconclusivo") {
+      const porque =
+        r.classe === "ferramenta"
+          ? "o comando do critério não executou — **o critério é que precisa de conserto**"
+          : "a máquina atrapalhou (processo morto, crash nativo ou recurso esgotado)";
+      linhas.push(
+        `- [inconclusivo] ${r.texto} — \`${r.comando}\` → ${porque}. Não reprova a tarefa.`,
+      );
+      if ((r.saida ?? "") !== "") linhas.push("", "```", r.saida ?? "", "```", "");
+      continue;
+    }
     const marca = r.estado === "passou" ? "PASSOU" : "FALHOU";
     linhas.push(`- [executado] ${r.texto} — \`${r.comando}\` → **${marca}**`);
     if (r.estado === "falhou" && (r.saida ?? "") !== "") {
@@ -261,19 +493,40 @@ export function relatorioCriterios(resultados: readonly ResultadoCriterio[]): st
     }
   }
 
-  const executados = resultados.filter((r) => r.estado !== "nao-executado").length;
-  const julgados = resultados.length - executados;
-  linhas.push(
-    "",
-    `Graus de prova: ${executados} executado(s), ${julgados} para julgamento` +
-      ` (de ${resultados.length}).`,
-  );
+  const executados = resultados.filter(
+    (r) => r.estado === "passou" || r.estado === "falhou",
+  ).length;
+  const inconclusivos = resultados.filter((r) => r.estado === "inconclusivo").length;
+  const julgados = resultados.length - executados - inconclusivos;
+  const partes = [`${executados} executado(s)`, `${julgados} para julgamento`];
+  // O inconclusivo só aparece quando existe: linha de relatório que diz "0 de alguma coisa"
+  // em toda rodada saudável vira ruído e para de ser lida justamente quando importa.
+  if (inconclusivos > 0) partes.push(`${inconclusivos} INCONCLUSIVO(s)`);
+  linhas.push("", `Graus de prova: ${partes.join(", ")} (de ${resultados.length}).`);
   return linhas.join("\n");
 }
 
-/** Algum critério com comando falhou? Aí não vale gastar verificador — devolva ao construtor. */
+/**
+ * Algum critério com comando falhou DE VERDADE? Aí não vale gastar verificador — devolva ao
+ * construtor.
+ *
+ * `inconclusivo` de propósito não conta: devolver a tarefa porque o comando não roda é o
+ * laço que custou US$ 12,90 na T-030. Ele não aprova nada — segue para o verificador julgar,
+ * e quando a classe é `ferramenta` o relatório da rodada pede correção do critério.
+ */
 export function reprovouNaMecanica(resultados: readonly ResultadoCriterio[]): boolean {
   return resultados.some((r) => r.estado === "falhou");
+}
+
+/**
+ * Critérios cujo COMANDO está quebrado. É o que o motor precisa levar ao relatório da rodada:
+ * nenhum despacho de construtor conserta isso, e sem alguém dizer em voz alta a tarefa
+ * silenciosamente queima as 3 tentativas até bloquear.
+ */
+export function criteriosComFerramentaQuebrada(
+  resultados: readonly ResultadoCriterio[],
+): ResultadoCriterio[] {
+  return resultados.filter((r) => r.estado === "inconclusivo" && r.classe === "ferramenta");
 }
 
 /**

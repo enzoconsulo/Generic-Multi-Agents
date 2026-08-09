@@ -333,7 +333,17 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
       `${r.criteriosExecutados} critério(s) resolvidos por comando, sem gastar modelo.`,
     );
   }
-  // Os dois pedem AÇÃO e por isso vão por último, que é onde se olha.
+  // Estes pedem AÇÃO e por isso vão por último, que é onde se olha.
+  if (r.criteriosQuebrados.length > 0) {
+    // Primeiro do grupo de propósito: enquanto o critério não for corrigido, toda rodada
+    // seguinte volta a bater nele, e a tarefa caminha para o bloqueio sem defeito nenhum.
+    const lista = r.criteriosQuebrados.map((c) => `${c.tarefa} (\`${c.comando}\`)`).join("; ");
+    linhas.push(
+      `CRITÉRIO QUEBRADO — o comando não executa nesta máquina, é defeito do critério e não` +
+        ` da entrega: ${lista}. Nenhum construtor conserta isso; peça a correção ao` +
+        " planejador antes da próxima rodada.",
+    );
+  }
   if (r.paraReplanejar.length > 0) {
     linhas.push(
       `Replanejadas automaticamente (esgotaram os ciclos): ${r.paraReplanejar.join(", ")}.` +

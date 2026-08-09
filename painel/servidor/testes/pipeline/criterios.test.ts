@@ -1,11 +1,13 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   avaliarComando,
   BINARIOS_PERMITIDOS,
+  classificarFalha,
   criterioDaSuite,
+  criteriosComFerramentaQuebrada,
   executarCriterios,
   lerCriterios,
   relatorioCriterios,
@@ -142,15 +144,23 @@ describe("executarCriterios", () => {
     expect(r[0]?.recusa).toBe("binario-nao-permitido");
   });
 
-  // Falha de ambiente virando reprovação da TAREFA é o desperdício mais caro da fábrica:
-  // queima um ciclo inteiro por um erro que não é do código.
-  it("comando inexistente não lança — vira falha registrada", async () => {
+  /**
+   * Falha de ambiente ou de ferramenta virando reprovação da TAREFA é o desperdício mais
+   * caro da fábrica: queima um ciclo inteiro por um erro que não é do código.
+   *
+   * Este teste JÁ EXISTIA afirmando `falhou` — ou seja, codificava o defeito como se fosse o
+   * contrato, com um comentário que descrevia o desperdício logo acima da asserção que o
+   * garantia. A T-054 inverte a asserção: opção inválida não decide nada sobre a entrega.
+   */
+  it("comando inexistente não lança — e não reprova a tarefa", async () => {
     const r = await executarCriterios(
       [{ texto: "x", comando: "node --isso-nao-existe", marcado: false }],
       projeto(),
     );
-    expect(r[0]?.estado).toBe("falhou");
+    expect(r[0]?.estado).toBe("inconclusivo");
+    expect(r[0]?.classe).toBe("ferramenta");
     expect(r[0]?.saida).toBeTypeOf("string");
+    expect(reprovouNaMecanica(r)).toBe(false);
   });
 
   /**
@@ -191,7 +201,9 @@ describe("executarCriterios", () => {
       { timeoutMs: 1500 },
     );
 
-    expect(r[0]?.estado).toBe("falhou");
+    // Estouro de tempo é ambiente (T-054): mata a árvore, registra, e NÃO reprova a tarefa.
+    expect(r[0]?.estado).toBe("inconclusivo");
+    expect(r[0]?.classe).toBe("ambiente");
     expect(r[0]?.saida).toContain("árvore de processos");
 
     // A prova: depois do estouro a neta parou de bater.
@@ -317,4 +329,222 @@ describe("lerCriterios — critério multi-linha (bug de rodada real)", () => {
     expect(c[0]?.texto).toContain("verifica a compra");
     expect(c[0]?.texto).not.toContain("verificar:");
   });
+});
+
+describe("classificarFalha — separar 'a entrega falhou' de 'não deu para medir' (T-054)", () => {
+  const base = {
+    argv: ["npm", "test"],
+    saida: "",
+    code: 1 as number | string | null,
+    signal: null as string | null,
+    estourouNossoTeto: false,
+    existeNoDisco: () => false,
+  };
+
+  it("comando que rodou e reprovou continua sendo `falha`", () => {
+    expect(classificarFalha({ ...base, saida: "3 testes falharam\nassert: esperado 2" })).toBe(
+      "falha",
+    );
+  });
+
+  it("nosso teto de tempo é ambiente, nunca defeito da tarefa", () => {
+    expect(classificarFalha({ ...base, estourouNossoTeto: true })).toBe("ambiente");
+  });
+
+  // POSIX: processo morto não devolve exit code útil, devolve sinal.
+  it("morte por sinal é ambiente", () => {
+    expect(classificarFalha({ ...base, code: null, signal: "SIGSEGV" })).toBe("ambiente");
+  });
+
+  /**
+   * O crash que reprovou T-024, T-027, T-029 e T-030 sem defeito nenhum. Qualquer NTSTATUS
+   * de erro entra, não só o 0xC0000409 que apareceu nas Notas.
+   */
+  it("crash nativo do Windows é ambiente", () => {
+    expect(classificarFalha({ ...base, code: 3221226505 })).toBe("ambiente"); // 0xC0000409
+    expect(classificarFalha({ ...base, code: 3221225477 })).toBe("ambiente"); // 0xC0000005
+  });
+
+  it("recurso esgotado é ambiente, em qualquer stack", () => {
+    for (const s of ["ENOMEM", "EMFILE", "JavaScript heap out of memory", "MemoryError"]) {
+      expect(classificarFalha({ ...base, saida: `algo ${s} algo` })).toBe("ambiente");
+    }
+  });
+
+  it("binário ausente é ferramenta — o critério aponta para o que não existe", () => {
+    expect(classificarFalha({ ...base, code: "ENOENT" })).toBe("ferramenta");
+    expect(classificarFalha({ ...base, code: 127, saida: "pytest: command not found" })).toBe(
+      "ferramenta",
+    );
+    expect(
+      classificarFalha({
+        ...base,
+        code: 1,
+        saida: "'ruff' is not recognized as an internal or external command",
+      }),
+    ).toBe("ferramenta");
+  });
+
+  it("opção inválida é ferramenta", () => {
+    expect(
+      classificarFalha({
+        ...base,
+        argv: ["node", "--opcao-xyz"],
+        code: 9,
+        saida: "node.exe: bad option: --opcao-xyz",
+      }),
+    ).toBe("ferramenta");
+    expect(classificarFalha({ ...base, saida: "npm ERR! Missing script: \"tst\"" })).toBe(
+      "ferramenta",
+    );
+  });
+
+  /**
+   * O CASO DIFÍCIL, e a razão de o discriminador ser o disco e não a mensagem. As duas
+   * situações abaixo imprimem exatamente o mesmo erro do Node.
+   */
+  describe("alvo não encontrado: mesma mensagem, desfechos opostos", () => {
+    // `String.raw` de propósito: a mensagem real do Node vem com separador do Windows, e
+    // escrever isso com escape manual já estragou este teste uma vez — `"C:\proj\tests"` em
+    // TypeScript é `C:proj<TAB>ests`, e o caso passava/reprovava pelo motivo errado.
+    const ALVO_DIRETORIO = String.raw`C:\proj\tests`;
+    const ALVO_ARQUIVO = String.raw`C:\proj\tests\turno.test.js`;
+
+    it("alvo que EXISTE e não carrega é ferramenta (o caso T-030)", () => {
+      expect(
+        classificarFalha({
+          ...base,
+          argv: ["node", "--test", "tests"],
+          saida: `Error: Cannot find module '${ALVO_DIRETORIO}'\ncode: 'MODULE_NOT_FOUND'`,
+          existeNoDisco: (c) => c === ALVO_DIRETORIO, // o diretório está lá
+        }),
+      ).toBe("ferramenta");
+    });
+
+    it("alvo que NÃO existe é falha da tarefa (o formato de T-017a)", () => {
+      expect(
+        classificarFalha({
+          ...base,
+          argv: ["node", "--test", "tests/turno.test.js"],
+          saida: `Error: Cannot find module '${ALVO_ARQUIVO}'`,
+          existeNoDisco: () => false, // a tarefa deveria ter criado o arquivo e não criou
+        }),
+      ).toBe("falha");
+    });
+
+    // Prova que o teste acima reprova pelo motivo CERTO: mesma mensagem, mesmo comando, e a
+    // única coisa que muda é o disco. Sem isto, os dois casos poderiam estar dando o
+    // resultado esperado por engano — foi exatamente o que aconteceu na primeira versão.
+    it("é o DISCO que decide: mesma entrada, resposta oposta", () => {
+      const entrada = {
+        ...base,
+        argv: ["node", "--test", "tests/turno.test.js"],
+        saida: `Error: Cannot find module '${ALVO_ARQUIVO}'`,
+      };
+      expect(classificarFalha({ ...entrada, existeNoDisco: () => true })).toBe("ferramenta");
+      expect(classificarFalha({ ...entrada, existeNoDisco: () => false })).toBe("falha");
+    });
+
+    it("módulo que um teste não conseguiu importar é falha, não ferramenta", () => {
+      // O alvo não é argumento do comando: a suíte rodou e um import quebrou. Defeito real.
+      expect(
+        classificarFalha({
+          ...base,
+          argv: ["npm", "test"],
+          saida: "Error: Cannot find module '../src/motor.js'",
+          existeNoDisco: () => true,
+        }),
+      ).toBe("falha");
+    });
+  });
+
+  it("reconhece alvo de outras stacks, não só do Node", () => {
+    expect(
+      classificarFalha({
+        ...base,
+        argv: ["python", "suite.py"],
+        saida: "can't open file 'suite.py': [Errno 2] No such file",
+        existeNoDisco: () => true,
+      }),
+    ).toBe("ferramenta");
+    expect(
+      classificarFalha({
+        ...base,
+        argv: ["go", "test", "./pacote"],
+        saida: "no Go files in ./pacote",
+        existeNoDisco: () => true,
+      }),
+    ).toBe("ferramenta");
+  });
+});
+
+describe("inconclusivo no relatório e nos portões", () => {
+  it("não reprova a tarefa — é o laço que custou US$ 12,90 na T-030", () => {
+    expect(
+      reprovouNaMecanica([
+        { texto: "a", estado: "passou", comando: "npm test" },
+        { texto: "b", estado: "inconclusivo", classe: "ferramenta", comando: "node --test tests" },
+      ]),
+    ).toBe(false);
+  });
+
+  it("aparece na escada e na linha Graus de prova", () => {
+    const texto = relatorioCriterios([
+      { texto: "suíte", estado: "passou", comando: "npm test" },
+      { texto: "alvo", estado: "inconclusivo", classe: "ferramenta", comando: "node --test tests" },
+      { texto: "tela", estado: "nao-executado", comando: null },
+    ]);
+    expect(texto).toContain("[inconclusivo] alvo");
+    expect(texto).toContain("o critério é que precisa de conserto");
+    expect(texto).toContain("Graus de prova: 1 executado(s), 1 para julgamento, 1 INCONCLUSIVO(s)");
+  });
+
+  // Linha que diz "0 de alguma coisa" em toda rodada saudável para de ser lida.
+  it("sem inconclusivo, a linha continua exatamente como era", () => {
+    const texto = relatorioCriterios([{ texto: "suíte", estado: "passou", comando: "npm test" }]);
+    expect(texto).toContain("Graus de prova: 1 executado(s), 0 para julgamento (de 1).");
+    expect(texto).not.toContain("INCONCLUSIVO");
+  });
+
+  it("só a classe `ferramenta` vira pedido de correção de critério", () => {
+    const quebrados = criteriosComFerramentaQuebrada([
+      { texto: "a", estado: "inconclusivo", classe: "ferramenta", comando: "node --test tests" },
+      { texto: "b", estado: "inconclusivo", classe: "ambiente", comando: "npm test" },
+      { texto: "c", estado: "falhou", comando: "npm test" },
+    ]);
+    expect(quebrados).toHaveLength(1);
+    expect(quebrados[0]?.comando).toBe("node --test tests");
+  });
+});
+
+describe("executarCriterios — a T-030 ponta a ponta, com processo de verdade", () => {
+  it("reproduz o critério quebrado da T-030 e NÃO reprova a tarefa", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "t030-"));
+    mkdirSync(join(dir, "tests"));
+    writeFileSync(join(dir, "tests", "a.test.js"), "");
+
+    // Exatamente o que estava escrito na T-030. O diretório existe; o runner é que não sabe
+    // consumi-lo nesta forma.
+    const r = await executarCriterios(
+      [{ texto: "a suíte passa", comando: "node --test tests", marcado: false }],
+      dir,
+    );
+
+    expect(r[0]?.estado).toBe("inconclusivo");
+    expect(r[0]?.classe).toBe("ferramenta");
+    expect(reprovouNaMecanica(r)).toBe(false);
+  }, 30_000);
+
+  it("arquivo de teste que a tarefa não criou continua reprovando de verdade", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "t017-"));
+    mkdirSync(join(dir, "tests"));
+
+    const r = await executarCriterios(
+      [{ texto: "o teste roda", comando: "node --test tests/naoexiste.test.js", marcado: false }],
+      dir,
+    );
+
+    expect(r[0]?.estado).toBe("falhou");
+    expect(reprovouNaMecanica(r)).toBe(true);
+  }, 30_000);
 });

@@ -1,3 +1,6 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   rodarPipeline,
@@ -35,8 +38,23 @@ function tarefa(p: Partial<TarefaResumo> & { id: string }): TarefaResumo {
   };
 }
 
+/**
+ * Diretório REAL, e isso importa mais do que parece.
+ *
+ * Aqui havia `dirProjeto: "/nao-usado"` — um caminho que não existe. O teste da falha
+ * mecânica declarava rodar "um comando real que falha", e o comando NUNCA chegou a rodar: o
+ * spawn morria na hora com `ENOENT` porque o `cwd` não existia, e a passada mecânica contava
+ * isso como "o critério reprovou". O teste ficava verde pelo motivo errado, exercitando o
+ * caminho de spawn quebrado em vez do caminho de reprovação.
+ *
+ * Foi a T-054 que revelou isso, ao passar a distinguir as duas coisas: `cwd` inexistente é
+ * `ferramenta` (inconclusivo, não reprova), e o teste caiu na hora. É o próprio defeito que
+ * a T-054 corrige, escondido dentro do teste que deveria prová-la.
+ */
+const dirReal = mkdtempSync(join(tmpdir(), "motor-retrabalho-"));
+
 const ctxBase: ContextoMotor = {
-  dirProjeto: "/nao-usado",
+  dirProjeto: dirReal,
   projeto: "teste",
   trilha: "software",
   equipe: null,

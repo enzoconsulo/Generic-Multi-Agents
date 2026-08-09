@@ -16,6 +16,7 @@ import {
   executarCriterios,
   lerCriterios,
   relatorioCriterios,
+  criteriosComFerramentaQuebrada,
   reprovouNaMecanica,
   type ResultadoCriterio,
 } from "./criterios.js";
@@ -172,6 +173,12 @@ export interface RelatorioMotor {
   bloqueadas: string[];
   /** Critérios resolvidos sem modelo — a economia da I5, medida. */
   criteriosExecutados: number;
+  /**
+   * Critérios cujo COMANDO está quebrado (T-054). Não reprovam a tarefa, mas precisam
+   * aparecer: nenhum construtor os conserta, e sem alguém dizer em voz alta a tarefa queima
+   * as 3 tentativas em silêncio até bloquear — foi o que custou US$ 12,90 na T-030.
+   */
+  criteriosQuebrados: { tarefa: string; comando: string }[];
   /** Marcos de fase verificados nesta rodada. */
   marcos: { fase: string; veredicto: VeredictoMarco }[];
   /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
@@ -251,6 +258,7 @@ export async function rodarPipeline(
     paraReplanejar: [],
     bloqueadas: [],
     criteriosExecutados: 0,
+    criteriosQuebrados: [],
     marcos: [],
     saneadas: [],
     etapasFalhas: [],
@@ -490,7 +498,26 @@ export async function rodarPipeline(
     // Passada mecânica: acontece ANTES de gastar um despacho de verificador.
     if (passo.papel === "verificador") {
       const executados = await passadaMecanica(passo, ctx, dep);
-      rel.criteriosExecutados += executados.length;
+      // Conta só o que a máquina REALMENTE decidiu. Somar o array inteiro inflava o número
+      // com critérios sem comando e, agora, com inconclusivos — e o relatório da rodada diz
+      // "N critério(s) resolvidos por comando, sem gastar modelo". Medida que se elogia
+      // sozinha é a que menos se confere.
+      rel.criteriosExecutados += executados.filter(
+        (r) => r.estado === "passou" || r.estado === "falhou",
+      ).length;
+
+      // Critério quebrado não reprova, mas não pode passar em silêncio: quem corrige critério
+      // é o planejador, e ele só age se alguém contar.
+      for (const q of criteriosComFerramentaQuebrada(executados)) {
+        rel.criteriosQuebrados.push({ tarefa: passo.tarefa.id, comando: q.comando ?? "" });
+        dep.log(
+          "erro",
+          `${passo.tarefa.id}: o comando do critério \`${q.comando}\` NÃO EXECUTA nesta` +
+            " máquina — é defeito do critério, não da entrega. A tarefa segue; o critério" +
+            " precisa do planejador.",
+        );
+      }
+
       if (executados.length > 0 && reprovouNaMecanica(executados)) {
         await dep.gravarStatus(passo.tarefa, "em-execucao");
         // Registra QUEM reprovou: falha mecânica é objetiva e localizada, e o próximo
