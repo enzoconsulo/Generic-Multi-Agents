@@ -880,24 +880,36 @@ export async function rodarPipeline(
     if (depois !== undefined && depois.status === statusAntes) {
       const vezes = (repeticoes.get(passo.tarefa.id) ?? 0) + 1;
       repeticoes.set(passo.tarefa.id, vezes);
+      // RECUPERAÇÃO ANTES DE DESISTIR. O agente pode ter feito o trabalho e falhado só no
+      // registro — foi exatamente o que aconteceu com a T-025 (dois ciclos de `opus`
+      // editando os arquivos certos, sem gravar `status`, sem commitar), e a rodada
+      // fechou com zero tarefa concluída enquanto o trabalho estava pronto no disco.
+      //
+      // O sinal é a ÁRVORE GIT, o mesmo do saneamento de abertura. Quando o motor fecha o
+      // ciclo em nome da tarefa, ele commita e registra o hash nas Notas, para o revisor ter
+      // um DIFF de verdade para julgar.
+      //
+      // Isto NÃO abre um laço infinito, e a razão é bonita: o commit deixa a árvore limpa,
+      // então uma segunda ocorrência não encontra trabalho parcial e cai no encerramento
+      // abaixo. A recuperação é auto-limitada por construção.
+      //
+      // T-062: o sinal de COMMIT é consultado já na 1ª repetição, os demais só na 2ª. O
+      // porquê da assimetria está no parâmetro `sinais` — commit é declaração do agente,
+      // árvore suja é ambígua. Antes os dois esperavam a 2ª, e o caso comum (agente commita e
+      // esquece o frontmatter) pagava um despacho de `opus` inteiro para ser descoberto.
+      const recuperou = await recuperarTrabalhoNaoRegistrado(
+        passo,
+        depois,
+        ctx,
+        dep,
+        headAntes,
+        vezes >= 2 ? "todos" : "commit",
+      );
+      if (recuperou) {
+        repeticoes.delete(passo.tarefa.id);
+        continue;
+      }
       if (vezes >= 2) {
-        // RECUPERAÇÃO ANTES DE DESISTIR. O agente pode ter feito o trabalho e falhado só no
-        // registro — foi exatamente o que aconteceu com a T-025 (dois ciclos de `opus`
-        // editando os arquivos certos, sem gravar `status`, sem commitar), e a rodada
-        // fechou com zero tarefa concluída enquanto o trabalho estava pronto no disco.
-        //
-        // O sinal é a ÁRVORE GIT, o mesmo do saneamento de abertura: mudou nas `areas`, o
-        // trabalho existe. Aí o motor fecha o ciclo em nome da tarefa — commit próprio, com
-        // hash registrado nas Notas, para o revisor ter um DIFF de verdade para julgar.
-        //
-        // Isto NÃO abre um laço infinito, e a razão é bonita: o commit deixa a árvore limpa,
-        // então uma segunda ocorrência não encontra trabalho parcial e cai direto no
-        // encerramento abaixo. A recuperação é auto-limitada por construção.
-        const recuperou = await recuperarTrabalhoNaoRegistrado(passo, depois, ctx, dep, headAntes);
-        if (recuperou) {
-          repeticoes.delete(passo.tarefa.id);
-          continue;
-        }
         dep.log(
           "erro",
           `${passo.tarefa.id}: ${agente.nome} terminou e o status continua` +
@@ -1002,6 +1014,24 @@ async function recuperarTrabalhoNaoRegistrado(
   ctx: ContextoMotor,
   dep: DependenciasMotor,
   headAntes: string | null,
+  /**
+   * QUAIS SINAIS CONSULTAR (T-062) — e a distinção existe porque eles não têm o mesmo valor
+   * probatório:
+   *
+   * - `commit` (sinal 1) é uma DECLARAÇÃO do agente. Pelo contrato do construtor, commitar
+   *   significa "terminei"; um agente não commita trabalho pela metade de propósito. Por isso
+   *   ele é consultado já na 1ª repetição: esperar a 2ª só paga um despacho de `opus` para
+   *   descobrir o que o commit já dizia.
+   * - `todos` acrescenta o sinal 2 (árvore suja), que é AMBÍGUO: pode ser entrega pronta sem
+   *   registro (T-025) ou agente cortado no meio de uma edição. Aí a segunda chance vale o
+   *   despacho, porque o trabalho pode estar de fato incompleto.
+   *
+   * Medido no job `fc211543`: o `executor-reforcado` da T-032 corrigiu o achado e commitou
+   * `e6f4aa7` sem gravar status; o motor despachou `opus` de novo, o segundo agente escreveu
+   * "não há nada a corrigir" e a rodada encerrou por `sem-progresso` com a entrega pronta no
+   * repositório. ~US$ 1,5 para confirmar um commit que já estava lá.
+   */
+  sinais: "commit" | "todos",
 ): Promise<boolean> {
   // Só o construtor: verificador e revisor não produzem artefato para commitar, e "trabalho
   // não commitado" na área deles seria justamente o que eles NÃO deviam ter feito.
@@ -1028,7 +1058,9 @@ async function recuperarTrabalhoNaoRegistrado(
     }
   }
 
-  // SINAL 2 — trabalho NÃO commitado nas `areas` (o caso da T-025).
+  // SINAL 2 — trabalho NÃO commitado nas `areas` (o caso da T-025). Ambíguo, então só na
+  // segunda passada: ver o parâmetro `sinais`.
+  if (sinais === "commit") return false;
   if (dep.commitarTarefa === undefined) return false;
   if (!(await dep.temTrabalhoParcial(atual))) return false;
 

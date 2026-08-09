@@ -178,11 +178,14 @@ describe("recuperação de trabalho não registrado (o caso T-025)", () => {
    * Este é o caso COMUM, e o da T-025 é o raro.
    */
   it("construtor que COMMITA mas não grava status: HEAD andou, logo houve trabalho", async () => {
-    const { dep, logs, commitsDeTarefa } = mundo([tarefa({ id: "T-110", status: "pronta" })], {
-      construtorMudo: true,
-      construtorCommita: true,
-      trabalhoParcial: false, // árvore limpa JUSTAMENTE porque ele commitou
-    });
+    const { dep, logs, commitsDeTarefa, despachos } = mundo(
+      [tarefa({ id: "T-110", status: "pronta" })],
+      {
+        construtorMudo: true,
+        construtorCommita: true,
+        trabalhoParcial: false, // árvore limpa JUSTAMENTE porque ele commitou
+      },
+    );
     const rel = await rodarPipeline(ctxBase, dep);
 
     expect(rel.encerrouPor).not.toBe("sem-progresso");
@@ -191,6 +194,34 @@ describe("recuperação de trabalho não registrado (o caso T-025)", () => {
     expect(logs.some((l) => l.includes("commitou") && l.includes("não gravou o status"))).toBe(
       true,
     );
+    /**
+     * T-062 — A ECONOMIA, e é o que o teste passou a travar. Antes a recuperação só era
+     * consultada na 2ª repetição, então este mesmo cenário custava DOIS despachos de
+     * construtor: o segundo agente ia olhar um trabalho já commitado e não tinha o que fazer.
+     * Medido no job `fc211543` (T-032): ~US$ 1,5 de `opus` para confirmar um commit que já
+     * estava no repositório.
+     */
+    expect(construtores(despachos), "commit é declaração de entrega: um despacho basta").toHaveLength(
+      1,
+    );
+  });
+
+  /**
+   * A contrapartida da T-062: árvore suja é sinal AMBÍGUO (entrega pronta sem registro, ou
+   * agente cortado no meio de uma edição), então ela NÃO encurta o caminho — o construtor
+   * ganha a segunda chance, que pode ser o que termina o trabalho.
+   */
+  it("árvore suja sem commit continua esperando a 2ª repetição", async () => {
+    const { dep, despachos, commitsDeTarefa } = mundo([tarefa({ id: "T-111", status: "pronta" })], {
+      construtorMudo: true,
+      construtorCommita: false, // não commitou: HEAD parado
+      trabalhoParcial: true, // mas deixou mudança nas areas
+    });
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(construtores(despachos), "a segunda chance vale o despacho aqui").toHaveLength(2);
+    expect(commitsDeTarefa).toHaveLength(1); // o motor fecha o ciclo em nome da tarefa
+    expect(rel.encerrouPor).not.toBe("sem-progresso");
   });
 
   it("HEAD parado e árvore limpa: não houve trabalho, encerra como antes", async () => {
