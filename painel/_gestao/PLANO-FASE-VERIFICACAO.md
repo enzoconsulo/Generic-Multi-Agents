@@ -265,6 +265,34 @@ valendo — sem ele, tarefa mal dimensionada gera replanejamento em cascata. E `
 não pode virar rota de fuga do construtor: se ele alegar impedimento e o critério for
 executável, o planejador devolve a tarefa e isso precisa ficar registrado.
 
+> **Entregue em 09/08 (`2976976`), com o gatilho 1 DESCARTADO e substituído — desenho revisado
+> com o usuário antes de escrever.**
+>
+> **Por que o gatilho 1 saiu.** "Mesmo comando falhando mecanicamente 2× → planejador" perdeu o
+> caso que existia para pegar: a T-054 fez comando quebrado virar `inconclusivo` (não reprova) e
+> a T-057 o pega na linha-base. O que sobrava — comando que falha DE VERDADE duas vezes — é
+> evidência de dificuldade, não de especificação errada, e para dificuldade o escalonamento de
+> modelo do `diagnostico.ts` já responde. **Lição geral: item de plano escrito antes dos
+> anteriores pode ter seu caso consumido por eles — reavalie o gatilho, não só a implementação.**
+>
+> **Gatilho B no lugar:** conformidade reprovada 2× seguidas. Mais defensável porque o argumento
+> vem do próprio `diagnostico.ts` — conformidade já roda SEMPRE no calibre máximo com escopo
+> completo, então a segunda reprovação idêntica é evidência sobre o TEXTO, não sobre o agente. E
+> de risco baixo por construção: só dispara em `tentativas >= 2`, substituindo o último
+> construtor, que ia ser gasto e que ao falhar levaria a replanejamento no ciclo seguinte — o
+> destino é o mesmo, economiza-se a passagem.
+>
+> **O ponto de implementação que mais importava:** a leitura do impedimento vem ANTES da guarda
+> de progresso, com teste próprio. O construtor que faz a coisa certa (para, escreve o motivo,
+> não move o status) é indistinguível de um agente travado para a guarda — se ela rodasse
+> primeiro, o comportamento honesto encerraria a rodada por `sem-progresso`. Corolário para
+> qualquer sinal novo de agente: **pergunte com qual guarda existente ele se parece, e quem lê
+> primeiro.**
+>
+> **Sem punição embutida:** `tentativas` não é tocado. Se o planejador discordar do impedimento e
+> devolver a tarefa, a tentativa gasta continua gasta — o desincentivo contra rota de fuga existe
+> sem precisar morar no motor. Travas: uma vez por linhagem e uma vez por rodada.
+
 ---
 
 ## T-059 — Fechar a porta de entrada: critério redundante e doutrina
@@ -395,7 +423,7 @@ mate processo — regra dura já registrada em `painel/CLAUDE.md`.
 | 4 | **T-059** dedupe + doutrina | — | baixo | médio (impede a recaída) | **feita** 09/08 (`acde1e3`) |
 | 5 | **T-057** linha-base na promoção | T-054 | médio | alto | **feita** 09/08 (`a0cd3ae`) |
 | 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) | **feita** 09/08 (`589a524`) |
-| 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | pronta para começar |
+| 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | **feita** 09/08 (`2976976`) |
 | 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido | pronta para começar |
 
 ### O que a T-054 mudou nas premissas dos itens seguintes
