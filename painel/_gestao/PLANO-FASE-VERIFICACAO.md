@@ -464,6 +464,49 @@ um. O fixture já tem as duas opções.
 > **Lição geral: ao consertar "o sinal é lido tarde demais", pergunte se todos os sinais daquele
 > ponto merecem a mesma pressa.**
 
+---
+
+## T-063 — `tentativas` é um portão da máquina escrito à mão por quem não sabe disso
+
+**Achado na terceira medição (job `7cd4a453`).** Custo observado: **um despacho de planejador
+desperdiçado, e um replanejamento que se repetiria a cada rodada** até alguém corrigir o campo.
+
+**O que aconteceu.** O `testador` da T-032 aprovou a tarefa (`em-teste → em-revisao`, correto)
+e, na MESMA gravação, mudou `tentativas: 2 → 4` — confundindo *"este é o ciclo 4"*, fato
+narrativo que pertence ao texto, com o CONTADOR que a máquina usa como portão. O motor leu
+`4 > 3`, concluiu "esgotou os ciclos" e despachou o planejador, que corretamente se recusou a
+replanejar (*"não há abordagem técnica errada nem tamanho excessivo a quebrar"*). O agente
+certo se comportou certo; o campo é que estava corrompido.
+
+**Por que isso é grave e não pontual.** `tentativas` decide TRÊS coisas: o limite de 3 ciclos,
+o escalonamento para o modelo reforçado e (via `deveReplanejar`) a autocorreção. É o campo com
+mais poder do frontmatter — e é escrito à mão por agentes cujo prompt fala dele de passagem. O
+próprio `CLAUDE.md` já reconhece a fragilidade: *"o limite de 3 ciclos depende de o AGENTE
+incrementar `tentativas`"*, e o teto de despachos por rodada existe justamente porque ele às
+vezes NÃO incrementa. Este caso é o erro oposto — incrementar demais — e não havia guarda
+nenhuma para ele.
+
+É a mesma família de todo o resto da fase: **um sinal que a máquina lê sendo escrito por quem
+não sabe que é sinal de máquina.**
+
+**O que fazer — as duas metades, e a segunda é a que vale.**
+
+1. **Doutrina** (`testador.md`, `conferente.md`, `revisor.md`, `revisor-generico.md`): dizer
+   explicitamente que `tentativas` é do construtor e que o número do ciclo se escreve no TEXTO,
+   nunca no frontmatter. Necessário, e insuficiente — o sistema já dependia disso e falhou.
+2. **Guarda no motor**: o motor observa quem rodou cada etapa. Um passo de `verificador` ou
+   `revisor` que mude `tentativas` é violação de contrato VISÍVEL — ignore o novo valor (use o
+   de antes do despacho, que o motor já tem em mãos), registre no relatório e siga. Nada de
+   confiar no campo cegamente depois de ter visto quem o escreveu.
+
+**Cuidado.** Não "corrigir" o arquivo por conta própria sem necessidade: escrever no
+frontmatter da tarefa é território do agente, e o motor só o faz em dois pontos deliberados
+(promoção e bloqueio). Ignorar o valor na DECISÃO da rodada é diferente de reescrever o arquivo
+— e é suficiente para não replanejar à toa.
+
+**Como verificar.** Teste com um verificador que devolve `tentativas` inflado: a decisão da
+rodada deve usar o valor anterior, e o relatório deve denunciar a violação.
+
 ## Ordem recomendada
 
 | # | item | depende de | esforço | ganho | estado |
@@ -477,6 +520,7 @@ um. O fixture já tem as duas opções.
 | 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | **feita** 09/08 (`2976976`) |
 | 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido |
 | 9 | **T-062** recuperação dispara 1 ciclo tarde | — | baixo | alto — custou US$ 1,5 numa rodada | **feita** 09/08 (`e764880`) |
+| 10 | **T-063** `tentativas` corrompido por verificador | — | baixo | alto — replanejamento à toa, toda rodada | pronta para começar |
 
 ### O que a T-054 mudou nas premissas dos itens seguintes
 
