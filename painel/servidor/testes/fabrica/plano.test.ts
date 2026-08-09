@@ -40,7 +40,11 @@ describe("parsearPlano contra os arquivos reais (contrato vivo)", () => {
     expect(plano.erros).toEqual([]);
     expect(plano.titulo).toBe("Plano — painel-fabrica");
     expect(plano.visao).not.toBe("");
-    expect(plano.fases).toHaveLength(3);
+    // Sobe quando uma fase nova entra no plano real — é o único ponto do teste que a
+    // evolução do projeto move de propósito, e é ele que pega heading malformado virando
+    // fase fantasma (foi o que aconteceu ao anotar a Fase 4).
+    expect(plano.fases).toHaveLength(4);
+    expect(plano.fases.at(-1)?.nome).toBe("Fase 4 — Verificação honesta");
     for (const fase of plano.fases) {
       // Asserções estáveis à evolução do projeto: toda fase tem meta, marco válido e tarefas.
       expect(fase.meta.length).toBeGreaterThan(10);

@@ -5,6 +5,12 @@ imediato e fundação de dados), depois o motor de execução de fluxos via Agen
 (jobs, SSE, inputs, cadastro, análise) e por fim CI local, robustez e polimento. O spike
 de autenticação do SDK abre o projeto por ser o maior risco técnico.
 
+Entre a Fase 3 e a Fase 4 há um vão de propósito: de T-021 a T-053 o painel foi mantido À
+MÃO pelo orquestrador, tarefa a tarefa, sem fase declarada — ações por projeto, editor de
+equipe, watchdog por ação, resumo dos trechos, custo/desempenho, o pipeline em código
+(T-051), o retrabalho diagnosticado (T-053) e as guardas de processo. O registro dessas
+entregas está em `PROGRESSO.md`, em `DECISOES.md` e nas armadilhas de `../CLAUDE.md`.
+
 ## Fase 1 — Fundação (painel somente-leitura)
 Meta: servidor + SPA rodando localmente; home com as 6 ações da fábrica descritas e a
 lista real de projetos; página de projeto com kanban de tarefas, plano/marcos, decisões
@@ -28,15 +34,6 @@ e documentação completa (README + CLAUDE.md do projeto).
 Marco: aprovado 2026-07-27 (ressalva: verificação visual em navegador não feita — sem
 navegador no ambiente; ver Verificação da T-020)
 Tarefas: T-017, T-018, T-019, T-020
-
-## Evolução contínua (T-021 a T-053) — fora da estrutura de fases
-
-Depois do marco da Fase 3 o painel passou a ser mantido À MÃO pelo orquestrador, tarefa a
-tarefa, sem fase declarada: ações por projeto, editor de equipe, watchdog por ação,
-resumo dos trechos, custo/desempenho, o pipeline em código (T-051), o retrabalho
-diagnosticado (T-053) e as guardas de processo. O registro dessas entregas está em
-`PROGRESSO.md`, em `DECISOES.md` e nas armadilhas de `../CLAUDE.md`. Fica anotado aqui para
-o plano não parecer interrompido na Fase 3.
 
 ## Fase 4 — Verificação honesta
 Meta: a verificação da fábrica passa a distinguir **"a entrega falhou"** de **"eu não
