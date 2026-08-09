@@ -206,6 +206,31 @@ para aparecer no texto final do job e na aba Jobs.
 AQUELA tarefa de circulação e as outras seguem — mesma doutrina de `emCircuito` em
 `motor.ts:590`. E a linha-base roda **uma vez por tarefa**, não por ciclo.
 
+> **Entregue em 09/08 (`a0cd3ae`).** Posicionada no primeiro passo de construtor (a alternativa
+> que este plano deixava aberta), com a condição `tentativas === 0` — em retrabalho a árvore já
+> tem a entrega e "intocada" deixaria de ser verdade.
+>
+> **Três omissões deliberadas, e cada uma seria um jeito de anular o ganho da fase:** não roda
+> a suíte do projeto (nem um `verificar:` que repita o canônico — usa `mesmoComando`, a chave
+> da T-059; rodá-la custaria a bateria por tarefa e desfaria T-056 + T-059); não escreve na
+> seção Verificação (pré-voo não é verificação); não escreve status (sai por `emCircuito`, então
+> a tarefa volta a andar sozinha quando o critério for corrigido, sem desbloqueio manual). Teto
+> de tempo de 60s, porque só interessa se o comando CONSEGUE executar.
+>
+> **Interação que vale registrar:** depois da T-054 o critério quebrado já não trava mais a
+> tarefa em laço (vira `inconclusivo`). O que a T-057 acrescenta é outra coisa, e é o que ela
+> deve ser cobrada por entregar: pegar o defeito **antes de qualquer despacho** (economia
+> direta) e dar ao planejador a chance de corrigir o critério antes do trabalho, para ele ser
+> de fato EXECUTADO em vez de degradar para julgamento. Sem a T-054 a tarefa entrava em laço;
+> sem a T-057 ela conclui com um portão e meio.
+>
+> **Quarto teste da fase que media outra coisa.** A versão inicial de "critério saudável segue
+> normalmente" afirmava o fluxo de 3 papéis, mas o agente falso não escreve código: o critério
+> seguia falhando e o teste media o TETO DE DESPACHOS (12 despachos, construtor↔construtor).
+> Hoje o construtor de mentira entrega de mentira — cria o arquivo que a tarefa promete. A
+> lição já anotada segue valendo, agora com forma mais nítida: **fixture que não cumpre a
+> tarefa não pode testar o que acontece DEPOIS de a tarefa ser cumprida.**
+
 ---
 
 ## T-058 — Replanejar cedo, e um canal de impedimento legível por máquina
@@ -346,7 +371,7 @@ mate processo — regra dura já registrada em `painel/CLAUDE.md`.
 | 2 | **T-056** suíte uma vez por ciclo | — | **baixo** | alto — corta a exposição pela metade | **feita** 09/08 (`cc9bfcf`) |
 | 3 | **T-055** retentativa de ambiente | T-054 | baixo | alto | **feita** 09/08 (`53d5cce`) |
 | 4 | **T-059** dedupe + doutrina | — | baixo | médio (impede a recaída) | **feita** 09/08 (`acde1e3`) |
-| 5 | **T-057** linha-base na promoção | T-054 | médio | alto | pronta para começar |
+| 5 | **T-057** linha-base na promoção | T-054 | médio | alto | **feita** 09/08 (`a0cd3ae`) |
 | 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) | pronta para começar |
 | 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | pronta para começar |
 | 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido | pronta para começar |
