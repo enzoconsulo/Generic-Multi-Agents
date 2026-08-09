@@ -132,6 +132,19 @@ nunca do lote inteiro (reexecutar o lote multiplicaria a suíte, que é o que T-
 **Como verificar.** Teste com um comando que falha na 1ª e passa na 2ª (contador em arquivo
 temporário); confirmar que `falha` genuína **não** é retentada.
 
+> **Entregue em 09/08 (`53d5cce`), com um desvio a este plano.** Estouro de tempo **não** é
+> retentado, ainda que seja `ambiente`. O argumento que autoriza a retentativa aqui em cima
+> — "custa segundos de CPU" — é verdadeiro para crash, que falha rápido, e **falso para
+> estouro**, que já consumiu o teto inteiro: retentar dobraria 10 min para 20 por critério,
+> na máquina onde a suíte já é o gargalo. Estouro segue `inconclusivo`, o que por si é o
+> ganho grande (deixou de reprovar). Lição para os itens restantes: **quando este plano
+> justificar uma decisão por um custo, confira se o custo é o mesmo em todos os casos que a
+> decisão cobre.**
+>
+> Entregue além do previsto, porque o "registro" do plano seria fraco só no arquivo da
+> tarefa: `reexecucoesPorAmbiente()` conta as reexecuções e o motor as loga por tarefa. É o
+> termômetro de que a T-061 vai precisar.
+
 ---
 
 ## T-056 — A suíte roda UMA vez por ciclo
@@ -303,7 +316,7 @@ mate processo — regra dura já registrada em `painel/CLAUDE.md`.
 |---|---|---|---|---|---|
 | 1 | **T-054** estado `inconclusivo` | — | médio | alto — é o que parou o dinheiro | **feita** 09/08 (`f52d901`) |
 | 2 | **T-056** suíte uma vez por ciclo | — | **baixo** | alto — corta a exposição pela metade | **feita** 09/08 (`cc9bfcf`) |
-| 3 | **T-055** retentativa de ambiente | T-054 | baixo | alto | pronta para começar |
+| 3 | **T-055** retentativa de ambiente | T-054 | baixo | alto | **feita** 09/08 (`53d5cce`) |
 | 4 | **T-059** dedupe + doutrina | — | baixo | médio (impede a recaída) | pronta para começar |
 | 5 | **T-057** linha-base na promoção | T-054 | médio | alto | pronta para começar |
 | 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) | pronta para começar |
