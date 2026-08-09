@@ -299,16 +299,35 @@ mate processo — regra dura já registrada em `painel/CLAUDE.md`.
 
 ## Ordem recomendada
 
-| # | item | depende de | esforço | ganho |
-|---|---|---|---|---|
-| 1 | **T-054** estado `inconclusivo` | — | médio | alto — é o que parou o dinheiro |
-| 2 | **T-056** suíte uma vez por ciclo | — | **baixo** | alto — corta a exposição pela metade |
-| 3 | **T-055** retentativa de ambiente | T-054 | baixo | alto |
-| 4 | **T-059** dedupe + doutrina | — | baixo | médio (impede a recaída) |
-| 5 | **T-057** linha-base na promoção | T-054 | médio | alto |
-| 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) |
-| 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes |
-| 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido |
+| # | item | depende de | esforço | ganho | estado |
+|---|---|---|---|---|---|
+| 1 | **T-054** estado `inconclusivo` | — | médio | alto — é o que parou o dinheiro | **feita** 09/08 (`f52d901`) |
+| 2 | **T-056** suíte uma vez por ciclo | — | **baixo** | alto — corta a exposição pela metade | **feita** 09/08 (`cc9bfcf`) |
+| 3 | **T-055** retentativa de ambiente | T-054 | baixo | alto | pronta para começar |
+| 4 | **T-059** dedupe + doutrina | — | baixo | médio (impede a recaída) | pronta para começar |
+| 5 | **T-057** linha-base na promoção | T-054 | médio | alto | pronta para começar |
+| 6 | **T-060** custo/retrabalho visível | — | médio | médio (habilita medir o resto) | pronta para começar |
+| 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | pronta para começar |
+| 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido | pronta para começar |
+
+### O que a T-054 mudou nas premissas dos itens seguintes
+
+- **T-055 ficou trivial.** A classe `ambiente` já existe e já é devolvida em
+  `ResultadoCriterio.classe`; falta só reexecutar UMA vez quando ela aparecer.
+- **T-057 ganhou o discriminador de que precisava.** A linha-base só funciona porque agora
+  existe como distinguir "critério quebrado" de "critério saudável que a tarefa vai fazer
+  passar" — é a mesma regra do disco descrita em `classificarFalha`.
+- **T-061 ganhou evidência nova, sem esforço.** Ao tentar rodar
+  `integracao/simular-pipeline.ts banco-imobiliario` como verificação da T-054, o script
+  passou de **400 s parado no primeiro arquivo de teste** do projeto e teve de ser
+  encerrado — com a máquina recém-limpa (22 processos órfãos removidos, memória livre de
+  0,44 GB → 1,45 GB) e nenhum outro agente rodando. A suíte do banco-imobiliario está lenta
+  por si, não só por contenção. Vale medir isso antes de concluir qualquer coisa sobre a
+  máquina.
+- **Aprendizado de método, para os próximos itens:** a T-054 derrubou DOIS testes que
+  estavam verdes pelo motivo errado (um afirmando o defeito como contrato, outro rodando
+  num `cwd` inexistente onde o comando nunca executava). Ao mexer em portão de verificação,
+  desconfie de teste rápido demais — 37 ms para "rodar um comando real" era o sintoma.
 
 T-054 e T-056 são independentes entre si e podem ir na mesma leva; **T-056 é o de melhor
 razão esforço/ganho** se a ideia for um ganho imediato. Nenhum item depende de outro além do
