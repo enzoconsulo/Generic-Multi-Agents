@@ -1,10 +1,11 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   avaliarComando,
   BINARIOS_PERMITIDOS,
+  chaveDeComando,
   classificarFalha,
   criterioDaSuite,
   criteriosComFerramentaQuebrada,
@@ -13,6 +14,8 @@ import {
   reexecucoesPorAmbiente,
   relatorioCriterios,
   reprovouNaMecanica,
+  type Criterio,
+  type ResultadoCriterio,
 } from "../../src/pipeline/criterios.js";
 
 describe("lerCriterios", () => {
@@ -548,6 +551,118 @@ describe("executarCriterios — a T-030 ponta a ponta, com processo de verdade",
     expect(r[0]?.estado).toBe("falhou");
     expect(reprovouNaMecanica(r)).toBe(true);
   }, 30_000);
+});
+
+describe("comando repetido no lote roda UMA vez (T-059)", () => {
+  /**
+   * Contador em arquivo: o script conta quantas vezes foi executado. É a única prova real de
+   * que a segunda execução não aconteceu — asserção sobre o resultado não distinguiria
+   * "reaproveitou" de "rodou de novo e deu igual".
+   */
+  function projetoContado(): { dir: string; execucoes: () => number } {
+    const dir = mkdtempSync(join(tmpdir(), "t059-"));
+    const contador = join(dir, "execucoes.txt");
+    writeFileSync(
+      join(dir, "conta.js"),
+      `const { existsSync, readFileSync, writeFileSync } = require("node:fs");
+       const c = ${JSON.stringify(contador)};
+       const n = existsSync(c) ? Number(readFileSync(c, "utf8")) : 0;
+       writeFileSync(c, String(n + 1));
+       process.exit(0);`,
+      "utf8",
+    );
+    return {
+      dir,
+      execucoes: () => (existsSync(contador) ? Number(readFileSync(contador, "utf8")) : 0),
+    };
+  }
+
+  /**
+   * O caso que a fábrica ENSINAVA: o exemplo de abertura do template de tarefa era
+   * `- [ ] \`npm test\` roda a suíte. \`verificar: npm test\``, e o critério implícito da
+   * suíte já roda o mesmo comando. Duas execuções da suíte inteira na mesma passada.
+   */
+  it("critério que repete a suíte não a executa de novo — herda o veredito", async () => {
+    const { dir, execucoes } = projetoContado();
+    const suite = criterioDaSuite("node conta.js");
+    expect(suite).not.toBeNull();
+
+    const r = await executarCriterios(
+      [
+        suite as Criterio,
+        { texto: "a suíte inteira passa", comando: "node conta.js", marcado: false },
+      ],
+      dir,
+    );
+
+    expect(execucoes(), "o comando devia ter rodado UMA vez").toBe(1);
+    expect(r[0]?.estado).toBe("passou");
+    expect(r[0]?.espelho).toBeUndefined();
+    expect(r[1]?.estado).toBe("passou");
+    expect(r[1]?.espelho).toBe(true);
+    // O texto do critério espelhado é preservado: descartá-lo apagaria a pergunta, não a
+    // duplicata (na T-030 o critério repetido tinha conteúdo próprio).
+    expect(r[1]?.texto).toBe("a suíte inteira passa");
+    expect(relatorioCriterios(r)).toContain("veredito reaproveitado");
+  }, 30_000);
+
+  it("reconhece a mesma coisa escrita de formas diferentes", async () => {
+    const { dir, execucoes } = projetoContado();
+    // Espaçamento e os alias documentados do próprio gerenciador.
+    const r = await executarCriterios(
+      [
+        { texto: "a", comando: "node  conta.js", marcado: false },
+        { texto: "b", comando: "node conta.js", marcado: false },
+      ],
+      dir,
+    );
+    expect(execucoes()).toBe(1);
+    expect(r[1]?.espelho).toBe(true);
+  }, 30_000);
+
+  it("`npm test`, `npm run test` e `npm t` são o mesmo comando", () => {
+    expect(chaveDeComando(["npm", "run", "test"])).toBe(chaveDeComando(["npm", "test"]));
+    expect(chaveDeComando(["npm", "t"])).toBe(chaveDeComando(["npm", "test"]));
+    expect(chaveDeComando(["pnpm", "run", "lint"])).toBe(chaveDeComando(["pnpm", "lint"]));
+  });
+
+  /**
+   * Na dúvida, EXECUTA. Chave que erra para o lado de "é o mesmo" faria um critério herdar o
+   * veredito de outro — o pior desfecho possível aqui, porque aprovaria sem conferir.
+   */
+  it("comandos diferentes não se confundem", () => {
+    const chaves = [
+      ["node", "--test"],
+      ["node", "--test", "tests"],
+      ["node", "--test", "tests/a.test.js"],
+      ["npm", "test"],
+      ["npm", "run", "lint"],
+      ["pnpm", "test"],
+    ].map(chaveDeComando);
+    expect(new Set(chaves).size).toBe(chaves.length);
+  });
+
+  it("critério espelhado não infla o termômetro da máquina nem o pedido de correção", () => {
+    // O espelho HERDA os campos do original, inclusive `reexecutado` — contá-lo mediria
+    // critérios afetados em vez de execuções perdidas.
+    const comEspelho: ResultadoCriterio[] = [
+      { texto: "a", estado: "passou", comando: "npm test", reexecutado: true },
+      { texto: "b", estado: "passou", comando: "npm test", reexecutado: true, espelho: true },
+    ];
+    expect(reexecucoesPorAmbiente(comEspelho)).toBe(1);
+
+    const quebrados: ResultadoCriterio[] = [
+      { texto: "a", estado: "inconclusivo", classe: "ferramenta", comando: "node --test tests" },
+      {
+        texto: "b",
+        estado: "inconclusivo",
+        classe: "ferramenta",
+        comando: "node --test tests",
+        espelho: true,
+      },
+    ];
+    expect(criteriosComFerramentaQuebrada(quebrados)).toHaveLength(1);
+  });
 });
 
 describe("retentativa única para falha de AMBIENTE (T-055)", () => {

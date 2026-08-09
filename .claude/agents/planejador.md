@@ -64,14 +64,22 @@ contrato. Peça de uma vez:
      não "o carrinho está testado". Critério de UI nomeia a tela e o que precisa aparecer
      nela — é sobre a captura que o revisor julga conformidade visual;
    - **quando o critério puder ser conferido por MÁQUINA, escreva o comando numa linha
-     indentada logo abaixo dele:** `` `verificar: npm test` ``. A fábrica executa esses
-     comandos de graça, antes de despachar o verificador, e anexa o resultado à tarefa —
-     critério que já falha aí volta direto ao construtor, sem pagar ~US$ 0,50 de despacho
-     para confirmar o óbvio.
+     indentada logo abaixo dele:** `` `verificar: node --test tests/carrinho.test.js` ``. A
+     fábrica executa esses comandos de graça, antes de despachar o verificador, e anexa o
+     resultado à tarefa — critério que já falha aí volta direto ao construtor, sem pagar
+     ~US$ 0,50 de despacho para confirmar o óbvio.
      A régua NÃO é "dá para automatizar", é **"a automação responde à MESMA pergunta"**:
      um `grep` que acha a string no bundle não prova que a tela ficou boa (isso já deu
      tarefa dada por pronta duas vezes nesta fábrica). Critério de julgamento fica SEM
      comando, de propósito, e é o verificador que decide;
+   - **nunca escreva "a suíte continua passando" como critério executável, e nunca invente o
+     comando de cabeça.** A suíte do projeto já roda em TODA verificação, sozinha, com o
+     comando do ecossistema — escrevê-la à mão não acrescenta verificação e cria uma segunda
+     chance de errar o comando. A T-030 do banco-imobiliario gastou 4 ciclos e US$ 12,90 num
+     `node --test tests` que não roda naquela máquina, com o deliverable correto desde o
+     primeiro ciclo, e o construtor não tem autoridade para consertar critério — só você tem.
+     Para qualquer outro comando, COPIE o que o projeto já usa (`_gestao/ci.json`, o
+     manifesto da stack, ou as tarefas anteriores) em vez de escrever de memória;
    - `dependencias` formando um grafo sem ciclos, com o máximo de tarefas independentes
      entre si (isso habilita paralelismo). Tudo depende da T-001 (scaffold);
    - `areas` preenchido com as pastas/arquivos que a tarefa deve tocar;

@@ -32,9 +32,21 @@ A régua NÃO é "dá para automatizar", é **"a automação responde à MESMA p
 `grep` que acha uma string no bundle não prova que a tela ficou boa. Critério de
 julgamento fica sem comando, de propósito, e vai para o verificador.
 
-- [ ] `npm test` roda a suíte inteira sem falha.
-      `verificar: npm test`
+**NÃO escreva "a suíte continua passando" como critério executável.** A fábrica já roda a
+suíte do projeto em TODA verificação, sozinha, com o comando do ecossistema — é o critério
+implícito de `pipeline/criterios.ts`. Escrevê-lo à mão não acrescenta verificação nenhuma e
+cria uma segunda chance de errar o comando: foi assim que a T-030 do banco-imobiliario
+gastou 4 ciclos e US$ 12,90 num `node --test tests` que não roda naquela máquina, com o
+deliverable correto desde o primeiro ciclo. Este exemplo abria a lista aqui, e por isso o
+erro se repetia.
+
+**Comando de verificação não se escreve de cabeça.** Copie o do projeto — `_gestao/ci.json`
+(estágio `testes`), o `package.json`/`Makefile`/manifesto equivalente, ou o comando que as
+outras tarefas do projeto já usam. Comando "quase certo" custa um ciclo inteiro.
+
 - [ ] O arquivo de teste da tarefa existe e roda isolado.
+      `verificar: node --test tests/<arquivo>.test.js`
+- [ ] O endpoint responde 201 e grava no banco.
       `verificar: node --test tests/<arquivo>.test.js`
 - [ ] (critério de julgamento — sem comando)
 

@@ -101,6 +101,14 @@ genérico de verdade.
    (promoções, bloqueios, linha `Marco:`). Tarefa corretiva pontual — causa raiz única e
    escopo óbvio de 1 tarefa — você cria direto pelo template; decomposição de verdade é
    do planejador.
+   **Ao criar tarefa direto, você NÃO redige comando de `verificar:` de cabeça** — copie o
+   canônico de `_gestao/ci.json` do projeto (estágio `testes`) ou de uma tarefa anterior, e
+   não escreva "a suíte continua passando" como critério (a fábrica já roda a suíte em toda
+   verificação). Foi o que faltou na T-030 do banco-imobiliario: um `node --test tests`
+   escrito à mão, impossível naquela máquina e contrariando um fato já registrado no
+   `PROGRESSO.md` do projeto, custou 4 ciclos e US$ 12,90 com o deliverable correto desde o
+   primeiro. **Critério é a única coisa que o construtor não pode consertar** — a autoridade
+   é sua e do planejador, então errar ali não tem quem corrija de dentro do ciclo.
 2. **Subagentes não criam subagentes.** O pipeline inteiro é conduzido por você, etapa por
    etapa: você chama o executor, espera, chama o testador, espera, chama o revisor.
 3. **Confinamento.** Todo agente recebe no prompt o caminho absoluto do projeto e a

@@ -183,6 +183,11 @@ export interface ResultadoCriterio {
    * é exatamente uma reprovação falsa que deixou de acontecer.
    */
   reexecutado?: boolean;
+  /**
+   * O veredito veio de um critério anterior do MESMO lote que declarava o mesmo comando
+   * (T-059) — este não foi executado de novo. Ver `executarCriterios`.
+   */
+  espelho?: boolean;
   /** Saída relevante (cortada) quando falhou — é o que o construtor precisa ler. */
   saida?: string;
 }
@@ -370,6 +375,25 @@ export async function executarCriterios(
 ): Promise<ResultadoCriterio[]> {
   const timeout = opcoes.timeoutMs ?? 10 * 60_000;
   const saida: ResultadoCriterio[] = [];
+  /**
+   * COMANDO REPETIDO NO LOTE RODA UMA VEZ (T-059).
+   *
+   * O mesmo comando, no mesmo lote, sobre a mesma árvore, não pode dar resposta diferente —
+   * então executar de novo é pagar duas vezes pela mesma informação. Quem paga mais caro é o
+   * critério implícito da suíte (`criterioDaSuite`), que vai SEMPRE na frente: uma tarefa que
+   * declara `verificar: npm test` roda a suíte inteira duas vezes na mesma passada.
+   *
+   * E não é caso raro: o exemplo de abertura do template oficial de tarefa era exatamente
+   * `- [ ] \`npm test\` roda a suíte inteira. \`verificar: npm test\``, ou seja, a fábrica
+   * ENSINAVA a duplicata. (O template foi corrigido junto com esta guarda; a guarda existe
+   * porque as tarefas já escritas seguem no disco, e porque doutrina não se aplica
+   * retroativamente.)
+   *
+   * Reaproveitar o veredito é melhor que descartar o critério: o texto do critério pode dizer
+   * mais do que o comando (na T-030, o critério 2 era um critério de conteúdo com uma checagem
+   * de suíte enxertada), e descartá-lo apagaria a pergunta em vez da duplicata.
+   */
+  const jaExecutado = new Map<string, ResultadoCriterio>();
 
   for (const c of criterios) {
     if (c.comando === null) {
@@ -386,6 +410,19 @@ export async function executarCriterios(
       });
       continue;
     }
+    // Já rodou neste lote? O veredito é o mesmo, por construção.
+    const chave = chaveDeComando(avaliacao.argv);
+    const anterior = jaExecutado.get(chave);
+    if (anterior !== undefined) {
+      saida.push({
+        ...anterior,
+        texto: c.texto,
+        comando: c.comando,
+        espelho: true,
+      });
+      continue;
+    }
+
     const primeira = await rodarUmaVez(avaliacao.argv, dirProjeto, timeout);
 
     /**
@@ -410,50 +447,70 @@ export async function executarCriterios(
     // máquina depois, em vez de esquecê-la.
     const marca = retentar ? { reexecutado: true } : {};
 
-    if (r.ok) {
-      saida.push({
-        texto: c.texto,
-        estado: "passou",
-        comando: c.comando,
-        ...marca,
-        saida: cortar(r.stdout),
-      });
-      continue;
-    }
+    const resultado: ResultadoCriterio = r.ok
+      ? { texto: c.texto, estado: "passou", comando: c.comando, ...marca, saida: cortar(r.stdout) }
+      : r.classe === "falha"
+        ? { texto: c.texto, estado: "falhou", comando: c.comando, ...marca, saida: cortar(r.bruta) }
+        : {
+            texto: c.texto,
+            estado: "inconclusivo",
+            classe: r.classe,
+            comando: c.comando,
+            ...marca,
+            // Inconclusivo: o comando não respondeu à pergunta. Dizer POR QUE na própria saída
+            // é o que impede o desperdício de sempre — o construtor gastando um ciclo atrás de
+            // um bug que não existe, ou o verificador tomando ruído de máquina por veredito.
+            saida: cortar(`${explicacaoDe(r, timeout)}\n\n${r.bruta}`),
+          };
 
-    if (r.classe === "falha") {
-      saida.push({
-        texto: c.texto,
-        estado: "falhou",
-        comando: c.comando,
-        ...marca,
-        saida: cortar(r.bruta),
-      });
-      continue;
-    }
-
-    // Inconclusivo: o comando não respondeu à pergunta. Dizer POR QUE na própria saída é o
-    // que impede o desperdício de sempre — o construtor gastando um ciclo atrás de um bug
-    // que não existe, ou o verificador tomando ruído de máquina por veredito.
-    const explicacao = r.estourou
-      ? `Comando excedeu o teto de ${Math.round(timeout / 1000)}s e a árvore de processos` +
-        " foi encerrada. Isso é limite de tempo, não defeito da tarefa."
-      : r.classe === "ferramenta"
-        ? "O COMANDO DO CRITÉRIO não conseguiu executar (binário ausente, opção inválida ou" +
-          " alvo que existe mas ele não sabe consumir). Isso é defeito do critério, não da" +
-          " entrega — nenhum construtor conserta, quem corrige critério é o planejador."
-        : "A máquina atrapalhou (processo morto, crash nativo ou recurso esgotado) nas DUAS" +
-          " execuções. Não diz nada sobre a entrega.";
-    saida.push({
-      texto: c.texto,
-      estado: "inconclusivo",
-      classe: r.classe,
-      comando: c.comando,
-      ...marca,
-      saida: cortar(`${explicacao}\n\n${r.bruta}`),
-    });
+    saida.push(resultado);
+    jaExecutado.set(chave, resultado);
   }
   return saida;
+}
+
+/** Por que o comando não decidiu — texto que vai para a tarefa, lido pelo próximo agente. */
+function explicacaoDe(r: Extract<Execucao, { ok: false }>, timeout: number): string {
+  if (r.estourou) {
+    return (
+      `Comando excedeu o teto de ${Math.round(timeout / 1000)}s e a árvore de processos foi` +
+      " encerrada. Isso é limite de tempo, não defeito da tarefa."
+    );
+  }
+  if (r.classe === "ferramenta") {
+    return (
+      "O COMANDO DO CRITÉRIO não conseguiu executar (binário ausente, opção inválida ou alvo" +
+      " que existe mas ele não sabe consumir). Isso é defeito do critério, não da entrega —" +
+      " nenhum construtor conserta, quem corrige critério é o planejador."
+    );
+  }
+  return (
+    "A máquina atrapalhou (processo morto, crash nativo ou recurso esgotado) nas DUAS" +
+    " execuções. Não diz nada sobre a entrega."
+  );
+}
+
+/**
+ * Chave de identidade de um comando, para reconhecer repetição dentro do lote (T-059).
+ *
+ * Compara a lista de argumentos, não a string: `npm  test` e `npm test` são o mesmo comando, e
+ * o planejador quebra linha e espaça como quiser. `npm run test` e `npm t` também entram —
+ * são alias documentados de `npm test` no próprio gerenciador, e é a variação que de fato
+ * aparece nas tarefas. Nada além disso: equivalência SEMÂNTICA (que `npm test` expande para o
+ * script `test` do `package.json`, podendo bater com um `node --test` escrito à mão) exigiria
+ * ler e interpretar manifesto de cada ecossistema, e chave de deduplicação que erra para o
+ * lado de dizer "é o mesmo" faria um critério herdar veredito de outro. Na dúvida, executa.
+ */
+export function chaveDeComando(argv: readonly string[]): string {
+  const partes = argv.filter((a) => a !== "");
+  const bin = (partes[0] ?? "").toLowerCase().replace(/\.(exe|cmd|bat)$/, "");
+  const resto = partes.slice(1);
+  // `<pm> run test` → `<pm> test`; `npm t` → `npm test`.
+  if (["npm", "pnpm", "yarn", "bun"].includes(bin)) {
+    if (resto[0] === "run" && resto.length === 2) return `${bin} ${resto[1]}`;
+    if (resto.length === 1 && resto[0] === "t") return `${bin} test`;
+  }
+  return [bin, ...resto].join(" ");
 }
 
 /** Desfecho de UMA execução do comando. */
@@ -545,19 +602,30 @@ export function relatorioCriterios(resultados: readonly ResultadoCriterio[]): st
         r.classe === "ferramenta"
           ? "o comando do critério não executou — **o critério é que precisa de conserto**"
           : "a máquina atrapalhou (processo morto, crash nativo ou recurso esgotado)";
+      const espelho = r.espelho === true ? " (mesmo comando já avaliado acima)" : "";
       linhas.push(
-        `- [inconclusivo] ${r.texto} — \`${r.comando}\` → ${porque}. Não reprova a tarefa.`,
+        `- [inconclusivo] ${r.texto} — \`${r.comando}\` → ${porque}${espelho}. Não reprova a` +
+          " tarefa.",
       );
-      if ((r.saida ?? "") !== "") linhas.push("", "```", r.saida ?? "", "```", "");
+      if (r.espelho !== true && (r.saida ?? "") !== "") {
+        linhas.push("", "```", r.saida ?? "", "```", "");
+      }
       continue;
     }
     const marca = r.estado === "passou" ? "PASSOU" : "FALHOU";
-    // A nota da reexecução importa mesmo quando o comando passou — talvez MAIS: é o registro
-    // de uma reprovação falsa que a T-055 evitou, e sem ele a instabilidade da máquina volta
-    // a ser folclore em vez de número.
-    const nota = r.reexecutado === true ? " (na 2ª execução; a 1ª caiu por ambiente)" : "";
+    // As duas notas mudam como o resultado deve ser LIDO, então não podem ficar de fora:
+    // a reexecução é o registro de uma reprovação falsa que a T-055 evitou (sem ela a
+    // instabilidade da máquina volta a ser folclore em vez de número), e o espelho avisa que
+    // este critério não foi conferido por si — senão o relatório afirmaria duas verificações
+    // onde houve uma.
+    const notas: string[] = [];
+    if (r.reexecutado === true) notas.push("na 2ª execução; a 1ª caiu por ambiente");
+    if (r.espelho === true) notas.push("mesmo comando já executado acima; veredito reaproveitado");
+    const nota = notas.length > 0 ? ` (${notas.join("; ")})` : "";
     linhas.push(`- [executado] ${r.texto} — \`${r.comando}\` → **${marca}**${nota}`);
-    if (r.estado === "falhou" && (r.saida ?? "") !== "") {
+    // Saída só na PRIMEIRA aparição do comando: repetir a mesma parede de texto por critério
+    // espelhado é o que fazia o relatório deixar de ser lido.
+    if (r.estado === "falhou" && r.espelho !== true && (r.saida ?? "") !== "") {
       linhas.push("", "```", r.saida ?? "", "```", "");
     }
   }
@@ -595,7 +663,11 @@ export function reprovouNaMecanica(resultados: readonly ResultadoCriterio[]): bo
 export function criteriosComFerramentaQuebrada(
   resultados: readonly ResultadoCriterio[],
 ): ResultadoCriterio[] {
-  return resultados.filter((r) => r.estado === "inconclusivo" && r.classe === "ferramenta");
+  return resultados.filter(
+    // Espelho fora: é o MESMO comando quebrado, e pedir a correção dele duas vezes só torna o
+    // relatório mais fácil de ignorar.
+    (r) => r.estado === "inconclusivo" && r.classe === "ferramenta" && r.espelho !== true,
+  );
 }
 
 /**
@@ -606,7 +678,11 @@ export function criteriosComFerramentaQuebrada(
  * instabilidade está melhorando ou piorando, em vez de se discutir por impressão.
  */
 export function reexecucoesPorAmbiente(resultados: readonly ResultadoCriterio[]): number {
-  return resultados.filter((r) => r.reexecutado === true).length;
+  // Espelho fora, e este é o detalhe que faz a conta valer: o critério espelhado HERDA o
+  // `reexecutado` do original (é o mesmo resultado copiado), e contá-lo mediria o número de
+  // critérios afetados em vez de execuções perdidas — inflando o termômetro da máquina
+  // justamente onde ele vai ser usado para decidir se a instabilidade melhorou.
+  return resultados.filter((r) => r.reexecutado === true && r.espelho !== true).length;
 }
 
 /**

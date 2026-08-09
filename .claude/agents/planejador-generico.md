@@ -82,6 +82,14 @@ possível roda com um portão só, e quem decide aceitar isso é o usuário — 
      itens **binários** ("cada seção abre com frase-tese", "nenhum slide passa de 6
      linhas"). Nunca escala vaga. Use isto o mínimo possível e justifique no Contexto por
      que não dava para subir de degrau;
+   - **não repita o verificador do projeto como critério de cada tarefa, e não escreva
+     comando de cabeça.** A fábrica já roda o comando de verificação do projeto em TODA
+     verificação, sozinha — repeti-lo à mão não acrescenta prova e cria uma segunda chance de
+     errar a grafia. Na trilha de software isso custou 4 ciclos e US$ 12,90 numa tarefa cujo
+     artefato estava correto desde o primeiro (T-030 do banco-imobiliario), porque o
+     construtor não tem autoridade para consertar critério — só você tem. Copie o comando de
+     onde ele já existe (a T-001 instalou o `verificar.<ext>`; `_gestao/ci.json` guarda o
+     canônico) em vez de reescrevê-lo;
    - `dependencias` sem ciclo, com o máximo de tarefas independentes (habilita paralelismo);
      tudo depende da T-001;
    - seção Contexto dizendo **quais ferramentas usar nesta tarefa** e com que papel, mais
