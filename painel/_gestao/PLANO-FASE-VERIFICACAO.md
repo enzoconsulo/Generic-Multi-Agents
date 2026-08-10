@@ -507,6 +507,67 @@ frontmatter da tarefa é território do agente, e o motor só o faz em dois pont
 **Como verificar.** Teste com um verificador que devolve `tentativas` inflado: a decisão da
 rodada deve usar o valor anterior, e o relatório deve denunciar a violação.
 
+---
+
+## T-061 — INVESTIGADA (10/08). Conclusão: melhorou muito, mas ainda vaza
+
+**O que a investigação tinha para responder:** a máquina ficava sem memória (23 processos
+`node`, 0,44 GB livres) e o painel morria no meio de jobs. Quanto disso era a fábrica?
+
+**Dado de quatro rodadas reais** (`3cbf5769`, `fc211543`, `7cd4a453`, `c080b98c`, somando
+~76 min de execução):
+
+| medida | antes da fase | depois |
+|---|---|---|
+| processos `node` acumulados | 23 | 2–4 |
+| memória livre durante as rodadas | 0,44 GB | 0,6–1,1 GB |
+| pilha de suítes órfãs (`node --test` pendurado) | 3 | **zero** |
+
+O quadro que derrubava o painel **não voltou**, e a explicação mais provável é a T-056: a
+suíte deixou de rodar em dobro, e era ela que deixava "8 `node.exe` órfãos por estouro".
+A coleta de órfãos funcionou uma vez (`fc211543`, 1 processo encerrado).
+
+**Mas há vazamento residual, e ele tem nome.** Ao fim da rodada `c080b98c` sobraram um
+`npm start` e um `node server/index.js` do banco-imobiliario, subidos por um agente às 21:43
+e nunca derrubados: **~106 MB por rodada**. A coleta de processos não os pegou, e o motivo é
+de desenho — ela exige DUAS provas, propriedade e **abandono**, e esses processos não parecem
+abandonados: o pai deles seguia vivo. É a armadilha que o `CLAUDE.md` do projeto já
+documenta ("Subiu servidor para capturar tela? DERRUBE ao terminar, pelo PID") sendo violada
+sem que nada perceba.
+
+**Veredito:** a fábrica deixou de ser a causa do colapso e passou a ser um vazamento lento.
+Um adendo honesto: com **só o painel de pé a máquina tem 0,74 GB livres de 7,86 GB** — o
+grosso do consumo não é a fábrica, é o resto do sistema. A fábrica não tem folga para
+desperdiçar, e é isso que torna os ~106 MB por rodada relevantes apesar de pequenos.
+
+Fica registrada como **T-066** a parte acionável; nada mais a investigar aqui.
+
+---
+
+## T-066 — Servidor subido por agente sobrevive à rodada
+
+**Evidência:** rodada `c080b98c`, ~106 MB (`npm start` + `node server/index.js`) vivos horas
+depois do fim do job. A coleta de órfãos não os alcança porque exige **abandono** (pai morto)
+e o pai deles continuava vivo.
+
+**Por que não basta mandar o agente derrubar.** Já está escrito no `CLAUDE.md` do projeto, em
+maiúsculas, com o custo medido — e foi violado de novo. Doutrina que depende de o agente
+lembrar não é invariante; é a mesma lição da T-063.
+
+**O que fazer.** O `RastreadorDescendentes` já amostra a cadeia de descendentes do painel a
+cada 30s, justamente porque a prova de propriedade é perecível. Ela é suficiente sozinha: um
+processo que nasceu DENTRO da etapa e continua vivo DEPOIS de a etapa terminar é trabalho
+abandonado, tenha o pai vivo ou não. Abandono deixa de ser "pai morto" e passa a ser "a etapa
+que o gerou acabou".
+
+**Cuidado — regra dura da casa.** Antes de embarcar QUALQUER heurística que mate processo,
+rodar `npx tsx integracao/dry-coleta.ts`, que imprime o pior caso ao lado do caso real. A
+primeira versão da coleta morreu nesse dry-run por mirar em comando do próprio usuário. E o
+painel nunca pode entrar na mira: ele é quem executa o job.
+
+**Como verificar.** Dry-run primeiro. Depois, teste com processo falso nascido durante a etapa
+e vivo depois dela, e um segundo processo nascido ANTES do job (que não pode ser tocado).
+
 ## Ordem recomendada
 
 | # | item | depende de | esforço | ganho | estado |
@@ -520,7 +581,10 @@ rodada deve usar o valor anterior, e o relatório deve denunciar a violação.
 | 7 | **T-058** replanejar cedo | T-054 | médio | alto — desenhar antes | **feita** 09/08 (`2976976`) |
 | 8 | **T-061** memória da máquina | T-056 | investigação | desconhecido |
 | 9 | **T-062** recuperação dispara 1 ciclo tarde | — | baixo | alto — custou US$ 1,5 numa rodada | **feita** 09/08 (`e764880`) |
-| 10 | **T-063** `tentativas` corrompido por verificador | — | baixo | alto — replanejamento à toa, toda rodada | pronta para começar |
+| 10 | **T-063** `tentativas` corrompido por verificador | — | baixo | alto — replanejamento à toa, toda rodada | **feita** 09/08 (`668abc5`) |
+| 11 | **T-064** cota reconhecida no 1º sinal | — | baixo | alto — até 3 despachos por rodada | **feita** 10/08 (`e775c16`) |
+| 12 | **T-065** orçamento de ferramentas medido | — | baixo | médio — torna o estouro visível | **feita** 10/08 (`200ca9c`) |
+| 13 | **T-066** servidor de agente sobrevive à rodada | T-061 | médio | médio — ~106 MB por rodada | pronta (exige dry-run antes) |
 
 ### O que a T-054 mudou nas premissas dos itens seguintes
 
