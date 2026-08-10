@@ -568,6 +568,27 @@ painel nunca pode entrar na mira: ele é quem executa o job.
 **Como verificar.** Dry-run primeiro. Depois, teste com processo falso nascido durante a etapa
 e vivo depois dela, e um segundo processo nascido ANTES do job (que não pode ser tocado).
 
+> **Entregue em 10/08 (`eee047e`), e o conserto foi de UMA LINHA — a especificação acima errava
+> o alvo.**
+>
+> Eu tinha escrito que faltava usar o `RastreadorDescendentes` para redefinir abandono. Ao abrir
+> o arquivo: a caminhada da cadeia (`alcancaPainel`) **já existia**, logo abaixo de um gate
+> `if (paiVivo(p) !== null) continue` que olhava UM nível e barrava antes. O `npm` vazado tinha
+> pai vivo — um `cmd.exe` que era ele mesmo órfão, porque o `claude` da etapa morrera. Pai vivo,
+> avô morto: o gate poupava, e a caminhada que teria pego o caso nunca rodava.
+>
+> **A troca é mais segura, não menos:** "alcança o painel por pais vivos" é literalmente "há um
+> job de pé usando isto". A prova de propriedade continua obrigatória.
+>
+> **O teste do pid reciclado me pegou num erro** que eu teria embarcado: o filtro de raízes que
+> acrescentei subia pelo `ppid` cru, e "pai" nascido depois do filho não é pai — o kill de
+> árvore não o levaria junto, e o filtro descartaria um órfão de verdade. Lição: **quando um
+> módulo tem noção própria de parentesco, as duas metades precisam usar a MESMA.**
+>
+> **Dry-run, os dois números:** pior caso 1 → 2 (subiu, e é esperado — a regra enxerga mais
+> abandono; os dois são processos da minha própria sessão, que é por que a prova de propriedade
+> não pode sair); coleta real 0 → 0.
+
 ## Ordem recomendada
 
 | # | item | depende de | esforço | ganho | estado |
@@ -584,7 +605,7 @@ e vivo depois dela, e um segundo processo nascido ANTES do job (que não pode se
 | 10 | **T-063** `tentativas` corrompido por verificador | — | baixo | alto — replanejamento à toa, toda rodada | **feita** 09/08 (`668abc5`) |
 | 11 | **T-064** cota reconhecida no 1º sinal | — | baixo | alto — até 3 despachos por rodada | **feita** 10/08 (`e775c16`) |
 | 12 | **T-065** orçamento de ferramentas medido | — | baixo | médio — torna o estouro visível | **feita** 10/08 (`200ca9c`) |
-| 13 | **T-066** servidor de agente sobrevive à rodada | T-061 | médio | médio — ~106 MB por rodada | pronta (exige dry-run antes) |
+| 13 | **T-066** servidor de agente sobrevive à rodada | T-061 | médio | médio — ~106 MB por rodada | **feita** 10/08 (`eee047e`) |
 
 ### O que a T-054 mudou nas premissas dos itens seguintes
 
