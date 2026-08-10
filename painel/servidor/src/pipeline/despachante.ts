@@ -1,4 +1,4 @@
-import type { Consulta } from "../jobs/claude/runner-claude.js";
+import { ehLimiteDeUso, horaDeReabertura, type Consulta } from "../jobs/claude/runner-claude.js";
 import { estimarCusto } from "../jobs/claude/precos.js";
 import { montarContexto, papelDoAgente } from "../contexto/montador.js";
 import type { EquipeProjeto } from "../fabrica/tipos.js";
@@ -286,14 +286,28 @@ export function criarDespachante(
         }
       }
     } catch (e) {
-      o.emitir("erro", `Etapa ${pedido.agente} falhou: ${(e as Error).message}`);
+      const mensagem = (e as Error).message;
+      o.emitir("erro", `Etapa ${pedido.agente} falhou: ${mensagem}`);
       if (ultimasDoStderr.length > 0) {
         o.emitir("erro", `stderr do agente:${QUEBRA}${ultimasDoStderr.join(QUEBRA)}`);
       }
+      /**
+       * LIMITE DE ASSINATURA (T-064). O provedor anuncia a cota na mensagem de erro, e
+       * `ehLimiteDeUso` já sabe reconhecê-la desde a T-045 — mas o sinal morria AQUI: o
+       * `texto` devolvido é o `result` do SDK, que num corte por cota nunca chega, e o motor
+       * ficava sem nada para ler. Ele então adivinhava falha sistêmica por 3 falhas em
+       * sequência, e cada uma dessas falhas custa dinheiro: medido no job `c080b98c`, um
+       * único despacho cortado por cota custou US$ 4,11 antes de devolver nada.
+       *
+       * Cota é parede rígida — só o relógio abre. Reconhecer é parar na hora.
+       */
       return {
         custoUsd: custoUsd || (estimarCusto(porModelo)?.usd ?? 0),
         concluiu: false,
         texto: textoFinal,
+        ...(ehLimiteDeUso(mensagem) || ultimasDoStderr.some((l) => ehLimiteDeUso(l))
+          ? { limiteDeUso: horaDeReabertura(mensagem) ?? "sem hora anunciada" }
+          : {}),
       };
     }
 

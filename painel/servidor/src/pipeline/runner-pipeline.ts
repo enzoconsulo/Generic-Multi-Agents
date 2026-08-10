@@ -301,6 +301,7 @@ const POR_QUE: Readonly<Record<RelatorioMotor["encerrouPor"], string>> = {
   "agente-cortado": "Um agente não devolveu resultado; o laço parou para não empilhar trabalho sobre estado desconhecido.",
   "sem-progresso": "Um agente terminou sem gravar o próprio status; o laço parou para não repetir o despacho.",
   "teto-de-voltas": "Teto de voltas do laço atingido — isto é sintoma de bug, investigue.",
+  cota: "LIMITE DA ASSINATURA batido — a rodada parou na hora, sem gastar despacho contra a parede. Redispare quando a cota voltar.",
 };
 
 function montarRelatorio(projeto: string, r: RelatorioMotor): string {

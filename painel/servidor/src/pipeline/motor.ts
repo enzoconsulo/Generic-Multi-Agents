@@ -102,6 +102,13 @@ export interface ResultadoDespacho {
    * uma linha de contrato (`MARCO: aprovado`) em vez de interpretar prosa.
    */
   texto?: string;
+  /**
+   * A etapa caiu por LIMITE DE ASSINATURA (T-064), com a hora de reabertura quando anunciada.
+   * Cota é parede rígida: só o relógio abre. Todo despacho seguinte é desperdício garantido,
+   * e desperdício CARO — medido no job `c080b98c`, um único despacho cortado por cota custou
+   * US$ 4,11 antes de devolver nada.
+   */
+  limiteDeUso?: string;
 }
 
 export interface DependenciasMotor {
@@ -245,7 +252,9 @@ export interface RelatorioMotor {
     | "orcamento"
     | "agente-cortado"
     | "sem-progresso"
-    | "teto-de-voltas";
+    | "teto-de-voltas"
+    /** Limite da assinatura batido (T-064): só o relógio reabre, insistir é desperdício. */
+    | "cota";
   orcamento: EstadoOrcamento;
 }
 
@@ -819,6 +828,22 @@ export async function rodarPipeline(
     // Falha SISTÊMICA é outra coisa: cota acabada, SDK quebrado, disco cheio. Aí insistir só
     // queima despacho, e o sinal é a sequência — falhas seguidas, sem nenhum sucesso no meio.
     if (!r.concluiu) {
+      // COTA BATIDA (T-064): parede rígida, e o provedor DIZ que bateu. Antes o motor
+      // adivinhava falha sistêmica por 3 falhas em sequência — e como cada falha custa (o
+      // agente trabalha e é cortado antes de devolver), adivinhar custava até três despachos
+      // para descobrir o que a primeira mensagem já informava.
+      if (r.limiteDeUso !== undefined) {
+        emCircuito.add(passo.tarefa.id);
+        rel.etapasFalhas.push({ tarefa: passo.tarefa.id, agente: agente.nome });
+        rel.encerrouPor = "cota";
+        dep.log(
+          "erro",
+          `Limite da assinatura batido em ${passo.tarefa.id} (reabre: ${r.limiteDeUso}).` +
+            " Encerrando a rodada agora: só o relógio abre essa porta, e cada despacho a mais" +
+            " gasta sem devolver nada.",
+        );
+        break;
+      }
       falhasSeguidas += 1;
       emCircuito.add(passo.tarefa.id);
       rel.etapasFalhas.push({ tarefa: passo.tarefa.id, agente: agente.nome });

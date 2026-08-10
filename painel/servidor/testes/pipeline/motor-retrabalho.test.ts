@@ -592,3 +592,67 @@ describe("`tentativas` é campo do construtor (T-063)", () => {
     expect(cs[1]?.modelo).toBe("opus");
   });
 });
+
+describe("limite da assinatura para a rodada NA HORA (T-064)", () => {
+  /**
+   * Medido no job `c080b98c`: o executor da T-033 trabalhou 52 chamadas de ferramenta,
+   * custou US$ 4,11 e foi cortado pela cota sem devolver nada. Antes, o motor só reconhecia
+   * "falha sistêmica" depois de TRÊS falhas seguidas — e como cada falha dessas custa, ele
+   * pagava até três despachos para descobrir o que a primeira mensagem já dizia.
+   */
+  function mundoComCota(tarefas: TarefaResumo[], quandoFalhar: (n: number) => boolean) {
+    const { dep, despachos, logs } = mundo(tarefas);
+    const original = dep.despachar;
+    let n = 0;
+    dep.despachar = async (pedido) => {
+      n += 1;
+      if (quandoFalhar(n)) {
+        despachos.push(pedido);
+        return { custoUsd: 1.5, concluiu: false, limiteDeUso: "6:50pm" };
+      }
+      return original(pedido);
+    };
+    return { dep, despachos, logs };
+  }
+
+  it("para no PRIMEIRO sinal de cota, sem gastar mais despacho", async () => {
+    const { dep, despachos, logs } = mundoComCota(
+      [
+        tarefa({ id: "T-400", status: "pronta", areas: ["a.js"] }),
+        tarefa({ id: "T-401", status: "pronta", areas: ["b.js"] }),
+        tarefa({ id: "T-402", status: "pronta", areas: ["c.js"] }),
+      ],
+      (n) => n === 1,
+    );
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.encerrouPor).toBe("cota");
+    expect(despachos, "um despacho só: o que bateu na parede").toHaveLength(1);
+    expect(logs.some((l) => l.includes("Limite da assinatura batido"))).toBe(true);
+    expect(logs.some((l) => l.includes("6:50pm"))).toBe(true);
+  });
+
+  /** Falha comum (sem cota) continua no comportamento antigo: a rodada segue nas outras. */
+  it("falha sem cota NÃO encerra a rodada", async () => {
+    const { dep } = mundoComCota(
+      [
+        tarefa({ id: "T-410", status: "pronta", areas: ["a.js"] }),
+        tarefa({ id: "T-411", status: "pronta", areas: ["b.js"] }),
+      ],
+      () => false,
+    );
+    const original = dep.despachar;
+    let n = 0;
+    dep.despachar = async (pedido) => {
+      n += 1;
+      if (n === 1) return { custoUsd: 0.5, concluiu: false }; // sem `limiteDeUso`
+      return original(pedido);
+    };
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.encerrouPor).not.toBe("cota");
+    expect(rel.tarefasConcluidas.length).toBeGreaterThan(0);
+  });
+});
