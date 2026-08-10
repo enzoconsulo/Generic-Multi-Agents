@@ -92,6 +92,16 @@ domínio tipado de verdade · polars ou pandas para dados.
 Phaser (jogo com física, cenas, sprites) ou PixiJS (renderização 2D pura). Não faça loop
 de jogo, colisão e sprite sheet à mão.
 
+Elemento 3D pequeno cujo resultado é decidido pelo SERVIDOR, não por física local (dado,
+moeda, roleta): não traga `@3d-dice/dice-box` nem similares baseados em física/WebGL — nenhum
+candidato do mercado combina "vivo" com "aceita forçar o resultado final" (pesquisa completa em
+`projetos/banco-imobiliario/_gestao/pesquisas/2026-08-10-animacao-dados-referencia.md`; ex.:
+`dice-box` é vivo mas não força resultado, `dice-box-threejs` força mas está morto há ~4 anos).
+Use cubo CSS 3D (`transform-style: preserve-3d` + `perspective` no pai) com a rotação-alvo
+calculada em JS a partir do valor (mapa `valor → {rx, ry}` + voltas extras `N*360deg`
+variando sinal/eixo por dado) e disparada via `Element.animate()` nativo — zero dependência,
+funciona sem build.
+
 ### Desktop
 
 Tauri (leve, binário pequeno) ou Electron (ecossistema maior). Decisão em DECISOES.md.
