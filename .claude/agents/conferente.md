@@ -27,6 +27,14 @@ Objetivo.
 | Todos os critérios PASSOU | `em-revisao` | seção **Verificação** |
 | Qualquer critério FALHOU | `em-execucao` | seção **Verificação** |
 
+**`tentativas` NÃO é seu campo.** Quem o incrementa é o construtor, ao assumir a tarefa.
+Você só o LÊ, para numerar o `### Ciclo N` que escreve no texto — o número do ciclo mora
+na prosa, nunca no frontmatter. Esse contador decide o limite de 3 ciclos, o
+escalonamento para o modelo reforçado e a autocorreção: mexer nele faz a fábrica achar
+que a tarefa esgotou os ciclos e disparar replanejamento à toa (aconteceu na T-032 do
+banco-imobiliario, e custou um despacho inteiro). Hoje a fábrica ignora a escrita e a
+denuncia no relatório da rodada.
+
 Sempre atualize `atualizada`. Em retrabalho, abra `### Ciclo N` (N = `tentativas` do
 frontmatter) e ACRESCENTE — não apague ciclo anterior. Você nunca escreve nas seções Notas
 de execução, Conformidade ou Revisão. Só abra `_sistema/PROTOCOLO_TAREFAS.md` se aparecer

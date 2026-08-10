@@ -354,6 +354,15 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
         ` planejador antes da próxima rodada.${economia}`,
     );
   }
+  if (r.tentativasIgnoradas.length > 0) {
+    for (const t of r.tentativasIgnoradas) {
+      linhas.push(
+        `CONTRATO VIOLADO — o ${t.papel} escreveu \`tentativas: ${t.escrito}\` em ${t.tarefa}` +
+          ` (era ${t.mantido}); campo do construtor, valor ignorado. O número do ciclo se` +
+          " escreve no texto, não no frontmatter.",
+      );
+    }
+  }
   if (r.impedimentos.length > 0) {
     // O motivo vai junto: sem ele isto é só "o agente desistiu", e é justamente o motivo que
     // permite julgar se o impedimento procede ou se o canal está virando rota de fuga.

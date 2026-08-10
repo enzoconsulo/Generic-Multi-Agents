@@ -145,9 +145,12 @@ function mundo(
       if (pedido.papel === opcoes.reprovarEm && reprovacoes < (opcoes.reprovarVezes ?? 1)) {
         reprovacoes += 1;
         atual.status = "em-execucao";
-        atual.tentativas += 1; // o agente real incrementa ao reprovar
         return { custoUsd: 0.1, concluiu: true };
       }
+      // O CONSTRUTOR é quem incrementa `tentativas`, ao assumir — contrato do protocolo. O
+      // fixture antes creditava o incremento ao reprovador, que é o que a T-063 passou a
+      // tratar como violação: mais um caso de fixture que não fazia o que anunciava.
+      if (pedido.papel === "construtor") atual.tentativas += 1;
       atual.status = proximoStatus[atual.status] ?? "concluida";
       return { custoUsd: 0.1, concluiu: true };
     },
@@ -296,9 +299,16 @@ describe("retrabalho diagnosticado — calibre proporcional à falha", () => {
     expect(c?.foco).toContain("não recomece do zero");
   });
 
-  /** O caso caro: entregou outra coisa. Aqui economizar é o erro. */
+  /**
+   * O caso caro: entregou outra coisa. Aqui economizar é o erro.
+   *
+   * `tentativas: 1` no estado inicial não é detalhe: tarefa em `em-revisao` JÁ foi construída
+   * uma vez, e é esse incremento (feito pelo construtor ao assumir) que torna o próximo
+   * despacho um retrabalho. O fixture antes começava em 0 e compensava fazendo o REPROVADOR
+   * incrementar — o que a T-063 passou a tratar como violação de contrato, corretamente.
+   */
   it("reprovado por CONFORMIDADE mantém calibre máximo e escopo completo", async () => {
-    const { dep, despachos } = mundo([tarefa({ id: "T-201", status: "em-revisao" })], {
+    const { dep, despachos } = mundo([tarefa({ id: "T-201", status: "em-revisao", tentativas: 1 })], {
       reprovarEm: "revisor",
       conformidade: "Conformidade: nao-cumpre",
       revisao: "",
@@ -313,7 +323,7 @@ describe("retrabalho diagnosticado — calibre proporcional à falha", () => {
   });
 
   it("defeitos `menor` do revisor: ajuste pontual, sem escalar modelo, com foco nomeado", async () => {
-    const { dep, despachos } = mundo([tarefa({ id: "T-202", status: "em-revisao" })], {
+    const { dep, despachos } = mundo([tarefa({ id: "T-202", status: "em-revisao", tentativas: 1 })], {
       reprovarEm: "revisor",
       conformidade: "Conformidade: cumpre",
       revisao: "[menor] a.js:3 — mensagem obsoleta",
@@ -328,7 +338,7 @@ describe("retrabalho diagnosticado — calibre proporcional à falha", () => {
   });
 
   it("defeito GRAVE reforça o modelo, mas ainda ataca só o que foi apontado", async () => {
-    const { dep, despachos } = mundo([tarefa({ id: "T-203", status: "em-revisao" })], {
+    const { dep, despachos } = mundo([tarefa({ id: "T-203", status: "em-revisao", tentativas: 1 })], {
       reprovarEm: "revisor",
       conformidade: "Conformidade: cumpre",
       revisao: "[critica] a.js:9 — quebra em uso normal",
@@ -510,5 +520,75 @@ describe("replanejamento precoce (T-058)", () => {
       expect(planejadores(despachos)).toHaveLength(0);
       expect(construtores(despachos)).toHaveLength(1);
     });
+  });
+});
+
+describe("`tentativas` é campo do construtor (T-063)", () => {
+  /**
+   * Medido no job `7cd4a453`: o testador aprovou a T-032 e, na mesma gravação, escreveu
+   * `tentativas: 2 → 4` — confundindo "este é o ciclo 4" com o contador que a máquina usa como
+   * portão. O motor leu `4 > 3`, concluiu "esgotou os ciclos" e despachou o planejador, que se
+   * recusou a replanejar porque não havia nada errado com a abordagem.
+   */
+  function mundoComVerificadorQueInflaTentativas() {
+    const { dep, despachos, logs } = mundo([
+      tarefa({ id: "T-300", status: "em-teste", tentativas: 2 }),
+    ]);
+    const original = dep.despachar;
+    dep.despachar = async (pedido) => {
+      const r = await original(pedido);
+      // O verificador aprova E estraga o campo, exatamente como aconteceu na T-032. Precisa
+      // mutar a cópia INTERNA do fixture (`mundo` clona as tarefas iniciais), senão o teste
+      // mexe num objeto que o motor nunca lê — e passaria sem exercitar nada.
+      if (pedido.papel === "verificador") {
+        const atual = (await dep.lerTarefas()).find((x) => x.id === "T-300");
+        if (atual !== undefined) (atual as { tentativas: number }).tentativas = 4;
+      }
+      return r;
+    };
+    return { dep, despachos, logs };
+  }
+
+  it("verificador que infla o campo não faz a tarefa 'esgotar os ciclos'", async () => {
+    const { dep, despachos, logs } = mundoComVerificadorQueInflaTentativas();
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    // Sem a guarda: `4 > 3` → replanejamento. Com ela, a rodada segue o fluxo normal.
+    expect(despachos.filter((d) => d.papel === "planejador")).toHaveLength(0);
+    expect(rel.paraReplanejar).not.toContain("T-300");
+    expect(rel.tarefasConcluidas).toContain("T-300");
+    expect(logs.some((l) => l.includes("campo do construtor"))).toBe(true);
+  });
+
+  it("denuncia a violação no relatório, com quem escreveu e o que foi mantido", async () => {
+    const { dep } = mundoComVerificadorQueInflaTentativas();
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.tentativasIgnoradas).toHaveLength(1);
+    expect(rel.tentativasIgnoradas[0]).toMatchObject({
+      tarefa: "T-300",
+      papel: "verificador",
+      escrito: 4,
+      mantido: 2,
+    });
+  });
+
+  /** O construtor PODE escrever: é o contrato dele, e sem isso o limite de ciclos não existe. */
+  it("incremento do construtor continua valendo", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-301", status: "pronta" })], {
+      reprovarEm: "revisor",
+      conformidade: "Conformidade: nao-cumpre",
+    });
+
+    await rodarPipeline(ctxBase, dep);
+
+    // 1º construtor em `tentativas: 0` (primeira execução), 2º já em retrabalho reforçado —
+    // e isso só acontece porque o incremento do construtor foi respeitado.
+    const cs = construtores(despachos);
+    expect(cs.length).toBeGreaterThanOrEqual(2);
+    expect(cs[0]?.modelo).toBeNull();
+    expect(cs[1]?.modelo).toBe("opus");
   });
 });

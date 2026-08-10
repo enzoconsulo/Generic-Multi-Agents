@@ -225,6 +225,12 @@ export interface RelatorioMotor {
    * é como um construtor que o use como rota de fuga aparece.
    */
   impedimentos: { tarefa: string; motivo: string }[];
+  /**
+   * Escritas de `tentativas` feitas por quem NÃO é o construtor (T-063), ignoradas nas
+   * decisões da rodada. Raro por construção — se aparecer com frequência, o prompt do papel
+   * em questão é que precisa de conserto, não o motor.
+   */
+  tentativasIgnoradas: { tarefa: string; papel: string; escrito: number; mantido: number }[];
   /** Marcos de fase verificados nesta rodada. */
   marcos: { fase: string; veredicto: VeredictoMarco }[];
   /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
@@ -307,6 +313,7 @@ export async function rodarPipeline(
     criteriosQuebrados: [],
     custoPorTarefa: [],
     impedimentos: [],
+    tentativasIgnoradas: [],
     marcos: [],
     saneadas: [],
     etapasFalhas: [],
@@ -325,6 +332,42 @@ export async function rodarPipeline(
   const comLinhaBase = new Set<string>();
   /** Contabilidade por tarefa (T-060), montada despacho a despacho. */
   const custosPorTarefa = new Map<string, CustoDeTarefa>();
+  /**
+   * `tentativas` EM QUE O MOTOR CONFIA, por tarefa (T-063).
+   *
+   * O campo é escrito à mão por agentes e decide TRÊS coisas: o limite de 3 ciclos, o
+   * escalonamento para o modelo reforçado e a autocorreção. Por protocolo quem o incrementa é
+   * o CONSTRUTOR, ao assumir a tarefa; verificador e revisor só o leem, para numerar o
+   * `### Ciclo N` que escrevem no texto.
+   *
+   * Medido no job `7cd4a453`: o `testador` da T-032 aprovou a tarefa e, na mesma gravação,
+   * escreveu `tentativas: 2 → 4` — confundindo "este é o ciclo 4" com o contador. O motor leu
+   * `4 > 3`, concluiu "esgotou os ciclos" e despachou o planejador, que se recusou a
+   * replanejar porque não havia nada errado com a abordagem. Um despacho inteiro de
+   * desperdício, e o replanejamento se repetiria a cada rodada até alguém corrigir o arquivo.
+   *
+   * O motor VÊ quem rodou cada etapa, então não precisa confiar no campo cegamente: aceita a
+   * escrita do construtor e ignora a dos outros papéis nas DECISÕES da rodada. Ignorar na
+   * decisão é diferente de reescrever o arquivo — o frontmatter continua sendo do agente, e o
+   * motor só escreve nele nos dois pontos deliberados de sempre (promoção e bloqueio).
+   */
+  const tentativasConfiaveis = new Map<string, number>();
+
+  /**
+   * Lê as tarefas aplicando o `tentativas` confiável. Primeira vez que vê uma tarefa, adota o
+   * valor do arquivo — a desconfiança começa só depois de o motor ter observado um despacho.
+   */
+  const lerTarefas = async (): Promise<TarefaResumo[]> => {
+    const tarefas = await dep.lerTarefas();
+    return tarefas.map((t) => {
+      const confiavel = tentativasConfiaveis.get(t.id);
+      if (confiavel === undefined) {
+        tentativasConfiaveis.set(t.id, t.tentativas);
+        return t;
+      }
+      return confiavel === t.tentativas ? t : { ...t, tentativas: confiavel };
+    });
+  };
   /**
    * Naturezas de reprovação na ORDEM em que ocorreram, por tarefa (T-058, gatilho B). Sem
    * deduplicar vizinhas — é justamente a repetição consecutiva que carrega o sinal, ao contrário
@@ -374,7 +417,7 @@ export async function rodarPipeline(
   }
 
   for (let volta = 0; volta < MAX_VOLTAS; volta++) {
-    const tarefas = await dep.lerTarefas();
+    const tarefas = await lerTarefas();
 
     // Tarefas que fecharam desde a última volta alimentam a autocalibragem do orçamento.
     for (const t of tarefas) {
@@ -426,7 +469,7 @@ export async function rodarPipeline(
       }
     }
 
-    const emAndamento = promover.length > 0 ? await dep.lerTarefas() : tarefas;
+    const emAndamento = promover.length > 0 ? await lerTarefas() : tarefas;
 
     // ---- MARCO DE FASE ---------------------------------------------------------------
     // Vem ANTES de pegar a próxima tarefa: fechada a última tarefa de uma fase, a pergunta
@@ -808,7 +851,43 @@ export async function rodarPipeline(
     // construtor 3 vezes na MESMA tarefa (tentativas 1, 2, 3), e a contagem cortaria a
     // rodada na segunda. O que caracteriza travamento é o status não mudar depois de o
     // agente dizer que terminou.
-    const depois = (await dep.lerTarefas()).find((t) => t.id === passo.tarefa.id);
+    // ---- QUEM PODE ESCREVER `tentativas` (T-063) --------------------------------------
+    // Feito sobre a leitura CRUA, antes do saneamento: o saneador mascara a violação, e o
+    // ponto aqui é justamente vê-la. O construtor pode escrever (é o contrato dele); qualquer
+    // outro papel que mexa no campo está fora do seu, e o valor novo é ignorado nas decisões.
+    const bruta = (await dep.lerTarefas()).find((t) => t.id === passo.tarefa.id);
+    if (bruta !== undefined) {
+      const confiavel = tentativasConfiaveis.get(passo.tarefa.id) ?? bruta.tentativas;
+      if (passo.papel === "construtor") {
+        tentativasConfiaveis.set(passo.tarefa.id, bruta.tentativas);
+      } else if (bruta.tentativas !== confiavel) {
+        // O valor corrompido FICA no arquivo, então todo passo seguinte o vê de novo. A
+        // corrupção é um evento só: denuncie na primeira observação daquele valor e siga
+        // ignorando em silêncio, senão o relatório repete a mesma linha por etapa e para de
+        // ser lido — que é como um aviso morre.
+        const jaDenunciado = rel.tentativasIgnoradas.some(
+          (x) => x.tarefa === passo.tarefa.id && x.escrito === bruta.tentativas,
+        );
+        if (!jaDenunciado) {
+          rel.tentativasIgnoradas.push({
+            tarefa: passo.tarefa.id,
+            papel: passo.papel,
+            escrito: bruta.tentativas,
+            mantido: confiavel,
+          });
+        }
+        if (!jaDenunciado)
+          dep.log(
+          "erro",
+          `${passo.tarefa.id}: o ${passo.papel} escreveu \`tentativas: ${bruta.tentativas}\`` +
+            ` (era ${confiavel}) — campo do construtor, e ele decide o limite de ciclos, o` +
+            " escalonamento de modelo e a autocorreção. Valor IGNORADO nas decisões desta" +
+            " rodada; o número do ciclo se escreve no texto, não no frontmatter.",
+        );
+      }
+    }
+
+    const depois = (await lerTarefas()).find((t) => t.id === passo.tarefa.id);
 
     // Portão que reprovou, OBSERVADO: o passo era de verificação/revisão e a tarefa voltou
     // para `em-execucao`. É daqui que sai o diagnóstico do próximo retrabalho — fato visto,
@@ -940,7 +1019,7 @@ export async function rodarPipeline(
   if (rel.tarefasConcluidas.length >= MIN_TAREFAS_PARA_DOCUMENTAR) {
     const decisao = decidir(comAgentesEmVoo(comGasto(orcamento, orcamento.gastoUsd), 0));
     if (decisao.acao === "seguir") {
-      const tarefas = await dep.lerTarefas();
+      const tarefas = await lerTarefas();
       const alvo = tarefas.find((t) => rel.tarefasConcluidas.includes(t.id));
       if (alvo !== undefined) {
         dep.log(
