@@ -117,16 +117,44 @@ export function escolherOrfaos(
     // PROPRIEDADE: só o que a fábrica lançou. Sem esta linha, comando do usuário cujo shell
     // lançador já saiu vira alvo — aconteceu no dry-run contra a máquina real.
     if (!criterio.observados.has(p.pid)) continue;
-    // ABANDONO: raiz de árvore órfã (pai morto, ou pid do pai reciclado). É o que separa
-    // "lixo" de "trabalho vivo de um job paralelo", que segue pendurado no painel.
-    if (paiVivo(p, porPid) !== null) continue;
     if (p.criadoEm < criterio.desdeMs) continue;
     if (!FAMILIA_AGENTE.has(p.nome.toLowerCase())) continue;
-    // Redundante com "pai morto", mas explícito: o painel e o que pende dele são sagrados.
+    /**
+     * ABANDONO — e a prova é a CADEIA INTEIRA, não o pai imediato (T-066).
+     *
+     * Aqui havia, antes desta linha, um gate `if (paiVivo(p) !== null) continue`: pai vivo,
+     * processo poupado. Isso olha UM nível, e abandono é propriedade da cadeia toda. O caso
+     * que escapou (rodada `c080b98c`, ~106 MB vivos horas depois do job): um `npm start` de
+     * agente cujo pai — um `cmd.exe` — continuava vivo, mas era ELE MESMO um órfão, porque o
+     * `claude` da etapa que os lançou já tinha morrido. Pai vivo, avô morto: o gate barrava, e
+     * a caminhada que teria pego o caso nunca era executada.
+     *
+     * Trocar o gate pela caminhada é mais SEGURO, não menos, e é o ponto todo: "alcança o
+     * painel por pais vivos" é exatamente "há um job de pé usando isto". Trabalho vivo de job
+     * paralelo continua pendurado no painel e segue intocável; o que se solta da árvore vira
+     * recolhível mesmo que um nível intermediário tenha sobrevivido.
+     */
     if (alcancaPainel(p, porPid, criterio.painelPid)) continue;
     escolhidos.push(p);
   }
-  return escolhidos;
+  // Só as RAÍZES: quem mata usa kill de ÁRVORE, então descendente escolhido junto com o
+  // ancestral seria morto duas vezes e contado duas vezes no relatório.
+  //
+  // A subida usa `paiVivo`, não o `ppid` cru — e o teste do pid reciclado pegou isto na hora:
+  // um "pai" que nasceu DEPOIS do filho não é pai, o kill de árvore dele não leva o filho
+  // junto, e filtrar por parentesco aparente descartaria um órfão de verdade. A noção de
+  // parentesco tem de ser a MESMA em todo o módulo, ou as duas metades discordam.
+  const escolhidosPorPid = new Set(escolhidos.map((p) => p.pid));
+  return escolhidos.filter((p) => {
+    const vistos = new Set<number>([p.pid]);
+    let atual = paiVivo(p, porPid);
+    while (atual !== null && !vistos.has(atual.pid)) {
+      if (escolhidosPorPid.has(atual.pid)) return false;
+      vistos.add(atual.pid);
+      atual = paiVivo(atual, porPid);
+    }
+    return true;
+  });
 }
 
 /** Lê a tabela de processos do sistema. Nunca lança: sem lista, não se recolhe nada. */

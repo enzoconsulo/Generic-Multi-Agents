@@ -167,3 +167,49 @@ describe("analisarLinhas (formato do Windows)", () => {
     expect(r[0]?.comando).toBe("");
   });
 });
+
+describe("abandono é da CADEIA, não do pai imediato (T-066)", () => {
+  /**
+   * O caso REAL que escapou: rodada `c080b98c`, ~106 MB (`npm start` + `node server/index.js`)
+   * vivos horas depois do job. O `npm` tinha pai VIVO — um `cmd.exe` — mas esse cmd era ele
+   * mesmo um órfão, porque o `claude` da etapa que os lançou já tinha morrido.
+   *
+   * O gate antigo (`pai vivo → poupa`) olhava um nível e barrava aí; a caminhada que teria
+   * pego o caso nunca chegava a rodar.
+   */
+  it("recolhe processo com pai VIVO cujo avô morreu", () => {
+    const processos = [
+      p(PAINEL, 1, "node.exe", T0 - 5000),
+      // O `claude` da etapa morreu: não está na lista.
+      p(900, 899, "cmd.exe", T0 + 100, "cmd /c npm start"), // pai (899) morto → órfão
+      p(901, 900, "node.exe", T0 + 200, "node server/index.js"), // pai 900 VIVO
+    ];
+
+    const escolhidos = escolherOrfaos(processos, criterio([900, 901]));
+
+    // Só a raiz: o kill de árvore de 900 leva 901 junto.
+    expect(escolhidos.map((x) => x.pid)).toEqual([900]);
+  });
+
+  /**
+   * A contrapartida, e é ela que torna a troca SEGURA: trabalho vivo de job paralelo continua
+   * pendurado no painel por pais vivos, e segue intocável mesmo com o gate antigo removido.
+   */
+  it("não toca em trabalho vivo de job paralelo", () => {
+    const processos = [
+      p(PAINEL, 1, "node.exe", T0 - 5000),
+      p(910, PAINEL, "cmd.exe", T0 + 100),
+      p(911, 910, "node.exe", T0 + 200, "npm test"),
+    ];
+    expect(escolherOrfaos(processos, criterio([910, 911]))).toEqual([]);
+  });
+
+  /** A prova de PROPRIEDADE continua obrigatória: comando do usuário nunca entra. */
+  it("processo solto que a fábrica não lançou continua fora", () => {
+    const processos = [
+      p(PAINEL, 1, "node.exe", T0 - 5000),
+      p(920, 919, "node.exe", T0 + 100, "node script-do-usuario.js"), // pai morto, não observado
+    ];
+    expect(escolherOrfaos(processos, criterio([]))).toEqual([]);
+  });
+});
