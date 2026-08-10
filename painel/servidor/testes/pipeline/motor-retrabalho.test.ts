@@ -656,3 +656,36 @@ describe("limite da assinatura para a rodada NA HORA (T-064)", () => {
     expect(rel.tarefasConcluidas.length).toBeGreaterThan(0);
   });
 });
+
+describe("orçamento de ferramentas declarado vira MEDIDA (T-065)", () => {
+  it("registra a etapa que passou do teto do papel", async () => {
+    const { dep } = mundo([tarefa({ id: "T-500", status: "pronta", areas: ["a.js", "b.js"] })]);
+    const original = dep.despachar;
+    dep.despachar = async (pedido) => {
+      const r = await original(pedido);
+      // Construtor com 2 areas: teto declarado 30. 39 foi o número real da T-032.
+      return pedido.papel === "construtor"
+        ? { ...r, chamadas: 39, orcadoFerramentas: 30 }
+        : { ...r, chamadas: 5, orcadoFerramentas: 20 };
+    };
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.estouros).toHaveLength(1);
+    expect(rel.estouros[0]).toMatchObject({ tarefa: "T-500", chamadas: 39, orcado: 30 });
+  });
+
+  it("etapa dentro do teto não vira ruído no relatório", async () => {
+    const { dep } = mundo([tarefa({ id: "T-501", status: "pronta" })]);
+    const original = dep.despachar;
+    dep.despachar = async (pedido) => ({
+      ...(await original(pedido)),
+      chamadas: 10,
+      orcadoFerramentas: 30,
+    });
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.estouros).toEqual([]);
+  });
+});

@@ -355,6 +355,14 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
         ` planejador antes da próxima rodada.${economia}`,
     );
   }
+  if (r.estouros.length > 0) {
+    const lista = r.estouros
+      .map((e) => `${e.tarefa}/${e.agente} ${e.chamadas} de ${e.orcado}`)
+      .join("; ");
+    linhas.push(
+      `Orçamento de ferramentas estourado (idas ao modelo custam ao quadrado): ${lista}.`,
+    );
+  }
   if (r.tentativasIgnoradas.length > 0) {
     for (const t of r.tentativasIgnoradas) {
       linhas.push(

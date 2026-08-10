@@ -52,6 +52,30 @@ const MAX_TURNS: Readonly<Record<string, number>> = {
   planejador: 60,
 };
 
+/**
+ * ORÇAMENTO DE FERRAMENTAS DECLARADO NOS PROMPTS (T-065), resolvido em número.
+ *
+ * Os prompts trazem o teto em tabela — o do construtor escala com o número de `areas`
+ * (30/45/60), o do verificador é 25 e o do revisor 20. Duas consequências disso, medidas nas
+ * quatro rodadas reais de 09/08:
+ *
+ * 1. **Ninguém enxergava o estouro.** Três despachos passaram do teto declarado (construtor
+ *    com 39 contra 30 e 52 contra 45; testador com 32 contra 25) e nada registrou. O freio da
+ *    máquina é o `maxTurns`, que vale 40-60 e conta VOLTAS DO MODELO, não chamadas — unidade
+ *    diferente, número diferente, e por isso ele não substitui esta conta.
+ * 2. **O agente tinha de derivar o próprio teto** contando as `areas` contra uma tabela. O
+ *    motor já sabe o número; dizer qual é custa uma linha.
+ *
+ * Isto MEDE, não corta. Cortar exigiria converter chamadas em voltas, e despacho interrompido
+ * no meio custa igual sem entregar nada (medido na T-064: US$ 4,11 num corte por cota).
+ */
+export function orcamentoDeFerramentas(papel: string, areas: number): number {
+  if (papel === "construtor") return areas <= 2 ? 30 : areas === 3 ? 45 : 60;
+  if (papel === "verificador") return 25;
+  if (papel === "revisor") return 20;
+  return 60;
+}
+
 /** Quebra de linha usada para montar os blocos de despacho. */
 const QUEBRA = String.fromCharCode(10);
 
@@ -239,6 +263,8 @@ export function criarDespachante(
     });
 
     let custoUsd = 0;
+    /** Chamadas de ferramenta desta etapa, para conferir contra o orçamento declarado (T-065). */
+    let chamadas = 0;
     let erro = false;
     let terminou = false;
     let textoFinal = "";
@@ -274,6 +300,7 @@ export function criarDespachante(
           }
           for (const bloco of (msg.message?.content ?? []) as { type?: string; name?: string }[]) {
             if (bloco.type === "tool_use" && bloco.name !== undefined) {
+              chamadas += 1;
               o.emitir("ferramenta", `${pedido.agente}: ${bloco.name}`);
             }
           }
@@ -315,11 +342,25 @@ export function criarDespachante(
     // justamente na etapa que foi cortada — que é a cara.
     if (custoUsd === 0) custoUsd = estimarCusto(porModelo)?.usd ?? 0;
 
+    // Estouro do orçamento DECLARADO (T-065): mede, não corta. O custo de um agente cresce
+    // com o quadrado das idas ao modelo, então passar do teto é caro — e sem registro isso
+    // some. Quem lê o relatório decide se é o agente que precisa de disciplina ou a tarefa
+    // que está grande demais para as `areas` que declarou.
+    const orcado = orcamentoDeFerramentas(papel, pedido.tarefa.areas.length);
+    if (chamadas > orcado) {
+      o.emitir(
+        "erro",
+        `${pedido.tarefa.id}: ${pedido.agente} usou ${chamadas} chamadas de ferramenta,` +
+          ` acima do teto declarado de ${orcado} para ${papel} com` +
+          ` ${pedido.tarefa.areas.length} area(s). Idas ao modelo custam ao quadrado.`,
+      );
+    }
+
     if (!terminou || erro) {
       o.emitir("erro", `Etapa ${pedido.agente} terminou sem resultado válido.`);
-      return { custoUsd, concluiu: false, texto: textoFinal };
+      return { custoUsd, concluiu: false, texto: textoFinal, chamadas, orcadoFerramentas: orcado };
     }
-    return { custoUsd, concluiu: true, texto: textoFinal };
+    return { custoUsd, concluiu: true, texto: textoFinal, chamadas, orcadoFerramentas: orcado };
   };
 }
 

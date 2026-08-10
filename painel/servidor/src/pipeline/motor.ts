@@ -109,6 +109,10 @@ export interface ResultadoDespacho {
    * US$ 4,11 antes de devolver nada.
    */
   limiteDeUso?: string;
+  /** Chamadas de ferramenta que a etapa gastou (T-065). */
+  chamadas?: number;
+  /** Teto DECLARADO no prompt do papel para esta tarefa (T-065). */
+  orcadoFerramentas?: number;
 }
 
 export interface DependenciasMotor {
@@ -238,6 +242,11 @@ export interface RelatorioMotor {
    * em questão é que precisa de conserto, não o motor.
    */
   tentativasIgnoradas: { tarefa: string; papel: string; escrito: number; mantido: number }[];
+  /**
+   * Etapas que passaram do orçamento de ferramentas DECLARADO no prompt do papel (T-065).
+   * Mede, não corta: idas ao modelo custam ao quadrado, e sem registro o estouro some.
+   */
+  estouros: { tarefa: string; agente: string; chamadas: number; orcado: number }[];
   /** Marcos de fase verificados nesta rodada. */
   marcos: { fase: string; veredicto: VeredictoMarco }[];
   /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
@@ -323,6 +332,7 @@ export async function rodarPipeline(
     custoPorTarefa: [],
     impedimentos: [],
     tentativasIgnoradas: [],
+    estouros: [],
     marcos: [],
     saneadas: [],
     etapasFalhas: [],
@@ -805,6 +815,14 @@ export async function rodarPipeline(
       ...(politica.escopo === "pontual" ? { foco: blocoDeFoco(diag) } : {}),
     });
     rel.despachos += 1;
+    if (r.chamadas !== undefined && r.orcadoFerramentas !== undefined && r.chamadas > r.orcadoFerramentas) {
+      rel.estouros.push({
+        tarefa: passo.tarefa.id,
+        agente: agente.nome,
+        chamadas: r.chamadas,
+        orcado: r.orcadoFerramentas,
+      });
+    }
     orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
     if (passo.papel === "revisor") orcamento = registrarTarefaConcluida(orcamento, r.custoUsd);
 
