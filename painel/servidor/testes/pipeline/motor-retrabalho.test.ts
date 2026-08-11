@@ -74,6 +74,8 @@ function mundo(
     reprovarEm?: "verificador" | "revisor";
     /** Quantas vezes esse papel reprova antes de deixar passar (padrão 1). */
     reprovarVezes?: number;
+    /** Custo de cada despacho. Configurável para exercitar os tetos de orçamento. */
+    custoPorDespacho?: number;
     /** Notas de execução que o motor lê — é onde vive a linha `Impedimento:` (T-058). */
     notas?: string;
     conformidade?: string;
@@ -133,26 +135,27 @@ function mundo(
     },
     hashHead: async () => head,
     despachar: async (pedido) => {
+      const custoDespacho = opcoes.custoPorDespacho ?? 0.1;
       despachos.push(pedido);
       const atual = tarefas.get(pedido.tarefa.id);
-      if (atual === undefined) return { custoUsd: 0.1, concluiu: true };
+      if (atual === undefined) return { custoUsd: custoDespacho, concluiu: true };
 
       if (pedido.papel === "construtor" && opcoes.construtorMudo === true) {
         // O agente commita (HEAD anda) mas NÃO grava o status — o caso comum.
         if (opcoes.construtorCommita === true) head = `head${++nHead}`;
-        return { custoUsd: 0.1, concluiu: true };
+        return { custoUsd: custoDespacho, concluiu: true };
       }
       if (pedido.papel === opcoes.reprovarEm && reprovacoes < (opcoes.reprovarVezes ?? 1)) {
         reprovacoes += 1;
         atual.status = "em-execucao";
-        return { custoUsd: 0.1, concluiu: true };
+        return { custoUsd: custoDespacho, concluiu: true };
       }
       // O CONSTRUTOR é quem incrementa `tentativas`, ao assumir — contrato do protocolo. O
       // fixture antes creditava o incremento ao reprovador, que é o que a T-063 passou a
       // tratar como violação: mais um caso de fixture que não fazia o que anunciava.
       if (pedido.papel === "construtor") atual.tentativas += 1;
       atual.status = proximoStatus[atual.status] ?? "concluida";
-      return { custoUsd: 0.1, concluiu: true };
+      return { custoUsd: custoDespacho, concluiu: true };
     },
     log: (_n, texto) => logs.push(texto),
   };
@@ -687,5 +690,51 @@ describe("orçamento de ferramentas declarado vira MEDIDA (T-065)", () => {
     const rel = await rodarPipeline(ctxBase, dep);
 
     expect(rel.estouros).toEqual([]);
+  });
+});
+
+/**
+ * TETO POR TAREFA (10/08). O teto de JOB protege a fatura; este protege a RODADA.
+ *
+ * Caso real que o motivou, job `341ba362`: teto de US$ 8, gasto de US$ 7,06 — todo ele na
+ * T-034, que não concluiu. O teto de job funcionou (parada limpa) e mesmo assim a rodada
+ * fechou com ZERO tarefa bancada. Ele não tinha como pegar: compara o restante contra a
+ * média de tarefas CONCLUÍDAS, e numa rodada sem conclusão nenhuma essa média não se forma.
+ */
+describe("teto por tarefa — uma tarefa que gira não pode zerar a rodada", () => {
+  it("estaciona quem gira na fronteira de ciclo, e as outras seguem até concluir", async () => {
+    const { dep, logs } = mundo(
+      [
+        tarefa({ id: "T-301", status: "em-execucao", tentativas: 1, prioridade: "alta" }),
+        tarefa({ id: "T-302", status: "pronta", prioridade: "media" }),
+      ],
+      { reprovarEm: "verificador", reprovarVezes: 2, custoPorDespacho: 1.5 },
+    );
+    // Teto 12 → cota individual de US$ 6. A T-301 chega lá em 4 despachos.
+    const rel = await rodarPipeline({ ...ctxBase, orcamento: novoOrcamento(12) }, dep);
+
+    expect(rel.impedimentos.map((i) => i.tarefa)).toContain("T-301");
+    expect(logs.some((l) => l.includes("T-301 estacionada"))).toBe(true);
+    // O que a trava existe para garantir: a rodada NÃO fecha zerada.
+    expect(rel.tarefasConcluidas).toContain("T-302");
+    // Estacionar não é bloquear nem cancelar — o trabalho da T-301 continua onde estava.
+    expect(rel.bloqueadas).not.toContain("T-301");
+  });
+
+  /**
+   * A trava vale só quando o próximo passo seria COMEÇAR outro retrabalho. Aplicá-la em
+   * qualquer passo estacionaria tarefa no verificador ou no revisor — jogando fora um ciclo
+   * já pago a um passo de fechar, o oposto do objetivo.
+   */
+  it("nunca estaciona no meio de um ciclo, nem em primeira execução", async () => {
+    const { dep } = mundo([tarefa({ id: "T-303", status: "pronta", tentativas: 0 })], {
+      custoPorDespacho: 3,
+    });
+    // Teto 12 → cota individual de US$ 6, que os 3 despachos (US$ 9) ultrapassam. Mesmo
+    // assim a tarefa fecha: ela nunca inicia um retrabalho.
+    const rel = await rodarPipeline({ ...ctxBase, orcamento: novoOrcamento(12) }, dep);
+
+    expect(rel.impedimentos).toEqual([]);
+    expect(rel.tarefasConcluidas).toContain("T-303");
   });
 });

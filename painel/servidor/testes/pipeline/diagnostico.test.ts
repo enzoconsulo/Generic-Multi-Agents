@@ -171,6 +171,73 @@ describe("politicaDe — as duas travas que impedem economia burra", () => {
     expect(p.maxTurns).toBeNull();
   });
 
+  /**
+   * T-034 (10/08): `cumpre-parcial` com achado nomeado NÃO é "entregou outra coisa".
+   *
+   * Três dos quatro critérios cumpridos e o quarto reprovado com arquivo, linha e
+   * aritmética. Mandar refazer com escopo completo e sem teto de voltas gastou 34 chamadas
+   * de ferramenta em `opus` para trocar UMA LINHA de CSS. O calibre continua máximo — o
+   * que muda é não recomeçar do zero o que já está 3/4 pronto.
+   */
+  it("conformidade PARCIAL com achado nomeado: mantém o calibre, mas vira pontual", () => {
+    const p = politicaDe(
+      diag({
+        natureza: "conformidade",
+        conformidade: "cumpre-parcial",
+        achados: [{ gravidade: "critica", texto: "faixa do modal cobre o tabuleiro" }],
+      }),
+      1,
+      true,
+    );
+    expect(p.reforcar).toBe(true); // NÃO se economiza capacidade em conformidade
+    expect(p.escopo).toBe("pontual"); // mas ataca o que foi apontado
+    expect(p.maxTurns).toBe(VOLTAS_MEDIO);
+  });
+
+  /** `nao-cumpre` é o caso que a trava 2 realmente descreve: entregou outra coisa. */
+  it("conformidade NÃO-CUMPRE segue no caro, mesmo com achado nomeado", () => {
+    const p = politicaDe(
+      diag({
+        natureza: "conformidade",
+        conformidade: "nao-cumpre",
+        achados: [{ gravidade: "critica", texto: "qualquer" }],
+      }),
+      1,
+      true,
+    );
+    expect(p.escopo).toBe("completo");
+    expect(p.maxTurns).toBeNull();
+  });
+
+  /**
+   * Sem achado nomeado não há foco para dar ao construtor: o bloco `<foco>` sairia vazio e
+   * o despacho pontual viraria adivinhação mais cara que refazer.
+   */
+  it("conformidade parcial SEM achado nomeado cai no caro", () => {
+    const p = politicaDe(
+      diag({ natureza: "conformidade", conformidade: "cumpre-parcial", achados: [] }),
+      1,
+      true,
+    );
+    expect(p.escopo).toBe("completo");
+    expect(p.maxTurns).toBeNull();
+  });
+
+  /** A trava 1 continua acima de tudo: em `tentativas >= 2` nem o parcial economiza. */
+  it("tentativas >= 2 vence a exceção do parcial", () => {
+    const p = politicaDe(
+      diag({
+        natureza: "conformidade",
+        conformidade: "cumpre-parcial",
+        achados: [{ gravidade: "critica", texto: "x" }],
+      }),
+      2,
+      true,
+    );
+    expect(p.escopo).toBe("completo");
+    expect(p.maxTurns).toBeNull();
+  });
+
   /** A economia principal: comando falhou, o comando já disse o quê. */
   it("falha mecânica não escala modelo e roda estreita", () => {
     const p = politicaDe(diag({ natureza: "mecanica" }), 1, true);

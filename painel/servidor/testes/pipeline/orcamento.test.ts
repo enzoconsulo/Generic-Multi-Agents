@@ -4,6 +4,7 @@ import {
   comGasto,
   CUSTO_TAREFA_PADRAO,
   decidir,
+  decidirTarefa,
   estimativaProximaTarefa,
   FATOR_SEGURANCA,
   novoOrcamento,
@@ -150,5 +151,40 @@ describe("situacao — o estado nomeado, mais fino que a ação", () => {
       "estourado-esperando",
     );
     expect(decidir(comGasto(novoOrcamento(5), 6)).situacao).toBe("estourado-encerrar");
+  });
+});
+
+describe("decidirTarefa — o teto POR TAREFA (10/08)", () => {
+  // Nasceu de uma queixa medida, não de teoria: o teto de job funcionou (parada limpa em
+  // US$ 7,06 de US$ 8) e a rodada AINDA fechou com zero tarefa bancada, porque a T-034
+  // sozinha consumiu tudo. Proteger o job não é o mesmo que proteger a rodada.
+  it("deixa passar enquanto a tarefa está dentro da própria cota", () => {
+    const d = decidirTarefa(novoOrcamento(8), 3.9);
+    expect(d.estacionar).toBe(false);
+    expect(d.tetoTarefaUsd).toBe(4);
+  });
+
+  it("estaciona a tarefa que passa de metade do teto do job", () => {
+    const d = decidirTarefa(novoOrcamento(8), 4);
+    expect(d.estacionar).toBe(true);
+    expect(d.motivo).toContain("4.00");
+  });
+
+  // O caso real que motivou a trava: T-034 no job `341ba362`.
+  it("teria estacionado a T-034 antes dos US$ 7,06", () => {
+    expect(decidirTarefa(novoOrcamento(8), 7.06).estacionar).toBe(true);
+  });
+
+  // Job sem teto é o comportamento antigo, e tem de continuar existindo inteiro.
+  it("sem teto de job não há teto por tarefa", () => {
+    const d = decidirTarefa(semTeto(), 999);
+    expect(d.estacionar).toBe(false);
+    expect(d.tetoTarefaUsd).toBeNull();
+  });
+
+  // Custo torto (NaN vindo de contabilidade parcial) não pode ligar nem desligar a trava
+  // por acidente — a comparação com NaN é sempre falsa, então o caminho seguro é explícito.
+  it("custo não-finito não estaciona", () => {
+    expect(decidirTarefa(novoOrcamento(8), Number.NaN).estacionar).toBe(false);
   });
 });

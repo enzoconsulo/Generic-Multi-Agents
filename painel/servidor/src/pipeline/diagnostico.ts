@@ -239,7 +239,41 @@ export function politicaDe(
   }
 
   // Trava 2: entregou outra coisa.
+  //
+  // MAS "conformidade" não é uma coisa só, e tratá-la como uma custou caro (medido na T-034,
+  // 10/08). `completoCaro` é a configuração MAIS cara que existe aqui — reforça o modelo, manda
+  // refazer com escopo COMPLETO e não põe teto de voltas. Aplicá-la a `cumpre-parcial` parte de
+  // uma premissa que os dados desmentem: a de que o construtor "não entendeu o pedido".
+  //
+  // O que a T-034 realmente foi: 3 dos 4 critérios cumpridos, e o quarto reprovado por um
+  // achado NOMEADO, com arquivo, linha e aritmética (a faixa do modal em `width: 26rem` fixa
+  // contra um tabuleiro que cresce por `flex-grow`). O construtor entendeu o pedido — errou uma
+  // faixa de viewport. O ciclo seguinte, despachado em `opus` com escopo completo e sem teto de
+  // voltas, gastou 34 chamadas de ferramenta para trocar UMA LINHA de CSS.
+  //
+  // A distinção, então, é entre não entender e não terminar:
+  //
+  // - `nao-cumpre` (ou veredito ilegível) → entregou outra coisa. Continua no calibre máximo.
+  // - `cumpre-parcial` COM achados nomeados → falta um pedaço localizado. Mantém o modelo
+  //   reforçado (não se economiza capacidade em conformidade), mas o escopo vira PONTUAL, com
+  //   teto de voltas: é a mesma forma do `defeito grave` logo abaixo, que já resolve este
+  //   formato há tempo — "reforça, mas ataca o que foi apontado".
+  // - `cumpre-parcial` SEM nenhum achado nomeado → não há foco para dar ao construtor; o bloco
+  //   `<foco>` sairia vazio e o despacho pontual viraria uma adivinhação mais cara. Cai no caro.
+  //
+  // Note o que NÃO muda: o modelo. A economia vem de não mandar refazer do zero o que já está
+  // 3/4 pronto — não de apostar num modelo mais fraco depois de uma reprovação.
   if (diag.natureza === "conformidade") {
+    if (diag.conformidade === "cumpre-parcial" && diag.achados.length > 0) {
+      return {
+        reforcar: temReforco,
+        maxTurns: VOLTAS_MEDIO,
+        escopo: "pontual",
+        motivo:
+          "conformidade PARCIAL com achado nomeado — falta pedaço localizado, não erro de" +
+          " entendimento: mantém o calibre e ataca o que foi apontado",
+      };
+    }
     return completoCaro("reprovado por CONFORMIDADE — erro de entendimento, calibre máximo");
   }
 

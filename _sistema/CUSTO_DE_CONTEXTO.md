@@ -388,6 +388,102 @@ graça). Sem a I3, ainda ajuda: o verificador gasta menos voltas descobrindo COM
 | I1+I2 | ~2,1 | ~0,60 | parcial — o que sobra depende da I3 ligada |
 | I1+I2+I3..I5 | ~1,5–1,8 | ~0,45–0,55 | núcleo pronto e testado, falta ligar |
 
+> **A projeção de US$ 0,45–0,55 por tarefa NÃO se confirmou. Medição de 2026-08-10, 9 dias
+> de uso real: US$ 12,17 por tarefa concluída** (94 despachos, 15 tarefas, US$ 182 nos jobs
+> do painel). Errou por 25×, e a seção 8 explica por quê — a I1–I5 resolveu de fato o
+> problema que media, e o custo migrou para dois lugares que este documento não modelava.
+
+---
+
+## 8. O que a medição de 2026-08-10 mostrou (e o que este documento errava)
+
+Nove dias, 156 sessões, transcripts reais (`~/.claude/projects/`) somados aos jobs do painel.
+
+**Primeiro: a I1–I5 funcionou.** O contexto por despacho caiu de 53,5k para **11–14k**, e
+ficou uniforme entre papéis. A hipótese central das seções 1–5 — "o agente recarrega o
+projeto a cada despacho" — foi resolvida e não é mais o gargalo. Nada abaixo contradiz isso.
+
+**Segundo: o custo migrou, e este documento estava medindo o lugar errado.**
+
+| onde | US$ (9 dias) | % |
+|---|---|---|
+| **3 sessões de chat do orquestrador** (Opus, 7–21 h cada) | **1.428** | **78%** |
+| pipeline da fábrica (todos os despachos de agente) | ~250 | 14% |
+| resto (153 sessões) | ~155 | 8% |
+
+As três sessões: 727/662/518 chamadas, contexto **médio** de 381k/364k/262k, máximo de 677k,
+**zero compactações**. Em `d817ec97`, o último quarto da sessão custou 110M de tokens contra
+29M do primeiro — 3,8× pelo mesmo trabalho.
+
+**A correção do modelo da seção 1.** A fórmula continua certa, mas a variável dominante
+mudou: com contexto de despacho pequeno, `N × c̄` deixa de ser governado por `c̄` (resolvido)
+e passa a ser governado por **N**, o número de voltas — e `N` cresce com o tamanho da
+SESSÃO, não com o do projeto. Numa sessão longa, `c̄` é o histórico da própria conversa.
+Daí a razão leitura/escrita ter ido a **38× no Opus** (638M lidos contra 16,6M escritos),
+quando a seção 1 media 12×. **Leitura passou a dominar a conta**, e a seção 1 conclui o
+contrário porque foi escrita quando o número era outro.
+
+**Consequência prática, em ordem de retorno:**
+
+1. **Sessão de chat longa é o item mais caro da fábrica, com folga.** `/clear` entre tarefas;
+   não deixar passar de ~150k. Nenhuma intervenção no pipeline chega perto disto.
+2. **O modelo do chat.** O painel já roda `modelo: sonnet, reforco: opus` — a política certa.
+   O chat orquestrador ficou fora dela e roda Opus em tudo, inclusive despacho e leitura de
+   status, que são trabalho de máquina de estados.
+3. **Dentro do pipeline (os 14%),** o gargalo são as VOLTAS por despacho, não o contexto:
+   idas ao modelo custam ao quadrado, e os estouros medidos (52 chamadas contra teto de 30)
+   estão na cauda cara. Ver os consertos de 10/08 na seção 9.
+
+**A lição metodológica, que vale mais que os números:** este documento mediu com precisão o
+que sabia medir (contexto por despacho, via `painel/dados/jobs/`) e ficou cego para 78% da
+conta, que morava fora do instrumento — nos transcripts do próprio chat. Ao otimizar custo,
+**meça a fatura inteira antes de escolher o alvo**; o alvo bem instrumentado tende a ser o
+que você já conhece, não o que mais custa.
+
+---
+
+## 9. Consertos de 2026-08-10 (pipeline)
+
+Todos nasceram de medição contra `dados/jobs/`, e todos têm teste.
+
+**1. A autocalibragem do orçamento media a coisa errada.**
+`motor.ts` chamava `registrarTarefaConcluida(orcamento, r.custoUsd)` no despacho do REVISOR —
+o custo da ETAPA, não o da TAREFA — e disparava também quando o revisor REPROVAVA. Medido no
+job `341ba362`: `custosObservados: [1,68]` enquanto a única tarefa da rodada tinha consumido
+US$ 7,06. Subestimativa de 4×, sempre para baixo, sempre no sentido de começar trabalho que
+não cabe. Hoje o gatilho é o status `concluida` e o número é o acumulado real de
+`custosPorTarefa`, que já existia desde a T-060. É de novo o padrão da Fase 4: o sinal certo,
+lido no lugar errado do laço.
+
+**2. Não havia teto POR TAREFA — e é isso que fazia a rodada fechar zerada.**
+O teto de job protege a fatura comparando o restante contra a média de tarefas CONCLUÍDAS;
+numa rodada sem nenhuma conclusão essa média nunca se forma. Resultado real: T-034 consumiu
+US$ 7,06 de um teto de US$ 8 (e US$ 12,40 em duas rodadas) sem concluir, com outras tarefas
+prontas esperando. `decidirTarefa` (`orcamento.ts`) dá a cada tarefa metade do teto do job;
+ao estourar, ela é **estacionada** — sai da rodada por `emCircuito`, sem mudar status, sem
+gastar `tentativas`, com o trabalho commitado — e a rodada segue nas outras.
+**Só na fronteira de ciclo** (construtor com `tentativas >= 1`): aplicar em qualquer passo
+estacionaria tarefa no verificador ou no revisor, jogando fora um ciclo pago a um passo de
+fechar. Há teste pelos dois lados — um que falha sem a trava, outro que falha se ela for
+aplicada larga demais.
+
+**3. `conformidade` não é uma coisa só.**
+`politicaDe` mandava toda reprovação de conformidade para a configuração mais cara que
+existe: reforça o modelo, escopo COMPLETO, sem teto de voltas. Na T-034 isso significou 34
+chamadas de ferramenta em `opus` para trocar **uma linha** de CSS — porque 3 dos 4 critérios
+estavam cumpridos e o quarto tinha um achado nomeado, com arquivo, linha e aritmética. Hoje
+`nao-cumpre` (entregou outra coisa) segue no caro; `cumpre-parcial` **com achado nomeado**
+mantém o calibre mas vira PONTUAL com teto de voltas — a mesma forma que o `defeito grave`
+já usava. Sem achado nomeado não há foco a dar, e volta ao caro.
+
+**4. Critério de UI parecia ser sempre julgamento.**
+A Fase 6 do banco-imobiliario saiu com **zero** `verificar:` em 27 critérios: "é visual" foi
+lido como "é julgamento", e a I5 inteira rodou a seco. Mas critério visual quase sempre se
+parte numa afirmação GEOMÉTRICA (mensurável) e uma ESTÉTICA (julgada). `captura.mjs` ganhou
+`--exigir="<expressão>"`, repetível, que sai com código 3 quando a expressão é falsa e grava
+o PNG mesmo assim — a parte objetiva sai de graça na passada mecânica, a subjetiva continua
+com o verificador, sobre o mesmo retrato. A doutrina foi para o `planejador`.
+
 **O que já está no ar hoje, sem depender de mais nada:** a I1 (MAPA), o
 `excludeDynamicSections`, a unificação de ferramentas dos especialistas e o **teto de custo
 com parada limpa** — este último não corta custo por tarefa, mas acaba com a classe de falha

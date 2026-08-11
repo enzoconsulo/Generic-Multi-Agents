@@ -168,6 +168,68 @@ export function registrarTarefaConcluida(
   return { ...estado, custosObservados: [...estado.custosObservados, custoUsd] };
 }
 
+/**
+ * TETO POR TAREFA — a trava que faltava, e a que responde à queixa real do usuário
+ * (10/08): "gastar 70% do limite e não entregar UMA tarefa".
+ *
+ * O teto de job é consultado só ENTRE etapas, contra a média de tarefas concluídas. Ele
+ * não vê nada quando UMA tarefa entra em vaivém de retrabalho e come o orçamento inteiro
+ * sozinha — que é exatamente o que aconteceu:
+ *
+ * | job        | tarefa | despachos | gasto     | concluiu? |
+ * |------------|--------|-----------|-----------|-----------|
+ * | `341ba362` | T-034  | 2         | US$ 7,06  | não       |
+ * | (2 rodadas)| T-034  | 5         | US$ 12,40 | não       |
+ *
+ * Nos dois casos o teto de US$ 8 fez o que prometia — parou limpo — e mesmo assim a rodada
+ * fechou com zero tarefa bancada, porque não havia com que comparar: `custosObservados`
+ * estava vazio ou continha um número pequeno demais (ver a correção do motor, que
+ * registrava o custo da ETAPA do revisor no lugar do custo da TAREFA).
+ *
+ * A regra: nenhuma tarefa sozinha pode consumir mais que esta fração do teto do job. Ao
+ * estourar, a tarefa é ESTACIONADA — não bloqueada, não cancelada: o trabalho dela já está
+ * commitado, e a rodada segue nas outras tarefas despacháveis. É a diferença entre "a
+ * rodada não entregou nada" e "a rodada entregou o que dava e deixou a difícil para depois".
+ *
+ * 0,5 e não menos: com teto de US$ 8 dá US$ 4, que cobre um ciclo completo com folga
+ * (média medida US$ 2,14) e ainda deixa metade do orçamento para as demais. Uma tarefa que
+ * passa disso não está trabalhando, está girando.
+ */
+export const FRACAO_TETO_POR_TAREFA = 0.5;
+
+export interface DecisaoTarefa {
+  /** A tarefa já gastou mais do que lhe cabe nesta rodada? */
+  estacionar: boolean;
+  /** Teto individual desta tarefa; `null` quando o job não tem teto. */
+  tetoTarefaUsd: number | null;
+  /** Frase pronta para o log. Vazia quando não estaciona. */
+  motivo: string;
+}
+
+/**
+ * Esta tarefa ainda pode receber outro despacho? Puro — quem chama aplica.
+ *
+ * `custoDaTarefaUsd` é o acumulado REAL da tarefa nesta rodada (todas as etapas, todos os
+ * ciclos), que o motor já mantém em `custosPorTarefa`.
+ */
+export function decidirTarefa(estado: EstadoOrcamento, custoDaTarefaUsd: number): DecisaoTarefa {
+  if (estado.tetoUsd === null) {
+    return { estacionar: false, tetoTarefaUsd: null, motivo: "" };
+  }
+  const tetoTarefaUsd = estado.tetoUsd * FRACAO_TETO_POR_TAREFA;
+  if (!Number.isFinite(custoDaTarefaUsd) || custoDaTarefaUsd < tetoTarefaUsd) {
+    return { estacionar: false, tetoTarefaUsd, motivo: "" };
+  }
+  return {
+    estacionar: true,
+    tetoTarefaUsd,
+    motivo:
+      `já consumiu US$ ${custoDaTarefaUsd.toFixed(2)} desta rodada, acima do teto individual` +
+      ` de US$ ${tetoTarefaUsd.toFixed(2)} (metade do teto do job). Estaciono a tarefa — o` +
+      " trabalho dela está commitado — e sigo nas outras, para a rodada não fechar zerada.",
+  };
+}
+
 /** Atualiza o gasto corrente. O runner chama a cada volta, com o acumulado do job. */
 export function comGasto(estado: EstadoOrcamento, gastoUsd: number): EstadoOrcamento {
   if (!Number.isFinite(gastoUsd) || gastoUsd < 0) return estado;

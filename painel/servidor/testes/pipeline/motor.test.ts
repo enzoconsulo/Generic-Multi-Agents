@@ -893,3 +893,31 @@ describe("contabilidade por tarefa (T-060)", () => {
     expect(rel.custoPorTarefa[0]?.concluiu).toBe(false);
   });
 });
+
+describe("autocalibragem do orçamento", () => {
+  /**
+   * O bug: `registrarTarefaConcluida` era chamado no despacho do REVISOR, com o custo da
+   * ETAPA. O orçamento passava a crer que uma tarefa custa o que custa um revisor — medido
+   * em `341ba362` como US$ 1,68 contra US$ 7,06 reais. Subestimativa sempre para baixo,
+   * sempre no sentido de começar trabalho que não cabe.
+   */
+  it("aprende o custo REAL da tarefa (todas as etapas), não o do último despacho", async () => {
+    const { dep } = mundo([tarefa({ id: "T-001", status: "pronta" })], { custoPorDespacho: 1 });
+    const rel = await rodarPipeline({ ...ctxBase, orcamento: novoOrcamento(50) }, dep);
+
+    expect(rel.tarefasConcluidas).toContain("T-001");
+    // Três etapas a US$ 1 = US$ 3 pela tarefa. O valor antigo teria sido US$ 1 (só o revisor).
+    expect(rel.orcamento.custosObservados).toEqual([3]);
+  });
+
+  /** Revisor que REPROVA não fecha tarefa nenhuma, e não pode alimentar a média. */
+  it("revisor que reprova não entra na autocalibragem", async () => {
+    const { dep } = mundo([tarefa({ id: "T-001", status: "em-revisao" })], {
+      custoPorDespacho: 1,
+      congelado: true,
+    });
+    const rel = await rodarPipeline({ ...ctxBase, orcamento: novoOrcamento(50) }, dep);
+
+    expect(rel.orcamento.custosObservados).toEqual([]);
+  });
+});

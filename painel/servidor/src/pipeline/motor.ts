@@ -36,6 +36,7 @@ import {
 import {
   comAgentesEmVoo,
   comGasto,
+  decidirTarefa,
   decidir,
   registrarTarefaConcluida,
   type EstadoOrcamento,
@@ -439,10 +440,32 @@ export async function rodarPipeline(
     const tarefas = await lerTarefas();
 
     // Tarefas que fecharam desde a última volta alimentam a autocalibragem do orçamento.
+    //
+    // A autocalibragem morava no lugar errado e media a coisa errada (achado de 10/08). Ela
+    // ficava no despacho do revisor — `registrarTarefaConcluida(orcamento, r.custoUsd)` — e
+    // isso errava DUAS vezes:
+    //
+    // 1. **Unidade errada.** `r.custoUsd` é o custo da ETAPA do revisor, não o da TAREFA. O
+    //    orçamento passava a acreditar que uma tarefa custa o que custa um revisor. Medido no
+    //    job `341ba362`: `custosObservados: [1.68]` enquanto a única tarefa da rodada (T-034)
+    //    tinha consumido US$ 7,06 — subestimativa de 4×, sempre para baixo, sempre no sentido
+    //    de começar trabalho que não cabe.
+    // 2. **Momento errado.** Disparava em TODO despacho de revisor, inclusive nos que
+    //    REPROVAM. Tarefa que voltou para o construtor entrava na média de "tarefas
+    //    concluídas".
+    //
+    // Aqui os dois se resolvem: o gatilho é o status `concluida` de verdade, e o número é o
+    // acumulado real da tarefa, que `custosPorTarefa` já mantém desde a T-060. A conta certa
+    // já existia no arquivo — só não era ela que alimentava a decisão. É o mesmo padrão que a
+    // Fase 4 registrou três vezes: o sinal certo, lido no lugar errado do laço.
     for (const t of tarefas) {
       if (t.status === "concluida" && !concluidasAntes.has(t.id)) {
         concluidasAntes.add(t.id);
-        if (volta > 0) rel.tarefasConcluidas.push(t.id);
+        if (volta > 0) {
+          rel.tarefasConcluidas.push(t.id);
+          const real = custosPorTarefa.get(t.id)?.custoUsd ?? 0;
+          if (real > 0) orcamento = registrarTarefaConcluida(orcamento, real);
+        }
       }
     }
 
@@ -712,6 +735,32 @@ export async function rodarPipeline(
       break;
     }
 
+    // TETO POR TAREFA. O `decidir` acima protege o JOB; esta trava protege a RODADA de ser
+    // monopolizada por uma tarefa só. Sem ela o teto de job faz seu trabalho e a rodada
+    // ainda fecha zerada — foi o que aconteceu duas vezes seguidas com a T-034 (US$ 7,06 e
+    // depois US$ 12,40 acumulados, nenhuma tarefa bancada), e é a queixa literal do usuário.
+    //
+    // Estacionar não é bloquear: o status não muda, `tentativas` não é gasta, o trabalho
+    // segue commitado. A tarefa só sai desta RODADA, e o próximo `/trabalhar` a retoma com
+    // o orçamento inteiro. Sai por `emCircuito` — o mesmo caminho do agente cortado — para
+    // o laço não reescolher a mesma tarefa e girar até `MAX_VOLTAS`.
+    //
+    // SÓ NA FRONTEIRA DE CICLO, e isto é o que torna a trava segura: ela vale apenas quando
+    // o próximo passo seria COMEÇAR mais um retrabalho (construtor com `tentativas >= 1`).
+    // Aplicá-la em qualquer passo estacionaria tarefa no verificador ou no revisor — jogando
+    // fora um ciclo já pago a um passo de fechar, que é o oposto do objetivo. É a mesma
+    // doutrina do `decidir` acima, um nível abaixo: nunca cortar no meio, só não COMEÇAR o
+    // que não cabe. Primeiro ciclo nunca é estacionado; quem gira é que paga.
+    const iniciandoRetrabalho = passo.papel === "construtor" && passo.tarefa.tentativas >= 1;
+    const gastoDaTarefa = custosPorTarefa.get(passo.tarefa.id)?.custoUsd ?? 0;
+    const dt = decidirTarefa(orcamento, iniciandoRetrabalho ? gastoDaTarefa : 0);
+    if (dt.estacionar) {
+      dep.log("erro", `${passo.tarefa.id} estacionada: ${dt.motivo}`);
+      rel.impedimentos.push({ tarefa: passo.tarefa.id, motivo: dt.motivo });
+      emCircuito.add(passo.tarefa.id);
+      continue;
+    }
+
     // DIAGNÓSTICO DO RETRABALHO. Só para o construtor, e só quando há reprovação: é o que
     // decide se esta etapa é uma construção de novo (calibre máximo) ou um conserto nomeado
     // (barato e estreito). O portão que reprovou foi OBSERVADO nesta rodada; tarefa herdada
@@ -824,7 +873,8 @@ export async function rodarPipeline(
       });
     }
     orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
-    if (passo.papel === "revisor") orcamento = registrarTarefaConcluida(orcamento, r.custoUsd);
+    // A autocalibragem NÃO é alimentada aqui — ver o topo do laço. O revisor aprovar é o
+    // último passo, não a prova de que a tarefa fechou, e o custo dele não é o da tarefa.
 
     // CONTABILIDADE POR TAREFA (T-060). O rótulo "retrabalho" sai de `tentativas` COMO ERA no
     // momento do despacho — fato observado, não estimativa feita depois. Contabiliza mesmo

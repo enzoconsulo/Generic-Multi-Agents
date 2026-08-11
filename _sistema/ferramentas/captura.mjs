@@ -24,6 +24,24 @@
  * houver algum. O PNG prova que a tela PINTOU; não prova que ela FUNCIONA — um TypeError
  * num handler de clique não muda um pixel. Para varrer telas em lote, é o que dá veredito
  * sem precisar olhar imagem por imagem.
+ *
+ * `--exigir="<expressão>"` AFIRMA algo sobre a página e sai com código 3 se a expressão for
+ * falsa. Pode repetir quantas vezes quiser — todas rodam na MESMA subida de navegador, e o
+ * código de saída é o veredito do conjunto:
+ *   --exigir="getComputedStyle(document.querySelector('.botao')).height >= '44px'"
+ *   --exigir="document.querySelector('.modal').getBoundingClientRect().top > innerHeight*0.4"
+ *
+ * POR QUE EXISTE (medido em 10/08). Critério de UI parecia ser sempre "julgamento", então
+ * ia inteiro para o verificador: na T-034, 4 dos 5 critérios saíram `[julgado]` e o testador
+ * refez do zero o mesmo ritual do executor — subir servidor, forçar a jogada por socket,
+ * dirigir o navegador — para remedir números que o executor já tinha medido. Duas contas
+ * caras para a mesma pergunta.
+ *
+ * Mas critério visual quase nunca é uma coisa só: "o modal fica ancorado na base e não cobre
+ * o tabuleiro" tem uma parte GEOMÉTRICA (mensurável, objetiva) e uma parte ESTÉTICA (ficou
+ * bom?). A geométrica é exatamente o que `--exigir` responde de graça, na passada mecânica,
+ * antes de gastar despacho. A estética continua com o verificador, olhando o PNG — que esta
+ * mesma execução já gravou.
  */
 
 import { spawn } from "node:child_process";
@@ -59,6 +77,15 @@ const largura = arg("largura", 1400);
 const porta = arg("porta", 9333);
 /** `--console`: também reporta erros/avisos da página e falhas de rede. */
 const verConsole = process.argv.includes("--console");
+/**
+ * `--exigir=...` repetido: TODAS as afirmações desta captura. `argTexto` pega só a primeira
+ * ocorrência, e aqui a repetição é o ponto — uma subida de navegador tem de conseguir
+ * responder a todos os critérios geométricos da tarefa, senão cada asserção custa um
+ * servidor + um navegador de novo, que é justamente o desperdício que isto ataca.
+ */
+const exigencias = process.argv
+  .filter((a) => a.startsWith("--exigir="))
+  .map((a) => a.slice("--exigir=".length));
 
 const navegador = NAVEGADORES.find((p) => existsSync(p));
 if (!navegador) {
@@ -200,6 +227,40 @@ try {
       for (const p of unicos.slice(0, 30)) console.log(`  - ${p.slice(0, 300)}`);
       // Sai != 0 para o chamador poder falhar um sweep de telas sem ler PNG por PNG.
       process.exitCode = 2;
+    }
+  }
+
+  // AFIRMAÇÕES. Rodam DEPOIS de o PNG estar no disco, de propósito: uma exigência que falha
+  // é exatamente quando a evidência visual mais importa — o verificador precisa do retrato
+  // para julgar o que a expressão não alcança. Falhar antes de gravar deixaria o portão sem
+  // o que olhar.
+  if (exigencias.length > 0) {
+    let reprovadas = 0;
+    for (const expr of exigencias) {
+      let veredito;
+      try {
+        const r = await Promise.race([
+          cmd("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }),
+          dorme(15000).then(() => "estourou"),
+        ]);
+        if (r === "estourou") veredito = { ok: false, nota: "não terminou em 15s" };
+        else if (r?.exceptionDetails)
+          veredito = { ok: false, nota: `erro: ${r.exceptionDetails.text ?? "expressão inválida"}` };
+        else {
+          const v = r?.result?.value;
+          // Truthy decide. O valor vai junto no log porque "falso" sem o número medido não
+          // diz ao construtor o que consertar — e é ele quem lê isto no relatório.
+          veredito = { ok: Boolean(v), nota: `valor: ${JSON.stringify(v) ?? "undefined"}` };
+        }
+      } catch (e) {
+        veredito = { ok: false, nota: `erro: ${e?.message ?? e}` };
+      }
+      if (!veredito.ok) reprovadas += 1;
+      console.log(`exigir[${veredito.ok ? "ok" : "FALHOU"}]: ${expr}  → ${veredito.nota}`);
+    }
+    if (reprovadas > 0) {
+      console.log(`exigir: ${reprovadas} de ${exigencias.length} afirmação(ões) falharam`);
+      process.exitCode = 3;
     }
   }
 } catch (erro) {

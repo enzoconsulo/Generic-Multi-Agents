@@ -72,6 +72,23 @@ contrato. Peça de uma vez:
      um `grep` que acha a string no bundle não prova que a tela ficou boa (isso já deu
      tarefa dada por pronta duas vezes nesta fábrica). Critério de julgamento fica SEM
      comando, de propósito, e é o verificador que decide;
+   - **critério de UI quase sempre se PARTE em dois, e a metade mensurável tem comando.**
+     Esta é a regra que mais economiza, e a que vinha sendo perdida: a Fase 6 inteira do
+     banco-imobiliario (T-034 a T-041) saiu com **zero** `verificar:` em 27 critérios, porque
+     "é visual" foi lido como "é julgamento". Não é. "O modal fica ancorado na base e não
+     cobre o tabuleiro" contém uma afirmação GEOMÉTRICA (objetiva, mensurável) e uma
+     ESTÉTICA (ficou bom?). Separe-as: a geométrica vira `verificar:` com
+     `` --exigir="<expressão booleana>" `` no `captura.mjs`, que sai != 0 quando a expressão
+     é falsa; a estética fica sem comando, e o verificador julga sobre o MESMO PNG que essa
+     execução já gravou. Repita `--exigir` para afirmar várias coisas numa subida só de
+     navegador:
+     ```
+     `verificar: node _sistema/ferramentas/captura.mjs http://localhost:3000/ _gestao/evidencias/T-0NN-mobile.png --largura=390 --altura=844 --exigir="parseFloat(getComputedStyle(document.querySelector('.botao')).height) >= 44" --exigir="document.querySelector('.modal').getBoundingClientRect().top > innerHeight*0.4"`
+     ```
+     O que isso evita, medido na T-034: 4 dos 5 critérios foram para `[julgado]` e o testador
+     refez do zero o ritual inteiro do executor — subir servidor, forçar a jogada, dirigir o
+     navegador — só para remedir números que o executor já tinha medido e escrito nas Notas.
+     Duas contas caras para a mesma pergunta, uma delas evitável de graça;
    - **nunca escreva "a suíte continua passando" como critério executável, e nunca invente o
      comando de cabeça.** A suíte do projeto já roda em TODA verificação, sozinha, com o
      comando do ecossistema — escrevê-la à mão não acrescenta verificação e cria uma segunda
