@@ -39,9 +39,20 @@
  *
  * Mas critério visual quase nunca é uma coisa só: "o modal fica ancorado na base e não cobre
  * o tabuleiro" tem uma parte GEOMÉTRICA (mensurável, objetiva) e uma parte ESTÉTICA (ficou
- * bom?). A geométrica é exatamente o que `--exigir` responde de graça, na passada mecânica,
- * antes de gastar despacho. A estética continua com o verificador, olhando o PNG — que esta
- * mesma execução já gravou.
+ * bom?). A geométrica é exatamente o que `--exigir` responde, antes de gastar despacho. A
+ * estética continua com o verificador, olhando o PNG — que esta mesma execução já gravou.
+ *
+ * ATENÇÃO — `--exigir` NÃO serve para escrever `verificar:` direto na tarefa, e achar que
+ * servia foi um erro que durou um dia (11/08). Dois motivos, cada um fatal sozinho:
+ *   1. a passada mecânica (`pipeline/criterios.ts`) recusa comando que contenha `< > ; | & $`
+ *      ou crase, e afirmação geométrica é feita de `<=`/`>=` — o comando é REJEITADO antes
+ *      de rodar, não executado;
+ *   2. este script NÃO sobe servidor. Um `verificar:` apontado para `localhost:3000` numa
+ *      passada mecânica bate em porta morta e vira reprovação falsa.
+ * Em `verificar:`, use uma CENA nomeada versionada no projeto
+ * (`node ferramentas/cenario.mjs --cena=<nome>`), que sobe o servidor, monta o estado e
+ * chama este script por dentro, com as expressões no código. `--exigir` continua valendo
+ * — e é ótimo — quando um agente ou uma pessoa roda a captura à mão.
  */
 
 import { spawn } from "node:child_process";

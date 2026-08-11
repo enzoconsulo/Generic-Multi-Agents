@@ -77,14 +77,25 @@ contrato. Peça de uma vez:
      banco-imobiliario (T-034 a T-041) saiu com **zero** `verificar:` em 27 critérios, porque
      "é visual" foi lido como "é julgamento". Não é. "O modal fica ancorado na base e não
      cobre o tabuleiro" contém uma afirmação GEOMÉTRICA (objetiva, mensurável) e uma
-     ESTÉTICA (ficou bom?). Separe-as: a geométrica vira `verificar:` com
-     `` --exigir="<expressão booleana>" `` no `captura.mjs`, que sai != 0 quando a expressão
-     é falsa; a estética fica sem comando, e o verificador julga sobre o MESMO PNG que essa
-     execução já gravou. Repita `--exigir` para afirmar várias coisas numa subida só de
-     navegador:
+     ESTÉTICA (ficou bom?). A geométrica pode ser medida de graça na passada mecânica; a
+     estética fica sem comando, e o verificador julga sobre o PNG.
+     **Mas o comando não pode ser a expressão.** A passada mecânica roda com `execFile`,
+     allowlist de binário e **recusa qualquer comando com `<`, `>`, `;`, `|`, `&`, `` ` ``
+     ou `$`** — e afirmação geométrica é toda feita de `<=` e `>=`. Um
+     `verificar: ... --exigir="a.scrollWidth <= a.clientWidth"` é REJEITADO antes de rodar
+     (`encadeamento-proibido`), não executado. Some-se a isso que o `captura.mjs` **não sobe
+     servidor**: apontar um `verificar:` para `localhost:3000` numa passada mecânica bate em
+     porta morta e vira reprovação falsa — o desperdício mais caro do sistema.
+     **A forma que FUNCIONA é uma cena nomeada, versionada no projeto**, que sobe o servidor,
+     monta o estado (sala, jogada forçada, modal aberto), captura e afirma — com as
+     expressões dentro do script, onde elas passam pelo revisor como código:
      ```
-     `verificar: node _sistema/ferramentas/captura.mjs http://localhost:3000/ _gestao/evidencias/T-0NN-mobile.png --largura=390 --altura=844 --exigir="parseFloat(getComputedStyle(document.querySelector('.botao')).height) >= 44" --exigir="document.querySelector('.modal').getBoundingClientRect().top > innerHeight*0.4"`
+     `verificar: node ferramentas/cenario.mjs --cena=tabuleiro-cabe-390`
      ```
+     Sem metacaractere nenhum, um binário só, sai != 0 quando a cena falha. Se o projeto
+     ainda não tem essa ferramenta, **planeje-a como tarefa** (é fundação, no espírito da
+     T-001) antes de prometer `verificar:` em critério de UI — e, até ela existir, escreva
+     o critério como julgamento honesto em vez de um comando que não roda.
      O que isso evita, medido na T-034: 4 dos 5 critérios foram para `[julgado]` e o testador
      refez do zero o ritual inteiro do executor — subir servidor, forçar a jogada, dirigir o
      navegador — só para remedir números que o executor já tinha medido e escrito nas Notas.
