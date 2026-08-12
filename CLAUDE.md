@@ -36,7 +36,8 @@ Gerador_de_projetos/
 │   ├── PROTOCOLO_TAREFAS.md ← formato e ciclo de vida das tarefas (LEIA antes de mexer em tarefas)
 │   ├── BIBLIOTECAS.md       ← doutrina da trilha SOFTWARE: scaffold oficial > lib madura > código próprio
 │   ├── DOMINIOS.md          ← doutrina da trilha GENÉRICA (não-software): artefato + verificador
-│   ├── CUSTO_DE_CONTEXTO.md ← por que 80-90% da conta é contexto, e o que corta (leia antes de "otimizar")
+│   ├── CUSTO_DE_CONTEXTO.md ← modelo de custo medido (seção 8 é a que vale hoje)
+│   ├── DECISOES_FECHADAS.md ← perguntas já respondidas que custaram sessão: NÃO REABRIR sem fato novo
 │   ├── ferramentas/         ← captura.mjs: PNG de tela via Edge/Chrome (prova visual dos agentes)
 │   │                          mapa.mjs: gera _gestao/MAPA.md, o índice denso do projeto
 │   ├── templates/           ← modelos de tarefa, especificação, plano e docs de projeto
@@ -331,15 +332,91 @@ defeito de planejamento que só aparece se alguém escrever.
 
 ## Disciplina de contexto (desempenho)
 
-**Medido: 80-90% da conta de cada job é contexto, não produção** — os agentes recarregavam
-quase o projeto inteiro a cada despacho, pagando preço de ESCRITA de cache (17,5× o da
-leitura). O antídoto é `_gestao/MAPA.md`: índice gerado por `_sistema/ferramentas/mapa.mjs`
-(determinístico, sem modelo, ~5% do tamanho do fonte) com árvore + assinatura e propósito
-de cada símbolo público. Os agentes o leem na abertura e só abrem na íntegra o que vão
-mudar. Sua parte: **garantir que ele exista e esteja fresco** — /trabalhar regenera na
-preparação, executor e construtor regeneram ao commitar. Mapa velho desorienta todo mundo e
-é pior que mapa nenhum. Modelo de custo e as próximas intervenções (I2–I5):
-`_sistema/CUSTO_DE_CONTEXTO.md`.
+### ESTA SESSÃO é o item mais caro da fábrica — leia isto antes de otimizar qualquer coisa
+
+Medição de 9 dias, 156 sessões, transcripts reais (2026-08-10):
+
+| onde | US$ | % |
+|---|---|---|
+| **3 sessões de chat do orquestrador** (Opus, 7–21 h cada) | **1.428** | **78%** |
+| pipeline inteiro (todos os despachos de agente) | ~250 | 14% |
+| resto (153 sessões) | ~155 | 8% |
+
+Contexto médio de 381k, máximo de 677k, **zero compactações**. Numa delas o último quarto
+custou 3,8× o primeiro pelo MESMO trabalho — a conta de uma sessão cresce ao quadrado,
+porque cada volta relê tudo que veio antes.
+
+**O contexto por despacho já foi resolvido** (53,5k → 11–14k, uniforme entre papéis): o
+`_gestao/MAPA.md` e a otimização do despachante fizeram o trabalho e **não são mais o
+gargalo**. Quem otimiza o pipeline hoje está mexendo em 14% da conta. Consequências, em
+ordem de retorno — e as duas primeiras são do USUÁRIO, não suas:
+
+1. **`/clear` entre tarefas; não deixe a sessão passar de ~150k.** Nenhuma intervenção no
+   pipeline chega perto disto. Se você perceber a sessão longa, **diga isso a ele** em vez
+   de seguir calado — é a única forma de o item nº 1 virar ação.
+2. **Modelo do chat.** O painel roda `sonnet` com escalada para `opus`, que é a política
+   certa. Este chat roda Opus em tudo, inclusive ler status e despachar — trabalho de
+   máquina de estados. Trocar é `/model`, e é decisão dele.
+3. Dentro dos 14%, o gargalo são as VOLTAS por despacho (idas ao modelo custam ao
+   quadrado), não o contexto.
+
+**Lição metodológica que essa medição deixou:** o documento de custo mediu com precisão o
+que sabia medir (contexto por despacho, via `painel/dados/jobs/`) e ficou cego para 78% da
+conta, que morava nos transcripts do próprio chat. **Meça a fatura inteira antes de escolher
+o alvo** — o alvo bem instrumentado tende a ser o que você já conhece, não o que mais custa.
+Detalhe completo: `_sistema/CUSTO_DE_CONTEXTO.md`, seção 8.
+
+**Quatro regras de custo que nasceram de estrago real** (as demais, e as perguntas já
+fechadas que não devem ser reabertas, estão em `_sistema/DECISOES_FECHADAS.md` — leia ANTES
+de propor otimização, para não pagar duas vezes pela mesma resposta):
+
+- **Já foram queimados R$ 550 numa noite em Fable/xhigh.** Execução real de fluxo roda em
+  Haiku ou Sonnet; **nunca Fable/xhigh sem o usuário pedir.**
+- **No painel não existe disparo "a seco":** `POST /api/acoes/:id` JÁ EXECUTA. Diga a
+  estimativa ANTES de gastar.
+- **Antes de PAGAR para medir, procure a evidência que já está em disco** —
+  `painel/dados/jobs/*.json` e `*.log.jsonl`, os arquivos de `_gestao/`, os logs. A leitura
+  inteira da rodada `0345125c` saiu daí sem gastar um centavo de modelo.
+- **Não desperdice despacho de subagente:** cada sessão nova é um prefixo novo para
+  ESCREVER no cache, e escrita custa muito mais que leitura.
+
+### O defeito recorrente desta fábrica: sensor sem atuador
+
+Sete defeitos dos últimos dias, todos com a MESMA forma — o sinal certo existia e ninguém
+agia sobre ele:
+
+| mecanismo | o sinal existia | o que acontecia |
+|---|---|---|
+| `tentativas` (T-063) | escrito pelo agente | confiado cegamente |
+| `ehLimiteDeUso()` (T-064) | exportado desde a T-045 | o motor adivinhava por sequência de falhas |
+| `alcancaPainel` (T-066) | a caminhada da cadeia existia | um gate de 1 nível barrava antes dela |
+| autocalibragem do orçamento | `custosPorTarefa` tinha o número | usava-se o custo da ETAPA do revisor |
+| recuperação por árvore git | existe e é testada | não disparou na T-035 (US$ 2,13 perdidos) |
+| `captura.mjs --exigir` | construído, testado, documentado | inutilizável no caminho real |
+
+Não são seis bugs distintos: **a fábrica constrói sensores mais rápido do que os liga a
+atuadores.** Ao propor conserto, a primeira pergunta é "o sinal já existe e está sendo
+lido no lugar errado?" — na maioria das vezes, sim, e aí o conserto é de uma linha.
+
+**Um caso que PARECE desta família e não é — não o "conserte":** o orçamento de ferramentas
+(T-065) mede o estouro e não corta, **de propósito**, e a razão está escrita em
+`despachante.ts`: cortar exigiria converter chamadas em voltas, e despacho interrompido no
+meio custa igual sem entregar nada (US$ 4,11 medidos num corte por cota, T-064). É a mesma
+doutrina do teto de orçamento — nunca cortar no meio, só não COMEÇAR o que não cabe. A
+lacuna real ali é outra: a medição não alimenta decisão NENHUMA (nem escalonamento, nem
+replanejamento, nem estimativa do próximo despacho). Antes de chamar mecanismo de defeito,
+leia o comentário: nesta fábrica quase todo "faltou" foi decidido, e o registro diz por quê.
+Corolário: **ao terminar um mecanismo, tente USÁ-LO pelo caminho real antes de dar por
+pronto.** O `--exigir` tinha teste, documentação e um agente o havia usado com sucesso —
+e ainda assim era rejeitado pela passada mecânica, o único caminho para o qual foi feito.
+
+### Contexto por despacho (resolvido, mantenha assim)
+
+`_gestao/MAPA.md` é o índice gerado por `_sistema/ferramentas/mapa.mjs` (determinístico, sem
+modelo, ~5% do tamanho do fonte) com árvore + assinatura e propósito de cada símbolo
+público. Os agentes o leem na abertura e só abrem na íntegra o que vão mudar. Sua parte:
+**garantir que ele exista e esteja fresco** — /trabalhar regenera na preparação, executor e
+construtor regeneram ao commitar. Mapa velho desorienta todo mundo e é pior que mapa nenhum.
 
 O que sustenta sessões longas de /trabalhar é o SEU contexto limpo. Regras:
 

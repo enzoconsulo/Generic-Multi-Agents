@@ -1,131 +1,144 @@
-Continuar o trabalho na fábrica Gerador_de_projetos.
-Handoff reescrito em 2026-07-30, no encerramento do dia.
+TRABALHO PENDENTE DA FÁBRICA — escrito em 2026-08-11, para ser executado quando a cota
+estiver folgada. Este arquivo é AUTOSSUFICIENTE: você não precisa de nenhuma conversa
+anterior, só dele e dos arquivos que ele aponta.
 
-=== SITUE-SE PRIMEIRO (ritual de início) ===
-Leia, nesta ordem:
-    1. _sistema/logs/2026-07-30.md   (a sessão anterior — comece aqui; o fim do arquivo
-                                      tem a seção "Amanhã")
-    2. _sistema/logs/2026-07-29.md   (análise de custo e cache; o raciocínio completo)
-    3. painel/CLAUDE.md              (seção "Armadilhas conhecidas" — cada uma custou uma sessão)
-Scan de status: um Grep de ^status: em projetos/*/_gestao/tarefas/*.md resolve.
+Enzo vai te dizer só "roda o proximo_prompt.txt". Isso significa: execute os itens abaixo
+NA ORDEM, um de cada vez, e pare quando o item terminar (não emende três de uma vez).
 
-Rodar:   cd painel && npm start  →  http://127.0.0.1:8765   (ou INICIAR.bat na raiz)
-Testes:  cd painel && npm test  →  501 verdes (393 servidor + 108 web)
-         DERRUBE O PAINEL ANTES — painel no ar atrapalha a suíte.
+Este arquivo é ROTATIVO — ele diz o que fazer AGORA e é reescrito a cada handoff. Regra,
+armadilha e decisão fechada NÃO moram aqui (a versão anterior guardava as duas coisas
+misturadas, e reescrever o handoff quase apagou conhecimento que custou sessões). Elas
+moram em: `CLAUDE.md` (constituição), `_sistema/DECISOES_FECHADAS.md` (o que já foi
+respondido e não se reabre sem fato novo) e `painel/CLAUDE.md` (armadilhas técnicas do
+cockpit). **Leia `_sistema/DECISOES_FECHADAS.md` antes de propor qualquer otimização.**
 
+═══════════════════════════════════════════════════════════════════════════════
+ANTES DE COMEÇAR — três coisas que mudam o resultado
+═══════════════════════════════════════════════════════════════════════════════
 
-=================================================================
-ESTADO EM QUE PAREI
-=================================================================
-- projetos/ia-hibrida-limpa: COMPLETO E CONSISTENTE. T-001..T-006 `concluida`, os três
-  marcos de fase aprovados, README/how_to_use/CLAUDE.md conferidos contra o código.
-  Submódulo Local_AI em dia com o remoto. Nenhuma tarefa `pronta` ou `backlog`.
-- _sistema/ideias/: nenhuma ideia `nova` aguardando roteamento.
-- painel: 501 testes verdes. Árvores git limpas nos TRÊS repositórios (fábrica, projeto,
-  submódulo).
-- Não sobrou dívida técnica conhecida. A última (contabilidade de tokens multi-sessão)
-  fechou hoje — ver abaixo.
+1. ESTA SESSÃO é o item mais caro da fábrica (78% da conta de 9 dias, contra 14% do
+   pipeline inteiro). Faça UM item, entregue, e peça a ele para dar /clear antes do
+   próximo. Não tente varrer os três numa sessão só — a conta de uma sessão cresce ao
+   quadrado. Detalhe: CLAUDE.md, seção "Disciplina de contexto".
 
+2. Os itens 1 e 2 são no PAINEL, que é mantido À MÃO pelo orquestrador (fica fora do
+   pipeline executor/testador/revisor). Você mesmo edita. Rode `cd painel && npm test`
+   antes de commitar — a suíte inteira é ~5 min (809 servidor + 162 web na última
+   medição, zero falha). Commite na raiz com prefixo `painel:`.
 
-=================================================================
-A FÁBRICA ESTÁ SEM TRABALHO — É ISSO QUE PRECISA DE DECISÃO
-=================================================================
-Um /trabalhar amanhã não teria o que fazer. A primeira coisa é ESCOLHER trabalho novo.
-Opções, na ordem que eu faria — PERGUNTE, nenhuma é óbvia o bastante para decidir sozinho:
+3. O item 3 é uma rodada do pipeline, que Enzo dispara PELO PAINEL. Se em vez disso você
+   for despachar agente daqui, passe `run_in_background: false` em TODO despacho e espere
+   — segundo plano é o padrão da ferramenta e já destruiu trabalho de agente duas vezes
+   nesta fábrica (CLAUDE.md, regra de ouro 7).
 
-  a) NOVA IDEIA (/ideia) ou /novo-projeto. É o caminho natural: o usuário dá a ideia bruta
-     e o planejador transforma em especificação, plano e tarefas.
-  b) PUBLICAR ia-hibrida-limpa no GitHub (aba Git do painel: remoto, varredura de
-     segurança, push). Já é viável — o submódulo foi enviado em 30/07. Irreversível →
-     confirmar antes.
-  c) TAREFA REGISTRADA E NÃO EXECUTADA: o restante do how_to_use.md do Estúdio (fluxo
-     antigo v5.0/RunPod) segue desatualizado; só a seção "Anúncio Shopee" foi reescrita.
-     Vira tarefa se o usuário priorizar.
+ESTADO DA FÁBRICA (2026-08-11, confira antes de agir — pode ter mudado):
+- ia-hibrida-limpa: T-001 a T-006 concluídas, nada aberto.
+- banco-imobiliario: T-034 concluída. T-035 em-teste (tentativas 1). T-036, T-037, T-039,
+  T-040, T-041 e T-043 prontas. T-038 e T-042 em backlog.
+- Última rodada: job `0345125c` — 5 despachos, US$ 6,58, T-034 concluída, encerrada pelo
+  teto de custo. Leitura completa em `_sistema/logs/2026-08-11.md`.
 
+═══════════════════════════════════════════════════════════════════════════════
+ITEM 1 — o orçamento de ferramentas mede e não alimenta decisão nenhuma
+═══════════════════════════════════════════════════════════════════════════════
+(maior retorno dos três; é análise + código no painel)
 
-=================================================================
-FECHADO EM 30/07 — NÃO REABRIR
-=================================================================
-- CONTABILIDADE DE TOKENS MULTI-SESSÃO: `modelUsage` é CUMULATIVO POR JOB. Sobrescrever
-  está certo, NÃO há subcontagem. O "platô idêntico nos sete últimos result" tinha
-  explicação boba: eles saíram numa janela de 2 ms (descarregados juntos no fim) e leram um
-  ACUMULADOR VIVO já final, enquanto total_cost_usd é escalar copiado por mensagem. Prova
-  aritmética: a soma de costUSD do modelUsage bate com o total_cost_usd até a 9ª casa nos
-  quatro jobs com telemetria. Há guarda no runner que avisa na tela se um SDK futuro mudar
-  a semântica — e teste travando que a conferência só vale com os valores FINAIS (conferir
-  a cada result dá falso positivo em toda rodada multi-sessão saudável).
-- SUBMÓDULO Local_AI: os 26 commits foram enviados (3d76584..4c91f38). Clone funciona.
-- "Otimizar o cache de contexto": prompt caching JÁ está ligado e bem configurado. O SDK
-  NÃO expõe cache_control nem TTL (conferido no sdk.d.ts da versão pinada 0.3.217).
-  Cachear em arquivo NÃO ajuda — o custo é por token NA REQUISIÇÃO, não por leitura de
-  disco. Detalhe completo no log de 29/07.
-- "Mexer no effort para economizar": effort mexe na GERAÇÃO (~16% da conta). Contexto
-  relido é ~65x a saída. Está otimizando a parte pequena.
-- getContextUsage(): NÃO FAZER. Mede tamanho de prefixo (22% da conta); o driver de 61%
-  (número de sessões) já ficou visível de graça no T-047. Exige mudar o tipo `Consulta` do
-  runner, que a suíte inteira usa para falsear o SDK. Reabrir SÓ SE tamanho de prefixo
-  virar o gargalo medido.
-- /status pago duplica ~70% do que o painel calcula de graça em 15 ms. DECISÃO DO USUÁRIO:
-  fica como está — não vale trocar julgamento da IA por US$ 0,29.
+O FATO: na rodada `0345125c`, 3 dos 5 despachos estouraram o teto declarado de chamadas de
+ferramenta — testador 30 de 25, revisor 28 de 20, executor-reforcado 31 de 30. Nas rodadas
+de 10/08 houve estouro de 52 contra 30. Idas ao modelo custam AO QUADRADO, então a cauda de
+estouro é onde o dinheiro do pipeline queima.
 
-LEVERS REAIS DE CUSTO, em ordem (medidos):
-  1. não desperdiçar despacho de subagente — cada sessão nova é um prefixo novo para
-     ESCREVER no cache, e escrita é 61% da conta (1,25x contra 0,1x da leitura)
-  2. número de turnos
-  3. tamanho do prefixo
+NÃO "conserte" fazendo o motor cortar o despacho no meio. Isso já foi decidido e a razão
+está escrita em `painel/servidor/src/pipeline/despachante.ts`, no comentário de
+`orcamentoDeFerramentas` (~linha 56): cortar exigiria converter chamadas em voltas, e
+despacho interrompido no meio custa igual sem entregar nada (US$ 4,11 medidos num corte por
+cota). É a mesma doutrina do teto de orçamento — nunca cortar no meio, só não COMEÇAR o que
+não cabe. Se você reescrever isso, vai estar desfazendo uma decisão sem ler o motivo.
 
+O QUE FALTA DE VERDADE: a medição não alimenta NENHUMA decisão. `estouros` entra no
+relatório e morre ali — não influencia escalonamento de modelo, não influencia
+replanejamento, não influencia a estimativa do próximo despacho. Um agente que estourou o
+teto estava se debatendo, e debater-se REPETE.
 
-=================================================================
-PAINEL — pontas soltas conhecidas, nenhuma urgente
-=================================================================
-- /api/jobs devolve ~135 KB na carga inicial e cresce; ~88% é `params` e `resultado` que a
-  LISTA não desenha. NÃO é gargalo (9 ms em loopback) e a poda do T-045 limita em 400 jobs.
-  Só mexa se a tela de Jobs pesar de verdade.
-- Verificação visual no navegador: a lógica é testada, o VISUAL não. Use
-  `node ferramentas/captura.mjs <url> saida.png --espera=3000` (dirige o Edge/Chrome via
-  DevTools Protocol, e o PNG pode ser LIDO). Tarefa de UI só vai para `concluida` depois de
-  capturar e olhar.
+O QUE FAZER: investigue e proponha o atuador consistente com a doutrina (agir ANTES de
+começar, nunca no meio). Landmarks:
+- `painel/servidor/src/pipeline/despachante.ts` — `orcamentoDeFerramentas`, e o ponto onde
+  `chamadas`/`orcadoFerramentas` são devolvidos (~linha 349).
+- `painel/servidor/src/pipeline/motor.ts` — onde `estouros` é preenchido (~linha 867) e
+  onde a política do retrabalho é decidida (a chamada a `politicaDe`).
+- `painel/servidor/src/pipeline/diagnostico.ts` — `politicaDe`, que já escolhe modelo,
+  `maxTurns` e escopo por natureza da reprovação. É o lugar natural para o sinal entrar.
+- `painel/servidor/src/pipeline/orcamento.ts` — `decidir`/`decidirTarefa`, a doutrina de
+  "não começar o que não cabe" já implementada; siga a mesma forma (função pura + teste).
+Traga a proposta ANTES de implementar se ela mudar comportamento de despacho.
 
+═══════════════════════════════════════════════════════════════════════════════
+ITEM 2 — por que a recuperação por árvore git não pegou na T-035
+═══════════════════════════════════════════════════════════════════════════════
+(investigação; provavelmente conserto pequeno)
 
-=================================================================
-REGRAS QUE NÃO PODEM SER ESQUECIDAS
-=================================================================
-CUSTO: já foram queimados R$550 numa noite em Fable/xhigh.
-  - Construa DIRETO você mesmo (orquestrador) quando der; o pipeline de agentes é caro.
-  - Execução real de fluxo: Haiku ou Sonnet. NUNCA Fable/xhigh sem o usuário pedir. Se a
-    sessão principal estiver em Opus, PASSE model explícito no despacho do agente.
-  - SEMPRE diga a estimativa ANTES de gastar. No painel não existe disparo "a seco":
-    POST /api/acoes/:id JÁ EXECUTA de verdade.
-  - Rodada real de referência: um /trabalhar completo custou US$ 7,42 (61 turnos,
-    8 sessões, 13,5M de cache relido).
+O FATO: na rodada `0345125c`, a T-035 recebeu TRÊS despachos de construtor seguidos, sem
+verificador entre eles (executor sonnet, executor sonnet, executor-reforcado opus). As Notas
+de execução do terceiro dizem, com todas as letras: "a sessão anterior implementou o CSS/JS
+na árvore de trabalho, sem commit, e encerrou ANTES de gerar a evidência e commitar" — e ele
+aproveitou 100% do trabalho. Custo dos dois primeiros despachos: US$ 2,13, por trabalho que
+ficou no disco sem ninguém registrar.
 
-ANTES DE PAGAR PARA MEDIR, PROCURE A EVIDÊNCIA QUE JÁ ESTÁ EM DISCO. A questão dos tokens
-ia custar outra rodada de /trabalhar; foi respondida de graça pela gravação SSE da sessão
-anterior (scratchpad de ~/.claude), pelos JSONs em painel/dados/jobs/ e por uma soma. O
-carimbo de hora dos eventos disse o que os números sozinhos não diziam.
+POR QUE ISSO DEVERIA TER SIDO PEGO: existe uma recuperação que pergunta à árvore git se
+houve trabalho quando o construtor termina sem gravar status — dois sinais, HEAD ter andado
+e mudança não commitada nas `areas`. As `areas` da T-035 são exatamente
+`public/js/tabuleiro.js` e `public/css/tabuleiro.css`, que eram os arquivos sujos. Ela
+deveria ter commitado em nome da tarefa e promovido a em-teste no PRIMEIRO despacho.
 
-DISCIPLINA DE VERIFICAÇÃO (o que mais custou tempo):
-  - Corrigir o teste até passar ESCONDE o bug. Se um teste falha, pergunte primeiro se ele
-    está certo e o código errado. (Aconteceu de novo hoje, e o teste estava certo.)
-  - Falha que se repete em TODA execução NÃO é flaky.
-  - Documentação que mente é pior que documentação ausente. E tarefa de documentação tem
-    escopo declarado: hoje a T-006 cobriu how_to_use.md + CLAUDE.md e o README ficou
-    mentindo por dois dias. Confira o `areas:` em vez de confiar que "já foi coberto".
-  - Mensagem de erro que assume um cenário e afirma categoricamente sobre outro é BUG.
+LANDMARKS:
+- `painel/servidor/src/pipeline/motor.ts`, a partir da ~linha 1160 (os comentários longos
+  sobre recuperação de trabalho não registrado — leia-os, contam dois casos reais).
+- Dados brutos da rodada: `painel/dados/jobs/0345125c.json` e `0345125c.log.jsonl`.
+- A tarefa: `projetos/banco-imobiliario/_gestao/tarefas/T-035-tabuleiro-mobile-fit.md`.
+- `MAX_DESPACHOS_POR_TAREFA` vale 12 (motor.ts ~299), então o teto de vaivém não agiu nem
+  perto — o freio esperado era a recuperação, não ele.
 
-ARMADILHAS TÉCNICAS DESTA BASE:
-  - Opção do SDK com nome errado é ignorada EM SILÊNCIO. Confira sempre em
-    painel/servidor/node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts.
-  - `modelUsage` é acumulador VIVO, não instantâneo por mensagem (ver seção fechada acima).
-  - Log de ferramenta com despacho DEVE manter `→ agente` NO FIM da linha — é o que o
-    segmentador da T-039 casa (/→\s*([a-z0-9-]+)\s*$/i) para fechar trecho. Mudar isso
-    mata TODOS os resumos de agente em silêncio. Há teste travando a invariante.
-  - Um job NÃO é uma sessão: um /trabalhar abriu 8. Despacho em background reabre sessão.
-  - Local_AI é submódulo git de verdade: código commita DENTRO dele; o repo pai recebe só o
-    ponteiro. Commit no pai sem push do submódulo = clone quebrado para quem baixar.
+Cuidado com a armadilha registrada em `painel/CLAUDE.md`: "antes de desistir de um agente,
+pergunte se ele produziu alguma coisa" — e a inversa, que é o caso aqui. Não conserte de um
+jeito que faça o motor commitar trabalho que o revisor nunca vai ver.
 
-O PAINEL É MANTIDO À MÃO pelo orquestrador — fica fora do pipeline executor/testador/
-revisor (que só opera em projetos/). Mudou o painel? `cd painel && npm test` antes de
-commitar, e commite na raiz da fábrica.
+═══════════════════════════════════════════════════════════════════════════════
+ITEM 3 — T-043 e depois o backfill dos `verificar:` da Fase 6
+═══════════════════════════════════════════════════════════════════════════════
+(é rodada de pipeline; Enzo dispara pelo painel)
 
-Trabalhe com autonomia máxima (decida e registre nos arquivos), respeitando a regra de custo.
+CONTEXTO: os 27 critérios de aceite da Fase 6 do banco-imobiliario não têm NENHUM
+`verificar:`, então caem todos em `[julgado]` e o testador refaz do zero o ritual que o
+executor acabou de fazer (subir servidor, entrar na sala, forçar jogada por socket, dirigir
+o navegador). Duas contas caras para a mesma pergunta.
+
+O backfill foi TENTADO em 11/08 e abortado de propósito. Não repita as duas formas óbvias:
+1. A passada mecânica (`painel/servidor/src/pipeline/criterios.ts`) recusa comando com
+   `< > ; | & $` ou crase. Afirmação geométrica é feita de `<=`/`>=`: todo `--exigir` é
+   rejeitado como `encadeamento-proibido` ANTES de rodar.
+2. `_sistema/ferramentas/captura.mjs` NÃO sobe servidor. `verificar:` apontado para
+   localhost bate em porta morta na passada mecânica → reprovação falsa, um ciclo perdido.
+Decisão completa: `projetos/banco-imobiliario/_gestao/DECISOES.md`, entrada de 2026-08-11.
+
+SEQUÊNCIA:
+a) Rodar a T-043 (`_gestao/tarefas/T-043-cenario-verificavel.md`) — ela cria
+   `ferramentas/cenario.mjs`, com cenas nomeadas que sobem o servidor, montam o estado,
+   capturam e afirmam, e é chamada por `node ferramentas/cenario.mjs --cena=<nome>`: um
+   binário, zero metacaractere. Está `pronta`, prioridade alta, sem dependências, `areas`
+   disjunta das outras — pode rodar em paralelo com T-036/T-037/T-040/T-041.
+b) DEPOIS que ela concluir e as cenas forem reais, escrever os `verificar:` de T-036,
+   T-037, T-040 e T-041 apontando para as cenas que existem de fato. Não invente nome de
+   cena: rode `node ferramentas/cenario.mjs --listar` e use o que ele imprimir.
+c) VALIDE todo `verificar:` que escrever contra as regras reais antes de commitar — a
+   regex `PERIGOSO` e a `BINARIOS_PERMITIDOS` estão em `criterios.ts` (~linhas 60-98).
+   Comando "quase certo" custa um ciclo inteiro (a T-030 deste projeto custou 4 ciclos e
+   US$ 12,90 assim). E nunca escreva `verificar:` para um comando que DEVE falhar: a
+   passada mecânica lê qualquer saída != 0 como critério reprovado.
+
+═══════════════════════════════════════════════════════════════════════════════
+SOBRAS PEQUENAS (faça de passagem, não gaste sessão com isso)
+═══════════════════════════════════════════════════════════════════════════════
+- `projetos/banco-imobiliario/server-error.log` (0 bytes) ficou não rastreado — algum agente
+  subiu servidor redirecionando stderr e não limpou. Apagar ou pôr no .gitignore do projeto.
+- T-039 (PWA lite/manifest) está `pronta` há dois dias e sem dependência nenhuma; foi
+  cortada pela cota em 10/08. É a tarefa mais barata do backlog — boa para fechar rodada.

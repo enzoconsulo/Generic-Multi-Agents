@@ -465,3 +465,10 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   de ser revisável, `Bin 13061 -> 16842 bytes` no lugar das linhas. Passou despercebido um
   commit inteiro. Ao editar, confira que o arquivo não ganhou controle cru: ferramenta de
   edição grava o caractere de verdade quando você quer a grafia dele.
+- **Um job NÃO é uma sessão** — um `/trabalhar` já abriu 8. Despacho reabre sessão, e cada
+  sessão nova é um prefixo novo para ESCREVER no cache. Ao contar custo ou depurar um job,
+  não presuma correspondência 1:1 com sessão.
+- **Log de ferramenta com despacho DEVE manter `→ agente` NO FIM da linha.** É o que o
+  segmentador dos resumos casa (`/→\s*([a-z0-9-]+)\s*$/i`) para fechar trecho. Mudar o
+  formato dessa linha mata TODOS os resumos de agente **em silêncio** — há teste travando a
+  invariante, mas o teste não explica por que ela existe; esta entrada explica.
