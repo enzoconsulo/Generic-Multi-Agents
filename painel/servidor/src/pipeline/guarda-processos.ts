@@ -52,11 +52,32 @@ const PADROES_PROIBIDOS: readonly { re: RegExp; o_que: string }[] = [
   { re: /\bwmic\b[^\n]*\bprocess\b[^\n]*\bdelete\b/i, o_que: "wmic process ... delete" },
 ];
 
-/** Como o agente DEVE resolver a situação que o levaria a matar processo. */
+/**
+ * Como o agente DEVE resolver a situação que o levaria a matar processo.
+ *
+ * Cobre os DOIS motivos que levam um agente até aqui, e o segundo é o comum: além de
+ * "a porta está ocupada", há "preciso derrubar o servidor que subi para fotografar a
+ * tela". A primeira versão desta mensagem só respondia o primeiro e mandava usar a suíte
+ * — que não produz PNG nenhum —, então o agente de UI era recusado sem alternativa e
+ * insistia até a etapa morrer. Foi o que matou o `testador` da T-036 (job `c19dcfe4`,
+ * duas recusas e `exit 1`) depois de o `executor-reforcado` já ter gasto 57 chamadas de
+ * ferramenta na mesma briga. Recusa sem saída é pior que recusa nenhuma: custa o
+ * despacho inteiro.
+ *
+ * A saída é sempre a mesma e é de ORDEM, não de permissão: **guarde o PID no instante em
+ * que você sobe o processo**. Quem faz isso nunca precisa descobrir dono de porta depois
+ * — que é exatamente a forma que esta guarda recusa.
+ */
 const SAIDA_CORRETA =
   "Porta ocupada NÃO se resolve matando processo: suba noutra porta (ex.: `PORT=3001 npm start`)." +
-  " Para conferir que o servidor sobe, use a suíte (`npm test`), que já usa porta efêmera." +
-  " Se precisar encerrar algo que VOCÊ subiu, mate pelo PID daquele processo e só dele.";
+  " Para PROVA VISUAL, prefira a cena versionada do projeto (`node ferramentas/cenario.mjs" +
+  " --cena=<nome>`), que sobe o servidor, captura, afirma e encerra o próprio filho — sem" +
+  " você precisar matar nada. Não havendo cena, suba o servidor você mesmo GUARDANDO O PID" +
+  " (`npm start & PID=$!`), fotografe com `_sistema/ferramentas/captura.mjs` e encerre com" +
+  " `kill $PID` — variável já capturada não é substituição de comando e passa por esta guarda." +
+  " Para conferir apenas que o servidor sobe (sem tela), a suíte (`npm test`) já usa porta efêmera." +
+  " O que nunca vale: descobrir por porta ou por nome QUEM matar — isso atinge terceiros," +
+  " inclusive o painel que está executando você.";
 
 /**
  * Avalia um comando de shell antes de ele rodar.

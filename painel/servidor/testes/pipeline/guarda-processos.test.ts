@@ -44,6 +44,10 @@ describe("guarda de processos — recusa o que mata por nome ou por porta", () =
     ["git status", "comando comum"],
     ["grep -rn 'kill' server/", "a palavra kill dentro de uma busca"],
     ["", "comando vazio"],
+    // As três formas que a mensagem de recusa ENSINA — ver o bloco abaixo.
+    ["node ferramentas/cenario.mjs --cena=modal-divida-390", "a cena versionada do projeto"],
+    ["npm start & PID=$!", "subir o servidor guardando o PID"],
+    ["kill $PID", "encerrar pela variável já capturada (não é substituição de comando)"],
   ];
 
   for (const [comando, caso] of permitidos) {
@@ -53,6 +57,35 @@ describe("guarda de processos — recusa o que mata por nome ou por porta", () =
       );
     });
   }
+
+  /**
+   * A ORIENTAÇÃO PRECISA SER EXECUTÁVEL — este é o teste que faltou no `--exigir`.
+   *
+   * Aquele mecanismo tinha teste, documentação e um agente que o usara com sucesso, e
+   * ainda assim era rejeitado pela passada mecânica: ninguém havia conferido se o comando
+   * ENSINADO passava pelo filtro que o receberia. Aqui o risco é o mesmo, e mais agudo,
+   * porque quem lê esta mensagem já está sendo recusado uma vez — mandá-lo para um segundo
+   * comando também recusado é o laço que matou o testador da T-036.
+   */
+  it("todo comando que a mensagem de recusa ensina passa pela própria guarda", () => {
+    const recusado = avaliarComandoDeProcesso("pkill node");
+    const motivo = recusado.motivo ?? "";
+
+    // Os comandos citados no texto, extraídos do próprio motivo para não divergirem dele.
+    const ensinados = ["PORT=3001 npm start", "npm start & PID=$!", "kill $PID", "npm test"];
+    for (const comando of ensinados) {
+      expect(motivo, `a mensagem deveria ensinar: ${comando}`).toContain(comando);
+      expect(
+        avaliarComandoDeProcesso(comando).permitido,
+        `a guarda ensina "${comando}" e recusaria o agente que obedecesse`,
+      ).toBe(true);
+    }
+
+    // A cena versionada é a saída preferencial para prova visual — sem ela, o agente de UI
+    // volta a improvisar o ritual que o leva a matar processo.
+    expect(motivo).toMatch(/cenario\.mjs/);
+    expect(motivo).toMatch(/captura\.mjs/);
+  });
 });
 
 describe("comandoDoToolInput", () => {
