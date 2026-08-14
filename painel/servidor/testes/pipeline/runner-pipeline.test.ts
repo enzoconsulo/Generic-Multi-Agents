@@ -156,6 +156,27 @@ function job(params: Record<string, unknown>): Job {
   };
 }
 
+
+/**
+ * Vigilância de processos FALSA — o mesmo motivo do SDK falso.
+ *
+ * A real sobe um PowerShell para ler `Win32_Process`: ~5s medidos nesta máquina, duas vezes
+ * por `executar()`, contra um `testTimeout` de 15s. Era o que fazia este arquivo inteiro
+ * estourar quando a máquina ficava ocupada — sintoma que parecia flakiness e não era.
+ * A decisão de matar processo continua coberta por `coleta-processos.test.ts`.
+ */
+function vigiaFalso() {
+  return {
+    criar: () => ({
+      iniciar: () => {},
+      parar: () => {},
+      amostrar: async () => {},
+      observados: new Set<number>() as ReadonlySet<number>,
+    }),
+    coletar: async () => ({ recolhidos: 0, detalhes: [] }),
+  };
+}
+
 beforeEach(() => limparCacheAgentes());
 
 describe("RunnerPipeline — ciclo completo sem orquestrador-modelo", () => {
@@ -164,7 +185,7 @@ describe("RunnerPipeline — ciclo completo sem orquestrador-modelo", () => {
     const { consulta } = sdkFalso(() => agenteGravaStatus(raiz, "T-001-x.md"));
     const { ctx } = contexto();
 
-    const r = await new RunnerPipeline(consulta).executar(
+    const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
       job({ raiz, projeto: "app", modelo: "sonnet" }),
       ctx,
     );
@@ -189,7 +210,7 @@ describe("RunnerPipeline — ciclo completo sem orquestrador-modelo", () => {
     });
     const { ctx } = contexto();
 
-    const r = await new RunnerPipeline(consulta).executar(
+    const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
       job({ raiz, projeto: "app", modelo: "sonnet" }),
       ctx,
     );
@@ -205,7 +226,7 @@ describe("RunnerPipeline — ciclo completo sem orquestrador-modelo", () => {
   it("nenhuma etapa recebe a ferramenta de despachar subagente", async () => {
     const raiz = fabricaFalsa([{ nome: "T-001-x.md", conteudo: tarefaMd({ id: "T-001", status: "pronta" }) }]);
     const { consulta, opcoesVistas } = sdkFalso(() => agenteGravaStatus(raiz, "T-001-x.md"));
-    await new RunnerPipeline(consulta).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
+    await new RunnerPipeline(consulta, vigiaFalso()).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
 
     expect(opcoesVistas.length).toBeGreaterThan(0);
     for (const o of opcoesVistas) {
@@ -218,7 +239,7 @@ describe("RunnerPipeline — ciclo completo sem orquestrador-modelo", () => {
   it("usa o modelo do arquivo do agente (testador em haiku) e o do fluxo nos demais", async () => {
     const raiz = fabricaFalsa([{ nome: "T-001-x.md", conteudo: tarefaMd({ id: "T-001", status: "pronta" }) }]);
     const { consulta, opcoesVistas } = sdkFalso(() => agenteGravaStatus(raiz, "T-001-x.md"));
-    await new RunnerPipeline(consulta).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
+    await new RunnerPipeline(consulta, vigiaFalso()).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
 
     expect(opcoesVistas.map((o) => o["model"])).toEqual(["sonnet", "haiku", "sonnet"]);
   });
@@ -227,7 +248,7 @@ describe("RunnerPipeline — ciclo completo sem orquestrador-modelo", () => {
   it("todas as etapas usam o MESMO systemPrompt e as MESMAS ferramentas", async () => {
     const raiz = fabricaFalsa([{ nome: "T-001-x.md", conteudo: tarefaMd({ id: "T-001", status: "pronta" }) }]);
     const { consulta, opcoesVistas } = sdkFalso(() => agenteGravaStatus(raiz, "T-001-x.md"));
-    await new RunnerPipeline(consulta).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
+    await new RunnerPipeline(consulta, vigiaFalso()).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
 
     const sistemas = new Set(opcoesVistas.map((o) => JSON.stringify(o["systemPrompt"])));
     const ferramentas = new Set(opcoesVistas.map((o) => JSON.stringify(o["allowedTools"])));
@@ -251,7 +272,7 @@ describe("RunnerPipeline — ciclo completo sem orquestrador-modelo", () => {
       prompts.push(p);
       agenteGravaStatus(raiz, "T-001-x.md");
     });
-    await new RunnerPipeline(consulta).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
+    await new RunnerPipeline(consulta, vigiaFalso()).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
 
     expect(prompts[0]).toContain("MARCA_DO_FONTE"); // construtor
     expect(prompts[2]).not.toContain("MARCA_DO_FONTE"); // revisor
@@ -264,7 +285,7 @@ describe("RunnerPipeline — ciclo completo sem orquestrador-modelo", () => {
       prompts.push(p);
       agenteGravaStatus(raiz, "T-001-x.md");
     });
-    await new RunnerPipeline(consulta).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
+    await new RunnerPipeline(consulta, vigiaFalso()).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
 
     for (const p of prompts) {
       expect(p.startsWith("<contexto-projeto>")).toBe(true);
@@ -280,12 +301,43 @@ describe("RunnerPipeline — desfechos", () => {
   it("etapa que não devolve result tira a tarefa da rodada, sem derrubar as outras", async () => {
     const raiz = fabricaFalsa([{ nome: "T-001-x.md", conteudo: tarefaMd({ id: "T-001", status: "pronta" }) }]);
     const { consulta } = sdkFalso(() => agenteGravaStatus(raiz, "T-001-x.md"), { falharNa: 2 });
-    const r = await new RunnerPipeline(consulta).executar(
+    const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
       job({ raiz, projeto: "app", modelo: "sonnet" }),
       contexto().ctx,
     );
     expect(r.etapasFalhas.map((e) => e.tarefa)).toContain("T-001");
     expect(r.encerrouPor).toBe("sem-trabalho");
+  });
+
+  /**
+   * A METADE FALTANTE da medida de critérios. O relatório sabia dizer "N critérios resolvidos
+   * por comando" e não sabia dizer "nesta tarefa a máquina não decidiu nada" — e foi assim que
+   * a Fase 6 do banco-imobiliario rodou com 27 critérios e zero `verificar:`, com o número
+   * simpático em cima e o portão do meio vazio embaixo.
+   */
+  it("tarefa sem nenhum `verificar:` é denunciada no relatório e no log", async () => {
+    const raiz = fabricaFalsa([
+      {
+        nome: "T-001-x.md",
+        conteudo: tarefaMd({
+          id: "T-001",
+          status: "pronta",
+          criterios: ["- [ ] a tela fica bonita", "- [ ] o botão parece clicável"].join("\n"),
+        }),
+      },
+    ]);
+    const { consulta } = sdkFalso(() => agenteGravaStatus(raiz, "T-001-x.md"));
+    const ctxLog = contexto();
+    const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
+      job({ raiz, projeto: "app", modelo: "sonnet" }),
+      ctxLog.ctx,
+    );
+
+    expect(r.texto).toContain("SEM nenhum `verificar:`");
+    expect(r.texto).toContain("T-001 (2)");
+    // Precisa dizer DE QUEM é o conserto: construtor nenhum resolve critério mal escrito.
+    expect(r.texto).toMatch(/replanejamento/i);
+    expect(ctxLog.logs().some((l) => l.includes("julgamento puro"))).toBe(true);
   });
 
   it("teto de custo encerra de forma planejada, com o que foi feito preservado", async () => {
@@ -297,7 +349,7 @@ describe("RunnerPipeline — desfechos", () => {
       (p) => agenteGravaStatus(raiz, p.includes("T-002") ? "T-002-y.md" : "T-001-x.md"),
       { custoPorEtapa: 3 },
     );
-    const r = await new RunnerPipeline(consulta).executar(
+    const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
       job({ raiz, projeto: "app", modelo: "sonnet", tetoUsd: 4 }),
       contexto().ctx,
     );
@@ -319,7 +371,7 @@ describe("RunnerPipeline — desfechos", () => {
     const { consulta } = sdkFalso((p) => {
       if (p.includes("PLANEJADOR")) despachados.push("planejador");
     });
-    const r = await new RunnerPipeline(consulta).executar(
+    const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
       job({ raiz, projeto: "app", modelo: "sonnet" }),
       contexto().ctx,
     );
@@ -337,7 +389,7 @@ describe("RunnerPipeline — desfechos", () => {
     const { consulta } = sdkFalso(() => {
       chamou += 1;
     });
-    const r = await new RunnerPipeline(consulta).executar(
+    const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
       job({ raiz, projeto: "app", modelo: "sonnet" }),
       contexto().ctx,
     );
@@ -360,14 +412,14 @@ describe("RunnerPipeline — trilha e especialistas", () => {
       prompts.push(p);
       agenteGravaStatus(raiz, "T-001-x.md");
     });
-    await new RunnerPipeline(consulta).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
+    await new RunnerPipeline(consulta, vigiaFalso()).executar(job({ raiz, projeto: "app", modelo: "sonnet" }), contexto().ctx);
 
     expect(prompts[0]).toContain("EXECUTOR de teste");
     expect(prompts[0]).toContain("SOU O ESPECIALISTA EM MOTOR.");
   });
 
   it("params inválidos falham cedo, com mensagem clara", async () => {
-    const r = new RunnerPipeline(sdkFalso(() => {}).consulta);
+    const r = new RunnerPipeline(sdkFalso(() => {}).consulta, vigiaFalso());
     await expect(r.executar(job({ raiz: "", projeto: "app", modelo: "x" }), contexto().ctx)).rejects.toThrow(/raiz/);
     await expect(r.executar(job({ raiz: "C:/f", projeto: "../fora", modelo: "x" }), contexto().ctx)).rejects.toThrow(/projeto/);
     await expect(r.executar(job({ raiz: "C:/f", projeto: "app", modelo: "" }), contexto().ctx)).rejects.toThrow(/modelo/);

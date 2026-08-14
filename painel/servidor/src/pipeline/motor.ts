@@ -219,6 +219,20 @@ export interface RelatorioMotor {
   /** Critérios resolvidos sem modelo — a economia da I5, medida. */
   criteriosExecutados: number;
   /**
+   * A OUTRA METADE da medida acima: tarefas em que a máquina não decidiu NADA, porque nenhum
+   * critério trazia `verificar:`. O portão do meio dessas tarefas é julgamento puro.
+   *
+   * Existe porque contar só `criteriosExecutados` é medida que se elogia sozinha — e ela
+   * ficou alta e simpática enquanto a Fase 6 do banco-imobiliario rodava com **27 critérios
+   * e zero `verificar:`**, tudo caindo em julgamento, com o verificador refazendo do zero o
+   * ritual que o construtor acabara de fazer. O sinal existia em `relatorioCriterios`
+   * (a linha `Graus de prova:`), era escrito no arquivo da tarefa e ninguém o lia.
+   *
+   * Não reprova nem bloqueia: é defeito de PLANEJAMENTO, e quem conserta é o replanejamento,
+   * não o construtor. Só precisa aparecer no relatório da rodada.
+   */
+  criteriosSemComando: { tarefa: string; julgados: number }[];
+  /**
    * Critérios cujo COMANDO está quebrado (T-054). Não reprovam a tarefa, mas precisam
    * aparecer: nenhum construtor os conserta, e sem alguém dizer em voz alta a tarefa queima
    * as 3 tentativas em silêncio até bloquear — foi o que custou US$ 12,90 na T-030.
@@ -329,6 +343,7 @@ export async function rodarPipeline(
     paraReplanejar: [],
     bloqueadas: [],
     criteriosExecutados: 0,
+    criteriosSemComando: [],
     criteriosQuebrados: [],
     custoPorTarefa: [],
     impedimentos: [],
@@ -684,9 +699,25 @@ export async function rodarPipeline(
       // com critérios sem comando e, agora, com inconclusivos — e o relatório da rodada diz
       // "N critério(s) resolvidos por comando, sem gastar modelo". Medida que se elogia
       // sozinha é a que menos se confere.
-      rel.criteriosExecutados += executados.filter(
+      const decididos = executados.filter(
         (r) => r.estado === "passou" || r.estado === "falhou",
       ).length;
+      rel.criteriosExecutados += decididos;
+
+      // A outra metade da medida (ver `criteriosSemComando`). O caso que interessa é o
+      // extremo: a máquina não decidiu NADA nesta tarefa. Reportar toda proporção imperfeita
+      // viraria ruído — critério estético sem comando é legítimo e normal. Tarefa inteira
+      // sem um único comando é planejamento com critério no degrau errado.
+      const semComando = executados.filter((r) => r.estado === "nao-executado").length;
+      if (decididos === 0 && semComando > 0) {
+        rel.criteriosSemComando.push({ tarefa: passo.tarefa.id, julgados: semComando });
+        dep.log(
+          "info",
+          `${passo.tarefa.id}: ${semComando} critério(s) e NENHUM \`verificar:\` — o portão do` +
+            " meio desta tarefa é julgamento puro. Defeito de planejamento, não do agente:" +
+            " quem conserta é o replanejamento.",
+        );
+      }
 
       // Termômetro da máquina (T-055): cada reexecução é, no melhor caso, uma reprovação
       // falsa que não aconteceu. Sem registro, a instabilidade volta a ser folclore.
@@ -1391,7 +1422,16 @@ async function passadaMecanica(
   // A suíte vai PRIMEIRO: se ela quebrou, o resto do relatório é ruído — o construtor
   // precisa ver isso na primeira linha.
   const criterios = [...(suite !== null ? [suite] : []), ...lerCriterios(secao)];
-  if (!criterios.some((c) => c.comando !== null)) return [];
+  if (!criterios.some((c) => c.comando !== null)) {
+    // Nada a executar: não gasta processo e não escreve bloco de "Passada mecânica" que só
+    // diria "não rodei nada". Mas DEVOLVE os critérios em vez de uma lista vazia — este é o
+    // caso mais interessante da fábrica, não o menos: tarefa em que a máquina não decide
+    // nada é planejamento com critério no degrau errado, e quem chama precisa poder ver
+    // isso (`RelatorioMotor.criteriosSemComando`). Devolver `[]` aqui apagava exatamente o
+    // sinal que valia a pena — a Fase 6 do banco-imobiliario rodou 27 critérios sem um
+    // único `verificar:` sem que uma linha de relatório dissesse isso.
+    return criterios.map((c) => ({ texto: c.texto, estado: "nao-executado" as const, comando: null }));
+  }
 
   const resultados = await executarCriterios(criterios, ctx.dirProjeto);
   const relatorio = relatorioCriterios(resultados);

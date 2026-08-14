@@ -14,7 +14,12 @@ import { rodarPipeline, type DependenciasMotor, type RelatorioMotor } from "./mo
 import { trilhaDe } from "./maquina.js";
 import { detectarEcossistema } from "../ci/ecossistemas.js";
 import { novoOrcamento } from "./orcamento.js";
-import { coletarOrfaos, RastreadorDescendentes } from "./coleta-processos.js";
+import {
+  coletarOrfaos,
+  RastreadorDescendentes,
+  type CriterioColeta,
+  type RelatorioColeta,
+} from "./coleta-processos.js";
 
 /**
  * Runner do PIPELINE EM CÓDIGO — o `/trabalhar` sem orquestrador-modelo.
@@ -55,14 +60,49 @@ export interface ResultadoPipeline extends RelatorioMotor {
   texto: string;
 }
 
+/**
+ * O que o runner usa da vigilância de processos — só isto, e é injetável de propósito.
+ *
+ * `RastreadorDescendentes` e `coletarOrfaos` sobem um PowerShell para ler `Win32_Process`.
+ * O cabeçalho de `coleta-processos.ts` orça essa leitura em ~300ms; **medido nesta máquina,
+ * são ~5.000ms** — 16× a premissa. O job real absorve (a amostragem é de 30 em 30s e não
+ * bloqueia), mas a SUÍTE não: `executar()` faz duas dessas leituras aguardadas, ~10s dos 15s
+ * de `testTimeout`, e o `runner-pipeline.test.ts` inteiro passava a estourar sempre que a
+ * máquina ficasse um pouco mais ocupada. Chamar isso de "flaky" era o diagnóstico errado, e
+ * o CLAUDE.md do painel já avisa que falha assim merece o teste aberto antes do rótulo.
+ *
+ * Além do tempo, é questão de princípio: a suíte deste projeto não toca rede nem login, e
+ * ler a tabela de processos do Windows é dependência externa igual. O caminho real continua
+ * coberto por `coleta-processos.test.ts`, que testa a decisão de matar — que é o que importa.
+ */
+export interface VigiaDeProcessos {
+  iniciar(): void;
+  parar(): void;
+  amostrar(): Promise<void>;
+  readonly observados: ReadonlySet<number>;
+}
+
+export interface VigilanciaProcessos {
+  criar(painelPid: number): VigiaDeProcessos;
+  coletar(criterio: CriterioColeta): Promise<RelatorioColeta>;
+}
+
+const VIGILANCIA_REAL: VigilanciaProcessos = {
+  criar: (painelPid) => new RastreadorDescendentes(painelPid),
+  coletar: coletarOrfaos,
+};
+
 export class RunnerPipeline implements Runner {
-  constructor(private readonly consulta: Consulta = consultaReal) {}
+  constructor(
+    private readonly consulta: Consulta = consultaReal,
+    private readonly vigilancia: VigilanciaProcessos = VIGILANCIA_REAL,
+  ) {}
 
   async executar(job: Job, ctx: ContextoExecucao): Promise<ResultadoPipeline> {
     // Marco zero da coleta de órfãos: nada nascido ANTES disto é candidato. O rastreador
     // começa junto porque a prova de propriedade é perecível — ver `coleta-processos.ts`.
     const iniciouEmMs = Date.now();
-    const rastreador = new RastreadorDescendentes(process.pid);
+    const rastreador = this.vigilancia.criar(process.pid);
     rastreador.iniciar();
     const p = lerParams(job.params ?? {});
     const dirProjeto = join(p.raiz, "projetos", p.projeto);
@@ -247,7 +287,7 @@ export class RunnerPipeline implements Runner {
     // Uma última amostra: a etapa final pode ter lançado algo depois da amostra anterior, e
     // aqui a cadeia até o painel ainda costuma estar intacta.
     await rastreador.amostrar();
-    const coleta = await coletarOrfaos({
+    const coleta = await this.vigilancia.coletar({
       painelPid: process.pid,
       desdeMs: iniciouEmMs,
       observados: rastreador.observados,
@@ -335,6 +375,18 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
     );
   }
   // Estes pedem AÇÃO e por isso vão por último, que é onde se olha.
+  if (r.criteriosSemComando.length > 0) {
+    // Vem junto da linha acima de propósito: as duas medem a mesma coisa por lados opostos, e
+    // sozinha a de cima é elogio. Uma rodada pode fechar com "12 critérios resolvidos por
+    // comando" e, ao lado, três tarefas onde a máquina não decidiu nada.
+    const lista = r.criteriosSemComando
+      .map((c) => `${c.tarefa} (${c.julgados})`)
+      .join("; ");
+    linhas.push(
+      `Tarefas SEM nenhum \`verificar:\` — portão do meio por julgamento puro: ${lista}.` +
+        " Isso é replanejamento (critério no degrau errado), não trabalho de construtor.",
+    );
+  }
   if (r.criteriosQuebrados.length > 0) {
     // Primeiro do grupo de propósito: enquanto o critério não for corrigido, toda rodada
     // seguinte volta a bater nele, e a tarefa caminha para o bloqueio sem defeito nenhum.
