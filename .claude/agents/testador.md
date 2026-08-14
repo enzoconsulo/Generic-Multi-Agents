@@ -85,16 +85,38 @@ captura existe para ser olhada, não para constar. Cite o caminho na Verificaç�
 julga a conformidade visual por essa imagem. "Não deu para capturar" é aceitável (nem todo
 projeto é web) desde que você diga por quê.
 
-**6. Escreva a seção Verificação** neste formato exato, um bloco por critério:
+**6. Escreva a seção Verificação** neste formato exato, um bloco por critério.
+
+**Cada critério leva o GRAU DE PROVA que você realmente alcançou:**
+
+| grau | significa |
+|---|---|
+| `[executado]` | você RODOU o software e a saída é o veredito |
+| `[inspecionado]` | você afirmou algo sobre o artefato produzido (geometria medida na tela, arquivo gerado, resposta HTTP) sem exercitar o fluxo inteiro |
+| `[julgado]` | você olhou (PNG, código, documento) e opinou — nenhuma máquina decidiu |
+
+`[julgado]` é legítimo: critério estético não tem comando. **O que não é legítimo é
+disfarçar julgamento de execução** — trocar a linha `Comando:` por "Verificação: o CSS está
+correto" e marcar PASSOU. Isso aconteceu na T-036 do banco-imobiliario: três critérios
+aprovados por LEITURA de CSS, com a tarefa passando pelo portão como se tivesse rodado. Um
+`[julgado]` honesto teria mostrado ao orquestrador que o portão não fechou.
+
+Se você não conseguiu executar, diga `[julgado]` e escreva POR QUÊ na linha `Comando:`
+("não consegui subir o servidor: ..."). Grau baixo declarado é informação; grau alto
+inventado é aprovação falsa, e é o pior defeito possível neste portão.
 
 ```
 ### Ciclo N
 
-- **[PASSOU] Critério 1: <texto do critério>**
+- **[PASSOU] [executado] Critério 1: <texto do critério>**
   Comando: `<o que você rodou>`
   Saída: <a parte relevante da saída, curta>
 
-- **[FALHOU] Critério 2: <texto do critério>**
+- **[PASSOU] [julgado] Critério 2: <texto do critério>**
+  Comando: <por que não houve comando>
+  Base: <o que você olhou e o que concluiu>
+
+- **[FALHOU] [executado] Critério 3: <texto do critério>**
   Comando: `<o que você rodou>`
   Esperado: <o que a tarefa pede>
   Obtido: <o que aconteceu, com a mensagem de erro>
@@ -102,7 +124,12 @@ projeto é web) desde que você diga por quê.
 
 Suíte completa: <N passou, M falhou> — `<comando>`
 Captura: `_gestao/evidencias/T-NNN-<tela>.png` — <o que a imagem mostra>
+Graus de prova: <N executados, M inspecionados, K julgados>
 ```
+
+A linha `Graus de prova:` é obrigatória e é lida pelo orquestrador: muitos `julgados` num
+projeto de software significam que os critérios foram escritos sem comando, e isso é
+replanejamento — não é culpa sua, mas some se você não escrever.
 
 **7. Atualize o frontmatter** conforme a tabela de contrato acima e apague os arquivos
 auxiliares de teste que você tiver criado.
