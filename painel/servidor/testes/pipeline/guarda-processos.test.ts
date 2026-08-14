@@ -72,7 +72,7 @@ describe("guarda de processos — recusa o que mata por nome ou por porta", () =
     const motivo = recusado.motivo ?? "";
 
     // Os comandos citados no texto, extraídos do próprio motivo para não divergirem dele.
-    const ensinados = ["PORT=3001 npm start", "npm start & PID=$!", "kill $PID", "npm test"];
+    const ensinados = ["PORT=3001 npm start", "taskkill /PID $s.Id /T /F", "npm test"];
     for (const comando of ensinados) {
       expect(motivo, `a mensagem deveria ensinar: ${comando}`).toContain(comando);
       expect(
@@ -80,6 +80,28 @@ describe("guarda de processos — recusa o que mata por nome ou por porta", () =
         `a guarda ensina "${comando}" e recusaria o agente que obedecesse`,
       ).toBe(true);
     }
+
+    /*
+     * PASSAR PELA GUARDA NÃO É FUNCIONAR — a versão anterior desta mensagem ensinava
+     * `npm start & PID=$!` + `kill $PID`, e este teste a aprovava, porque testava só se a
+     * guarda permitiria o comando. Permitia. Só que no Bash tool do Windows o `$!` devolve o
+     * PID do JOB do Git Bash, não o do processo Windows (medido: 626 contra 3780 reais): o
+     * `kill` do Git Bash traduz e mata o processo direto, mas `taskkill /PID` com esse número
+     * falha, e o `node.exe` que o `npm` deixou fica órfão de qualquer jeito.
+     *
+     * Órfão acumulado é o que já derrubou o painel levando junto o job em voo, então a
+     * orientação tem de dar o PID REAL e matar a ÁRVORE — o que só o PowerShell com
+     * `-PassThru` entrega. Fica travado aqui para a forma antiga não voltar por descuido.
+     */
+    // Citar o `$!` é BOM — é o erro que o agente cometeria sozinho. O que não pode é citá-lo
+    // como receita: se aparecer, tem de vir precedido da desaconselhação.
+    if (motivo.includes("PID=$!")) {
+      expect(
+        motivo,
+        "o `$!` só pode aparecer como anti-padrão, nunca como a receita a seguir",
+      ).toMatch(/NÃO use[^.]*PID=\$!/);
+    }
+    expect(motivo, "o /T é o que mata o node.exe filho que o npm deixa").toContain("/T");
 
     // A cena versionada é a saída preferencial para prova visual — sem ela, o agente de UI
     // volta a improvisar o ritual que o leva a matar processo.

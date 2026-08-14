@@ -72,9 +72,16 @@ const SAIDA_CORRETA =
   "Porta ocupada NÃO se resolve matando processo: suba noutra porta (ex.: `PORT=3001 npm start`)." +
   " Para PROVA VISUAL, prefira a cena versionada do projeto (`node ferramentas/cenario.mjs" +
   " --cena=<nome>`), que sobe o servidor, captura, afirma e encerra o próprio filho — sem" +
-  " você precisar matar nada. Não havendo cena, suba o servidor você mesmo GUARDANDO O PID" +
-  " (`npm start & PID=$!`), fotografe com `_sistema/ferramentas/captura.mjs` e encerre com" +
-  " `kill $PID` — variável já capturada não é substituição de comando e passa por esta guarda." +
+  " você precisar matar nada. Não havendo cena, suba o servidor PELO POWERSHELL, que é o" +
+  " único jeito de obter o PID real do Windows:" +
+  " `$s = Start-Process npm -ArgumentList 'start' -PassThru`; fotografe com" +
+  " `_sistema/ferramentas/captura.mjs` e, no fim," +
+  " `taskkill /PID $s.Id /T /F`. O `/T` é obrigatório: `npm` deixa um `node.exe` filho que" +
+  " sobrevive a matar só o pai." +
+  " NÃO use `npm start & PID=$!` no Bash: o `$!` devolve o PID do JOB do Git Bash (medido:" +
+  " 626 quando o processo Windows era 3780). O `kill` do Git Bash até traduz esse número, mas" +
+  " mata só o processo direto e deixa o filho órfão; e `taskkill /PID` com ele falha com" +
+  " 'processo não encontrado'." +
   " Para conferir apenas que o servidor sobe (sem tela), a suíte (`npm test`) já usa porta efêmera." +
   " O que nunca vale: descobrir por porta ou por nome QUEM matar — isso atinge terceiros," +
   " inclusive o painel que está executando você.";

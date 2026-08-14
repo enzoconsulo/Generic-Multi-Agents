@@ -34,8 +34,24 @@ node _sistema/ferramentas/captura.mjs <url> <arquivo.png> [--espera=2500] [--pos
   em fato medido em vez de julgamento.
 
 **O que ele NÃO faz: subir servidor.** Ele fotografa uma URL que já responde. Quem sobe o
-servidor é você (numa porta livre, derrubando pelo PID ao terminar) — ou a cena versionada do
-projeto, abaixo.
+servidor é você — ou, melhor, a cena versionada do projeto (abaixo), que faz isso sozinha.
+
+Subindo à mão, **use o PowerShell**, porque é o único jeito de obter o PID real do Windows:
+
+```powershell
+$s = Start-Process npm -ArgumentList 'start' -PassThru   # $s.Id é o PID de verdade
+taskkill /PID $s.Id /T /F                                # /T mata o node.exe filho do npm
+```
+
+**Não use `npm start & PID=$!` no Bash.** Medido: `$!` devolveu 626 enquanto o processo
+Windows era 3780 — é o PID do JOB do Git Bash. O `kill` do Git Bash traduz e mata o processo
+direto, mas `taskkill /PID` com esse número falha, e o `node.exe` que o `npm` deixou fica
+órfão de qualquer jeito. Órfão acumulado já derrubou o painel levando junto o job em voo.
+
+**`file://` não serve para montar prova visual composta.** Uma página local que referencie
+sub-recurso de OUTRO diretório (`<img src="file:///.../public/icone.svg">`) tem o recurso
+bloqueado pelo navegador **em silêncio**: a captura sai com o item quebrado e **código 0** —
+evidência verde que não prova nada. Suba o servidor e use `http://`.
 
 **`--exigir` não serve para escrever `verificar:` na tarefa.** A passada mecânica recusa
 comando com `< > ; | & $` ou crase, e afirmação geométrica é feita de `<=`/`>=`. Em `verificar:`
