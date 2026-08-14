@@ -12,9 +12,25 @@ e não precisa de nada instalado: o Node 22 tem `WebSocket` e `fetch` nativos.
 
 ```
 node _sistema/ferramentas/captura.mjs <url> <arquivo.png> [--espera=2500] [--pos-espera=1200]
-       [--largura=1400] [--altura=1200] [--porta=9333]
-       [--js="<expressão>"] [--console] [--exigir="<expressão>"]
+       [--largura=1400] [--altura=1200] [--porta=<auto>] [--js-teto=15000]
+       [--js="<expressão>"] [--console] [--exigir="<expressão>"] [--movimento-reduzido]
 ```
+
+**Tem suíte** (`cd _sistema/ferramentas && node --test`): 7 casos que sobem o navegador de
+verdade e conferem viewport exato, códigos de saída, PNG gravado mesmo na reprovação, zero
+processo órfão e duas capturas simultâneas sem disputar porta. Mexeu aqui? Rode.
+
+- **`--movimento-reduzido`** fotografa o caminho ACESSÍVEL. **Por padrão, agora, o navegador
+  responde `no-preference`** — e antes não respondia: o Edge headless reporta
+  `prefers-reduced-motion: reduce`, então TODA tarefa de animação desta fábrica fotografava o
+  caminho acessível achando que fotografava o normal, e a evidência provava o contrário do que
+  a tarefa pedia. Se a sua tarefa exige verificar o caminho acessível (e várias exigem), é
+  esta flag que faz isso — de propósito, não por acidente.
+- `--js-teto` é o teto do `--js` e de cada `--exigir` (padrão 15s). Fluxo de UI com vários
+  turnos não cabe em 15s; quando estoura, a captura segue e as afirmações voltam como
+  `Uncaught` sem dizer onde parou — então aumente o teto em vez de acelerar o fluxo.
+- `--porta` tem padrão derivado do PID. Não fixe um número: a fábrica roda até 3 agentes em
+  paralelo, e porta fixa faz duas capturas disputarem o mesmo DevTools.
 
 - `--largura`/`--altura` dão o **viewport exato**, inclusive larguras de celular (360, 390) —
   ele emula as métricas do dispositivo em vez de redimensionar a janela, que tem mínimo. A

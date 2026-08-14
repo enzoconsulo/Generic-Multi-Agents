@@ -62,7 +62,7 @@
  * — e é ótimo — quando um agente ou uma pessoa roda a captura à mão.
  */
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 
 const NAVEGADORES = [
@@ -92,9 +92,24 @@ const js = argTexto("js");
 const posEspera = arg("pos-espera", 1200);
 const altura = arg("altura", 1200);
 const largura = arg("largura", 1400);
-const porta = arg("porta", 9333);
+/**
+ * Porta do DevTools. O padrão deriva do PID porque a fábrica roda até 3 agentes em paralelo:
+ * com um número fixo, duas capturas simultâneas disputam a mesma porta E o mesmo diretório de
+ * perfil. O pior desfecho não seria um erro — seria a segunda conversar com o DevTools da
+ * PRIMEIRA e fotografar a página errada, que é evidência silenciosamente trocada.
+ */
+const porta = arg("porta", 9300 + (process.pid % 400));
+/**
+ * Teto do `--js` e do `--exigir`. Era fixo em 15s, e fluxo de UI com vários turnos de jogo
+ * não cabe — o agente da T-042 teve de acelerar as animações para caber no teto. Pior: o
+ * estouro só avisa no stderr e a captura SEGUE, então a cena "passa pela metade" e as
+ * afirmações voltam como `Uncaught` sem dizer onde parou.
+ */
+const jsTeto = arg("js-teto", 15000);
 /** `--console`: também reporta erros/avisos da página e falhas de rede. */
 const verConsole = process.argv.includes("--console");
+/** `--movimento-reduzido`: fotografa o caminho ACESSÍVEL. Ver `setEmulatedMedia` abaixo. */
+const movimentoReduzido = process.argv.includes("--movimento-reduzido");
 /**
  * `--exigir=...` repetido: TODAS as afirmações desta captura. `argTexto` pega só a primeira
  * ocorrência, e aqui a repetição é o ponto — uma subida de navegador tem de conseguir
@@ -219,6 +234,27 @@ try {
     mobile: false,
   });
 
+  /**
+   * MOVIMENTO REDUZIDO — a armadilha mais silenciosa que esta ferramenta tinha.
+   *
+   * O Edge headless responde `prefers-reduced-motion: reduce` = **true** (medido). Como todo
+   * código de animação bem-feito checa essa media query e desliga o movimento, TODA tarefa de
+   * animação desta fábrica vinha fotografando o caminho ACESSÍVEL achando que fotografava o
+   * normal: a evidência provava o contrário do que a tarefa pedia, e não havia como notar
+   * olhando o PNG. Foi descoberto por acaso, comparando matrizes de transformação.
+   *
+   * O padrão passa a ser `no-preference`, que é o que o usuário comum tem. Quem quiser
+   * verificar o caminho acessível — e deve, é requisito real — pede `--movimento-reduzido`.
+   */
+  await cmd("Emulation.setEmulatedMedia", {
+    features: [
+      {
+        name: "prefers-reduced-motion",
+        value: movimentoReduzido ? "reduce" : "no-preference",
+      },
+    ],
+  });
+
   // Ligado ANTES de navegar: erro na montagem do app é o que mais interessa e acontece
   // antes de qualquer clique.
   if (verConsole) {
@@ -268,10 +304,10 @@ try {
     // deixaria a captura pendurada para sempre. Melhor fotografar o que deu e avisar.
     const r = await Promise.race([
       cmd("Runtime.evaluate", { expression: js, awaitPromise: true, returnByValue: true }),
-      dorme(15000).then(() => "estourou"),
+      dorme(jsTeto).then(() => "estourou"),
     ]);
     if (r === "estourou") {
-      console.error("aviso: --js não terminou em 15s; capturando o estado atual");
+      console.error("aviso: --js não terminou em '+jsTeto+'ms; capturando o estado atual (use --js-teto=<ms>)");
     } else if (r?.exceptionDetails) {
       throw new Error(`--js falhou: ${r.exceptionDetails.text ?? "erro na expressão"}`);
     } else if (r?.result?.value !== undefined) {
@@ -283,12 +319,28 @@ try {
     await dorme(posEspera);
   }
 
-  const { data } = await cmd("Page.captureScreenshot", {
-    format: "png",
-    captureBeyondViewport: true, // página inteira, não só a dobra
-  });
-  writeFileSync(saida, Buffer.from(data, "base64"));
-  console.log(`ok: ${saida}`);
+  /**
+   * O retrato tem teto como todo o resto. Era a ÚNICA chamada CDP sem `Promise.race`: se o
+   * WebSocket não respondesse, o script ficava pendurado para sempre — com o Edge aberto,
+   * que é o mecanismo mais provável por trás dos processos órfãos observados.
+   */
+  const retrato = await Promise.race([
+    cmd("Page.captureScreenshot", {
+      format: "png",
+      captureBeyondViewport: true, // página inteira, não só a dobra
+    }),
+    dorme(30000).then(() => null),
+  ]);
+  if (retrato === null || retrato.data === undefined) {
+    throw new Error("Page.captureScreenshot não respondeu em 30s");
+  }
+  const png = Buffer.from(retrato.data, "base64");
+  writeFileSync(saida, png);
+  // Dimensão REAL do arquivo, lida do cabeçalho PNG (largura/altura em big-endian, bytes
+  // 16..23). O verificador julga o retrato, não o viewport: quando os dois divergem — página
+  // que rola, ou conteúdo dentro de um iframe menor — é aqui que ele descobre, em vez de
+  // supor que está vendo a régua que pediu.
+  console.log(`ok: ${saida} (${png.readUInt32BE(16)}x${png.readUInt32BE(20)} px)`);
 
   if (verConsole) {
     // Repetição idêntica é ruído (um mesmo erro dispara a cada render).
@@ -314,9 +366,9 @@ try {
       try {
         const r = await Promise.race([
           cmd("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }),
-          dorme(15000).then(() => "estourou"),
+          dorme(jsTeto).then(() => "estourou"),
         ]);
-        if (r === "estourou") veredito = { ok: false, nota: "não terminou em 15s" };
+        if (r === "estourou") veredito = { ok: false, nota: `não terminou em ${jsTeto}ms (use --js-teto=<ms>)` };
         else if (r?.exceptionDetails)
           veredito = { ok: false, nota: `erro: ${r.exceptionDetails.text ?? "expressão inválida"}` };
         else {
@@ -344,6 +396,34 @@ try {
     ws?.close();
   } catch {
     /* já fechado */
+  }
+  /**
+   * MATAR A ÁRVORE, não o processo de topo.
+   *
+   * `filho.kill()` derruba só o processo direto; o navegador espalha renderer, GPU e utility
+   * em processos separados, que ficam órfãos. Foi medido: 4 `msedge.exe` sobrando de perfis
+   * `captura-perfil-*`, sem ninguém para recolhê-los no caminho interativo.
+   *
+   * A fábrica já aprendeu isto duas vezes — `npm` deixando `node.exe` filho, e o `timeout` do
+   * `execFile` que não mata a árvore e fechava o painel em 08/08 — e escreveu `encerrarArvore()`
+   * em `painel/servidor/src/ci/processo.ts`. Este arquivo é `.mjs` em `_sistema/` e não importa
+   * TypeScript do painel, então ficou de fora das duas correções. Terceira vez é a vez de
+   * copiar as 4 linhas.
+   */
+  if (filho.pid !== undefined) {
+    if (process.platform === "win32") {
+      try {
+        spawnSync("taskkill", ["/PID", String(filho.pid), "/T", "/F"], { stdio: "ignore" });
+      } catch {
+        /* já morreu entre o fim do try e aqui */
+      }
+    } else {
+      try {
+        process.kill(filho.pid, "SIGKILL");
+      } catch {
+        /* já morreu */
+      }
+    }
   }
   filho.kill();
 }
