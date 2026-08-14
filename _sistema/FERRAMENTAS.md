@@ -16,6 +16,12 @@ node _sistema/ferramentas/captura.mjs <url> <arquivo.png> [--espera=2500] [--pos
        [--js="<expressão>"] [--console] [--exigir="<expressão>"]
 ```
 
+- `--largura`/`--altura` dão o **viewport exato**, inclusive larguras de celular (360, 390) —
+  ele emula as métricas do dispositivo em vez de redimensionar a janela, que tem mínimo. A
+  linha `viewport: LxA (pedido LxA)` sai **sempre**; divergência é erro (código **4**).
+  **Copie essa linha para as Notas ao lado de qualquer número geométrico que você medir** —
+  medida sem a régua ao lado já custou uma fase inteira ao banco-imobiliario, julgada a
+  496×704 por três tarefas seguidas enquanto os critérios diziam 390×844.
 - `--js` roda uma expressão **na página** antes do retrato — é como se fotografa tela que só
   existe depois de um clique (modal aberto, formulário submetido, caixa expandida). O valor
   de retorno vai para o stdout: é assim que um clique DIZ o que fez.

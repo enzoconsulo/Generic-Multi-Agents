@@ -11,9 +11,16 @@
  * Com CDP dá para esperar o load, dar um respiro para o fetch e só então capturar.
  *
  * Uso:
- *   node _sistema/ferramentas/captura.mjs <url> <arquivo.png> [--espera=2500] [--altura=1200]
- *                                [--console]
+ *   node _sistema/ferramentas/captura.mjs <url> <arquivo.png> [--espera=2500]
+ *                                [--largura=1400] [--altura=1200] [--console]
  *                                [--js="<expressão>"] [--pos-espera=1200]
+ *
+ * `--largura`/`--altura` dão o viewport EXATO, via `Emulation.setDeviceMetricsOverride` —
+ * inclusive larguras de celular (360, 390), que a janela do headless não alcança. A linha
+ * `viewport: LxA (pedido LxA)` sai sempre no stdout, e divergência é erro (código 4):
+ * afirmação geométrica medida na régua errada aponta para a conclusão contrária, e foi
+ * assim que uma fase inteira do banco-imobiliario foi julgada a 496×704 achando que estava
+ * a 390×844. Copie essa linha para as Notas junto com a medição.
  *
  * `--js` roda uma expressão na página ANTES de capturar (e `--pos-espera` dá tempo do
  * resultado pintar). É o que permite conferir tela que só existe depois de um clique —
@@ -185,6 +192,33 @@ try {
     });
 
   await cmd("Page.enable");
+
+  /**
+   * VIEWPORT EXATO — e por que `--window-size` sozinho não serve.
+   *
+   * `--window-size=390,844` pede o tamanho da JANELA, e janela tem mínimo: nesta máquina o
+   * Edge headless entrega `innerWidth` 496 e `innerHeight` 704 para esse pedido. A
+   * ferramenta obedecia à risca e mentia em silêncio — quem pedia "390×844" recebia uma tela
+   * 27% mais larga e 20% mais alta, que é exatamente a folga que decide se um layout cabe
+   * num celular.
+   *
+   * O estrago foi medido: TODA a evidência mobile da Fase 6 do banco-imobiliario (T-034,
+   * T-035, T-036) foi julgada a 496×704. Dois agentes mediram o mesmo modal e chegaram a
+   * conclusões opostas sobre se ele cobria o tabuleiro, e nenhum dos dois estava mentindo —
+   * os dois estavam na régua errada. O número real aparecia nas Notas ("viewport real do
+   * headless: 496×704") e ninguém percebeu que ele não era o pedido.
+   *
+   * `Emulation.setDeviceMetricsOverride` define o viewport de LAYOUT diretamente, sem passar
+   * pela janela, então o número pedido é o número obtido. É o mesmo mecanismo que o
+   * "device toolbar" do DevTools usa.
+   */
+  await cmd("Emulation.setDeviceMetricsOverride", {
+    width: Number(largura),
+    height: Number(altura),
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+
   // Ligado ANTES de navegar: erro na montagem do app é o que mais interessa e acontece
   // antes de qualquer clique.
   if (verConsole) {
@@ -198,6 +232,34 @@ try {
   // Respiro para o React resolver os fetches e pintar — é exatamente o que falta no
   // `--screenshot` simples.
   await dorme(espera);
+
+  /**
+   * CONFERE A RÉGUA E DIZ QUAL ELA É — o atuador do parágrafo acima.
+   *
+   * O override poderia falhar em silêncio (versão de navegador, flag nova, página que força
+   * zoom) e voltaríamos a julgar layout na medida errada sem ninguém notar. Duas decisões
+   * deliberadas aqui:
+   *
+   * 1. A linha `viewport:` é impressa SEMPRE, mesmo quando bate. É ela que aparece no stdout
+   *    do agente e acaba copiada nas Notas da tarefa — a régua fica registrada junto da
+   *    medição, e um número desses no relatório é o que teria denunciado o 496×704.
+   * 2. Divergência é ERRO (código 4), não aviso. Evidência medida na régua errada não é
+   *    evidência fraca, é evidência que aponta para a conclusão contrária — foi o que
+   *    aconteceu na T-036. Reprovar cedo custa uma captura; passar batido custa a fase.
+   */
+  const medida = await cmd("Runtime.evaluate", {
+    expression: "JSON.stringify([innerWidth, innerHeight])",
+    returnByValue: true,
+  });
+  const [larguraReal, alturaReal] = JSON.parse(medida?.result?.value ?? "[0,0]");
+  console.log(`viewport: ${larguraReal}x${alturaReal} (pedido ${largura}x${altura})`);
+  if (larguraReal !== Number(largura) || alturaReal !== Number(altura)) {
+    console.error(
+      `ERRO: viewport pedido ${largura}x${altura}, obtido ${larguraReal}x${alturaReal}. ` +
+        "Toda afirmação geométrica desta captura estaria na régua errada.",
+    );
+    process.exitCode = 4;
+  }
 
   // Interação opcional: clique/scroll/preenchimento antes do retrato.
   if (js !== null) {
