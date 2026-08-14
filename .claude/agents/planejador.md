@@ -110,7 +110,22 @@ contrato. Peça de uma vez:
      manifesto da stack, ou as tarefas anteriores) em vez de escrever de memória;
    - `dependencias` formando um grafo sem ciclos, com o máximo de tarefas independentes
      entre si (isso habilita paralelismo). Tudo depende da T-001 (scaffold);
-   - `areas` preenchido com as pastas/arquivos que a tarefa deve tocar;
+
+     **FUNDAÇÃO CRIADA NO MEIO DO PROJETO PRECISA SER DECLARADA COMO DEPENDÊNCIA DE QUEM ELA
+     SERVE.** Quando você planeja uma ferramenta cujo valor é tornar as OUTRAS tarefas
+     verificáveis ou mais baratas (uma cena de verificação, um harness, um gerador), o
+     instinto é dar a ela `dependencias: []` e seguir. Faça o contrário do que o instinto
+     pede: vá nas tarefas que ela serve e ponha o ID dela nas `dependencias` DELAS.
+
+     Sem isso ela fica invisível para toda regra de ordem — a do motor ("quem destrava mais
+     primeiro") conta dependentes declarados, e um `id` maior a joga para o fim da fila
+     exatamente por ter nascido depois. Medido: a T-043 do banco-imobiliario era fundação
+     declarada no próprio texto, ficou por último, e dois jobs (US$ 14) foram gastos fazendo
+     à mão, três vezes, o ritual que ela existia para eliminar — enquanto ela esperava.
+   - `areas` preenchido com as pastas/arquivos que a tarefa deve tocar. **Se a tarefa vai
+     precisar acrescentar uma cena de verificação, o arquivo da cena entra nas `areas`** — é
+     por elas que se decide quais construtores rodam em paralelo, e trabalho feito fora delas
+     nem entra no commit de recuperação;
    - seção Contexto dizendo ao executor o que ele precisa saber sem redescobrir tudo —
      inclusive **quais bibliotecas da stack usar nesta tarefa** (com o papel de cada uma).
      Contexto que nomeia a lib evita que o construtor escreva à mão o que já está

@@ -284,6 +284,14 @@ As regras valem igual nas duas trilhas — troque "executor/testador" por
   **regera o artefato do zero** antes de conferir.
 - **Revisor** lê o diff commitado: pode rodar em paralelo com qualquer agente, inclusive
   do mesmo projeto.
+- **Não mande um agente escrever fora das `areas` da tarefa dele.** `areas` é o mutex do
+  paralelismo, mas ele só descreve o que a TAREFA declara — o despacho é texto livre, e uma
+  linha de "Contexto extra" fura o mutex sem que nada acuse. Aconteceu em 14/08: despachei a
+  T-042 (`areas` de animação) mandando acrescentar cenas em `ferramentas/cenario.mjs`, que é
+  a `area` da T-043 — e a checagem de disjunção, olhando as areas declaradas, disse "ok".
+  Consequência extra: `commitarTarefa` commita `areas` + o arquivo da tarefa, então trabalho
+  feito fora delas **não entra no commit de recuperação** e fica solto na árvore. Precisa
+  tocar o arquivo? Acrescente-o às `areas` ANTES de despachar, ou não mande.
 
 ## Equipe do projeto — especialistas sob demanda
 
