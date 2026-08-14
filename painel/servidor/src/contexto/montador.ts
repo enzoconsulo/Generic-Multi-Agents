@@ -183,6 +183,11 @@ export async function lerDiff(
 /** Entrada do montador: tudo que ele precisa saber, e nada de I/O do chamador. */
 export interface PedidoContexto {
   dirProjeto: string;
+  /**
+   * Raiz da fábrica — só para ler `_sistema/FERRAMENTAS.md`. Opcional: ausente, o bloco sai
+   * sem o inventário em vez de falhar (é o que os testes de fixture fazem).
+   */
+  raizFabrica?: string | undefined;
   papel: PapelAgente;
   /** `areas` do frontmatter da tarefa. Vazio = o montador não embute fonte nenhuma. */
   areas?: readonly string[];
@@ -193,19 +198,48 @@ export interface PedidoContexto {
 }
 
 /**
- * Bloco COMPARTILHADO de um projeto: MAPA (sem o cabeçalho volátil) + `CLAUDE.md`.
+ * Bloco COMPARTILHADO de um projeto: ferramental da fábrica + `CLAUDE.md` + MAPA (sem o
+ * cabeçalho volátil).
  *
- * Idêntico para todo agente do projeto — é o que o cache pode reaproveitar. Se um dos dois
+ * Idêntico para todo agente do projeto — é o que o cache pode reaproveitar. Se algum dos três
  * não existir, o bloco sai menor em vez de falhar: projeto recém-criado ou importado à mão
  * é caso legítimo (ver "armadilhas" do painel: `_gestao/` pode não existir).
+ *
+ * O INVENTÁRIO VEM PRIMEIRO, e a ordem é deliberada: `_sistema/FERRAMENTAS.md` é o único
+ * pedaço idêntico entre PROJETOS diferentes, então pô-lo na frente faz o prefixo de cache
+ * ser compartilhado por toda a fábrica, e não só pelos despachos de um projeto.
+ *
+ * POR QUE ele é injetado em vez de ficar só nos prompts dos agentes: um agente que não sabe
+ * que a ferramenta existe não a procura. Três reincidências medidas — T-026 (executor declarou
+ * "não há navegador disponível neste ambiente" e pulou a evidência; o revisor teve de apontar
+ * que `captura.mjs` existia), T-036 ciclo 1 (script descartável com `spawnSync` dentro do
+ * próprio servidor: 0 entrega) e T-036 ciclo 2 (o testador **instalou o puppeteer**). Nenhuma
+ * delas é desobediência: em nenhum dos três casos o inventário estava no contexto do agente.
  */
-export async function montarCompartilhado(dirProjeto: string): Promise<string> {
-  const [mapa, claude] = await Promise.all([
+export async function montarCompartilhado(
+  dirProjeto: string,
+  raizFabrica?: string,
+): Promise<string> {
+  const [ferramental, mapa, claude] = await Promise.all([
+    raizFabrica === undefined
+      ? Promise.resolve(null)
+      : lerOpcional(join(raizFabrica, "_sistema", "FERRAMENTAS.md")),
     lerOpcional(join(dirProjeto, "_gestao", "MAPA.md")),
     lerOpcional(join(dirProjeto, "CLAUDE.md")),
   ]);
 
   const partes: string[] = [];
+  if (ferramental !== null) {
+    partes.push(
+      "<ferramental-da-fabrica>",
+      "O que você JÁ TEM. Consulte ANTES de escrever script auxiliar, instalar dependência",
+      "ou declarar que algo não é possível neste ambiente.",
+      "",
+      ferramental.trim(),
+      "</ferramental-da-fabrica>",
+      "",
+    );
+  }
   if (claude !== null) {
     partes.push("<contexto-projeto>", claude.trim(), "</contexto-projeto>");
   }
@@ -319,7 +353,7 @@ export async function montarEspecifico(pedido: PedidoContexto): Promise<{
 /** Monta os dois blocos de uma vez, já medidos. */
 export async function montarContexto(pedido: PedidoContexto): Promise<BlocosContexto> {
   const [compartilhado, esp] = await Promise.all([
-    montarCompartilhado(pedido.dirProjeto),
+    montarCompartilhado(pedido.dirProjeto, pedido.raizFabrica),
     montarEspecifico(pedido),
   ]);
   return {

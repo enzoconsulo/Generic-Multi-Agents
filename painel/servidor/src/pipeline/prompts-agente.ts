@@ -116,6 +116,41 @@ export async function carregarAgente(
  * guarda fraca por 12k tokens por etapa é o negócio certo; trocá-la em silêncio não seria,
  * por isso está escrito aqui.
  */
+/**
+ * Família REMOVIDA do contexto do agente (`disallowedTools`), por cima da allowlist.
+ *
+ * Duas classes, e as duas já custaram trabalho perdido nesta fábrica:
+ *
+ * - **despachar subagente** (`Agent`, `Task`): "subagentes não criam subagentes" é regra da
+ *   constituição, e o pipeline em código já é quem conduz as etapas;
+ * - **agendar continuação futura** (`ScheduleWakeup`, `Cron*`, `Monitor`, `PushNotification`,
+ *   `RemoteTrigger`, `Task*`): num job headless não existe quem entregue notificação depois.
+ *   O agente que agenda para "voltar mais tarde" está encerrando o próprio turno com o
+ *   trabalho pela metade. Medido no job `1a3bc22e` (14/08): o `executor` da T-036 chamou
+ *   `ScheduleWakeup` seis vezes esperando uma captura, e a etapa morreu sem entregar nada.
+ *
+ * A allowlist de `tools` já bastaria; isto existe porque `disallowedTools` é o único
+ * mecanismo que o `sdk.d.ts` promete que **remove do contexto** — cobre o que o harness
+ * injete por fora da allowlist, como as ferramentas diferidas.
+ */
+export const FERRAMENTAS_PROIBIDAS: readonly string[] = [
+  "Agent",
+  "Task",
+  "ScheduleWakeup",
+  "CronCreate",
+  "CronDelete",
+  "CronList",
+  "Monitor",
+  "PushNotification",
+  "RemoteTrigger",
+  "TaskCreate",
+  "TaskGet",
+  "TaskList",
+  "TaskOutput",
+  "TaskStop",
+  "TaskUpdate",
+];
+
 export const FERRAMENTAS_PIPELINE: readonly string[] = [
   "Read",
   "Glob",

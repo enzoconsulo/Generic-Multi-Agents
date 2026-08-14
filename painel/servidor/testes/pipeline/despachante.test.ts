@@ -1,5 +1,143 @@
+import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { orcamentoDeFerramentas } from "../../src/pipeline/despachante.js";
+import { criarDespachante, orcamentoDeFerramentas } from "../../src/pipeline/despachante.js";
+import { limparCacheAgentes, FERRAMENTAS_PROIBIDAS } from "../../src/pipeline/prompts-agente.js";
+import type { Consulta } from "../../src/jobs/claude/runner-claude.js";
+import type { PedidoDespacho } from "../../src/pipeline/motor.js";
+import type { TarefaResumo } from "../../src/fabrica/tipos.js";
+
+/**
+ * Fábrica falsa mínima: um agente e um projeto. Precisa ser em disco porque o despachante lê
+ * o prompt de `.claude/agents/` e o inventário de `_sistema/FERRAMENTAS.md` — que é
+ * justamente o que está sendo testado.
+ */
+async function fabricaFalsa(): Promise<{ raiz: string; dirProjeto: string }> {
+  const raiz = await mkdtemp(join(tmpdir(), "desp-"));
+  await mkdir(join(raiz, ".claude", "agents"), { recursive: true });
+  await writeFile(join(raiz, ".claude", "agents", "executor.md"), "Você implementa a tarefa.");
+  await mkdir(join(raiz, "_sistema"), { recursive: true });
+  await writeFile(
+    join(raiz, "_sistema", "FERRAMENTAS.md"),
+    "# Ferramental\nUse `_sistema/ferramentas/captura.mjs` — não instale driver de navegador.",
+  );
+  const dirProjeto = join(raiz, "projetos", "app");
+  await mkdir(join(dirProjeto, "_gestao"), { recursive: true });
+  await writeFile(join(dirProjeto, "CLAUDE.md"), "# app");
+  limparCacheAgentes();
+  return { raiz, dirProjeto };
+}
+
+function tarefa(): TarefaResumo {
+  return {
+    arquivo: "T-001-x.md",
+    id: "T-001",
+    titulo: "x",
+    status: "pronta",
+    prioridade: "alta",
+    dependencias: [],
+    areas: [],
+    tentativas: 0,
+    replanejadaDe: null,
+    agente: null,
+    criada: null,
+    atualizada: null,
+    erros: [],
+  };
+}
+
+/** Captura o `options` que chegaria ao SDK e encerra a etapa sem custo. */
+function espiao(): { consulta: Consulta; vistas: Record<string, unknown>[]; prompts: string[] } {
+  const vistas: Record<string, unknown>[] = [];
+  const prompts: string[] = [];
+  const consulta: Consulta = (args) => {
+    vistas.push(args.options as Record<string, unknown>);
+    prompts.push(String(args.prompt));
+    return (async function* () {
+      yield { type: "result", is_error: false, total_cost_usd: 0 };
+    })();
+  };
+  return { consulta, vistas, prompts };
+}
+
+async function despachar(): Promise<{ opcoes: Record<string, unknown>; prompt: string }> {
+  const { raiz, dirProjeto } = await fabricaFalsa();
+  const { consulta, vistas, prompts } = espiao();
+  const despachante = criarDespachante({
+    raizFabrica: raiz,
+    dirProjeto,
+    projeto: "app",
+    modeloFluxo: "sonnet",
+    equipe: null,
+    consulta,
+    abortController: new AbortController(),
+    emitir: () => {},
+  });
+  const pedido: PedidoDespacho = {
+    tarefa: tarefa(),
+    papel: "construtor",
+    agente: "executor",
+    modelo: null,
+    promptColado: null,
+    motivo: "teste",
+    notas: "",
+  };
+  await despachante(pedido);
+  return { opcoes: vistas[0] ?? {}, prompt: prompts[0] ?? "" };
+}
+
+/**
+ * O DEFEITO QUE ESTE TESTE TRAVA (14/08). `allowedTools` só AUTO-APROVA; quem restringe é
+ * `tools`. O `sdk.d.ts` é literal em `allowedTools`: *"To restrict which tools are available,
+ * use the `tools` option instead."* O despachante passava só `allowedTools` e o comentário
+ * afirmava que isso impedia o agente de despachar subagente — não impedia nada.
+ *
+ * A prova empírica está no job `1a3bc22e`: o `executor` da T-036 chamou **`ScheduleWakeup`
+ * seis vezes**, ferramenta que nunca esteve em `FERRAMENTAS_PIPELINE`. Ele tentava agendar
+ * continuação futura para esperar uma captura, num job headless onde ninguém acorda ninguém;
+ * a etapa morreu com `exit 1` e a tarefa ficou sem entrega.
+ *
+ * Por isso o teste é sobre o objeto `options` QUE CHEGA AO SDK, e não sobre a constante: é a
+ * armadilha registrada no CLAUDE.md do painel — opção com nome errado é ignorada em silêncio,
+ * compila, passa nos testes, e a proteção configurada simplesmente não acontece.
+ */
+describe("despachante — a restrição de ferramentas chega ao SDK na opção que restringe", () => {
+  it("passa `tools` (restrição), não só `allowedTools` (auto-aprovação)", async () => {
+    const { opcoes } = await despachar();
+    expect(Array.isArray(opcoes["tools"]), "`tools` é o que restringe — precisa ser passado").toBe(
+      true,
+    );
+    expect(opcoes["tools"]).toContain("Read");
+    expect(opcoes["tools"]).toContain("Bash");
+  });
+
+  it("nenhuma ferramenta de despacho ou agendamento sobrevive em `tools`", async () => {
+    const { opcoes } = await despachar();
+    const tools = opcoes["tools"] as string[];
+    for (const proibida of FERRAMENTAS_PROIBIDAS) expect(tools).not.toContain(proibida);
+  });
+
+  it("remove a família perigosa do contexto por `disallowedTools`", async () => {
+    const { opcoes } = await despachar();
+    const negadas = opcoes["disallowedTools"] as string[];
+    expect(negadas).toContain("Agent");
+    expect(negadas).toContain("ScheduleWakeup");
+  });
+
+  /**
+   * O inventário abre o bloco compartilhado — a parte byte-idêntica entre despachos, e a
+   * única idêntica entre PROJETOS. Fora dela ele seria pago por inteiro a cada etapa.
+   */
+  it("injeta o ferramental da fábrica no início do prompt", async () => {
+    const { prompt } = await despachar();
+    expect(prompt).toContain("<ferramental-da-fabrica>");
+    expect(prompt).toContain("captura.mjs");
+    expect(prompt.indexOf("<ferramental-da-fabrica>")).toBeLessThan(
+      prompt.indexOf("<contexto-projeto>"),
+    );
+  });
+});
 
 describe("orcamentoDeFerramentas — o teto declarado nos prompts, em número (T-065)", () => {
   /**

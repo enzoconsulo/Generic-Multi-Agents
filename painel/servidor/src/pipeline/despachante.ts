@@ -2,8 +2,9 @@ import { ehLimiteDeUso, horaDeReabertura, type Consulta } from "../jobs/claude/r
 import { estimarCusto } from "../jobs/claude/precos.js";
 import { montarContexto, papelDoAgente } from "../contexto/montador.js";
 import type { EquipeProjeto } from "../fabrica/tipos.js";
-import { carregarAgente, FERRAMENTAS_PIPELINE } from "./prompts-agente.js";
+import { carregarAgente, FERRAMENTAS_PIPELINE, FERRAMENTAS_PROIBIDAS } from "./prompts-agente.js";
 import { avaliarComandoDeProcesso, comandoDoToolInput } from "./guarda-processos.js";
+import { avaliarReinvencao } from "./guarda-ferramental.js";
 import type { PedidoDespacho, ResultadoDespacho } from "./motor.js";
 
 /**
@@ -18,9 +19,11 @@ import type { PedidoDespacho, ResultadoDespacho } from "./motor.js";
  * 1. **Não existe agente abandonado.** Quem chama é `for await (… of consulta(…))` dentro
  *    de um `await`. O bug que destruiu trabalho em 30/07 e 01/08 — um modelo encerrando o
  *    turno com agente em voo — não tem como acontecer: não há modelo decidindo esperar.
- * 2. **O agente não pode despachar subagente.** `FERRAMENTAS_PIPELINE` não inclui
- *    `Agent`/`Task`. A regra "subagentes não criam subagentes" deixa de ser pedido no
- *    prompt e vira ausência de ferramenta.
+ * 2. **O agente não pode despachar subagente nem agendar continuação futura.**
+ *    `FERRAMENTAS_PIPELINE` (passada em `tools`, que é o que restringe de verdade) não inclui
+ *    `Agent`/`Task`, e `FERRAMENTAS_PROIBIDAS` remove a família de agendamento. As regras
+ *    "subagentes não criam subagentes" e "nunca agende continuação futura" deixam de ser
+ *    pedido no prompt e viram ausência de ferramenta.
  * 3. **O prefixo é estável entre etapas.** Mesmo `systemPrompt` (preset sem seções
  *    dinâmicas), mesmas ferramentas, e o bloco compartilhado do projeto abrindo a mensagem
  *    — nessa ordem de propósito, é o que o cache consegue reaproveitar.
@@ -159,6 +162,7 @@ export function criarDespachante(
     const hash = hashDasNotas(pedido);
     const ctx = await montarContexto({
       dirProjeto: o.dirProjeto,
+      raizFabrica: o.raizFabrica,
       papel,
       areas: pedido.tarefa.areas,
       hashCommit: hash,
@@ -203,8 +207,26 @@ export function criarDespachante(
         cwd: o.dirProjeto,
         model: modelo,
         ...(o.fallback !== undefined ? { fallbackModel: o.fallback } : {}),
-        // Sem `Agent`/`Task`: a regra "subagentes não criam subagentes" vira ausência de
-        // ferramenta em vez de pedido no prompt.
+        /**
+         * `tools` RESTRINGE; `allowedTools` só auto-aprova. Confundir os dois deixou a
+         * fábrica sem restrição nenhuma por semanas, com o comentário aqui afirmando o
+         * contrário. O `sdk.d.ts` é literal em `allowedTools`: *"To restrict which tools are
+         * available, use the `tools` option instead."*
+         *
+         * A prova de que não restringia está no job `1a3bc22e` (14/08): o `executor` chamou
+         * **`ScheduleWakeup` seis vezes** — ferramenta que nunca esteve em
+         * `FERRAMENTAS_PIPELINE`. Ele tentava agendar continuação futura para esperar uma
+         * captura, num job headless onde não existe quem acorde ninguém; a etapa morreu com
+         * `exit 1` e a tarefa ficou sem entrega. Mesma família do `run_in_background` que
+         * destruiu trabalho em 30/07 e 01/08: proteção que depende de o modelo lembrar não é
+         * proteção, e proteção escrita na opção errada não é nem lembrete.
+         *
+         * `disallowedTools` é cinto e suspensório para a família perigosa: o `sdk.d.ts` diz
+         * que ela é *"removed from the model's context"*, então cobre também o que o harness
+         * injete por fora da allowlist.
+         */
+        tools: [...FERRAMENTAS_PIPELINE],
+        disallowedTools: [...FERRAMENTAS_PROIBIDAS],
         allowedTools: [...FERRAMENTAS_PIPELINE],
         permissionMode: "bypassPermissions",
         // A ÚNICA conferência de comando neste caminho. `bypassPermissions` desliga o
@@ -216,11 +238,17 @@ export function criarDespachante(
               hooks: [
                 async (entrada: unknown) => {
                   const i = entrada as { tool_name?: string; tool_input?: unknown };
-                  const veredicto = avaliarComandoDeProcesso(comandoDoToolInput(i.tool_input));
+                  const comando = comandoDoToolInput(i.tool_input);
+                  // Duas guardas, um hook: matar processo alheio e reinventar ferramenta que a
+                  // fábrica já tem. Separadas em módulos porque são motivos distintos, unidas
+                  // aqui porque o ponto de decisão tem de ser único — guarda que depende de um
+                  // caminho novo lembrar de chamá-la não é guarda.
+                  const processo = avaliarComandoDeProcesso(comando);
+                  const veredicto = processo.permitido ? avaliarReinvencao(comando) : processo;
                   if (veredicto.permitido) return { continue: true };
                   o.emitir(
                     "erro",
-                    `GUARDA: comando de kill recusado para ${pedido.agente} — ${veredicto.motivo ?? ""}`,
+                    `GUARDA: comando recusado para ${pedido.agente} — ${veredicto.motivo ?? ""}`,
                   );
                   return {
                     continue: true,
