@@ -355,3 +355,48 @@ describe("deveBloquear / deveReplanejar", () => {
     expect(deveReplanejar(tarefa({ id: "T-1", tentativas: 2 }))).toBe(false);
   });
 });
+
+describe("proximosPassos — desempate por quem destrava mais", () => {
+  /**
+   * A ordem que o `/trabalhar` sempre prometeu e o código não fazia: no empate de prioridade
+   * caía direto no id, que é a ordem de CRIAÇÃO. Numa fase madura isso inverte a fila, porque
+   * a tarefa que abre caminho para outras costuma nascer depois delas.
+   */
+  it("entre iguais, a que destrava mais tarefas vem primeiro — não a de id menor", () => {
+    const t = [
+      tarefa({ id: "T-001", status: "pronta", prioridade: "alta" }),
+      tarefa({ id: "T-009", status: "pronta", prioridade: "alta" }),
+      // Três esperam pela T-009; nenhuma espera pela T-001.
+      tarefa({ id: "T-010", status: "backlog", dependencias: ["T-009"] }),
+      tarefa({ id: "T-011", status: "backlog", dependencias: ["T-009"] }),
+      tarefa({ id: "T-012", status: "backlog", dependencias: ["T-009"] }),
+    ];
+    const ordem = proximosPassos(t, "software").map((p) => p.tarefa.id);
+    expect(ordem[0]).toBe("T-009");
+  });
+
+  it("prioridade ainda manda: `alta` sem dependentes vence `media` com muitos", () => {
+    const t = [
+      tarefa({ id: "T-001", status: "pronta", prioridade: "alta" }),
+      tarefa({ id: "T-002", status: "pronta", prioridade: "media" }),
+      tarefa({ id: "T-003", status: "backlog", dependencias: ["T-002"] }),
+      tarefa({ id: "T-004", status: "backlog", dependencias: ["T-002"] }),
+    ];
+    expect(proximosPassos(t, "software").map((p) => p.tarefa.id)[0]).toBe("T-001");
+  });
+
+  /**
+   * Dependente CONCLUÍDA não espera por ninguém. Contá-la faria uma tarefa antiga parecer
+   * urgente para sempre — a contagem tem de medir espera viva, não histórico.
+   */
+  it("dependente já concluída não conta como quem espera", () => {
+    const t = [
+      tarefa({ id: "T-001", status: "pronta", prioridade: "alta" }),
+      tarefa({ id: "T-009", status: "pronta", prioridade: "alta" }),
+      tarefa({ id: "T-010", status: "concluida", dependencias: ["T-009"] }),
+      tarefa({ id: "T-011", status: "concluida", dependencias: ["T-009"] }),
+    ];
+    // Empate real em 0 dependentes vivos → volta a valer o id, que é o determinismo.
+    expect(proximosPassos(t, "software").map((p) => p.tarefa.id)[0]).toBe("T-001");
+  });
+});

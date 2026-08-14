@@ -127,7 +127,21 @@ export interface Passo {
  *    dois construtores no mesmo arquivo se atropelam.
  * 3. **Revisor lê o diff commitado** — pode rodar em paralelo com qualquer coisa.
  *
- * Ordem: prioridade, depois id (determinístico entre rodadas).
+ * Ordem: prioridade; **no empate, quem destrava mais tarefas**; e só então id (que existe
+ * para o resultado ser determinístico entre rodadas, não porque o número signifique algo).
+ *
+ * O desempate por dependentes é o que o `/trabalhar` sempre PROMETEU ("entre iguais, a que
+ * destrava mais dependentes") e o código não fazia: caía direto no id, que é a ordem de
+ * CRIAÇÃO. Numa fase madura isso inverte a fila — a tarefa que abre caminho para outras três
+ * costuma ter sido criada depois delas, então o id a joga para o fim exatamente quando ela é
+ * a mais urgente.
+ *
+ * Limite conhecido, e vale registrar porque a heurística não o cobre: só enxerga a dependência
+ * DECLARADA. Uma tarefa de fundação cujo valor é tornar as outras verificáveis — e que ninguém
+ * lista em `dependencias` — continua invisível aqui, por mais dependentes reais que tenha.
+ * Foi o caso da T-043 do banco-imobiliario, que ficou por último enquanto dois jobs (US$ 14)
+ * faziam à mão o ritual que ela existia para eliminar. O conserto DAQUILO é de planejamento
+ * (declarar a fundação como dependência de quem ela serve), não de ordenação.
  */
 export function proximosPassos(
   tarefas: readonly TarefaResumo[],
@@ -140,10 +154,24 @@ export function proximosPassos(
     if (papel === undefined || papel === null) continue;
     candidatos.push({ tarefa: t, papel });
   }
+  // Quantas tarefas AINDA ABERTAS esperam por cada uma. Concluída não conta: ela já não
+  // espera por ninguém, e somá-la faria uma tarefa antiga parecer urgente para sempre.
+  const dependentes = new Map<string, number>();
+  for (const t of tarefas) {
+    if (t.status === "concluida" || t.status === "cancelada") continue;
+    for (const dep of t.dependencias ?? []) {
+      dependentes.set(dep, (dependentes.get(dep) ?? 0) + 1);
+    }
+  }
+
   candidatos.sort((a, b) => {
     const pa = ORDEM_PRIORIDADE[a.tarefa.prioridade] ?? 1;
     const pb = ORDEM_PRIORIDADE[b.tarefa.prioridade] ?? 1;
-    return pa !== pb ? pa - pb : a.tarefa.id.localeCompare(b.tarefa.id);
+    if (pa !== pb) return pa - pb;
+    const da = dependentes.get(a.tarefa.id) ?? 0;
+    const db = dependentes.get(b.tarefa.id) ?? 0;
+    if (da !== db) return db - da; // mais dependentes primeiro
+    return a.tarefa.id.localeCompare(b.tarefa.id);
   });
 
   const revisores = candidatos.filter((c) => c.papel === "revisor");
