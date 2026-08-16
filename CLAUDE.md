@@ -306,11 +306,11 @@ lados.
 Tarefa com `agente: <id>` e `<id>` presente no `equipe.json` do projeto:
 
 1. Despache o subagente **`<id>`**.
-2. Não existe? Despache **`<projeto>__<id>`**. É o nome qualificado, que o painel usa
-   quando o mesmo `id` aparece em mais de um projeto injetado — antes, nesse caso, um
-   projeto recebia o especialista do outro em silêncio.
-3. Também não existe? Você está fora do painel — no chat interativo o SDK não injeta equipe
-   nenhuma. **Não caia no genérico em silêncio:** despache o `executor` (ou `construtor`)
+2. Não existe? Despache **`<projeto>__<id>`**, o nome qualificado — usado quando o mesmo
+   `id` aparece em mais de um projeto injetado, caso em que antes um projeto recebia o
+   especialista do outro em silêncio.
+3. Também não existe? **Não caia no genérico em silêncio:** despache o `executor` (ou
+   `construtor`)
    genérico com o prompt do especialista COLADO no despacho:
 
    ```
@@ -319,9 +319,22 @@ Tarefa com `agente: <id>` e `<id>` presente no `equipe.json` do projeto:
    ```
 
    O prompt do especialista é curto por construção (ele delega a disciplina ao
-   executor/construtor e só carrega o domínio), então colar custa pouco. É este passo 3 que
-   faz `equipe.json` valer nos DOIS caminhos de disparo: antes, o especialista existia só
-   pelo painel, e todo `/trabalhar` rodado no terminal perdia a especialização sem avisar.
+   executor/construtor e só carrega o domínio), então colar custa pouco.
+
+**O passo 3 não é o caso raro — é o ÚNICO que executa no painel** (medido em 16/08: 51 de 51
+despachos com `agente:`, em 41 rodadas). A redação anterior sugeria o contrário, dizendo que
+os passos 1-2 eram "o que o painel usa", e isso levou a suspeitar que a equipe especializada
+nunca chegava ao modelo.
+
+A razão é estrutural e está em `runner-pipeline.ts`: injetar subagente pelo SDK serve para um
+orquestrador-MODELO que decide chamar `Agent`. No pipeline em código quem despacha é a máquina
+de estados, que monta a `query()` inteira — não há a quem oferecer um subagente. Então o
+painel passa `disponiveis` vazio de propósito, a resolução cai no passo 3, e o prompt do
+especialista entra num bloco `<especialista>` ao lado do `<seu-papel>`. **A especialização
+chega; o que não existe é o mecanismo de subagente.** Há teste travando as duas metades da
+cadeia (`especialista-colado.test.ts` e `despachante.test.ts`).
+
+Os passos 1 e 2 continuam valendo para VOCÊ, no chat interativo, onde há de fato subagentes.
 
 Sem `agente:`, use o genérico da trilha. Com um `agente:` que **não consta** no
 `equipe.json`: use o genérico **e anote no log** — apontar para especialista inexistente é

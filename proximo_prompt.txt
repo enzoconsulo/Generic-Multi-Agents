@@ -187,13 +187,16 @@ máquina com 7,9 GB. **Traga números antes de implementar** — pode ser que n�
 ANOTADO, NÃO É TAREFA AINDA
 ═══════════════════════════════════════════════════════════════════════════════
 
-- **A equipe do projeto NUNCA é injetada pelo caminho do pipeline.** Em 51 de 51 despachos com
-  `agente:`, a resolução caiu no passo 3 ("genérico com prompt colado"). É DELIBERADO e está
-  comentado em `runner-pipeline.ts:271` — quem despacha é código, então colar o prompt é o
-  único modo que funciona. O que está errado é a CONSTITUIÇÃO: a seção "Equipe do projeto" do
-  `CLAUDE.md` descreve o passo 2 (`<projeto>__<id>`) como "o nome qualificado, que o painel
-  usa", e esse caminho nunca executa no pipeline. Ou o `CLAUDE.md` passa a dizer que o passo 3
-  é o normal no painel, ou o passo 2 vira código morto declarado. Decida e escreva.
+- **RESOLVIDO em 16/08 — a equipe especializada É usada, e não estava.** A auditoria mostrou
+  que em 51 de 51 despachos com `agente:` a resolução cai no passo 3, e isso levantou a
+  suspeita de que `equipe.json` fosse decoração. Não é: o passo 3 devolve `promptColado`, e o
+  despachante o insere num bloco `<especialista>` ao lado do `<seu-papel>`. Provado em
+  execução com o `equipe.json` REAL (`especialista-colado.test.ts`) e sobre o prompt que chega
+  ao SDK (`despachante.test.ts`) — inclusive que cada especialista traz o SEU prompt e que a
+  troca após 2 reprovações abandona o prompt de propósito. O que não existe no painel é o
+  MECANISMO de subagente do SDK: quem despacha é a máquina de estados, que monta a `query()`
+  inteira, então não há a quem oferecer um subagente. `CLAUDE.md` corrigido — dizia que os
+  passos 1-2 eram "o que o painel usa".
 - **`tarefas.ts:74`** tem o mesmo `/^T-\d+/` que causou o bug do marco, mas só como fallback do
   `id:` do frontmatter. Latente. Alinhe para `/^T-\d+[a-z]*/i` quando encostar no arquivo.
 - **`paraReplanejar` teve 2 entradas (T-030, T-032) e nenhuma `bloqueada` em 41 rodadas.** O

@@ -65,7 +65,9 @@ function espiao(): { consulta: Consulta; vistas: Record<string, unknown>[]; prom
   return { consulta, vistas, prompts };
 }
 
-async function despachar(): Promise<{ opcoes: Record<string, unknown>; prompt: string }> {
+async function despachar(
+  promptColado: string | null = null,
+): Promise<{ opcoes: Record<string, unknown>; prompt: string }> {
   const { raiz, dirProjeto } = await fabricaFalsa();
   const { consulta, vistas, prompts } = espiao();
   const despachante = criarDespachante({
@@ -83,7 +85,7 @@ async function despachar(): Promise<{ opcoes: Record<string, unknown>; prompt: s
     papel: "construtor",
     agente: "executor",
     modelo: null,
-    promptColado: null,
+    promptColado,
     motivo: "teste",
     notas: "",
   };
@@ -208,5 +210,41 @@ describe("limiarDeDebate — o ALARME, calibrado no p90 medido (16/08)", () => {
   it("papel desconhecido não vira limiar zero", () => {
     expect(limiarDeDebate("planejador")).toBeGreaterThanOrEqual(60);
     expect(limiarDeDebate("papel-que-nao-existe")).toBeGreaterThanOrEqual(60);
+  });
+});
+
+
+/**
+ * A OUTRA METADE DA CADEIA DA EQUIPE ESPECIALIZADA (16/08).
+ *
+ * `maquina.test.ts` e `especialista-colado.test.ts` provam que a resolução DEVOLVE o prompt do
+ * especialista quando não há subagente injetado — que é o caso de 100% dos despachos do
+ * pipeline em código. Falta provar que ele CHEGA à mensagem, e essa metade é a que esta
+ * fábrica já perdeu em silêncio antes: o `outputConfig` do SDK compilava, passava nos testes e
+ * era ignorado.
+ *
+ * Por isso o teste é sobre o `prompt` que o espião captura, não sobre o campo do pedido.
+ */
+describe("despachante — o prompt do especialista chega à mensagem", () => {
+  it("insere o bloco <especialista> com o conteúdo colado", async () => {
+    const { prompt } = await despachar("Você é o especialista em motor de regras deste projeto.");
+    expect(prompt).toContain("<especialista>");
+    expect(prompt).toContain("Você é o especialista em motor de regras deste projeto.");
+    expect(prompt).toContain("</especialista>");
+  });
+
+  it("sem especialista, nenhum bloco vazio sobra na mensagem", async () => {
+    const { prompt } = await despachar(null);
+    expect(prompt).not.toContain("<especialista>");
+  });
+
+  /**
+   * O prompt do papel continua sendo o do papel: o especialista ACRESCENTA domínio, não
+   * substitui a disciplina. Trocar um pelo outro faria o executor perder o contrato de estado.
+   */
+  it("o bloco do papel continua presente ao lado do especialista", async () => {
+    const { prompt } = await despachar("domínio X");
+    expect(prompt).toContain("<seu-papel>");
+    expect(prompt.indexOf("<seu-papel>")).toBeLessThan(prompt.indexOf("<especialista>"));
   });
 });
