@@ -8,7 +8,7 @@ import type { TarefaResumo } from "../../src/fabrica/tipos.js";
  * A EQUIPE ESPECIALIZADA CHEGA MESMO AO MODELO? (16/08)
  *
  * A auditoria dos 41 jobs mostrou que em 51 de 51 despachos com `agente:` a resolução caiu no
- * PASSO 3 — "genérico com prompt colado". Steps 1 e 2 (subagente injetado pelo SDK) nunca
+ * PASSO 3 — o especialista colado no despacho. Os passos 1 e 2 (subagente do SDK) nunca
  * executam no pipeline em código, e isso é deliberado: quem despacha é código, não um
  * orquestrador-modelo que "chama" subagentes.
  *
@@ -58,7 +58,7 @@ describe("equipe especializada no pipeline em código", () => {
     // Conteúdo REAL do especialista, não um campo qualquer preenchido.
     expect(r.promptColado).toContain("motor de regras");
     expect(r.promptColado).toContain("server/engine/");
-    expect(r.motivo).toContain("prompt colado");
+    expect(r.motivo).toContain("colado no despacho");
   });
 
   it("cada especialista traz o SEU prompt, não o do vizinho", () => {
@@ -79,7 +79,7 @@ describe("equipe especializada no pipeline em código", () => {
       { disponiveis: new Set<string>(), projeto: "banco-imobiliario", reforco: "opus" },
     );
     expect(r.promptColado).toBeNull();
-    expect(r.motivo).toContain("NÃO consta");
+    expect(r.motivo).toContain("não consta");
   });
 
   /**
@@ -96,5 +96,48 @@ describe("equipe especializada no pipeline em código", () => {
     expect(r.nome).toBe("executor-reforcado");
     expect(r.promptColado).toBeNull();
     expect(r.motivo).toContain("enviesando");
+  });
+
+  /**
+   * REGRESSÃO DE REDAÇÃO, e ela vale um teste porque o estrago foi real.
+   *
+   * O motivo do passo 3 era `` `engine` não injetado — genérico com prompt colado ``. Está
+   * correto e é enganoso: abre pelo mecanismo AUSENTE (injeção de subagente, que o painel
+   * nunca usa e nem deveria) em vez do efeito real (o especialista foi aplicado). Em 16/08
+   * isso fez 51 despachos saudáveis serem lidos como 51 degradados numa auditoria, e a
+   * conclusão errada — "a equipe especializada nunca é usada" — chegou a ser relatada ao
+   * usuário antes de ser desmentida por teste.
+   *
+   * A linha de log é lida meses depois, fora de contexto, por quem julga a saúde do
+   * roteamento por ela. Descreva o que ACONTECEU.
+   */
+  it("o motivo descreve o que aconteceu, não o mecanismo que faltou", () => {
+    const r = resolverAgente(
+      { tarefa: tarefaCom("engine"), papel: "construtor" },
+      trilhaDe(equipe), equipe,
+      { disponiveis: new Set<string>(), projeto: "banco-imobiliario", reforco: "opus" },
+    );
+    expect(r.motivo).not.toMatch(/não injetad|nao injetad/i);
+    expect(r.motivo).toContain("engine");
+  });
+
+  /**
+   * Passo 1/2 e passo 3 aplicam o MESMO especialista por meios diferentes. Se as duas linhas
+   * fossem idênticas no log, não daria para auditar por qual caminho o roteamento passou —
+   * que é a única razão de o campo `motivo` existir.
+   */
+  it("distingue no log o especialista aplicado como subagente do aplicado por colagem", () => {
+    const comum = { projeto: "banco-imobiliario", reforco: "opus" };
+    const colado = resolverAgente(
+      { tarefa: tarefaCom("engine"), papel: "construtor" },
+      trilhaDe(equipe), equipe, { ...comum, disponiveis: new Set<string>() },
+    );
+    const subagente = resolverAgente(
+      { tarefa: tarefaCom("engine"), papel: "construtor" },
+      trilhaDe(equipe), equipe, { ...comum, disponiveis: new Set(["engine"]) },
+    );
+    expect(subagente.nome).toBe("engine");
+    expect(subagente.promptColado).toBeNull();
+    expect(colado.motivo).not.toBe(subagente.motivo);
   });
 });

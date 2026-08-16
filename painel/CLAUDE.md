@@ -472,3 +472,15 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   segmentador dos resumos casa (`/→\s*([a-z0-9-]+)\s*$/i`) para fechar trecho. Mudar o
   formato dessa linha mata TODOS os resumos de agente **em silêncio** — há teste travando a
   invariante, mas o teste não explica por que ela existe; esta entrada explica.
+- **Linha de log descreve o que ACONTECEU, nunca o mecanismo que faltou.** O motivo do passo
+  3 da resolução de agente era `` `engine` não injetado — genérico com prompt colado ``:
+  tecnicamente correto e enganoso, porque abre pelo mecanismo AUSENTE (injeção de subagente
+  do SDK, que o pipeline em código nunca usa e nem deveria) em vez do efeito real — o
+  especialista FOI aplicado, por colagem. Em 16/08 isso fez uma auditoria ler 51 despachos
+  saudáveis como 51 degradados, e a conclusão errada ("a equipe especializada nunca é usada")
+  chegou ao usuário antes de ser desmentida por teste. Log é lido meses depois, fora de
+  contexto, por quem julga a saúde do sistema por ele: **abra pelo efeito; mencione a
+  ausência só quando ela FOR o defeito** (ex.: `agente:` que não consta no `equipe.json`), e
+  aí nomeie-a como defeito, não como detalhe de implementação. Corolário para auditoria:
+  antes de concluir que um mecanismo está degradado a partir de uma linha de log, **confirme
+  o efeito no código ou num teste** — a linha descreve a trilha de decisão, não o resultado.

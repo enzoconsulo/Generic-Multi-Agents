@@ -271,7 +271,7 @@ describe("resolverAgente — os 3 passos do CLAUDE.md", () => {
     );
     expect(r.nome).toBe("executor");
     expect(r.promptColado).toBeNull();
-    expect(r.motivo).toContain("NÃO consta");
+    expect(r.motivo).toContain("não consta");
   });
 });
 

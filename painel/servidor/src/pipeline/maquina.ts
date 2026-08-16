@@ -208,7 +208,22 @@ export interface AgenteResolvido {
   modelo: string | null;
   /** Prompt do especialista a COLAR no despacho, quando o agente nomeado não existe. */
   promptColado: string | null;
-  /** Trilha de decisão, para o log — é o que permite auditar roteamento errado. */
+  /**
+   * Trilha de decisão, para o log — é o que permite auditar roteamento errado.
+   *
+   * **DESCREVA O QUE ACONTECEU, NUNCA O QUE FALTOU.** Esta linha é lida meses depois, fora
+   * de contexto, e quem a lê julga a saúde do roteamento por ela. O texto antigo do passo 3
+   * era `` `engine` não injetado — genérico com prompt colado ``: tecnicamente correto e
+   * enganoso, porque abre pelo mecanismo AUSENTE (injeção de subagente, que o painel nunca
+   * usa e nem deveria) em vez do efeito REAL (o especialista foi aplicado). Custou uma
+   * auditoria inteira em 16/08: 51 despachos saudáveis foram lidos como 51 degradados, e a
+   * conclusão errada — "a equipe especializada nunca é usada" — chegou a ser relatada ao
+   * usuário antes de ser desmentida por teste.
+   *
+   * Regra para as próximas: o motivo começa pelo que o despacho É. Ausência só aparece
+   * quando ela É o defeito (ex.: `agente:` que não consta no `equipe.json`), e aí vem
+   * nomeada como defeito, não como detalhe de implementação.
+   */
   motivo: string;
 }
 
@@ -288,7 +303,11 @@ export function resolverAgente(
       nome: `${generico}${sufixo}`,
       modelo,
       promptColado: null,
-      motivo: `\`agente: ${id}\` NÃO consta no equipe.json — genérico + defeito de planejamento`,
+      // Aqui a ausência É o defeito, então ela lidera — mas o efeito vem junto, para quem lê
+      // o log saber o que de fato rodou.
+      motivo:
+        `genérico da trilha SEM especialização — \`agente: ${id}\` não consta no` +
+        " equipe.json (defeito de planejamento, não do agente)",
     };
   }
 
@@ -311,18 +330,29 @@ export function resolverAgente(
         nome: candidato,
         modelo,
         promptColado: null,
-        motivo: `especialista \`${id}\`${reforcar ? " (reforçado)" : ""}`,
+        // "subagente" explícito para distinguir do passo 3, que aplica o MESMO especialista
+        // por outro meio. Sem isso as duas linhas ficariam idênticas no log e não daria para
+        // auditar por qual caminho o roteamento passou.
+        motivo: `especialista \`${id}\` como subagente${reforcar ? " (reforçado)" : ""}`,
       };
     }
   }
 
-  // Passo 3: nenhuma equipe injetada (disparo fora do painel). Genérico com o prompt do
-  // especialista COLADO — é o que faz `equipe.json` valer nos DOIS caminhos de disparo.
+  // Passo 3: genérico da trilha com o prompt do especialista COLADO no despacho.
+  //
+  // **Este é o caminho NORMAL do painel, não a exceção** — medido em 16/08: 51 de 51
+  // despachos com `agente:`, em 41 rodadas. `runner-pipeline.ts` passa `disponiveis` vazio de
+  // propósito: injetar subagente pelo SDK serve a um orquestrador-MODELO que decide chamar
+  // `Agent`, e aqui quem despacha é a máquina de estados, que monta a `query()` inteira. Não
+  // há a quem oferecer um subagente. Os passos 1 e 2 existem para o chat interativo.
+  //
+  // A especialização NÃO se perde: `promptColado` entra num bloco `<especialista>` ao lado do
+  // `<seu-papel>` (ver `despachante.ts`), e há teste travando as duas metades da cadeia.
   return {
     nome: `${generico}${sufixo}`,
     modelo,
     promptColado: especialista.prompt,
-    motivo: `\`${id}\` não injetado — genérico com prompt colado`,
+    motivo: `especialista \`${id}\` colado no despacho${reforcar ? " (reforçado)" : ""}`,
   };
 }
 
