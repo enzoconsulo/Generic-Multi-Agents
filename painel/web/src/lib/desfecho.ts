@@ -127,6 +127,13 @@ const ROTULO_ESTADO: Readonly<Record<string, string>> = {
  * Desfechos do PIPELINE EM CÓDIGO, por `encerrouPor`. As frases de retomada descrevem o
  * mecanismo real: cada rodada relê `_gestao/tarefas/` do disco e o saneamento de abertura
  * decide tarefa por tarefa se ela continua ou recomeça — ver `pipeline/motor.ts`.
+ *
+ * **Elas dizem O QUE FAZER, e não só o que aconteceria** (16/08). A redação anterior
+ * explicava direito o efeito de "redisparar" e deixava o usuário sem saber por onde se
+ * redispara — a pergunta que ele acabou fazendo com todas as letras: *"colo exatamente o
+ * mesmo do meu primeiro prompt na mesma ação que não foi finalizada?"*. Hoje existe o botão
+ * (`lib/retomada.ts`) e estas frases o nomeiam. Ao editar qualquer uma: se ela não terminar
+ * com uma AÇÃO possível na tela, ela ainda não está pronta.
  */
 const POR_ENCERRAMENTO: Readonly<
   Record<string, { rotulo: string; tom: TomDesfecho; explicacao: string; retomada: string }>
@@ -144,8 +151,9 @@ const POR_ENCERRAMENTO: Readonly<
       "Parada PLANEJADA: o orçamento do job acabou e o laço não começou nada que não coubesse." +
       " Nenhum agente foi cortado no meio.",
     retomada:
-      "Redisparar com um teto maior continua daqui — tarefa concluída fica concluída e a que" +
-      " estava em andamento é retomada.",
+      "Clique em Retomar a rodada: ela continua daqui — tarefa concluída fica concluída e a" +
+      " que estava em andamento é retomada. Você não precisa redigitar nada, e o job de" +
+      " retomada nasce com o orçamento cheio de novo (é um job novo, com custo novo).",
   },
   cota: {
     rotulo: "Parou no limite da assinatura",
@@ -154,9 +162,10 @@ const POR_ENCERRAMENTO: Readonly<
       "A cota da assinatura acabou no meio de uma etapa. Não é defeito da fábrica e não há" +
       " o que corrigir: só o relógio reabre.",
     retomada:
-      "NADA do que já foi feito se perde — o estado vive nos arquivos das tarefas, não no job." +
-      " Quando a cota voltar, redispare: a rodada relê o disco, mantém o que está concluído e" +
-      " retoma a tarefa em voo de onde ela parou.",
+      "NADA do que já foi feito se perde — o estado vive nos arquivos e na sessão gravada, não" +
+      " no job. Quando a cota voltar, clique em Retomar aqui mesmo: NÃO cole o pedido de novo" +
+      " e não abra outra ação. A rodada relê o disco, mantém o que está concluído e retoma a" +
+      " tarefa em voo de onde ela parou. Retomar antes da hora só gasta segundos e não anda.",
   },
   "agente-cortado": {
     rotulo: "Parou: agente sem resultado",
@@ -165,8 +174,8 @@ const POR_ENCERRAMENTO: Readonly<
       "Um agente terminou sem devolver resultado e o laço parou para não empilhar trabalho" +
       " sobre estado desconhecido.",
     retomada:
-      "Ao redisparar, as demais tarefas seguem normalmente e a afetada é retomada (ou refeita," +
-      " se ele não deixou nada na árvore).",
+      "Clique em Retomar: as demais tarefas seguem normalmente e a afetada é retomada (ou" +
+      " refeita, se ele não deixou nada na árvore).",
   },
   "sem-progresso": {
     rotulo: "Parou: estado não gravado",
@@ -175,8 +184,8 @@ const POR_ENCERRAMENTO: Readonly<
       "Um agente terminou sem gravar o próprio status e sem deixar trabalho na árvore. O laço" +
       " parou para não repetir o mesmo despacho indefinidamente.",
     retomada:
-      "Ao redisparar, a tarefa volta a `pronta` e é refeita do início. Se repetir, é bug do" +
-      " agente e não da tarefa.",
+      "Ao clicar em Retomar, a tarefa volta a `pronta` e é refeita do início. Se repetir, é" +
+      " bug do agente e não da tarefa.",
   },
   "teto-de-voltas": {
     rotulo: "Parou: teto de voltas",
@@ -262,7 +271,9 @@ export function desfechoDoJob(job: JobParaDesfecho): Desfecho {
       tom: "erro",
       explicacao: texto(job.erro) ?? "O fluxo terminou com erro.",
       detalhes,
-      retomada: "Corrija a causa antes de redisparar — o estado das tarefas em disco não mudou.",
+      retomada:
+        "Corrija a causa antes de usar o Retomar — o estado das tarefas em disco não mudou," +
+        " então repetir sem consertar repete a falha.",
       qualificado: false,
     };
   }
@@ -276,8 +287,9 @@ export function desfechoDoJob(job: JobParaDesfecho): Desfecho {
           : "O painel caiu ou foi reiniciado com este job em voo.",
       detalhes,
       retomada:
-        "Redisparar retoma pelo disco: o que estava commitado continua valendo, e a tarefa em" +
-        " andamento é retomada ou devolvida a `pronta`.",
+        "Clique em Retomar: continua pelo disco (e, num fluxo de agente, pela sessão gravada)." +
+        " O que estava commitado continua valendo e a tarefa em andamento é retomada ou" +
+        " devolvida a `pronta`. Desligar o computador no meio cai exatamente aqui.",
       qualificado: false,
     };
   }

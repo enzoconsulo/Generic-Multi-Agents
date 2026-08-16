@@ -27,6 +27,8 @@ import {
   rotuloEstadoJob,
 } from "../../lib/formato";
 import { useAgora } from "../../lib/useAgora";
+import { avisoAntesDeRetomar, confirmacaoDeRetomada, ofertaDeRetomada } from "../../lib/retomada";
+import { paredeDeCota } from "../../lib/cota";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
 
 /**
@@ -107,7 +109,11 @@ export function Jobs() {
               Selecione uma execução à esquerda.
             </p>
           ) : (
-            <DetalheJob job={selecionado} linhas={logs[selecionado.id] ?? []} />
+            <DetalheJob
+              job={selecionado}
+              linhas={logs[selecionado.id] ?? []}
+              todosOsJobs={jobs}
+            />
           )}
         </section>
       </div>
@@ -201,13 +207,25 @@ function ItemJob({
   );
 }
 
-function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[] }) {
+function DetalheJob({
+  job,
+  linhas: linhasAoVivo,
+  todosOsJobs,
+}: {
+  job: Job;
+  linhas: LinhaLog[];
+  /** Só para saber se a parede de cota está de pé — ver `lib/cota.ts`. */
+  todosOsJobs: readonly Job[];
+}) {
   // Ao vivo vem do SSE; job já terminado (ou fora do buffer de replay) é lido do
   // `<id>.log.jsonl` gravado no fim da execução. Ver `useHistoricoLog`.
   const historico = useHistoricoLog(job.id, linhasAoVivo);
   const linhas = historico.linhas;
   const [cancelando, setCancelando] = useState(false);
   const [erroCancel, setErroCancel] = useState<string | null>(null);
+  const [retomando, setRetomando] = useState(false);
+  const [erroRetomar, setErroRetomar] = useState<string | null>(null);
+  const [confirmacao, setConfirmacao] = useState<string | null>(null);
   const [verLogCru, setVerLogCru] = useState(false);
   const [verPorAgente, setVerPorAgente] = useState(false);
 
@@ -231,6 +249,10 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
   // lógica dentro do componente seria lógica não verificada.
   const desfecho = desfechoDoJob(job);
 
+  // A oferta de retomada e o aviso de cota são decisões — moram em `lib/`, com teste.
+  const oferta = ofertaDeRetomada(job);
+  const parede = paredeDeCota(todosOsJobs);
+
   async function cancelar() {
     setCancelando(true);
     setErroCancel(null);
@@ -240,6 +262,29 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
       setErroCancel(e instanceof ErroApi || e instanceof Error ? e.message : "Falha ao cancelar");
     } finally {
       setCancelando(false);
+    }
+  }
+
+  async function retomar() {
+    setRetomando(true);
+    setErroRetomar(null);
+    setConfirmacao(null);
+    try {
+      // A confirmação traz o TETO REAL do job criado, resolvido pelo servidor contra a
+      // tabela de guardrails atual. Ele não é anunciado antes do clique porque a web
+      // precisaria de uma segunda cópia daquela tabela — e cópia que diverge é pior que
+      // silêncio quando o assunto é quanto vai custar.
+      const r = (await api(`/api/jobs/${job.id}/retomar`, { method: "POST" })) as {
+        tetoUsd?: unknown;
+      };
+      setConfirmacao(confirmacaoDeRetomada(r));
+      // Sem navegar para o job novo de propósito: ele entra na lista pelo SSE em um
+      // instante, e trocar a seleção debaixo de quem está lendo é o mesmo incômodo do
+      // autoscroll que esta tela já recusa em outro lugar.
+    } catch (e) {
+      setErroRetomar(e instanceof ErroApi || e instanceof Error ? e.message : "Falha ao retomar");
+    } finally {
+      setRetomando(false);
     }
   }
 
@@ -271,6 +316,16 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
       </div>
 
       <PainelDesfecho desfecho={desfecho} />
+      {oferta !== null && (
+        <CartaoRetomar
+          oferta={oferta}
+          parede={parede}
+          retomando={retomando}
+          erro={erroRetomar}
+          confirmacao={confirmacao}
+          aoRetomar={retomar}
+        />
+      )}
       {erroCancel !== null && <div className="aviso aviso-erro">{erroCancel}</div>}
 
       {/* Quem está trabalhando AGORA — a informação nº 1 que o usuário quer. */}
@@ -464,6 +519,57 @@ function PainelDesfecho({ desfecho }: { desfecho: Desfecho }) {
           {d}
         </p>
       ))}
+    </section>
+  );
+}
+
+/**
+ * O BOTÃO RETOMAR, logo abaixo do desfecho.
+ *
+ * Fica AQUI, e não na página do projeto, porque é aqui que a pessoa está quando descobre
+ * que o fluxo parou — e a pergunta que ela faz nesse instante é "e agora, o que eu clico?".
+ * A tela respondia isso com um parágrafo que explicava o efeito de "redisparar" sem dizer
+ * onde se redispara; a saída real era voltar ao projeto e redigitar o pedido de memória.
+ *
+ * A promessa vem inteira de `lib/retomada.ts`, com teste. Ela SEMPRE diz se o pedido
+ * precisa ser recolado (nunca precisa) — é a dúvida literal do usuário, e responder por
+ * omissão não conta.
+ */
+function CartaoRetomar({
+  oferta,
+  parede,
+  retomando,
+  erro,
+  confirmacao,
+  aoRetomar,
+}: {
+  oferta: NonNullable<ReturnType<typeof ofertaDeRetomada>>;
+  parede: ReturnType<typeof paredeDeCota>;
+  retomando: boolean;
+  erro: string | null;
+  confirmacao: string | null;
+  aoRetomar: () => void;
+}) {
+  return (
+    <section className="retomar">
+      <div className="retomar-linha">
+        <button
+          type="button"
+          className="botao-principal"
+          onClick={aoRetomar}
+          disabled={retomando}
+        >
+          {retomando ? "Retomando…" : oferta.rotulo}
+        </button>
+        <p className="retomar-promessa">{oferta.promessa}</p>
+      </div>
+      {confirmacao !== null && <p className="retomar-ok">{confirmacao}</p>}
+      {/* Avisa, não bloqueia — mesma decisão de `lib/cota.ts`: a hora que o provedor
+          anuncia é texto livre, e barrar por palpite custa mais que a tentativa. */}
+      {parede !== null && (
+        <p className="retomar-aviso">{avisoAntesDeRetomar(parede.reabreEm)}</p>
+      )}
+      {erro !== null && <div className="aviso aviso-erro">{erro}</div>}
     </section>
   );
 }

@@ -2,13 +2,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { ContextoExecucao, Job, NovaPendencia, Runner } from "../tipos.js";
 import { ehEsforco, type Esforco } from "../robustez/guardrails.js";
 import { estimarCusto } from "./precos.js";
-import {
-  comAgentesEmVoo,
-  comGasto,
-  decidir,
-  novoOrcamento,
-  type SituacaoOrcamento,
-} from "../../pipeline/orcamento.js";
+import { decidirFluxo, type AcaoFluxo } from "./orcamento-fluxo.js";
 
 /**
  * Runner que executa um fluxo da fábrica via Claude Agent SDK (T-008). O padrão de uso
@@ -44,9 +38,19 @@ export interface ParamsClaude {
    * cota**. `maxTurns` não serve para isso e o histórico prova — ele limita só o laço do
    * orquestrador, enquanto `num_turns` é somado entre os `result` inclusive dos subagentes;
    * jobs somaram 211 e 212 voltas com o teto em 120. Aqui a unidade é dinheiro, que é o
-   * que acaba. Ver `pipeline/orcamento.ts` para a decisão e a parada limpa.
+   * que acaba. Ver `claude/orcamento-fluxo.ts` para a decisão e a parada limpa — e por que
+   * ela NÃO é a mesma de `pipeline/orcamento.ts`, que fala de tarefas que um fluxo de
+   * agente único não tem.
    */
   tetoUsd?: number;
+  /**
+   * `sessionId` de uma sessão anterior a CONTINUAR (`options.resume` do SDK), em vez de
+   * começar do zero. É o que sustenta o botão Retomar — ver `jobs/retomada.ts`.
+   *
+   * Quando presente, o `prompt` deste job é a instrução de continuação, não o pedido
+   * original: o pedido inteiro volta com o histórico da sessão.
+   */
+  retomarSessao?: string;
 }
 
 /**
@@ -623,6 +627,12 @@ export class RunnerClaude implements Runner {
         // Só vai quando a tabela de guardrails define: omitir mantém o padrão do modelo,
         // que é o certo para os fluxos de julgamento.
         ...(p.esforco !== undefined ? { effort: p.esforco } : {}),
+        // RETOMADA (16/08): recarrega o transcript de `~/.claude/projects/<cwd>/<id>.jsonl`
+        // e continua a conversa. O nome da opção é `resume` e está conferido no
+        // `sdk.d.ts` da versão PINADA — opção com nome errado é ignorada EM SILÊNCIO, e o
+        // fluxo recomeçaria do zero sem ninguém perceber. Há teste sobre o objeto
+        // `options` que chega ao SDK, não sobre a tabela que o monta.
+        ...(p.retomarSessao !== undefined ? { resume: p.retomarSessao } : {}),
       },
     });
 
@@ -662,17 +672,22 @@ export class RunnerClaude implements Runner {
      */
     let limiteBatido: string | null = null;
     /**
-     * Orçamento do job. `tetoUsd` ausente = `null` = comportamento antigo, sem freio —
-     * explícito, para ninguém achar que há teto onde não há.
+     * Teto do job. `null` = comportamento antigo, sem freio — explícito, para ninguém achar
+     * que há teto onde não há. A decisão em si é de `claude/orcamento-fluxo.ts`, e ela é
+     * SEM ESTADO: o gasto vem do acumulador a cada volta, então não há o que carregar entre
+     * elas. Guardar um objeto de orçamento aqui foi o que fez este runner herdar a régua do
+     * pipeline (e o alarme falso que ela produzia em 100% dos jobs).
      */
-    let orcamento = novoOrcamento(p.tetoUsd ?? null);
+    const tetoUsd =
+      typeof p.tetoUsd === "number" && Number.isFinite(p.tetoUsd) && p.tetoUsd > 0
+        ? p.tetoUsd
+        : null;
     /**
-     * Última SITUAÇÃO de orçamento já registrada, para não repetir o mesmo aviso a cada
-     * volta. É a situação e não a ação: "resta pouco" e "estourou, esperando agente" levam
-     * ambas a `nao-iniciar`, e esconder a segunda tiraria do log justo o aviso que importa.
-     * Também não é o texto — ele embute o gasto, que muda toda volta.
+     * Última AÇÃO de orçamento já registrada, para não repetir o mesmo aviso a cada volta.
+     * Não é o texto — ele embute o gasto, que muda toda volta, e comparar a frase faria o
+     * aviso reaparecer indefinidamente.
      */
-    let avisoOrcamento: SituacaoOrcamento | "" = "";
+    let avisoOrcamento: AcaoFluxo | "" = "";
     /** Preenchido quando o fluxo foi encerrado PELO teto — desfecho planejado, não falha. */
     let tetoAtingido: string | null = null;
 
@@ -813,18 +828,24 @@ export class RunnerClaude implements Runner {
       // A decisão NUNCA corta agente em voo: enquanto houver despacho sem `tool_result`, o
       // orçamento só avisa. Cortar ali destrói o trabalho que o agente não gravou — foi o
       // desperdício de 30/07 e de 01/08, e seria perverso reproduzi-lo em nome de economia.
-      if (orcamento.tetoUsd !== null) {
+      if (tetoUsd !== null) {
         const parciais = acumulador.fechar();
         const gasto = parciais !== null ? (estimarCusto(parciais.porModelo)?.usd ?? 0) : 0;
-        orcamento = comAgentesEmVoo(comGasto(orcamento, gasto), despachosPendentes.size);
-        const decisao = decidir(orcamento);
+        const decisao = decidirFluxo(tetoUsd, gasto, despachosPendentes.size);
 
         // Deduplica pela AÇÃO, não pelo texto: o motivo embute o gasto corrente, que sobe a
         // cada volta — comparar a frase faria o mesmo aviso reaparecer indefinidamente e
         // afogaria o log justo quando ele mais importa.
-        if (decisao.acao !== "seguir" && decisao.situacao !== avisoOrcamento) {
-          avisoOrcamento = decisao.situacao;
-          ctx.emitir("log", { nivel: "erro", texto: `Orçamento: ${decisao.motivo}` });
+        if (decisao.acao !== "seguir" && decisao.acao !== avisoOrcamento) {
+          avisoOrcamento = decisao.acao;
+          // `avisar` é informação, não falha: sair em vermelho aqui repetiria o erro do
+          // alarme antigo, que pintava de erro um fluxo perfeitamente saudável. Nível
+          // `log` e não um nome novo — a tela só sabe renderizar os níveis que conhece
+          // (`ROTULO_NIVEL`, `NIVEIS_TEXTO`), e nível inventado some do trecho em silêncio.
+          ctx.emitir("log", {
+            nivel: decisao.acao === "avisar" ? "log" : "erro",
+            texto: `Orçamento: ${decisao.motivo}`,
+          });
         }
         if (decisao.acao === "encerrar") {
           tetoAtingido = decisao.motivo;
@@ -1172,6 +1193,7 @@ function lerParams(params: Record<string, unknown>): ParamsClaude {
   const maxTurns = params["maxTurns"];
   const esforco = params["esforco"];
   const tetoUsd = params["tetoUsd"];
+  const retomarSessao = params["retomarSessao"];
   return {
     prompt,
     cwd,
@@ -1191,6 +1213,12 @@ function lerParams(params: Record<string, unknown>): ParamsClaude {
     // silêncio. `novoOrcamento` faz a validação; aqui só barramos o que não é número.
     ...(typeof tetoUsd === "number" && Number.isFinite(tetoUsd) && tetoUsd > 0
       ? { tetoUsd }
+      : {}),
+    // Mesma disciplina do resto: sessão inválida vira "sem retomada" (o fluxo recomeça, e
+    // o usuário vê isso), nunca um `resume` com lixo — que o SDK rejeitaria derrubando o
+    // job inteiro em vez de degradar.
+    ...(typeof retomarSessao === "string" && retomarSessao.trim() !== ""
+      ? { retomarSessao: retomarSessao.trim() }
       : {}),
   };
 }

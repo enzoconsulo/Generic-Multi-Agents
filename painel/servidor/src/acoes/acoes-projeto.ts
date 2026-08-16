@@ -305,6 +305,11 @@ export async function montarJobAcaoProjeto(
     usaClaude: true,
     params: {
       prompt,
+      // Qual ação da tabela gerou este job. Existe para a RETOMADA (`jobs/retomada.ts`)
+      // poder reconsultar `guardrailsParaAcao` em vez de herdar o teto congelado no
+      // params — sem isto, um job de antes de uma recalibragem seria retomado com o teto
+      // antigo, e a calibragem nova só valeria para quem nunca precisou retomar.
+      acao: `projeto:${idAcao}`,
       // Raiz da fábrica: é onde estão os `.claude/agents/` que o fluxo vai despachar.
       cwd: fabricaRaiz,
       modelo: opcoes.modelo,

@@ -1277,3 +1277,91 @@ describe("RunnerClaude — prefixo cacheável", () => {
     });
   });
 });
+
+/**
+ * RETOMADA (16/08) — o `resume` do SDK.
+ *
+ * Estes testes olham para o objeto `options` que CHEGA ao SDK, e não para os params, pela
+ * mesma razão dos testes de `effort` acima: opção com nome errado é ignorada em silêncio, e
+ * aqui o sintoma seria pior que caro — seria o fluxo recomeçar do zero com cara de retomada,
+ * ou seja, exatamente o desperdício que o botão existe para evitar.
+ */
+describe("retomada de sessão — options.resume", () => {
+  it("passa `resume` ao SDK quando o job traz `retomarSessao`", async () => {
+    let opcoes: Record<string, unknown> | undefined;
+    const runner = new RunnerClaude(
+      consultaDe([{ type: "result", is_error: false }], (o) => (opcoes = o)),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    await runner.executar(jobFake({ ...PARAMS, retomarSessao: "sess-abc" }), ctx);
+    expect(opcoes?.["resume"]).toBe("sess-abc");
+  });
+
+  it("job normal NÃO manda resume — retomar sem pedir seria continuar conversa alheia", async () => {
+    let opcoes: Record<string, unknown> | undefined;
+    const runner = new RunnerClaude(
+      consultaDe([{ type: "result", is_error: false }], (o) => (opcoes = o)),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    await runner.executar(jobFake(PARAMS), ctx);
+    expect(opcoes).not.toHaveProperty("resume");
+  });
+
+  it("sessão vazia ou de tipo errado vira SEM retomada, nunca um resume com lixo", async () => {
+    for (const torto of ["", "   ", 42, null]) {
+      let opcoes: Record<string, unknown> | undefined;
+      const runner = new RunnerClaude(
+        consultaDe([{ type: "result", is_error: false }], (o) => (opcoes = o)),
+      );
+      const { ctx } = contexto(new AbortController().signal);
+      await runner.executar(jobFake({ ...PARAMS, retomarSessao: torto }), ctx);
+      expect(opcoes).not.toHaveProperty("resume");
+    }
+  });
+});
+
+/**
+ * TETO DE CUSTO no runner de fluxo único (16/08). A decisão mudou de
+ * `pipeline/orcamento.ts` para `claude/orcamento-fluxo.ts`; o que estes testes travam é o
+ * CONSUMO — a régua nova precisa estar realmente ligada, senão é mais um campo que ninguém
+ * lê. Ver a tabela de medição no cabeçalho de `orcamento-fluxo.ts`.
+ */
+describe("teto de custo do fluxo — silêncio no começo, aviso perto do fim", () => {
+  /** Uma volta com uso alto o bastante para estourar qualquer teto pequeno. */
+  const VOLTA_CARA = {
+    type: "assistant",
+    message: {
+      id: "m1",
+      model: "claude-sonnet-5",
+      usage: { input_tokens: 10, output_tokens: 200_000, cache_read_input_tokens: 0 },
+      content: [{ type: "text", text: "trabalhando" }],
+    },
+  };
+
+  it("gasto pequeno sob o teto do /ideia não produz linha de orçamento nenhuma", async () => {
+    const barata = {
+      type: "assistant",
+      message: {
+        id: "m1",
+        model: "claude-sonnet-5",
+        usage: { input_tokens: 10, output_tokens: 50, cache_read_input_tokens: 100 },
+        content: [{ type: "text", text: "oi" }],
+      },
+    };
+    const runner = new RunnerClaude(consultaDe([barata, { type: "result", is_error: false }]));
+    const { ctx, eventos } = contexto(new AbortController().signal);
+    await runner.executar(jobFake({ ...PARAMS, tetoUsd: 6 }), ctx);
+
+    const orcamento = eventos.filter((e) =>
+      String((e.dados as { texto?: string } | undefined)?.texto ?? "").startsWith("Orçamento:"),
+    );
+    expect(orcamento).toEqual([]);
+  });
+
+  it("estourar o teto encerra limpo e o resultado diz `teto-custo`", async () => {
+    const runner = new RunnerClaude(consultaDe([VOLTA_CARA, { type: "result", is_error: false }]));
+    const { ctx } = contexto(new AbortController().signal);
+    const r = await runner.executar(jobFake({ ...PARAMS, tetoUsd: 0.5 }), ctx);
+    expect((r as { motivo?: string }).motivo).toBe("teto-custo");
+  });
+});

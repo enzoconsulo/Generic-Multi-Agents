@@ -627,3 +627,47 @@ o que é consistente com a tese mas não é prova; e a rodada foi truncada pelo 
 do usuário no testador da T-032, então T-032/T-033 ficaram sem medição.
 
 **Quem:** orquestrador (a pedido do usuário, após disparar a Fase 5 para medir)
+
+## 2026-08-16 — Botão Retomar, e o teto de custo passou a ser calibrado pelo trabalho medido
+**Decisão:** três coisas, na ordem em que uma exige a outra.
+
+1. **`POST /api/jobs/:id/retomar` + botão na aba Jobs.** Job de agente único retoma a
+   SESSÃO (`options.resume` do SDK, com o transcript que fica em `~/.claude/projects/`);
+   job de pipeline redispara lendo o disco. O prompt do job retomado é uma instrução curta
+   de continuação, nunca o pedido original — ele volta inteiro com o histórico.
+2. **O teto do `/ideia` subiu de US$ 3 para US$ 6, e o do `/novo-projeto` de US$ 4 para
+   US$ 8.** Números medidos, não estimados.
+3. **O runner de fluxo único deixou de usar a régua de orçamento do PIPELINE**
+   (`claude/orcamento-fluxo.ts` no lugar de `pipeline/orcamento.ts`).
+
+**Motivo:** o usuário relatou a sensação de que "Pedir funcionalidade" entregava trabalho
+picotado por causa do teto, e a leitura dos 108 jobs em `dados/jobs/` mostrou três fatos
+que se combinam mal:
+
+- **Nenhum job jamais encerrou por `teto-custo`** — o freio nunca cortou ninguém. A
+  contagem de `motivo`/`encerrouPor` nos 108 jobs: `sem-trabalho` 16, `orcamento` 12
+  (pipeline), `limite-uso` 9, `agente-cortado` 5, `cota` 4, `sem-progresso` 4, zero
+  `teto-custo`.
+- **Mesmo assim o teto do `/ideia` estava abaixo do custo do trabalho:** US$ 0,62 · 1,87 ·
+  2,99 · 3,29 · 4,61 nos cinco jobs com contabilidade final. Três de cinco chegaram a US$ 3
+  ou passaram. O teto só não cortou porque o medidor ao vivo (acumulador + `precos.ts`) lê
+  mais baixo que o `total_cost_usd` final — sorte, não projeto.
+- **E o alarme tocava em 100% das execuções, no começo delas.** A régua do pipeline
+  pergunta "ainda cabe COMEÇAR outra tarefa?" e compara o restante com
+  `CUSTO_TAREFA_PADRAO × FATOR_SEGURANCA` = US$ 2,63; com teto de US$ 3 isso dispara a
+  partir de US$ 0,37 de gasto. Os cinco jobs dispararam com US$ 0,39 a US$ 0,55, e o texto
+  anunciava "não começo outra tarefa" num fluxo que não tem tarefas. Foi o que o usuário
+  leu como a fábrica se limitando — e ele leu certo o que estava escrito.
+
+**A alternativa descartada foi "deixar como está porque nunca cortou".** Um teto que só é
+inofensivo enquanto o medidor erra para baixo não é um freio, é uma tesoura esperando o
+medidor melhorar. E `/ideia` é o fluxo que o usuário mais dispara.
+
+**O que NÃO mudou, de propósito:** a parada continua limpa (nunca corta agente em voo, ver
+`orcamento-fluxo.ts`), e a `paredeDeCota` continua avisando sem bloquear o botão.
+
+**Limite conhecido:** o `resume` do SDK está travado por teste sobre o objeto `options`, e a
+rota por teste HTTP contra o app real — mas a retomada de uma conversa de verdade só se
+prova gastando. Ainda não foi exercida com a assinatura.
+
+**Quem:** usuário (relatou e pediu o botão) + orquestrador

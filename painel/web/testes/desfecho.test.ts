@@ -74,8 +74,49 @@ describe("desfechoDoJob — teto de custo NÃO é falha", () => {
     expect(d.rotulo).toBe("Parou no teto de custo");
     expect(d.tom).toBe("atencao");
     expect(d.explicacao).toContain("PLANEJADA");
-    expect(d.retomada).toContain("teto maior");
   });
+
+  /**
+   * A frase pedia "redisparar com um teto maior" — conselho impossível de seguir, porque não
+   * havia onde escolher teto na tela. Desde 16/08 o botão Retomar existe e o job de retomada
+   * nasce com o orçamento cheio, então a instrução passou a ser executável. Este teste trava
+   * as DUAS metades: nomear a ação e dizer o que acontece com o orçamento.
+   */
+  it("manda clicar em Retomar e explica que o orçamento recomeça cheio", () => {
+    const d = desfechoDoJob({ estado: "concluido", resultado: { motivo: "teto-custo" } });
+    expect(d.retomada).toContain("Retomar");
+    expect(d.retomada).toContain("orçamento cheio");
+  });
+});
+
+/**
+ * Toda frase de retomada tem de terminar numa AÇÃO que existe na tela (16/08). A redação
+ * anterior explicava o efeito de "redisparar" e deixava o usuário sem saber por onde — e a
+ * pergunta veio com todas as letras: *"colo exatamente o mesmo do meu primeiro prompt?"*.
+ * Este teste é a guarda contra a frase que volta a ser só descritiva.
+ */
+describe("toda retomada nomeia o botão", () => {
+  const casos: { nome: string; job: Parameters<typeof desfechoDoJob>[0] }[] = [
+    { nome: "cota", job: { estado: "concluido", resultado: { motivo: "limite-uso" } } },
+    { nome: "teto", job: { estado: "concluido", resultado: { motivo: "teto-custo" } } },
+    { nome: "orcamento", job: { estado: "concluido", resultado: { encerrouPor: "orcamento" } } },
+    {
+      nome: "agente-cortado",
+      job: { estado: "concluido", resultado: { encerrouPor: "agente-cortado" } },
+    },
+    {
+      nome: "sem-progresso",
+      job: { estado: "concluido", resultado: { encerrouPor: "sem-progresso" } },
+    },
+    { nome: "falhou", job: { estado: "falhou", erro: "boom" } },
+    { nome: "cancelado", job: { estado: "cancelado" } },
+    { nome: "interrompido", job: { estado: "interrompido" } },
+  ];
+  for (const { nome, job } of casos) {
+    it(`${nome} cita Retomar`, () => {
+      expect(desfechoDoJob(job).retomada).toContain("Retomar");
+    });
+  }
 });
 
 describe("desfechoDoJob — desfechos do pipeline em código", () => {

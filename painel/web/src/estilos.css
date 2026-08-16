@@ -3538,3 +3538,70 @@ ul.md-lista ul.md-lista {
   font-size: 0.8rem;
   color: var(--cor-texto-suave);
 }
+
+/* ---------- Botão RETOMAR (16/08) ----------
+   Fica logo abaixo do painel de desfecho porque é a resposta à pergunta que o desfecho
+   levanta: "e agora, o que eu clico?". Antes disto a saída era voltar à página do projeto e
+   redigitar o pedido inteiro — o usuário pediu com essas palavras: "não está claro nem
+   entendível". A promessa ao lado do botão é obrigatória: um botão "Retomar" sozinho não diz
+   se o pedido precisa ser recolado, e essa era exatamente a dúvida. */
+.retomar {
+  margin: 0 0 0.9rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-left: 3px solid var(--cor-acento);
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-superficie-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+/* Botão e promessa lado a lado, e a promessa é que estica: ela é o conteúdo, o botão é o
+   atalho. Em tela estreita a linha quebra e o botão vai para cima, que é a ordem de leitura
+   certa quando não cabem juntos. */
+.retomar-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.botao-principal {
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-acento);
+  color: #06121f;
+  border: 1px solid var(--cor-acento);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.botao-principal:hover:not(:disabled) {
+  background-color: var(--cor-acento-forte);
+}
+.botao-principal:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.retomar-promessa {
+  margin: 0;
+  flex: 1 1 20rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--cor-texto);
+}
+.retomar-ok {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--cor-sucesso);
+}
+.retomar-aviso {
+  margin: 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--cor-alerta);
+}

@@ -44,7 +44,8 @@ O padrão que isto instancia vale para todo projeto da fábrica:
 | `rotas/` | um arquivo por recurso HTTP; só traduz HTTP ↔ operação | endpoint novo |
 | `fabrica/` | **leitor** dos arquivos da fábrica (tarefas, plano, equipe, ideias, logs, git) | ler algo novo do disco |
 | `fabrica/escrita-tarefas.ts` | as ÚNICAS escritas de status que o painel faz (promoção e bloqueio) | quase nunca — e leia o cabeçalho antes |
-| `jobs/` | fila: locks por escopo, persistência em `dados/`, cancelamento, inputs pendentes | mexer em execução, estado de job, retomada |
+| `jobs/` | fila: locks por escopo, persistência em `dados/`, cancelamento, inputs pendentes | mexer em execução, estado de job |
+| `jobs/retomada.ts` | monta o job que CONTINUA um interrompido (sessão do SDK ou disco) e resolve o teto dele | botão Retomar, teto de quem retoma |
 | `jobs/claude/` | runner do Agent SDK (`runner-claude.ts`) e tabela de preços (`precos.ts`) | contabilidade, tokens, desfecho de fluxo |
 | `jobs/robustez/` | watchdog de inatividade e guardrails por ação (tetos) | teto de turnos/custo/silêncio |
 | `jobs/resumo/` | resumidor barato dos trechos do log | mexer no resumo por agente |
@@ -144,11 +145,15 @@ ele pertence a `lib/`.
 | descobrir a stack de um projeto | `detectarEcossistema` | `servidor/src/ci/ecossistemas.ts` |
 | estimar custo por tokens | `estimarCusto` | `servidor/src/jobs/claude/precos.ts` |
 | reconhecer cota estourada | `ehLimiteDeUso`, `horaDeReabertura` | `servidor/src/jobs/claude/runner-claude.ts` |
+| decidir o teto de um fluxo de agente único | `decidirFluxo` (NÃO use `pipeline/orcamento.ts` aqui) | `servidor/src/jobs/claude/orcamento-fluxo.ts` |
+| continuar um job interrompido | `planejarRetomada`, `tetoDaRetomada`, `ehRetomavel` | `servidor/src/jobs/retomada.ts` |
 | varrer segredos antes de publicar | `varrerRepo` | `servidor/src/fabrica/seguranca.ts` |
 | chamar a API do painel na web | `api()`, `ErroApi` | `web/src/lib/api.ts` |
 | dados de um GET com carregando/erro | `useDados` | `web/src/lib/useDados.ts` |
 | jobs/log/pendências ao vivo | `useJobsAoVivo` (conexão ÚNICA) | `web/src/lib/useJobsAoVivo.ts` |
 | desfecho de um job (o selo e o texto) | `desfechoDoJob` | `web/src/lib/desfecho.ts` |
+| o que o botão Retomar oferece e promete | `ofertaDeRetomada`, `confirmacaoDeRetomada` | `web/src/lib/retomada.ts` |
+| saber se a cota está batida agora | `paredeDeCota`, `avisoParede` | `web/src/lib/cota.ts` |
 | condensar log em tópicos legíveis | `montarTopicos` | `web/src/lib/topicos.ts` |
 | saber quem trabalha / em que etapa | `agenteAtivo`, `etapaDoAgente`, `segmentarPorAgente` | `web/src/lib/atividade.ts` |
 | custo de um job na tela | `custoDoJob`, `formatarCusto`, `ratearPorAgente` | `web/src/lib/custo.ts` |

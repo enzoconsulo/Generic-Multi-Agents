@@ -88,11 +88,30 @@ const POR_ACAO: Readonly<Record<string, Partial<Guardrails>>> = {
    * US$ 6,55 SEM teto e morreram na parede da cota, deixando tarefa pela metade.
    */
   trabalhar: { maxTurns: 200, watchdogMs: 20 * MINUTO, maxBudgetUsd: 8 },
-  /** Planejar um projeto inteiro: especificação, plano, equipe e ~20 tarefas. */
-  "novo-projeto": { maxTurns: 150, maxBudgetUsd: 4 },
+  /**
+   * Planejar um projeto inteiro: especificação, plano, equipe e ~20 tarefas. É
+   * estritamente MAIS trabalho que um `/ideia` (medido em até US$ 4,61), então um teto
+   * menor que o do `/ideia` seria incoerente. US$ 8. O `/novo-projeto banco-imobiliario`
+   * que fechou com US$ 0,57 não é contraexemplo — é o que terminou com 9 das 22 tarefas
+   * nunca escritas, e é justamente o desfecho que um teto apertado produz de novo.
+   */
+  "novo-projeto": { maxTurns: 150, maxBudgetUsd: 8 },
   manutencao: { maxTurns: 120, maxBudgetUsd: 3 },
   "encerrar-dia": { maxTurns: 100, maxBudgetUsd: 2 },
-  ideia: { maxTurns: 100, maxBudgetUsd: 3 },
+  /**
+   * US$ 6, e o número é MEDIDO (16/08), não estimado. `/ideia` é o "Pedir funcionalidade" —
+   * o fluxo que o usuário mais dispara — e ele não é leve: registra a ideia, LÊ o projeto e
+   * despacha o planejador, que reescreve plano e escreve as tarefas. Os 5 jobs com
+   * contabilidade final custaram US$ 0,62 · 1,87 · 2,99 · 3,29 · 4,61.
+   *
+   * Ou seja: **o teto anterior de US$ 3 ficava abaixo da mediana do próprio trabalho.** Ele
+   * nunca chegou a cortar ninguém — nenhum dos 108 jobs em `dados/jobs/` encerrou por
+   * `teto-custo` — porque o medidor ao vivo lê mais baixo que o `total_cost_usd` final. Isso
+   * é sorte, não projeto: no dia em que o medidor apertar, US$ 3 passa a cortar `/ideia` no
+   * meio do planejador, e tarefa pela metade é o desperdício mais caro que existe aqui.
+   * Um teto tem de ser maior que o trabalho que ele protege; senão não é freio, é tesoura.
+   */
+  ideia: { maxTurns: 100, maxBudgetUsd: 6 },
   // /status é leitura e sumarização — mecânico pela mesma régua.
   status: { maxTurns: 40, watchdogMs: 10 * MINUTO, esforco: "medium", maxBudgetUsd: 1 },
   /** Análise não é um dos 6 comandos, mas é um fluxo Claude e também merece teto. */

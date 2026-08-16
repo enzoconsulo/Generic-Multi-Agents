@@ -506,6 +506,34 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   segmentador dos resumos casa (`/→\s*([a-z0-9-]+)\s*$/i`) para fechar trecho. Mudar o
   formato dessa linha mata TODOS os resumos de agente **em silêncio** — há teste travando a
   invariante, mas o teste não explica por que ela existe; esta entrada explica.
+- **Régua emprestada de outro subsistema vira alarme que toca sempre.** O runner Claude —
+  fluxo de agente ÚNICO — consultava `pipeline/orcamento.ts`, que responde "ainda cabe
+  COMEÇAR outra tarefa?" comparando o restante com `CUSTO_TAREFA_PADRAO × FATOR_SEGURANCA`
+  (US$ 2,63). Com o teto de US$ 3 do `/ideia`, isso dispara a partir de **US$ 0,37 de
+  gasto**: os 5 jobs de `/ideia` com log em disco tocaram o alarme com US$ 0,39 a US$ 0,55,
+  ou seja **5 de 5, sempre nos primeiros 15%**, anunciando em vermelho que "não começo outra
+  tarefa" num fluxo que não tem tarefa nenhuma. O usuário leu como a fábrica se limitando
+  — e leu certo o que estava escrito. Hoje a régua é `claude/orcamento-fluxo.ts`, com
+  gatilho em 80% do teto e texto que diz o que VAI acontecer. Lição geral: **um limiar só
+  significa alguma coisa na grandeza em que foi calibrado**; reaproveitar o módulo trouxe
+  junto a unidade errada, e nada quebrou — só passou a mentir. É irmão do achado do
+  orçamento de ferramentas ("alarme que toca em metade das rodadas não carrega informação"),
+  desta vez do lado do runner.
+- **Teto que nunca cortou pode ser um teto errado, não um teto folgado.** Zero dos 108 jobs
+  em `dados/jobs/` encerrou por `teto-custo` — e ainda assim o teto do `/ideia` (US$ 3)
+  estava ABAIXO do custo medido do próprio trabalho (US$ 0,62 · 1,87 · 2,99 · 3,29 · 4,61).
+  Os dois fatos convivem porque o medidor ao vivo (acumulador + `precos.ts`) lê mais baixo
+  que o `total_cost_usd` final: o freio só era inofensivo enquanto o instrumento errava para
+  baixo. Ao avaliar um guardrail, **compare o teto com o custo MEDIDO do trabalho que ele
+  protege**, nunca com a contagem de vezes que ele disparou — disparo zero é ambíguo entre
+  "folgado" e "quebrado", e aqui era o pior dos dois.
+- **Sessão interrompida é retomável, e o transcript já estava no disco.** O `sessionId`
+  gravado no `system/init` (T-019) ficou seis semanas sem consumidor: a única forma de
+  continuar um `/ideia` cortado pela cota era voltar ao projeto e REDIGITAR o pedido. O SDK
+  persiste a conversa em `~/.claude/projects/<cwd>/<sessionId>.jsonl` (`persistSession`
+  vem `true` e o painel não o desliga) e aceita `options.resume`. Sensor sem atuador, de
+  novo — e o atuador eram duas linhas. Ao encontrar um campo que "existe para permitir X",
+  procure quem faz o X.
 - **Linha de log descreve o que ACONTECEU, nunca o mecanismo que faltou.** O motivo do passo
   3 da resolução de agente era `` `engine` não injetado — genérico com prompt colado ``:
   tecnicamente correto e enganoso, porque abre pelo mecanismo AUSENTE (injeção de subagente

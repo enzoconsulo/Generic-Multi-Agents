@@ -112,6 +112,9 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
       escopo: `projeto:${args}`,
       usaClaude: true,
       params: {
+        // Ver a nota em `montarJobAcao` abaixo: é o que permite a retomada reconsultar a
+        // tabela de guardrails em vez de herdar um teto congelado.
+        acao: id,
         raiz: fabricaRaiz,
         projeto: args,
         modelo: pedido.modelo,
@@ -147,6 +150,13 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
     escopo: escopoDaAcao(id, args),
     usaClaude: true,
     params: {
+      // Qual ação da tabela gerou este job. Existe para a RETOMADA (`jobs/retomada.ts`)
+      // reconsultar `guardrailsParaAcao` em vez de herdar o teto congelado aqui — sem
+      // isto, um job criado antes de uma recalibragem seria retomado com o teto ANTIGO,
+      // e a calibragem nova só valeria para quem nunca precisou retomar. Foi o que a
+      // captura de tela mostrou no primeiro corte do botão Retomar: teto de US$ 3 num
+      // `/ideia` cuja tabela já dizia US$ 6.
+      acao: id,
       prompt: comPreambuloHeadless(prompt, extra),
       cwd: fabricaRaiz,
       modelo: pedido.modelo,
