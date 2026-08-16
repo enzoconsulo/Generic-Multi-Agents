@@ -46,7 +46,21 @@ export function parsearPlano(texto: string): Plano {
       } else if (nome === "Marco") {
         faseCorrente.marco = parsearMarco(valor);
       } else {
-        faseCorrente.tarefas = valor.match(/T-\d+/g) ?? [];
+        // O SUFIXO DE LETRA É PARTE DO ID (`T-017a`), e esquecê-lo desligava o marco da fase
+        // INTEIRA, em silêncio (achado de 16/08).
+        //
+        // O padrão era `/T-\d+/g`, que lia `T-017a, T-017b, T-017c` como `T-017` três vezes.
+        // `fasesProntasParaMarco` então procurava a tarefa `T-017` — que não existe, porque
+        // ela foi CANCELADA justamente para virar as três — e, não achando, concluía que a
+        // fase não estava completa. O marco nunca ficava pronto e nada acusava: não há erro,
+        // só uma fase que jamais entra na lista de pendentes.
+        //
+        // O alcance é maior que um projeto: sufixo de letra é a convenção da fábrica para
+        // REPLANEJAMENTO (T-017 → T-017a/b/c). Ou seja, replanejar uma tarefa desativava o
+        // portão de marco da fase dela, permanentemente, em qualquer projeto. Medido no
+        // banco-imobiliario: a Fase 2 ficou `pendente` por duas semanas com as 13 tarefas
+        // concluídas, e o marco só foi verificado quando um humano olhou o PLANO.md.
+        faseCorrente.tarefas = valor.match(/T-\d+[a-z]*/gi) ?? [];
       }
       continue;
     }

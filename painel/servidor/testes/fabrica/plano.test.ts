@@ -105,3 +105,35 @@ describe("faseAtualDoPlano", () => {
     expect(faseAtualDoPlano(completo)).toBeNull();
   });
 });
+
+/**
+ * SUFIXO DE LETRA NO ID — o achado de 16/08, e o defeito mais silencioso encontrado até aqui.
+ *
+ * `T-017a, T-017b, T-017c` era lido por `/T-\d+/g` como `T-017` três vezes. Como `T-017` foi
+ * CANCELADA (é exatamente o que gera as substitutas com sufixo), `fasesProntasParaMarco`
+ * procurava uma tarefa inexistente, não a achava concluída, e concluía que a fase não estava
+ * pronta. Resultado: **o marco da fase nunca ficava pendente de verificação, e nada acusava**
+ * — não há erro, log nem contador; a fase simplesmente não entra na lista.
+ *
+ * O alcance não é de um projeto: sufixo de letra é a convenção da fábrica para replanejamento.
+ * Replanejar uma tarefa desligava o portão de marco da fase dela, para sempre.
+ */
+describe("IDs com sufixo de letra (replanejamento)", () => {
+  const plano = [
+    "## Fase 2 — Núcleo",
+    "Meta: motor completo",
+    "Marco: pendente",
+    "Tarefas: T-007, T-016, T-017a, T-017b, T-017c",
+  ].join("\n");
+
+  it("preserva o sufixo em vez de truncar para o ID da tarefa cancelada", () => {
+    const f = parsearPlano(plano).fases[0];
+    expect(f?.tarefas).toEqual(["T-007", "T-016", "T-017a", "T-017b", "T-017c"]);
+  });
+
+  it("não colapsa as substitutas numa só entrada repetida", () => {
+    const f = parsearPlano(plano).fases[0];
+    expect(new Set(f?.tarefas).size).toBe(5);
+    expect(f?.tarefas).not.toContain("T-017");
+  });
+});
