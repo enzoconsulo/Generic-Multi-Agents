@@ -92,6 +92,50 @@ export const ESTADOS_JOB_TERMINAIS: ReadonlySet<string> = new Set([
   "interrompido",
 ]);
 
+/**
+ * Nome do projeto a partir do escopo do lock (`projeto:banco-imobiliario` → o nome).
+ * `null` para `global`. É o que permite a lista de execuções dizer SOBRE O QUE cada job foi
+ * sem depender do título, que num `/ideia` é o prompt inteiro do usuário.
+ */
+export function projetoDoEscopo(escopo: string): string | null {
+  const prefixo = "projeto:";
+  return escopo.startsWith(prefixo) ? escopo.slice(prefixo.length) : null;
+}
+
+/**
+ * O argumento desta ação é um TEXTO LIVRE (a ideia inteira) ou um identificador curto?
+ *
+ * `/novo-projeto` e `/ideia` recebem a descrição do que se quer construir — o texto mais
+ * importante que se digita no painel, e o que mais decide a qualidade do plano que sai. Os
+ * dois vinham num `<input>` de uma linha, ao lado da instrução "descreva o que é, para quem,
+ * o que precisa ter na v1 e o que NÃO entra": um pedido de quatro frases numa caixa que
+ * mostra meia. `/trabalhar` e `/status` recebem um nome de projeto e continuam no input, que
+ * é o controle certo para um identificador.
+ *
+ * Lista explícita, e não heurística sobre o `argument-hint`: o hint vem do frontmatter dos
+ * comandos e pode mudar a qualquer momento — decidir o tipo de campo por ele faria a caixa
+ * encolher em silêncio no dia em que alguém reescrevesse uma linha de documentação.
+ */
+const ARGUMENTO_LIVRE: ReadonlySet<string> = new Set(["novo-projeto", "ideia"]);
+
+export function argumentoEhTextoLongo(idAcao: string): boolean {
+  return ARGUMENTO_LIVRE.has(idAcao);
+}
+
+/**
+ * Dia legível para agrupar o histórico ("Hoje", "Ontem", "14/08"). Histórico sem marco de
+ * data é uma pilha de horas soltas — dá para ver o que aconteceu, não QUANDO.
+ */
+export function diaLegivel(iso: string, agora: Date = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const dia = (x: Date): string => x.toISOString().slice(0, 10);
+  const ontem = new Date(agora.getTime() - 86_400_000);
+  if (dia(d) === dia(agora)) return "Hoje";
+  if (dia(d) === dia(ontem)) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
 /* --------------------------------- Tempo --------------------------------- */
 
 /**

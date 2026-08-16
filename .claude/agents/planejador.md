@@ -53,6 +53,13 @@ contrato. Peça de uma vez:
    "Higiene obrigatória"). Toda tarefa seguinte depende dela. Sem essa base, cada tarefa
    paga a instalação de novo e o testador reprova por "não consegui executar o projeto" —
    a reprovação mais cara do sistema.
+
+   **A T-001 entrega também o `_gestao/GUIA.md`**, a partir de
+   `_sistema/templates/GUIA.md` — onde fica o quê, as receitas do projeto e a lista do que
+   já existe. É o padrão de documentação da fábrica
+   (`_sistema/PADRAO_DE_PROJETO.md`) e o que impede a tarefa T-014 de reescrever um helper
+   que a T-006 já criou: a segunda cópia não custa o tempo perdido, custa as duas versões
+   divergindo em silêncio a partir dali.
 3. **Tarefas** em `_gestao/tarefas/T-NNN-slug.md` — cada uma:
    - **no máximo 3 `areas`** — ver "Tamanho de tarefa" abaixo; é a regra mais importante
      desta lista e a que mais custa quando ignorada;

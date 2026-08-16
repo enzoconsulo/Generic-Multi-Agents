@@ -15,6 +15,57 @@ import type { FasePlano, LinhaLog, Plano, TarefaCompleta } from "./tipos";
  */
 const DESPACHO = /(?:\(subagente\)\s*)?(?:Agent|Task)\s*→\s*(.+?)\s*$/;
 
+/**
+ * DOIS MOTORES, DOIS FORMATOS DE LOG — e a tela precisa dos dois (16/08).
+ *
+ * `/trabalhar <projeto>` roda pelo PIPELINE EM CÓDIGO, onde quem despacha é a máquina de
+ * estados e não a ferramenta `Agent`: nenhuma linha `Agent → testador` é emitida, nunca.
+ * O regex acima, único sensor de "quem está trabalhando" até aqui, casava zero linhas nesses
+ * jobs — e o efeito visível era a trilha construir → verificar → revisar sempre apagada e o
+ * log inteiro num bloco só, atribuído ao "orquestrador".
+ *
+ * Hoje esse caminho manda `agente`/`papel`/`tarefa` em CAMPO (ver `LinhaLog`), e a escolha do
+ * modo é por job: **se qualquer linha traz `agente`, o job é do pipeline** e a segmentação
+ * usa os campos; senão cai no regex, que continua sendo o contrato do runner do Agent SDK.
+ * Decidir por job, e não por linha, é o que impede um formato de contaminar o outro.
+ */
+export function temMetaEstruturada(linhas: readonly LinhaLog[]): boolean {
+  return linhas.some((l) => typeof l.agente === "string" && l.agente !== "");
+}
+
+/**
+ * CABEÇALHO DE ETAPA EM LOG ANTIGO — leitor de compatibilidade, e só isso.
+ *
+ * Jobs gravados antes de `MetaEtapa` (16/08) não têm os campos, e o histórico do painel é
+ * justamente onde se vai olhar um job de ontem: sem isto, a correção das bolinhas valeria
+ * só para execuções futuras, e quem abrisse a rodada de ontem continuaria vendo a trilha
+ * apagada — concluindo, com razão, que nada foi consertado.
+ *
+ * As duas formas são as que o pipeline escrevia: `T-048 · revisor · revisor · sonnet · ~16307
+ * tok` (despachante) e `T-048 → revisor (motivo)` (motor).
+ *
+ * **Não é contrato novo: é leitor de arquivo velho.** Todo caminho novo manda os campos, e
+ * casar formato de frase entre servidor e tela é exatamente o acoplamento que `MetaEtapa`
+ * existe para desfazer. Quando o log antigo deixar de importar, isto sai inteiro.
+ */
+const CABECALHO_ANTIGO =
+  /^(T-\d+[a-z]?)\s*(?:·\s*([a-z-]+)\s*·\s*([a-z0-9-]+)|→\s*([a-z0-9-]+))/i;
+
+export interface CabecalhoAntigo {
+  agente: string;
+  papel: string | null;
+  tarefa: string;
+}
+
+/** Agente/papel/tarefa deduzidos de um cabeçalho antigo, ou `null` se a linha não é um. */
+export function lerCabecalhoAntigo(texto: string): CabecalhoAntigo | null {
+  const m = CABECALHO_ANTIGO.exec(texto.trim());
+  if (m === null) return null;
+  const agente = m[3] ?? m[4] ?? "";
+  if (agente === "") return null;
+  return { agente, papel: m[2] ?? null, tarefa: m[1] ?? "" };
+}
+
 export interface AtividadeAgente {
   /** Id do agente despachado (`domain`, `testador`, `revisor`…). */
   id: string;
@@ -26,6 +77,13 @@ export interface AtividadeAgente {
 
 /** Id do agente do despacho mais recente, ou null se nenhum despacho no log. */
 export function agenteAtivo(linhas: readonly LinhaLog[]): string | null {
+  if (temMetaEstruturada(linhas)) {
+    // A ÚLTIMA linha manda, inclusive quando ela não tem agente: no pipeline, linha sem meta
+    // é o motor decidindo entre etapas (promover, rodar critério, commitar gestão). Dizer
+    // "o executor está trabalhando" ali seria mentira — ele já terminou.
+    const ultima = linhas[linhas.length - 1];
+    return ultima?.agente ?? null;
+  }
   for (let i = linhas.length - 1; i >= 0; i--) {
     const linha = linhas[i];
     if (linha === undefined || linha.nivel !== "ferramenta") continue;
@@ -35,12 +93,29 @@ export function agenteAtivo(linhas: readonly LinhaLog[]): string | null {
   return null;
 }
 
+/** Papel do agente que produziu a última linha (só no pipeline em código). */
+export function papelAtivo(linhas: readonly LinhaLog[]): string | null {
+  return linhas[linhas.length - 1]?.papel ?? null;
+}
+
 /** Quantas vezes cada agente foi despachado, do mais recente para o mais antigo. */
 export function atividadePorAgente(linhas: readonly LinhaLog[]): AtividadeAgente[] {
   const porId = new Map<string, AtividadeAgente>();
+  const estruturado = temMetaEstruturada(linhas);
+  let anterior: string | null = null;
   for (const linha of linhas) {
-    if (linha.nivel !== "ferramenta") continue;
-    const id = DESPACHO.exec(linha.texto)?.[1];
+    let id: string | undefined;
+    if (estruturado) {
+      // No pipeline, "despacho" é a TROCA de agente: cada etapa é uma `query()` própria, e
+      // todas as linhas dela vêm carimbadas. Contar linha a linha diria "o executor foi
+      // despachado 40 vezes" para um único despacho de 40 chamadas de ferramenta.
+      const atual = linha.agente ?? null;
+      id = atual !== null && atual !== anterior ? atual : undefined;
+      anterior = atual;
+    } else {
+      if (linha.nivel !== "ferramenta") continue;
+      id = DESPACHO.exec(linha.texto)?.[1];
+    }
     if (id === undefined) continue;
     const atual = porId.get(id);
     if (atual === undefined) porId.set(id, { id, vezes: 1, ultimoEm: linha.em });
@@ -55,13 +130,39 @@ export function atividadePorAgente(linhas: readonly LinhaLog[]): AtividadeAgente
 /* ------------------------- Linha do tempo do job ------------------------- */
 
 /** Etapa do pipeline da fábrica, deduzida de QUEM está trabalhando. */
-export type EtapaPipeline = "construtor" | "testador" | "revisor";
+export type EtapaPipeline = "construtor" | "verificador" | "revisor";
 
-/** Testador e revisor são fixos; qualquer outro agente é um construtor. */
-export function etapaDoAgente(agente: string | null): EtapaPipeline | null {
+/**
+ * Nomes dos portões nas DUAS trilhas da fábrica. A etapa do meio se chamava `testador`, o
+ * nome do agente da trilha de software — e por isso um projeto genérico, verificado pelo
+ * `conferente`, tinha o portão do meio classificado como "construtor". A etapa é o PAPEL;
+ * o agente é quem o cumpre naquela trilha.
+ */
+const VERIFICADORES: ReadonlySet<string> = new Set(["testador", "conferente"]);
+const REVISORES: ReadonlySet<string> = new Set(["revisor", "revisor-generico"]);
+
+/**
+ * Etapa da trilha a partir do papel (quando o log o traz) ou do nome do agente.
+ *
+ * `papel` vence sempre que existe: ele é o que o motor DECIDIU, enquanto o nome do agente é
+ * uma pista — no passo 3 da resolução (o único que roda no painel) o construtor de um
+ * especialista se chama `executor`, e num projeto genérico o verificador se chama
+ * `conferente`. Papéis que não são portão (`planejador`, `documentador`) devolvem `null`:
+ * eles acontecem FORA do ciclo de uma tarefa, e acender uma bolinha para eles diria que a
+ * tarefa andou quando ela não andou.
+ */
+export function etapaDoAgente(agente: string | null, papel?: string | null): EtapaPipeline | null {
+  if (papel !== undefined && papel !== null && papel !== "") {
+    if (papel === "construtor") return "construtor";
+    // `marco` é o verificador exercitando a META da fase — mesma etapa, outro objeto.
+    if (papel === "verificador" || papel === "marco") return "verificador";
+    if (papel === "revisor") return "revisor";
+    return null;
+  }
   if (agente === null) return null;
-  if (agente === "testador") return "testador";
-  if (agente === "revisor") return "revisor";
+  const base = agente.replace(/-reforcado$/, "");
+  if (VERIFICADORES.has(base)) return "verificador";
+  if (REVISORES.has(base)) return "revisor";
   return "construtor";
 }
 
@@ -69,6 +170,10 @@ export interface SegmentoAgente {
   /** Agente do trecho; null = orquestrador (antes do primeiro despacho). */
   agente: string | null;
   etapa: EtapaPipeline | null;
+  /** Papel do trecho, quando o log o traz (pipeline em código). */
+  papel: string | null;
+  /** Tarefa do trecho, quando conhecida — o que responde "isto foi sobre o quê?". */
+  tarefa: string | null;
   inicio: string;
   /** Último evento do trecho (o trecho corrente usa o último que chegou). */
   fim: string;
@@ -85,11 +190,15 @@ export interface SegmentoAgente {
  */
 export function segmentarPorAgente(linhas: readonly LinhaLog[]): SegmentoAgente[] {
   const segmentos: SegmentoAgente[] = [];
+  const estruturado = temMetaEstruturada(linhas);
 
-  const abrir = (agente: string | null, em: string): SegmentoAgente => {
+  const abrir = (linha: LinhaLog | null, agente: string | null, em: string): SegmentoAgente => {
+    const papel = linha?.papel ?? null;
     const s: SegmentoAgente = {
       agente,
-      etapa: etapaDoAgente(agente),
+      etapa: etapaDoAgente(agente, papel),
+      papel,
+      tarefa: linha?.tarefa ?? null,
       inicio: em,
       fim: em,
       linhas: [],
@@ -99,21 +208,48 @@ export function segmentarPorAgente(linhas: readonly LinhaLog[]): SegmentoAgente[
     return s;
   };
 
+  const fechar = (s: SegmentoAgente, linha: LinhaLog): void => {
+    s.fim = linha.em;
+    if (s.tarefa === null && linha.tarefa !== undefined) s.tarefa = linha.tarefa;
+    const ms = Date.parse(s.fim) - Date.parse(s.inicio);
+    s.duracaoMs = Number.isFinite(ms) && ms > 0 ? ms : 0;
+  };
+
   let atual: SegmentoAgente | null = null;
 
   for (const linha of linhas) {
+    if (estruturado) {
+      // Troca de agente abre trecho — inclusive a troca PARA `null`, que é o motor voltando a
+      // decidir entre duas etapas. Sem isso, promoções e critérios do motor apareceriam
+      // dentro do bloco do agente anterior, creditando a ele trabalho que não é dele.
+      const alvo = linha.agente ?? null;
+      if (atual === null || atual.agente !== alvo) atual = abrir(linha, alvo, linha.em);
+      atual.linhas.push(linha);
+      fechar(atual, linha);
+      continue;
+    }
+
     const despachado = linha.nivel === "ferramenta" ? DESPACHO.exec(linha.texto)?.[1] : undefined;
 
     if (despachado !== undefined) {
-      atual = abrir(despachado, linha.em);
+      atual = abrir(null, despachado, linha.em);
       continue; // a linha do despacho é o cabeçalho do trecho, não conteúdo dele
     }
-    if (atual === null) atual = abrir(null, linha.em);
+
+    // Log de PIPELINE ANTIGO (sem os campos): o cabeçalho da etapa ainda é reconhecível no
+    // texto. Ver `lerCabecalhoAntigo` — é leitor de compatibilidade, não contrato.
+    const antigo = linha.nivel !== "erro" ? lerCabecalhoAntigo(linha.texto) : null;
+    if (antigo !== null) {
+      atual = abrir({ ...linha, papel: antigo.papel ?? undefined, tarefa: antigo.tarefa }, antigo.agente, linha.em);
+      atual.linhas.push(linha);
+      fechar(atual, linha);
+      continue;
+    }
+
+    if (atual === null) atual = abrir(null, null, linha.em);
 
     atual.linhas.push(linha);
-    atual.fim = linha.em;
-    const ms = Date.parse(atual.fim) - Date.parse(atual.inicio);
-    atual.duracaoMs = Number.isFinite(ms) && ms > 0 ? ms : 0;
+    fechar(atual, linha);
   }
 
   // Trecho de orquestrador vazio no fim (despacho sem nada depois ainda) não é ruído:
@@ -135,7 +271,9 @@ export function segmentarPorEstagio(linhas: readonly LinhaLog[]): SegmentoAgente
     if (atual === null || atual.agente !== nome) {
       atual = {
         agente: nome,
-        etapa: null, // as etapas construir/testar/revisar são do pipeline Claude
+        etapa: null, // as etapas construir/verificar/revisar são do pipeline Claude
+        papel: null,
+        tarefa: null,
         inicio: linha.em,
         fim: linha.em,
         linhas: [],
@@ -151,8 +289,16 @@ export function segmentarPorEstagio(linhas: readonly LinhaLog[]): SegmentoAgente
   return segmentos;
 }
 
-/** Última tarefa (T-NNN) citada no log — o orquestrador cita o id ao despachar. */
+/**
+ * Última tarefa em foco. Prefere o CAMPO `tarefa` (pipeline em código, onde o motor sabe
+ * exatamente qual tarefa despachou) e só cai no texto quando ele não existe — no runner do
+ * Agent SDK o id só aparece na prosa do orquestrador.
+ */
 export function tarefaEmFoco(linhas: readonly LinhaLog[]): string | null {
+  for (let i = linhas.length - 1; i >= 0; i--) {
+    const t = linhas[i]?.tarefa;
+    if (t !== undefined && t !== "") return t;
+  }
   for (let i = linhas.length - 1; i >= 0; i--) {
     const casou = /\bT-\d{3,}\b/.exec(linhas[i]?.texto ?? "");
     if (casou !== null) return casou[0];

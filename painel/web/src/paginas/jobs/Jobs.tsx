@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ErroApi } from "../../lib/api";
-import { avisoLimiteDeUso } from "../../lib/limite-uso";
-import { avisoTetoCusto } from "../../lib/teto-custo";
-import { avisoDespachoEmVoo, avisoDespachoFundo } from "../../lib/avisos-job";
+import { classeDesfecho, desfechoDoJob, type Desfecho } from "../../lib/desfecho";
 import { useHistoricoLog } from "../../lib/useHistoricoLog";
 import { useJobsAoVivo } from "../../lib/useJobsAoVivo";
+import { montarTopicos, type Topico } from "../../lib/topicos";
 import {
   agenteAtivo,
+  etapaDoAgente,
+  papelAtivo,
   segmentarPorAgente,
   segmentarPorEstagio,
   tarefaEmFoco,
@@ -17,29 +18,39 @@ import {
 import type { Job, LinhaLog, Pendencia, ResumoTrecho, ResultadoContabil } from "../../lib/tipos";
 import { custoDoJob, explicarCusto, formatarCusto, ratearPorAgente } from "../../lib/custo";
 import {
-  classeEstadoJob,
   decorrido,
+  diaLegivel,
   duracaoLegivel,
   jobCancelavel,
   milhares,
+  projetoDoEscopo,
   rotuloEstadoJob,
 } from "../../lib/formato";
 import { useAgora } from "../../lib/useAgora";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
 
 /**
- * Página de Jobs (T-024): acompanhar a execução VENDO, não lendo.
+ * Página de Jobs: acompanhar a execução VENDO, não lendo.
  *
- * Antes era uma parede de log monoespaçado com prefixos. O pedido do usuário era
- * "detalhe dos jobs e o que está fazendo, assim como cada agente" — então a visão
- * principal passou a ser: quem trabalha agora, em que etapa do pipeline, em qual tarefa,
- * e o que cada agente fez (em blocos). O log cru continua, atrás de "ver log técnico".
+ * Três decisões governam esta tela, e as três vieram de pedido explícito do usuário:
+ *
+ * 1. **O novo entra POR CIMA.** A atividade é uma pilha: o que acabou de acontecer fica no
+ *    topo e o antigo desce. É o que permite deixar a tela parada e acompanhar sem rolar —
+ *    com o mais recente embaixo, acompanhar exige rolagem constante ou autoscroll, e
+ *    autoscroll briga com quem está lendo.
+ * 2. **Um evento, uma linha.** Rajada de ferramenta vira um tópico com contagem
+ *    (`lib/topicos.ts`); sem isso, os 74–92% de linhas que são só nome de ferramenta
+ *    empurrariam tudo que interessa para fora da tela.
+ * 3. **O selo diz o DESFECHO, não o estado da fila** (`lib/desfecho.ts`): um job cortado
+ *    pela cota parou de aparecer como "Concluído" verde.
  */
 export function Jobs() {
   const { jobs, logs, pendencias, conectado, carregando, erro } = useJobsAoVivo();
   const [params, setParams] = useSearchParams();
   const idSelecionado = params.get("job");
-  const selecionado = jobs.find((j) => j.id === idSelecionado) ?? null;
+  // Sem nada na URL, abre no mais recente: chegar na aba e ver "selecione uma execução"
+  // é um passo a mais para a pergunta que 9 em 10 visitas fazem ("o que está rodando?").
+  const selecionado = jobs.find((j) => j.id === idSelecionado) ?? jobs[0] ?? null;
 
   function selecionar(id: string) {
     setParams((p) => {
@@ -71,7 +82,7 @@ export function Jobs() {
       <PainelInputs pendencias={pendencias} />
 
       <div className="jobs-layout">
-        <aside className="jobs-lista">
+        <aside className="jobs-lista" aria-label="Histórico de execuções">
           {carregando ? (
             <Carregando texto="Carregando execuções…" />
           ) : jobs.length === 0 ? (
@@ -81,15 +92,12 @@ export function Jobs() {
                 : "Nenhuma execução ainda. Dispare uma ação na página inicial."}
             </p>
           ) : (
-            jobs.map((job) => (
-              <ItemJob
-                key={job.id}
-                job={job}
-                agente={agenteAtivo(logs[job.id] ?? [])}
-                ativo={job.id === idSelecionado}
-                aoClicar={() => selecionar(job.id)}
-              />
-            ))
+            <ListaJobs
+              jobs={jobs}
+              logs={logs}
+              idSelecionado={selecionado?.id ?? null}
+              aoSelecionar={selecionar}
+            />
           )}
         </aside>
 
@@ -107,6 +115,45 @@ export function Jobs() {
   );
 }
 
+/**
+ * Histórico agrupado por DIA. A lista vinha como uma pilha de horários soltos: dava para ver
+ * o que aconteceu, não quando — e num histórico que já passa de cem itens "14:32" sozinho
+ * não localiza nada.
+ */
+function ListaJobs({
+  jobs,
+  logs,
+  idSelecionado,
+  aoSelecionar,
+}: {
+  jobs: Job[];
+  logs: Record<string, LinhaLog[]>;
+  idSelecionado: string | null;
+  aoSelecionar: (id: string) => void;
+}) {
+  let diaAnterior = "";
+  return (
+    <>
+      {jobs.map((job) => {
+        const dia = diaLegivel(job.criadoEm);
+        const abreDia = dia !== diaAnterior;
+        diaAnterior = dia;
+        return (
+          <div key={job.id} className="jobs-grupo">
+            {abreDia && <div className="jobs-dia">{dia}</div>}
+            <ItemJob
+              job={job}
+              agente={agenteAtivo(logs[job.id] ?? [])}
+              ativo={job.id === idSelecionado}
+              aoClicar={() => aoSelecionar(job.id)}
+            />
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function ItemJob({
   job,
   agente,
@@ -119,20 +166,32 @@ function ItemJob({
   aoClicar: () => void;
 }) {
   const rodando = jobCancelavel(job.estado);
+  const desfecho = desfechoDoJob(job);
+  const projeto = projetoDoEscopo(job.escopo);
+  const custo = custoDoJob(job);
+  const duracao =
+    job.terminadoEm !== undefined
+      ? decorrido(job.iniciadoEm ?? job.criadoEm, Date.parse(job.terminadoEm))
+      : null;
+
   return (
     <button
       type="button"
-      className={`job-item ${ativo ? "ativo" : ""}`}
+      className={`job-item ${ativo ? "ativo" : ""} ${classeDesfecho(desfecho.tom)}`}
       onClick={aoClicar}
       title={job.titulo}
+      aria-current={ativo ? "true" : undefined}
     >
       <span className="job-item-topo">
-        <span className={`badge job-estado ${classeEstadoJob(job.estado)}`}>
-          {rotuloEstadoJob(job.estado)}
-        </span>
+        <span className={`badge job-selo ${classeDesfecho(desfecho.tom)}`}>{desfecho.rotulo}</span>
         <span className="job-item-hora">{horaCurta(job.criadoEm)}</span>
       </span>
       <span className="job-item-titulo mono">{job.titulo}</span>
+      <span className="job-item-rodape">
+        {projeto !== null && <span className="job-item-projeto">{projeto}</span>}
+        {duracao !== null && <span>{duracao}</span>}
+        {custo !== null && <span>{formatarCusto(custo)}</span>}
+      </span>
       {rodando && agente !== null && (
         <span className="job-item-agente">
           <span className="pulso-mini" aria-hidden="true" /> {agente}
@@ -150,6 +209,7 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
   const [cancelando, setCancelando] = useState(false);
   const [erroCancel, setErroCancel] = useState<string | null>(null);
   const [verLogCru, setVerLogCru] = useState(false);
+  const [verPorAgente, setVerPorAgente] = useState(false);
 
   const rodando = jobCancelavel(job.estado);
   // Relógio só corre enquanto o job está vivo; terminado tem duração fixa.
@@ -157,22 +217,19 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
   const fim = rodando ? agora : Date.parse(job.terminadoEm ?? job.criadoEm);
   const tempo = decorrido(job.iniciadoEm ?? job.criadoEm, fim);
   const agente = rodando ? agenteAtivo(linhas) : null;
+  const papel = rodando ? papelAtivo(linhas) : null;
   // Job Claude segmenta por AGENTE; job de CI por ESTÁGIO — ele não tem agentes.
   const segmentos = job.usaClaude ? segmentarPorAgente(linhas) : segmentarPorEstagio(linhas);
+  const topicos = montarTopicos(linhas);
   const tarefa = tarefaEmFoco(linhas);
   const modelo = typeof job.params["modelo"] === "string" ? job.params["modelo"] : "—";
-  const resultado = job.resultado as
-    | (ResultadoContabil & { motivo?: string; reabreEm?: string | null })
-    | null;
+  const resultado = job.resultado as ResultadoContabil | null;
   // Real ou estimado, com o prefixo que declara qual é. Ver `lib/custo`.
   const custo = custoDoJob(job);
   const fatias = ratearPorAgente(job);
-  // Decisão e texto vivem em `lib/limite-uso` — os testes da web são de lógica pura, então
+  // Decisão e texto vivem em `lib/desfecho` — os testes da web são de lógica pura, então
   // lógica dentro do componente seria lógica não verificada.
-  const avisoCota = avisoLimiteDeUso(resultado);
-  const avisoTeto = avisoTetoCusto(resultado);
-  const avisoFundo = avisoDespachoFundo(resultado);
-  const avisoEmVoo = avisoDespachoEmVoo(resultado);
+  const desfecho = desfechoDoJob(job);
 
   async function cancelar() {
     setCancelando(true);
@@ -189,10 +246,21 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
   return (
     <div className="job-detalhe">
       <div className="job-detalhe-cab">
-        <div>
-          <span className={`badge job-estado ${classeEstadoJob(job.estado)}`}>
-            {rotuloEstadoJob(job.estado)}
+        <div className="job-detalhe-ident">
+          <span className={`badge job-selo ${classeDesfecho(desfecho.tom)}`}>
+            {desfecho.rotulo}
           </span>
+          {/* O estado CRU da fila fica visível quando o desfecho o qualifica. Escondê-lo
+              trocaria uma ambiguidade por outra: é ele que explica por que este job não
+              aparece como erro em lugar nenhum do sistema. */}
+          {desfecho.qualificado && (
+            <span
+              className="job-estado-cru"
+              title="Estado na fila do painel — governa lock, cancelamento e persistência."
+            >
+              na fila: {rotuloEstadoJob(job.estado)}
+            </span>
+          )}
           <h3 className="job-detalhe-titulo mono">{job.titulo}</h3>
         </div>
         {rodando && (
@@ -201,6 +269,9 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
           </button>
         )}
       </div>
+
+      <PainelDesfecho desfecho={desfecho} />
+      {erroCancel !== null && <div className="aviso aviso-erro">{erroCancel}</div>}
 
       {/* Quem está trabalhando AGORA — a informação nº 1 que o usuário quer. */}
       {rodando && (
@@ -217,7 +288,9 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
               {!job.usaClaude
                 ? "executando o pipeline"
                 : agente !== null
-                  ? "trabalhando agora"
+                  ? papel !== null
+                    ? `trabalhando como ${papel}`
+                    : "trabalhando agora"
                   : "organizando o trabalho"}
               {tarefa !== null && ` · tarefa ${tarefa}`}
               {tempo !== null && ` · há ${tempo}`}
@@ -227,7 +300,11 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
       )}
 
       {job.usaClaude && (
-        <TrilhaPipeline etapa={agente !== null ? etapaDe(agente) : null} segmentos={segmentos} />
+        <TrilhaPipeline
+          etapa={etapaDoAgente(agente, papel)}
+          segmentos={segmentos}
+          tarefa={tarefa}
+        />
       )}
 
       <dl className="job-campos">
@@ -292,7 +369,6 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
           />
         )}
         {job.sessionId !== undefined && <Campo rot="Sessão" valor={job.sessionId} />}
-        {job.erro !== undefined && avisoCota === null && <Campo rot="Erro" valor={job.erro} />}
       </dl>
 
       {/* Onde o dinheiro foi (T-050). O total sozinho não é acionável: o pipeline despacha
@@ -323,79 +399,34 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
         </div>
       )}
 
-      {avisoCota !== null && (
-        <div className="aviso aviso-erro">
-          <strong>Limite de uso da assinatura.</strong> {avisoCota}
-        </div>
-      )}
+      <div className="secao-cab-acao">
+        <h4 className="secao-tarefa-rot">
+          {verPorAgente
+            ? job.usaClaude
+              ? "O que cada agente fez"
+              : "Passo a passo"
+            : "Atividade — mais recente no topo"}
+        </h4>
+        <button
+          type="button"
+          className="botao botao-secundario botao-compacto"
+          onClick={() => setVerPorAgente((v) => !v)}
+        >
+          {verPorAgente ? "Ver linha do tempo" : "Agrupar por agente"}
+        </button>
+      </div>
 
-      {/* Parada planejada: NÃO usa `aviso-erro`, porque não é erro. */}
-      {avisoTeto !== null && (
-        <div className="aviso">
-          <strong>Encerrado pelo teto de custo.</strong> {avisoTeto}
-        </div>
-      )}
-
-      {/* Dano consumado vem ANTES do risco: quando os dois aparecem, é este que decide. */}
-      {avisoEmVoo !== null && (
-        <div className="aviso aviso-erro">
-          <strong>Agente cortado no meio do trabalho.</strong> {avisoEmVoo}
-        </div>
-      )}
-
-      {avisoFundo !== null && (
-        <div className="aviso aviso-erro">
-          <strong>Pode ter ficado trabalho pela metade.</strong> {avisoFundo}
-        </div>
-      )}
-
-      {erroCancel !== null && <div className="aviso aviso-erro">{erroCancel}</div>}
-
-      <h4 className="secao-tarefa-rot">
-        {job.usaClaude ? "O que cada agente fez" : "Passo a passo"}
-      </h4>
-      {linhas.length === 0 && (job.resumos?.length ?? 0) > 0 ? (
-        // Log perdido mas resumo preservado — este é o caso NORMAL ao rever uma execução
-        // antiga, porque as linhas de log só trafegam pelo SSE e o resumo mora no job.
-        // Sem este ramo o resumo ficaria invisível justamente quando é a única memória
-        // do que aconteceu.
-        <>
-          <p className="texto-suave">
-            O texto integral não está mais em memória — o resumo de cada trecho ficou:
-          </p>
-          <ol className="trechos">
-            {job.resumos!.map((r) => (
-              <ResumoSolto key={r.indice} resumo={r} />
-            ))}
-          </ol>
-        </>
-      ) : linhas.length === 0 ? (
-        <p className="texto-suave">
-          {rodando
-            ? "Aguardando os primeiros passos…"
-            : "Sem log gravado para esta execução — ela é anterior ao histórico persistido, " +
-              "ou o servidor caiu antes de fechá-la."}
+      {historico.descartadas > 0 && (
+        <p className="texto-suave trecho-aviso">
+          {historico.descartadas} linha(s) do meio foram omitidas pelo teto de histórico —
+          começo e fim estão inteiros.
         </p>
+      )}
+
+      {verPorAgente ? (
+        <PorAgente job={job} linhas={linhas} segmentos={segmentos} rodando={rodando} />
       ) : (
-        <ol className="trechos">
-          {historico.descartadas > 0 && (
-            <li className="texto-suave trecho-aviso">
-              {historico.descartadas} linha(s) do meio foram omitidas pelo teto de histórico —
-              começo e fim estão inteiros.
-            </li>
-          )}
-          {segmentos.map((s, i) => (
-            <Trecho
-              key={i}
-              segmento={s}
-              aberto={i === segmentos.length - 1}
-              rotuloSemAgente={job.usaClaude ? "orquestrador" : "pipeline"}
-              // O `indice` do servidor é a posição do segmento aqui: as duas pontas usam
-              // a mesma regra de corte (despacho de subagente abre trecho).
-              resumo={job.resumos?.find((r) => r.indice === i)}
-            />
-          ))}
-        </ol>
+        <Atividade topicos={topicos} rodando={rodando} temResumo={(job.resumos?.length ?? 0) > 0} />
       )}
 
       <button
@@ -410,26 +441,178 @@ function DetalheJob({ job, linhas: linhasAoVivo }: { job: Job; linhas: LinhaLog[
   );
 }
 
-function etapaDe(agente: string): EtapaPipeline {
-  if (agente === "testador") return "testador";
-  if (agente === "revisor") return "revisor";
-  return "construtor";
+/**
+ * O DESFECHO em prosa: o que aconteceu e o que acontece se você redisparar.
+ *
+ * Fica logo abaixo do título, antes de qualquer número, porque é a única coisa da tela que
+ * muda a DECISÃO do usuário. Custo, tokens e rateio são para depois de saber se o trabalho
+ * está de pé.
+ */
+function PainelDesfecho({ desfecho }: { desfecho: Desfecho }) {
+  if (desfecho.explicacao === null && desfecho.detalhes.length === 0) return null;
+  return (
+    <section className={`desfecho ${classeDesfecho(desfecho.tom)}`}>
+      {desfecho.explicacao !== null && <p className="desfecho-frase">{desfecho.explicacao}</p>}
+      {desfecho.retomada !== null && (
+        <p className="desfecho-retomada">
+          <span className="desfecho-rot">Ao redisparar</span>
+          {desfecho.retomada}
+        </p>
+      )}
+      {desfecho.detalhes.map((d) => (
+        <p key={d.slice(0, 40)} className="desfecho-detalhe">
+          {d}
+        </p>
+      ))}
+    </section>
+  );
 }
 
-/** Onde a tarefa está no ciclo construir → testar → revisar. */
+/**
+ * LINHA DO TEMPO EM MINI-TÓPICOS, do mais recente para o mais antigo.
+ *
+ * A visão padrão da tela. É a que atende o pedido de "deixar o computador ligado com a tela
+ * parada e acompanhar sem rolar": o que acaba de acontecer aparece na primeira linha, e o
+ * antigo desce sozinho. Sem autoscroll de propósito — autoscroll rouba a rolagem de quem
+ * está lendo, e é justamente quando algo interessante aparece que a pessoa para para ler.
+ */
+function Atividade({
+  topicos,
+  rodando,
+  temResumo,
+}: {
+  topicos: Topico[];
+  rodando: boolean;
+  temResumo: boolean;
+}) {
+  if (topicos.length === 0) {
+    return (
+      <p className="texto-suave">
+        {rodando
+          ? "Aguardando os primeiros passos…"
+          : temResumo
+            ? "O texto integral não está mais em memória — veja o resumo em “Agrupar por agente”."
+            : "Sem log gravado para esta execução — ela é anterior ao histórico persistido, " +
+              "ou o servidor caiu antes de fechá-la."}
+      </p>
+    );
+  }
+  return (
+    <ol className="linha-tempo" aria-live="polite">
+      {topicos.map((t, i) => (
+        <li key={t.chave} className={`tt tt-${t.tipo} ${i === 0 && rodando ? "tt-agora" : ""}`}>
+          <span className="tt-icone" aria-hidden="true">
+            {t.icone}
+          </span>
+          <span className="tt-corpo">
+            <span className="tt-linha">
+              <span className="tt-titulo">{t.titulo}</span>
+              {/* `acoes` já traz a contagem no próprio título ("9 ações de ferramenta") —
+                  repetir "×9" ao lado seria a mesma informação duas vezes. */}
+              {t.vezes > 1 && t.tipo !== "acoes" && <span className="tt-vezes">×{t.vezes}</span>}
+            </span>
+            {t.detalhe !== null && <span className="tt-detalhe">{t.detalhe}</span>}
+          </span>
+          <span className="tt-meta">
+            {t.agente !== null && <span className="tt-agente">{t.agente}</span>}
+            {t.tarefa !== null && <span className="tt-tarefa">{t.tarefa}</span>}
+            <span className="tt-hora">{horaCurta(t.em)}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** A visão antiga, por blocos de agente — agora opcional e também do mais novo para o antigo. */
+function PorAgente({
+  job,
+  linhas,
+  segmentos,
+  rodando,
+}: {
+  job: Job;
+  linhas: LinhaLog[];
+  segmentos: SegmentoAgente[];
+  rodando: boolean;
+}) {
+  if (linhas.length === 0 && (job.resumos?.length ?? 0) > 0) {
+    // Log perdido mas resumo preservado — este é o caso NORMAL ao rever uma execução
+    // antiga, porque as linhas de log só trafegam pelo SSE e o resumo mora no job.
+    return (
+      <>
+        <p className="texto-suave">
+          O texto integral não está mais em memória — o resumo de cada trecho ficou:
+        </p>
+        <ol className="trechos">
+          {[...job.resumos!].reverse().map((r) => (
+            <ResumoSolto key={r.indice} resumo={r} />
+          ))}
+        </ol>
+      </>
+    );
+  }
+  if (linhas.length === 0) {
+    return (
+      <p className="texto-suave">
+        {rodando
+          ? "Aguardando os primeiros passos…"
+          : "Sem log gravado para esta execução — ela é anterior ao histórico persistido, " +
+            "ou o servidor caiu antes de fechá-la."}
+      </p>
+    );
+  }
+  // Mais recente no topo, como a linha do tempo: as duas visões da mesma tela não podem
+  // discordar sobre onde fica o "agora".
+  const emOrdem = segmentos.map((s, i) => ({ s, i })).reverse();
+  return (
+    <ol className="trechos">
+      {emOrdem.map(({ s, i }) => (
+        <Trecho
+          key={i}
+          segmento={s}
+          aberto={i === segmentos.length - 1}
+          rotuloSemAgente={job.usaClaude ? "orquestrador" : "pipeline"}
+          // O `indice` do servidor é a posição do segmento aqui: as duas pontas usam
+          // a mesma regra de corte (despacho de subagente abre trecho).
+          resumo={job.resumos?.find((r) => r.indice === i)}
+        />
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * Onde a tarefa está no ciclo construir → verificar → revisar.
+ *
+ * As bolinhas ficaram apagadas em todo `/trabalhar <projeto>` durante semanas, e a causa não
+ * era esta trilha: era `segmentarPorAgente` não reconhecendo o log do pipeline em código
+ * (ver `atividade.ts`). Com os campos `agente`/`papel` no log, ela volta a acender — e agora
+ * acende também na trilha genérica, cujo verificador (`conferente`) o mapa antigo
+ * classificava como construtor.
+ */
 function TrilhaPipeline({
   etapa,
   segmentos,
+  tarefa,
 }: {
   etapa: EtapaPipeline | null;
   segmentos: SegmentoAgente[];
+  tarefa: string | null;
 }) {
   const etapas: { id: EtapaPipeline; rotulo: string }[] = [
     { id: "construtor", rotulo: "Construir" },
-    { id: "testador", rotulo: "Testar" },
+    { id: "verificador", rotulo: "Verificar" },
     { id: "revisor", rotulo: "Revisar" },
   ];
-  const cumpridas = new Set(segmentos.map((s) => s.etapa).filter((e): e is EtapaPipeline => e !== null));
+  // Só conta como cumprida a etapa DESTA tarefa: numa rodada com 5 tarefas, olhar o job
+  // inteiro deixaria as três bolinhas acesas o tempo todo e a trilha não diria mais nada.
+  const daTarefa = tarefa === null ? segmentos : segmentos.filter((s) => s.tarefa === tarefa);
+  const cumpridas = new Set(
+    (daTarefa.length > 0 ? daTarefa : segmentos)
+      .map((s) => s.etapa)
+      .filter((e): e is EtapaPipeline => e !== null),
+  );
 
   return (
     <ol className="trilha" aria-label="Etapa do ciclo">
@@ -446,6 +629,7 @@ function TrilhaPipeline({
           </li>
         );
       })}
+      {tarefa !== null && <li className="trilha-tarefa">{tarefa}</li>}
     </ol>
   );
 }
@@ -520,6 +704,7 @@ function Trecho({
       <div className="trecho-cab-linha">
         <span className="trecho-nome">{nome}</span>
         {segmento.etapa !== null && <span className="badge badge-suave">{segmento.etapa}</span>}
+        {segmento.tarefa !== null && <span className="badge badge-suave">{segmento.tarefa}</span>}
         <span className="trecho-meta">
           {ferramentas > 0 && `${ferramentas} ferramenta(s)`}
           {segmento.duracaoMs > 0 && ` · ${duracaoLegivel(segmento.duracaoMs)}`}
@@ -644,10 +829,12 @@ function CartaoInput({ pendencia }: { pendencia: Pendencia }) {
           </div>
         ) : (
           <div className="input-acoes">
-            <input
-              type="text"
-              className="input-motivo"
+            {/* Textarea, não input: a resposta a uma pergunta do fluxo costuma ser uma
+                instrução inteira, e um campo de uma linha esconde o que a pessoa escreveu. */}
+            <textarea
+              className="input-resposta"
               placeholder="sua resposta"
+              rows={3}
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
             />

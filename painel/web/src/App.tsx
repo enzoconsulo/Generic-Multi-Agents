@@ -1,5 +1,6 @@
 import { Link, NavLink, Route, Routes } from "react-router-dom";
 import { useJobsAoVivo } from "./lib/useJobsAoVivo";
+import { avisoParede, paredeDeCota } from "./lib/cota";
 import { ESTADOS_JOB_ATIVOS } from "./lib/formato";
 import { Ajustes } from "./paginas/ajustes/Ajustes";
 import { ComoFunciona } from "./paginas/como-funciona/ComoFunciona";
@@ -13,6 +14,10 @@ export function App() {
   // trabalhando se você já estiver na aba certa — e o painel inteiro parece parado.
   const { jobs } = useJobsAoVivo();
   const ativos = jobs.filter((j) => ESTADOS_JOB_ATIVOS.has(j.estado));
+  // Parede de cota: vale para a fábrica inteira, então o aviso é global — quem dispara pela
+  // página inicial precisa vê-lo tanto quanto quem dispara pela página do projeto. Ver
+  // `lib/cota.ts`: é derivado da lista de jobs que já está na tela, sem estado novo.
+  const parede = paredeDeCota(jobs);
 
   return (
     <div className="aplicacao">
@@ -37,6 +42,12 @@ export function App() {
         </nav>
       </header>
       <main className="conteudo">
+        {parede !== null && (
+          <div className="faixa-cota">
+            <strong>Limite de uso da assinatura.</strong> {avisoParede(parede)}{" "}
+            <Link to={`/jobs?job=${encodeURIComponent(parede.jobId)}`}>Ver a execução</Link>
+          </div>
+        )}
         <Routes>
           <Route path="/" element={<Inicio />} />
           <Route path="/projeto/:nome" element={<Projeto />} />

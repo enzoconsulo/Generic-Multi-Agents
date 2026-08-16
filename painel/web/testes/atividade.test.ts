@@ -103,7 +103,7 @@ describe("segmentarPorAgente", () => {
     expect(s.map((x) => x.agente)).toEqual([null, "domain", "testador"]);
     expect(s[0]?.linhas).toHaveLength(1); // o que veio antes do 1º despacho
     expect(s[1]?.etapa).toBe("construtor");
-    expect(s[2]?.etapa).toBe("testador");
+    expect(s[2]?.etapa).toBe("verificador");
   });
 
   it("a linha do despacho é cabeçalho do trecho, não conteúdo dele", () => {
@@ -134,6 +134,78 @@ describe("segmentarPorAgente", () => {
 
   it("log vazio não gera trecho", () => {
     expect(segmentarPorAgente([])).toEqual([]);
+  });
+});
+
+/**
+ * O PIPELINE EM CÓDIGO — `/trabalhar <projeto>`, que é o caminho quente — nunca emite
+ * `Agent → x`: quem despacha é a máquina de estados, não a ferramenta `Agent`. Antes de
+ * `MetaEtapa` isso fazia TODO job desses cair num trecho único de "orquestrador", com a
+ * trilha construir → verificar → revisar apagada. Estes testes travam o formato novo.
+ */
+describe("segmentarPorAgente × pipeline em código (meta em campo)", () => {
+  const etapa = (agente: string, papel: string, tarefa: string, texto: string, em: string): LinhaLog => ({
+    nivel: "assistente",
+    texto,
+    em,
+    agente,
+    papel,
+    tarefa,
+  });
+
+  it("segmenta pelos CAMPOS quando eles existem, sem depender do texto", () => {
+    const linhas: LinhaLog[] = [
+      log("inicio", "Pipeline em código · projeto alfa", "2026-08-16T10:00:00Z"),
+      etapa("executor", "construtor", "T-001", "T-001 · construtor · executor", "2026-08-16T10:00:10Z"),
+      { nivel: "ferramenta", texto: "executor: Edit", em: "2026-08-16T10:00:20Z", agente: "executor", papel: "construtor", tarefa: "T-001" },
+      etapa("testador", "verificador", "T-001", "T-001 · verificador · testador", "2026-08-16T10:02:00Z"),
+      etapa("revisor", "revisor", "T-001", "T-001 · revisor · revisor", "2026-08-16T10:03:00Z"),
+    ];
+    const s = segmentarPorAgente(linhas);
+    expect(s.map((x) => x.agente)).toEqual([null, "executor", "testador", "revisor"]);
+    expect(s.map((x) => x.etapa)).toEqual([null, "construtor", "verificador", "revisor"]);
+    expect(s[1]?.tarefa).toBe("T-001");
+    // A linha de cabeçalho da etapa é CONTEÚDO aqui (ao contrário do `Agent → x`, que é só
+    // marcador): ela traz o modelo e o tamanho do contexto, que são dado útil.
+    expect(s[1]?.linhas).toHaveLength(2);
+  });
+
+  it("volta ao orquestrador entre etapas — linha sem agente é decisão do motor", () => {
+    const s = segmentarPorAgente([
+      etapa("executor", "construtor", "T-001", "construindo", "2026-08-16T10:00:00Z"),
+      log("assistente", "T-001: em-execucao → em-teste", "2026-08-16T10:01:00Z"),
+      etapa("testador", "verificador", "T-001", "verificando", "2026-08-16T10:01:30Z"),
+    ]);
+    expect(s.map((x) => x.agente)).toEqual(["executor", null, "testador"]);
+  });
+
+  it("agenteAtivo devolve null quando quem está falando é o motor", () => {
+    const linhas = [
+      etapa("executor", "construtor", "T-001", "construindo", "2026-08-16T10:00:00Z"),
+      log("assistente", "Gestão commitada: abc1234", "2026-08-16T10:05:00Z"),
+    ];
+    // Dizer "executor trabalhando" aqui seria mentira: ele já terminou.
+    expect(agenteAtivo(linhas)).toBeNull();
+  });
+
+  it("conta UM despacho por etapa, não um por linha", () => {
+    const linhas: LinhaLog[] = [
+      etapa("executor", "construtor", "T-001", "a", "2026-08-16T10:00:00Z"),
+      etapa("executor", "construtor", "T-001", "b", "2026-08-16T10:00:05Z"),
+      etapa("testador", "verificador", "T-001", "c", "2026-08-16T10:01:00Z"),
+      etapa("executor", "construtor", "T-001", "d", "2026-08-16T10:02:00Z"),
+    ];
+    const porAgente = atividadePorAgente(linhas);
+    expect(porAgente.find((a) => a.id === "executor")?.vezes).toBe(2);
+    expect(porAgente.find((a) => a.id === "testador")?.vezes).toBe(1);
+  });
+
+  it("tarefaEmFoco prefere o campo ao texto", () => {
+    const linhas: LinhaLog[] = [
+      log("assistente", "o plano cita T-999 como referência", "2026-08-16T10:00:00Z"),
+      etapa("executor", "construtor", "T-007", "trabalhando", "2026-08-16T10:00:10Z"),
+    ];
+    expect(tarefaEmFoco(linhas)).toBe("T-007");
   });
 });
 
@@ -168,12 +240,37 @@ describe("segmentarPorEstagio (jobs de CI, que não têm agentes)", () => {
 });
 
 describe("etapaDoAgente / tarefaEmFoco", () => {
-  it("testador e revisor são etapas próprias; o resto é construtor", () => {
-    expect(etapaDoAgente("testador")).toBe("testador");
+  it("verificador e revisor são etapas próprias; o resto é construtor", () => {
+    expect(etapaDoAgente("testador")).toBe("verificador");
     expect(etapaDoAgente("revisor")).toBe("revisor");
     expect(etapaDoAgente("domain")).toBe("construtor");
     expect(etapaDoAgente("executor")).toBe("construtor");
     expect(etapaDoAgente(null)).toBeNull();
+  });
+
+  /**
+   * A etapa do meio se chamava "testador" — o nome do agente da trilha de SOFTWARE. Num
+   * projeto genérico quem verifica é o `conferente`, e ele caía no ramo "qualquer outro
+   * agente é construtor": o portão do meio aparecia como construção na trilha da tela.
+   */
+  it("conhece os agentes das DUAS trilhas, inclusive os reforçados", () => {
+    expect(etapaDoAgente("conferente")).toBe("verificador");
+    expect(etapaDoAgente("revisor-generico")).toBe("revisor");
+    expect(etapaDoAgente("construtor")).toBe("construtor");
+    expect(etapaDoAgente("construtor-reforcado")).toBe("construtor");
+    expect(etapaDoAgente("executor-reforcado")).toBe("construtor");
+  });
+
+  it("o PAPEL vence o nome — é ele que o motor decidiu", () => {
+    // No passo 3 da resolução (o único que roda no painel) o construtor de um especialista
+    // continua se chamando `executor`; e um verificador genérico pode ter qualquer nome.
+    expect(etapaDoAgente("executor", "verificador")).toBe("verificador");
+    expect(etapaDoAgente("zzz", "revisor")).toBe("revisor");
+    // `marco` é o verificador exercitando a meta da fase: mesma etapa, outro objeto.
+    expect(etapaDoAgente("testador", "marco")).toBe("verificador");
+    // Papéis fora do ciclo de uma tarefa NÃO acendem etapa nenhuma.
+    expect(etapaDoAgente("planejador", "planejador")).toBeNull();
+    expect(etapaDoAgente("documentador", "documentador")).toBeNull();
   });
 
   it("pega a ÚLTIMA tarefa citada no log", () => {

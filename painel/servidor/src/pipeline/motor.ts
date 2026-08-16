@@ -308,6 +308,15 @@ export interface RelatorioMotor {
     | "teto-de-voltas"
     /** Limite da assinatura batido (T-064): só o relógio reabre, insistir é desperdício. */
     | "cota";
+  /**
+   * Hora de reabertura anunciada pelo provedor, quando `encerrouPor === "cota"` (16/08).
+   *
+   * O dado já existia — `despachante.ts` o extrai com `horaDeReabertura` e o devolve em
+   * `limiteDeUso` — e morria dentro do laço, escrito só numa linha de log. A tela, que é
+   * onde a pergunta "quando posso redisparar?" é feita, nunca o recebia. Mais um sensor sem
+   * atuador; aqui ele sobe até o resultado do job.
+   */
+  limiteDeUso?: string;
   orcamento: EstadoOrcamento;
 }
 
@@ -1040,6 +1049,7 @@ export async function rodarPipeline(
         emCircuito.add(passo.tarefa.id);
         rel.etapasFalhas.push({ tarefa: passo.tarefa.id, agente: agente.nome });
         rel.encerrouPor = "cota";
+        rel.limiteDeUso = r.limiteDeUso;
         dep.log(
           "erro",
           `Limite da assinatura batido em ${passo.tarefa.id} (reabre: ${r.limiteDeUso}).` +

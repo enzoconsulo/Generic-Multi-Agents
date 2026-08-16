@@ -36,6 +36,7 @@ Gerador_de_projetos/
 │   ├── PROTOCOLO_TAREFAS.md ← formato e ciclo de vida das tarefas (LEIA antes de mexer em tarefas)
 │   ├── BIBLIOTECAS.md       ← doutrina da trilha SOFTWARE: scaffold oficial > lib madura > código próprio
 │   ├── DOMINIOS.md          ← doutrina da trilha GENÉRICA (não-software): artefato + verificador
+│   ├── PADRAO_DE_PROJETO.md ← como TODO projeto se documenta (GUIA.md à mão + MAPA.md gerado)
 │   ├── CUSTO_DE_CONTEXTO.md ← modelo de custo medido (seção 8 é a que vale hoje)
 │   ├── DECISOES_FECHADAS.md ← perguntas já respondidas que custaram sessão: NÃO REABRIR sem fato novo
 │   ├── ferramentas/         ← captura.mjs: PNG de tela via Edge/Chrome (prova visual dos agentes)
@@ -52,6 +53,8 @@ Gerador_de_projetos/
         ├── _gestao/
         │   ├── MAPA.md       ← GERADO por mapa.mjs: índice denso (árvore + assinaturas).
         │   │                    É por ele que os agentes se orientam em vez de varrer o código
+        │   ├── GUIA.md       ← À MÃO: onde fica o quê, as receitas e "já existe — não reinvente".
+        │   │                    O MAPA diz o que EXISTE; o GUIA diz COMO SE FAZ (PADRAO_DE_PROJETO.md)
         │   ├── ESPECIFICACAO.md
         │   ├── PLANO.md
         │   ├── DECISOES.md
@@ -438,6 +441,13 @@ modelo, ~5% do tamanho do fonte) com árvore + assinatura e propósito de cada s
 público. Os agentes o leem na abertura e só abrem na íntegra o que vão mudar. Sua parte:
 **garantir que ele exista e esteja fresco** — /trabalhar regenera na preparação, executor e
 construtor regeneram ao commitar. Mapa velho desorienta todo mundo e é pior que mapa nenhum.
+
+Ao lado dele, `_gestao/GUIA.md` é o par ESCRITO À MÃO: o MAPA diz *o que existe e onde*, o
+GUIA diz *como se faz* — o papel de cada módulo, as receitas ("para fazer X, mexa em Y") e a
+seção **"já existe — não reinvente"**, que é a única defesa contra a segunda cópia de um
+helper. O padrão, obrigatório em todo projeto (novo ou importado), está em
+`_sistema/PADRAO_DE_PROJETO.md`; a T-001 o cria, o documentador o mantém, e o exemplo
+completo a copiar é `painel/GUIA.md`.
 
 O que sustenta sessões longas de /trabalhar é o SEU contexto limpo. Regras:
 

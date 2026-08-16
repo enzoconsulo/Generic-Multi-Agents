@@ -270,6 +270,16 @@ async function garantirGestao(destino: string, fabricaRaiz: string, nome: string
     return tpl.replace(/<nome do projeto>/g, nome);
   });
 
+  // GUIA.md — o padrão de documentação da fábrica (`_sistema/PADRAO_DE_PROJETO.md`). Entra
+  // como ESQUELETO: quem o preenche é a análise de código que a importação já enfileira, e
+  // depois o documentador. Criar aqui (e não deixar para o modelo lembrar) é o que faz o
+  // padrão valer para projeto importado — que é justamente o que chega sem documentação
+  // nenhuma e onde a pergunta "onde mexo para fazer X?" é mais cara.
+  await criarSeFaltar(join(gestao, "GUIA.md"), async () => {
+    const tpl = await lerTemplate(fabricaRaiz, "GUIA.md", `# GUIA — ${nome}\n`);
+    return tpl.replace(/<nome do projeto>/g, nome);
+  });
+
   await criarSeFaltar(join(gestao, "DECISOES.md"), async () => {
     const tpl = await lerTemplate(fabricaRaiz, "DECISOES.md", `# Decisões — ${nome}\n`);
     return tpl.replace(/<nome do projeto>/g, nome);

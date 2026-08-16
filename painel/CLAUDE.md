@@ -9,6 +9,13 @@ na raiz dela (`<fabrica>/painel/`), versionado no repositório do sistema — n�
 comum sob `projetos/`. Gestão (especificação, plano, tarefas, decisões) em `_gestao/`; o
 protocolo de tarefas está em `../_sistema/PROTOCOLO_TAREFAS.md`. Trabalhe em português (BR).
 
+> **Comece por [`GUIA.md`](GUIA.md)**, ao lado deste arquivo: onde fica cada módulo, as
+> receitas ("para acrescentar um endpoint, mexa em…") e a lista **"já existe — não
+> reinvente"**. Os três documentos se dividem assim, e a divisão é deliberada: o `GUIA.md`
+> responde *como faço*, o `_gestao/MAPA.md` (gerado) responde *o que existe e onde*, e ESTE
+> arquivo responde *o que já deu errado aqui*. Padrão em
+> `../_sistema/PADRAO_DE_PROJETO.md`.
+
 ## Stack
 - Node.js 22+ / TypeScript estrito; monorepo npm workspaces: `servidor/` e `web/`.
 - Backend: Express 5, escutando SOMENTE em 127.0.0.1:8765; SSE nativo (sem lib);
@@ -398,6 +405,33 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
 - **Entregue onde o usuário OLHA.** A T-023 pôs a visualização de agentes na página do
   projeto; o usuário acompanha execução na página de **Jobs**, que ficou como estava. Ao
   receber um pedido de UI, confirme em QUAL tela ele acontece.
+- **Sensor que lê o formato do OUTRO motor não está quebrado — está cego.** A trilha
+  construir → verificar → revisar da aba Jobs ficou apagada em TODO `/trabalhar <projeto>`,
+  e o log inteiro caía num bloco só de "orquestrador". Causa: `lib/atividade.ts` descobria o
+  agente casando `Agent → testador` por regex — o formato do runner do **Agent SDK** —, e o
+  pipeline em CÓDIGO nunca emite essa linha, porque quem despacha ali é a máquina de estados
+  e não a ferramenta `Agent`. O sensor funcionava perfeitamente sobre o motor errado. Hoje o
+  despachante manda `agente`/`papel`/`tarefa` em CAMPO (`MetaEtapa`), a tela decide o modo
+  por job, e `lerCabecalhoAntigo` lê os logs já gravados. **Ao mexer em algo que consome
+  log, pergunte qual dos dois motores o produziu** — desde 02/08 são dois, e eles não falam
+  a mesma língua. Corolário: preferir campo a formato de frase; casar prosa entre servidor e
+  tela é o acoplamento que já matou os resumos em silêncio uma vez.
+- **`concluido` é estado da FILA, não veredito de entrega.** Um `/trabalhar` cortado pela
+  cota aparecia com selo verde "Concluído": o pipeline RETORNA ao bater na cota (o laço
+  parou limpo, e retornar preserva o relatório), enquanto o runner Claude LANÇA e vira
+  `falhou`. Mesmo fato, dois estados, duas leituras na tela — e a mais cara era a verde. Pior,
+  os avisos de `limite-uso`/`teto-custo` procuravam o campo `motivo`, que só o runner Claude
+  gravava: o pipeline dizia a mesma coisa por outro nome (`encerrouPor: "cota"`) e a tela não
+  falava esse dialeto. Hoje `runner-pipeline` traduz para o vocabulário comum e
+  `lib/desfecho.ts` é o ÚNICO ponto que a tela consulta. Ao acrescentar um desfecho: dê o
+  nome que o outro motor já usa, ou traduza na fronteira — nunca deixe a tela adivinhar.
+- **Caixa de digitação não herda o layout do catálogo em que o botão vive.** O pedido de
+  funcionalidade — o texto que mais decide a qualidade do plano — era digitado dentro de um
+  cartão de `.grade-cards` (17rem), quatro linhas visíveis; e a ideia de um projeto novo,
+  num `<input>` de UMA linha, ao lado da instrução para descrever o que é, para quem, o que
+  entra na v1 e o que não entra. Hoje o cartão aberto atravessa a grade
+  (`.card-acao.aberto { grid-column: 1 / -1 }`) e `argumentoEhTextoLongo` decide entre
+  `<textarea>` e `<input>` pelo CONTEÚDO do argumento, não pelo comando.
 - **Navegador NÃO dá caminho absoluto de pasta.** `webkitdirectory` e
   `showDirectoryPicker()` entregam os arquivos e escondem onde eles estão. Por isso o
   seletor de pasta da importação roda no BACKEND (`projetos/seletor-pasta.ts`) — só é

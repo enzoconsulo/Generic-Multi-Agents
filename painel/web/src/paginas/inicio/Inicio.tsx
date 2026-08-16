@@ -13,7 +13,12 @@ import type {
 import { Carregando, MensagemErro } from "../../componentes/Estados";
 import { GrafoGit } from "../../componentes/GrafoGit";
 import { BadgeMarco, ResumoStatus } from "../../componentes/Indicadores";
-import { estimarCusto, rotuloPeso, textoEstrategia } from "../../lib/formato";
+import {
+  argumentoEhTextoLongo,
+  estimarCusto,
+  rotuloPeso,
+  textoEstrategia,
+} from "../../lib/formato";
 
 export function Inicio() {
   const fabrica = useDados<RespostaFabrica>("/api/fabrica");
@@ -151,6 +156,7 @@ function CartaoAcao({
   );
   const estimativa = estrategia ? estimarCusto(acao.peso, estrategia.custo) : null;
   const pesado = acao.peso === "pesado";
+  const textoLivre = argumentoEhTextoLongo(acao.id);
 
   async function disparar(evento: React.FormEvent) {
     evento.preventDefault();
@@ -192,15 +198,32 @@ function CartaoAcao({
         <form className="form-acao" onSubmit={disparar}>
           {acao.argumentos !== null && (
             <label className="campo-form">
-              <span>Argumentos</span>
-              <input
-                type="text"
-                value={args}
-                onChange={(e) => setArgs(e.target.value)}
-                placeholder={acao.argumentos ?? ""}
-                autoFocus
-              />
-              <span className="campo-ajuda">{acao.argumentos}</span>
+              <span>{textoLivre ? "Descreva o que você quer" : "Argumentos"}</span>
+              {/* Ideia de projeto é texto de quatro frases; nome de projeto é uma palavra.
+                  Ver `argumentoEhTextoLongo` — a caixa segue o conteúdo, não o comando. */}
+              {textoLivre ? (
+                <textarea
+                  value={args}
+                  onChange={(e) => setArgs(e.target.value)}
+                  placeholder={acao.argumentos ?? ""}
+                  rows={6}
+                  autoFocus
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={args}
+                  onChange={(e) => setArgs(e.target.value)}
+                  placeholder={acao.argumentos ?? ""}
+                  autoFocus
+                />
+              )}
+              <span className="campo-ajuda">
+                {textoLivre
+                  ? "Quanto mais claro (o que é · para quem · o que precisa ter na v1 · o que" +
+                    " NÃO entra), melhor o plano que sai."
+                  : acao.argumentos}
+              </span>
             </label>
           )}
 

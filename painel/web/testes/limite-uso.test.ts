@@ -51,3 +51,38 @@ describe("avisoLimiteDeUso × entrega parcial (T-047)", () => {
     expect(avisoLimiteDeUso({ motivo: "limite-uso" })).toContain("sem entregar");
   });
 });
+
+/**
+ * O PIPELINE EM CÓDIGO não conta turnos de SDK — conta TAREFAS. Sem este ramo, todo
+ * `/trabalhar` cortado pela cota caía em "nada foi entregue" mesmo tendo fechado e commitado
+ * tarefas, que é o conselho que manda refazer trabalho pronto. É a terceira vez que esta
+ * mensagem erra por olhar o sinal do outro motor; por isso o teste é explícito.
+ */
+describe("avisoLimiteDeUso × pipeline em código", () => {
+  it("tarefa concluída é prova de entrega mais forte que turno", () => {
+    const texto = avisoLimiteDeUso({
+      motivo: "limite-uso",
+      reabreEm: "9:00am",
+      tarefasConcluidas: ["T-011", "T-012"],
+    });
+    expect(texto).toContain("2 tarefa(s) fecharam");
+    expect(texto).toContain("T-011, T-012");
+    expect(texto).toContain("retoma de onde parou");
+    expect(texto).not.toContain("sem entregar");
+  });
+
+  it("lista vazia não conta como entrega", () => {
+    expect(avisoLimiteDeUso({ motivo: "limite-uso", tarefasConcluidas: [] })).toContain(
+      "sem entregar",
+    );
+  });
+
+  it("tarefa concluída vence turnos zerados (o pipeline não reporta turnos)", () => {
+    const texto = avisoLimiteDeUso({
+      motivo: "limite-uso",
+      numTurnos: 0,
+      tarefasConcluidas: ["T-011"],
+    });
+    expect(texto).toContain("1 tarefa(s) fecharam");
+  });
+});

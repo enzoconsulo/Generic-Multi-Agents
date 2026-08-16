@@ -58,6 +58,30 @@ export interface ResultadoPipeline extends RelatorioMotor {
   custoEstimadoUsd: number;
   /** Texto pronto para a UI e para o log do dia. */
   texto: string;
+  /**
+   * DESFECHO no mesmo vocabulário do runner Claude (`ResultadoClaude.motivo`), 16/08.
+   *
+   * Sem isto, um `/trabalhar` cortado pela cota ficava com o job `concluido`, verde, sem uma
+   * palavra na tela: os avisos de `lib/limite-uso.ts` e `lib/teto-custo.ts` procuram o campo
+   * `motivo`, que só o runner Claude gravava. O pipeline dizia a mesma coisa por outro nome
+   * (`encerrouPor: "cota" | "orcamento"`) e a tela não falava esse dialeto — dois vocabulários
+   * para o mesmo fato, e o mais caro deles era o mudo.
+   *
+   * A tradução é aqui, e não na tela, de propósito: quem sabe que "cota" é limite de
+   * assinatura é este módulo. A tela deve receber o desfecho, não deduzi-lo.
+   */
+  motivo?: "limite-uso" | "teto-custo";
+  /** Hora de reabertura anunciada, quando `motivo === "limite-uso"`. */
+  reabreEm?: string | null;
+}
+
+/** Desfecho do laço traduzido para o vocabulário que a tela já entende. Ver `motivo`. */
+function motivoDe(r: RelatorioMotor): Pick<ResultadoPipeline, "motivo" | "reabreEm"> {
+  if (r.encerrouPor === "cota") {
+    return { motivo: "limite-uso", reabreEm: r.limiteDeUso ?? null };
+  }
+  if (r.encerrouPor === "orcamento") return { motivo: "teto-custo" };
+  return {};
 }
 
 /**
@@ -136,8 +160,16 @@ export class RunnerPipeline implements Runner {
       equipe,
       consulta: this.consulta,
       abortController: controlador,
-      emitir: (nivel, texto) =>
-        ctx.emitir("log", { nivel: nivel === "ferramenta" ? "ferramenta" : nivel === "erro" ? "erro" : "assistente", texto }),
+      // `meta` viaja junto com a linha (agente/papel/tarefa em CAMPO, não em prosa) — é o que
+      // permite à aba Jobs saber quem trabalha e em que etapa sem reconhecer frase. Ver
+      // `MetaEtapa` em `despachante.ts`.
+      emitir: (nivel, texto, meta) =>
+        ctx.emitir("log", {
+          nivel:
+            nivel === "ferramenta" ? "ferramenta" : nivel === "erro" ? "erro" : "assistente",
+          texto,
+          ...(meta ?? {}),
+        }),
     });
 
     /** Seção crua de uma tarefa, lendo o arquivo completo só quando é preciso. */
@@ -335,6 +367,7 @@ export class RunnerPipeline implements Runner {
       projeto: p.projeto,
       custoEstimadoUsd: relatorio.orcamento.gastoUsd,
       texto,
+      ...motivoDe(relatorio),
     };
   }
 }
@@ -346,14 +379,49 @@ const POR_QUE: Readonly<Record<RelatorioMotor["encerrouPor"], string>> = {
   "agente-cortado": "Um agente não devolveu resultado; o laço parou para não empilhar trabalho sobre estado desconhecido.",
   "sem-progresso": "Um agente terminou sem gravar o próprio status; o laço parou para não repetir o despacho.",
   "teto-de-voltas": "Teto de voltas do laço atingido — isto é sintoma de bug, investigue.",
-  cota: "LIMITE DA ASSINATURA batido — a rodada parou na hora, sem gastar despacho contra a parede. Redispare quando a cota voltar.",
+  cota: "LIMITE DA ASSINATURA batido — a rodada parou na hora, sem gastar despacho contra a parede.",
+};
+
+/**
+ * O QUE ACONTECE AO REDISPARAR — dito em voz alta, por desfecho (16/08).
+ *
+ * A pergunta do usuário era literal: "ao retomar, ele continua de onde parou ou perde todo o
+ * esforço?". A resposta estava certa no código e em lugar nenhum na tela.
+ *
+ * O mecanismo, para quem for conferir: **o estado NÃO vive no job, vive nos arquivos**. Cada
+ * rodada abre relendo `_gestao/tarefas/` do disco, e o saneamento de abertura decide tarefa
+ * por tarefa — `em-execucao` com mudança não commitada nas `areas` continua de onde parou;
+ * `em-execucao` com árvore limpa volta a `pronta` e é refeita. Tarefa `concluida` fica
+ * concluída; commit feito é commit mantido. Ou seja: o que se perde numa parada é, no máximo,
+ * o ciclo da ÚNICA tarefa que estava em voo — nunca a rodada.
+ */
+const AO_REDISPARAR: Readonly<Record<RelatorioMotor["encerrouPor"], string>> = {
+  "sem-trabalho": "Nada a retomar: a rodada esvaziou a fila do que era despachável.",
+  orcamento:
+    "Ao redisparar COM TETO MAIOR, a rodada retoma daqui: tarefa concluída fica concluída," +
+    " e a que estava em andamento continua do ponto em que parou.",
+  "agente-cortado":
+    "Ao redisparar, as outras tarefas seguem normalmente; a que teve o agente cortado é" +
+    " retomada (ou refeita, se ele não chegou a deixar nada na árvore).",
+  "sem-progresso":
+    "Ao redisparar, a tarefa volta a `pronta` e é refeita do início — o agente não gravou" +
+    " estado, então não há de onde continuar. Se ela repetir isso, é bug do agente.",
+  "teto-de-voltas": "Investigue antes de redisparar: repetir sem corrigir bate no mesmo teto.",
+  cota:
+    "NADA DO QUE FOI FEITO SE PERDE: o estado vive nos arquivos das tarefas, não no job." +
+    " Quando a cota voltar, redispare — a rodada relê o disco, mantém o que está concluído e" +
+    " retoma a tarefa que estava em voo de onde ela parou.",
 };
 
 function montarRelatorio(projeto: string, r: RelatorioMotor): string {
   const linhas = [
     `Pipeline de ${projeto}: ${r.despachos} despacho(s), ` +
       `${r.tarefasConcluidas.length} tarefa(s) concluída(s).`,
-    POR_QUE[r.encerrouPor],
+    POR_QUE[r.encerrouPor] +
+      (r.encerrouPor === "cota" && r.limiteDeUso !== undefined
+        ? ` A cota reabre: ${r.limiteDeUso}.`
+        : ""),
+    AO_REDISPARAR[r.encerrouPor],
   ];
   if (r.tarefasConcluidas.length > 0) linhas.push(`Concluídas: ${r.tarefasConcluidas.join(", ")}.`);
   if (r.promovidas.length > 0) linhas.push(`Promovidas: ${r.promovidas.join(", ")}.`);

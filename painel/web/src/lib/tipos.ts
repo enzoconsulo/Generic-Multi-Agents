@@ -292,6 +292,17 @@ export interface LinhaLog {
   /** Presente só em jobs de CI (T-017): identifica de qual estágio a linha veio. */
   estagio?: string;
   fluxo?: "stdout" | "stderr";
+  /**
+   * QUEM produziu a linha, em campo (16/08). Espelha `MetaEtapa` do servidor
+   * (`pipeline/despachante.ts`) e só existe nos jobs do PIPELINE EM CÓDIGO — o runner do
+   * Agent SDK anuncia o agente dentro do texto (`Agent → testador`), e é por isso que
+   * `atividade.ts` sabe ler os dois.
+   */
+  agente?: string;
+  /** Papel no pipeline (`construtor`, `verificador`, `revisor`, `marco`…). */
+  papel?: string;
+  /** Tarefa em foco (`T-012`). */
+  tarefa?: string;
 }
 
 /* ----------------------------------- CI/CD (T-017/T-018) ----------------------------------- */

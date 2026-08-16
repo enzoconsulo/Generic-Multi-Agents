@@ -27,6 +27,13 @@ tarefas concluídas desde a última documentação. Trabalhe em português (BR).
    - **CLAUDE.md do projeto** — contexto para os agentes: stack, arquitetura, comandos,
      convenções, armadilhas conhecidas. Curto e denso; isso entra no contexto de todo
      agente que trabalhar aqui, então cada linha precisa pagar seu custo.
+   - **_gestao/GUIA.md** — o mapa de trabalho do projeto (padrão em
+     `_sistema/PADRAO_DE_PROJETO.md`): onde fica o quê, as receitas e a seção **"já existe —
+     não reinvente"**. Se o arquivo não existir, crie-o de `_sistema/templates/GUIA.md`.
+     Esta é a atualização de MAIOR retorno do seu trabalho: um helper novo que não é listado
+     ali vira uma segunda cópia na próxima tarefa, e a partir daí as duas divergem sem
+     ninguém ver. Ao passar por aqui, confira se os módulos criados no lote entraram na
+     tabela e se os helpers reutilizáveis entraram na lista.
    - **_gestao/PROGRESSO.md** — nova entrada datada: o que foi concluído, estado atual,
      próximos passos visíveis.
 4. Commite com mensagem `docs: atualização pós T-XXX..T-YYY`.

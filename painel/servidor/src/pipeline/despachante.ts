@@ -42,9 +42,33 @@ export interface OpcoesDespachante {
   equipe: EquipeProjeto | null;
   consulta: Consulta;
   abortController: AbortController;
-  emitir(nivel: "info" | "erro" | "ferramenta", texto: string): void;
+  emitir(nivel: "info" | "erro" | "ferramenta", texto: string, meta?: MetaEtapa): void;
   /** Teto de voltas por etapa. Etapa que passa disso está girando, não trabalhando. */
   maxTurnsPorEtapa?: number;
+}
+
+/**
+ * QUEM produziu esta linha de log, em campos — não em prosa (16/08).
+ *
+ * A aba Jobs desenha "quem trabalha agora" e a trilha construir → verificar → revisar a
+ * partir do log, e até aqui ela só sabia ler o formato do runner do Agent SDK
+ * (`Agent → testador`, casado por regex). O pipeline em CÓDIGO nunca emite essa linha —
+ * quem despacha é a máquina de estados, não a ferramenta `Agent` —, então em TODO job de
+ * `/trabalhar <projeto>` a segmentação por agente devolvia um bloco único e a trilha ficava
+ * apagada. O sensor não estava quebrado: ele lia um formato que este caminho não produz.
+ *
+ * A correção é mandar o dado em campo em vez de fazer a UI reconhecê-lo no texto. Casar
+ * formato de frase entre servidor e tela já mordeu esta fábrica antes (o `→ agente` dos
+ * resumos, cuja invariante precisa de teste para não morrer em silêncio); campo estruturado
+ * não tem esse modo de falha.
+ */
+export interface MetaEtapa {
+  /** Nome do agente despachado (`executor`, `conferente`, `revisor-generico`…). */
+  agente: string;
+  /** Papel no pipeline — é ele, e não o nome, que decide a etapa da trilha. */
+  papel: string;
+  /** Tarefa em foco (`T-012`); ausente nos papéis que não olham uma tarefa. */
+  tarefa?: string;
 }
 
 /** Voltas por papel. O construtor é o único que realmente escreve muito. */
@@ -196,13 +220,27 @@ export function criarDespachante(
   o: OpcoesDespachante,
 ): (pedido: PedidoDespacho) => Promise<ResultadoDespacho> {
   return async function despachar(pedido: PedidoDespacho): Promise<ResultadoDespacho> {
+    const papel = papelDoAgente(pedido.agente);
+    // `marco` e `documentador` recebem uma tarefa só para satisfazer o tipo do pedido — o
+    // trabalho deles é sobre a FASE e sobre o projeto. Carimbar o id dela na linha faria a
+    // tela dizer que o marco é da T-007, que é mentira visível.
+    const meta: MetaEtapa = {
+      agente: pedido.agente,
+      papel,
+      ...(pedido.papel === "marco" || pedido.papel === "documentador"
+        ? {}
+        : { tarefa: pedido.tarefa.id }),
+    };
+    /** Emite já carimbado com quem é a etapa. Usar sempre este, nunca `o.emitir` cru. */
+    const emitir = (nivel: "info" | "erro" | "ferramenta", texto: string): void =>
+      o.emitir(nivel, texto, meta);
+
     const agente = await carregarAgente(o.raizFabrica, pedido.agente);
     if (agente === null) {
-      o.emitir("erro", `Agente \`${pedido.agente}\` não existe em .claude/agents/ — etapa abortada.`);
+      emitir("erro", `Agente \`${pedido.agente}\` não existe em .claude/agents/ — etapa abortada.`);
       return { custoUsd: 0, concluiu: false };
     }
 
-    const papel = papelDoAgente(pedido.agente);
     // Hash do último commit registrado nas Notas — o revisor julga o diff, não o projeto.
     const hash = hashDasNotas(pedido);
     const ctx = await montarContexto({
@@ -238,7 +276,7 @@ export function criarDespachante(
 
     const modelo = pedido.modelo ?? agente.modelo ?? o.modeloFluxo;
     const tokens = ctx.medida.compartilhadoTok + ctx.medida.especificoTok;
-    o.emitir(
+    emitir(
       "info",
       `${pedido.tarefa.id} · ${papel} · ${pedido.agente} · ${modelo} · ~${tokens} tok de ` +
         `contexto (${ctx.medida.arquivosIncluidos.length} arquivo(s) embutido(s))`,
@@ -291,7 +329,7 @@ export function criarDespachante(
                   const processo = avaliarComandoDeProcesso(comando);
                   const veredicto = processo.permitido ? avaliarReinvencao(comando) : processo;
                   if (veredicto.permitido) return { continue: true };
-                  o.emitir(
+                  emitir(
                     "erro",
                     `GUARDA: comando recusado para ${pedido.agente} — ${veredicto.motivo ?? ""}`,
                   );
@@ -374,7 +412,7 @@ export function criarDespachante(
           for (const bloco of (msg.message?.content ?? []) as { type?: string; name?: string }[]) {
             if (bloco.type === "tool_use" && bloco.name !== undefined) {
               chamadas += 1;
-              o.emitir("ferramenta", `${pedido.agente}: ${bloco.name}`);
+              emitir("ferramenta", `${pedido.agente}: ${bloco.name}`);
             }
           }
         } else if (msg.type === "result") {
@@ -387,9 +425,9 @@ export function criarDespachante(
       }
     } catch (e) {
       const mensagem = (e as Error).message;
-      o.emitir("erro", `Etapa ${pedido.agente} falhou: ${mensagem}`);
+      emitir("erro", `Etapa ${pedido.agente} falhou: ${mensagem}`);
       if (ultimasDoStderr.length > 0) {
-        o.emitir("erro", `stderr do agente:${QUEBRA}${ultimasDoStderr.join(QUEBRA)}`);
+        emitir("erro", `stderr do agente:${QUEBRA}${ultimasDoStderr.join(QUEBRA)}`);
       }
       /**
        * LIMITE DE ASSINATURA (T-064). O provedor anuncia a cota na mensagem de erro, e
@@ -421,7 +459,7 @@ export function criarDespachante(
     // medido), então isto é termômetro para leitura humana, nunca alarme.
     const orcado = orcamentoDeFerramentas(papel, pedido.tarefa.areas.length);
     if (chamadas > orcado) {
-      o.emitir(
+      emitir(
         "info",
         `${pedido.tarefa.id}: ${pedido.agente} usou ${chamadas} chamadas de ferramenta,` +
           ` acima do alvo declarado de ${orcado} para ${papel} com` +
@@ -434,7 +472,7 @@ export function criarDespachante(
     // no ciclo seguinte (`politicaDe`).
     const limiar = limiarDeDebate(papel);
     if (chamadas > limiar) {
-      o.emitir(
+      emitir(
         "erro",
         `${pedido.tarefa.id}: ${pedido.agente} se DEBATEU — ${chamadas} chamadas, acima do` +
           ` p90 medido para ${papel} (${limiar}). O próximo despacho desta tarefa não usa` +
@@ -443,7 +481,7 @@ export function criarDespachante(
     }
 
     if (!terminou || erro) {
-      o.emitir("erro", `Etapa ${pedido.agente} terminou sem resultado válido.`);
+      emitir("erro", `Etapa ${pedido.agente} terminou sem resultado válido.`);
       return {
         custoUsd,
         concluiu: false,

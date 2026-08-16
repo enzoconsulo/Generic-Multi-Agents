@@ -38,6 +38,10 @@ interface DadosLog {
   texto?: unknown;
   estagio?: unknown;
   fluxo?: unknown;
+  /** `MetaEtapa` do pipeline em código — ver `LinhaLog.agente`. */
+  agente?: unknown;
+  papel?: unknown;
+  tarefa?: unknown;
 }
 interface DadosEstagioInicio {
   estagio?: unknown;
@@ -203,6 +207,9 @@ function aoEvento(e: Event): void {
       em: evento.em,
       ...(typeof d?.estagio === "string" ? { estagio: d.estagio } : {}),
       ...(d?.fluxo === "stdout" || d?.fluxo === "stderr" ? { fluxo: d.fluxo } : {}),
+      ...(typeof d?.agente === "string" && d.agente !== "" ? { agente: d.agente } : {}),
+      ...(typeof d?.papel === "string" && d.papel !== "" ? { papel: d.papel } : {}),
+      ...(typeof d?.tarefa === "string" && d.tarefa !== "" ? { tarefa: d.tarefa } : {}),
     };
     publicar({
       logs: { ...interno.logs, [evento.jobId]: [...(interno.logs[evento.jobId] ?? []), linha] },

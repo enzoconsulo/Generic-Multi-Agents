@@ -1,6 +1,6 @@
 # MAPA — painel
 
-<!-- GERADO por _sistema/ferramentas/mapa.mjs. NÃO editar à mão — a próxima geração sobrescreve. HEAD: 9d43b61 · 2026-08-02 -->
+<!-- GERADO por _sistema/ferramentas/mapa.mjs. NÃO editar à mão — a próxima geração sobrescreve. HEAD: ff66749 · 2026-08-16 -->
 
 Índice denso deste projeto: o que existe, onde, e a assinatura de cada símbolo
 público. **Existe para você não precisar varrer o projeto para se orientar** — ler o
@@ -12,35 +12,39 @@ você vai modificar ou cujo comportamento interno você precisa conferir.
 ## Árvore
 
 ```
-(raiz)  .gitignore, CLAUDE.md, README.md, package-lock.json, package.json
-_gestao/  DECISOES.md, ESPECIFICACAO.md, PLANO.md, PROGRESSO.md
+(raiz)  .gitignore, CLAUDE.md, GUIA.md, README.md, package-lock.json, package.json
+_gestao/  DECISOES.md, ESPECIFICACAO.md, MAPA.md, PLANO-FASE-VERIFICACAO.md, PLANO.md, PROGRESSO.md
 _gestao/pesquisas/  2026-07-21-agentes-dinamicos.md, 2026-07-21-claude-code-headless.md, 2026-07-31-economia-do-pipeline.md
 _gestao/tarefas/  T-001-spike-agent-sdk.md, T-002-esqueleto-monorepo.md, T-003-leitor-estado-fabrica.md, T-004-api-leitura.md, T-005-pagina-inicial.md, T-006-pagina-projeto.md, T-007-nucleo-jobs.md, T-008-runner-claude.md, T-009-sse-eventos.md, T-010-inputs-pendentes.md, T-011-acoes-fabrica.md, T-012-acao-analise.md … (+30)
+dados/  pulso.log
 dados/ci/  _cronometro.json, teste-todo-cli.json
-dados/jobs/  0d5ef7b2.json, 10711214.json, 16273f2b.json, 222d2495.json, 284211c8.json, 28943cc8.json, 2a8be82a.json, 33a01a83.json, 358c14f1.json, 3bb93223.json, 3d2f928c.json, 3d84b678.json … (+50)
+dados/jobs/  0345125c.json, 0345125c.log.jsonl, 04457d51.json, 04457d51.log.jsonl, 0d5ef7b2.json, 10711214.json, 16273f2b.json, 1a3bc22e.json, 1a3bc22e.log.jsonl, 222d2495.json, 284211c8.json, 28943cc8.json … (+141)
 experimentos/spike-sdk/  .gitignore, LEIA-ME.md, index.mjs, package-lock.json, package.json
 servidor/  package.json, tsconfig.build.json, tsconfig.json, vitest.config.ts
-servidor/integracao/  bench-escala.ts, bench-leitor.ts, canusetool.ts, medir-esforco.ts, veredito.ts
+servidor/integracao/  bench-escala.ts, bench-leitor.ts, canusetool.ts, dry-coleta.ts, medir-esforco.ts, rodar-pipeline.ts, simular-pipeline.ts, veredito.ts
 servidor/src/  agregador-rotas.ts, app.ts, config.ts, index.ts, inicializar.ts
 servidor/src/acoes/  acoes-projeto.ts, acoes.ts, agentes-dinamicos.ts, analise.ts, preambulo.ts
 servidor/src/acoes/prompts/  analise.md
 servidor/src/acoes/prompts/projeto/  conferir.md, documentar.md, marco.md, pesquisar.md, progresso.md, recriar-equipe.md, replanejar.md, revisar.md, testar.md
 servidor/src/ci/  config.ts, ecossistemas.ts, processo.ts, resultados.ts, runner-ci.ts
+servidor/src/contexto/  montador.ts
 servidor/src/eventos/  hub.ts
-servidor/src/fabrica/  ajustes.ts, analise-estruturada.ts, catalogo-acoes.ts, equipe-escrita.ts, equipe.ts, fabrica.ts, frontmatter.ts, git.ts, index.ts, plano.ts, publicacao.ts, seguranca.ts … (+3)
+servidor/src/fabrica/  ajustes.ts, analise-estruturada.ts, catalogo-acoes.ts, equipe-escrita.ts, equipe.ts, escrita-tarefas.ts, fabrica.ts, frontmatter.ts, git.ts, index.ts, plano.ts, publicacao.ts … (+4)
 servidor/src/jobs/  fila.ts, historico-log.ts, inputs.ts, instancia.ts, persistencia.ts, runner-fake.ts, tipos.ts
 servidor/src/jobs/claude/  precos.ts, runner-claude.ts
 servidor/src/jobs/resumo/  gerente-resumos.ts, resumidor.ts, segmentos.ts
 servidor/src/jobs/robustez/  guardrails.ts, watchdog.ts
+servidor/src/pipeline/  coleta-processos.ts, criterios.ts, despachante.ts, diagnostico.ts, guarda-ferramental.ts, guarda-processos.ts, maquina.ts, marco.ts, motor.ts, orcamento.ts, prompts-agente.ts, runner-pipeline.ts … (+1)
 servidor/src/projetos/  importar.ts, runner-importar.ts, seletor-pasta.ts
 servidor/src/rotas/  acoes-projeto.ts, acoes.ts, ajustes.ts, cadastro.ts, ci.ts, equipe.ts, eventos.ts, fabrica.ts, git.ts, inputs.ts, jobs.ts, projetos.ts … (+2)
 servidor/testes/  erros.test.ts, precos.test.ts, saude.test.ts, veredito-esforco.test.ts
-servidor/testes/acoes/  acoes-projeto-rota.test.ts, acoes-projeto.test.ts, acoes-rota.test.ts, acoes.test.ts, agentes-dinamicos.test.ts
+servidor/testes/acoes/  acoes-projeto-rota.test.ts, acoes-projeto.test.ts, acoes-rota.test.ts, acoes.test.ts, agentes-dinamicos.test.ts, roteamento-pipeline.test.ts
 servidor/testes/analise/  analise-rota.test.ts, analise.test.ts
 servidor/testes/cadastro/  cadastro-rota.test.ts, importar.test.ts, seletor-pasta.test.ts
 servidor/testes/ci/  ci-lock.test.ts, ci-rota.test.ts, config.test.ts, processo.test.ts, resultados.test.ts, runner-ci.test.ts
+servidor/testes/contexto/  montador.test.ts
 servidor/testes/eventos/  hub.test.ts
-servidor/testes/fabrica/  ajustes-cache.test.ts, analise-estruturada.test.ts, equipe-escrita.test.ts, equipe.test.ts, fabrica.test.ts, git.test.ts, plano.test.ts, projeto.test.ts, publicacao.test.ts, seguranca.test.ts, tarefas.test.ts
+servidor/testes/fabrica/  ajustes-cache.test.ts, analise-estruturada.test.ts, equipe-escrita.test.ts, equipe.test.ts, escrita-tarefas.test.ts, fabrica.test.ts, git.test.ts, plano.test.ts, projeto.test.ts, publicacao.test.ts, seguranca.test.ts, tarefas.test.ts
 servidor/testes/fixtures/fabrica-falsa/_sistema/ideias/  2026-07-10-modo-relatorio.md, 2026-07-12-atalhos-teclado.md, 2026-07-13-ideia-estranha.md, README.md
 servidor/testes/fixtures/fabrica-falsa/_sistema/logs/  2026-07-18.md, 2026-07-20.md, LEIA-ME.md
 servidor/testes/fixtures/fabrica-falsa/projetos/  solto.txt
@@ -50,21 +54,22 @@ servidor/testes/fixtures/fabrica-falsa/projetos/beta/  README.md
 servidor/testes/inputs/  inputs.test.ts
 servidor/testes/jobs/  ajudantes.ts, api.test.ts, fila-historico.test.ts, fila.test.ts, historico-log.test.ts, persistencia.test.ts, robustez.test.ts
 servidor/testes/jobs-claude/  runner-claude.test.ts
+servidor/testes/pipeline/  coleta-processos.test.ts, criterios.test.ts, despachante.test.ts, diagnostico.test.ts, especialista-colado.test.ts, guarda-ferramental.test.ts, guarda-processos.test.ts, maquina.test.ts, marco.test.ts, motor-retrabalho.test.ts, motor.test.ts, orcamento.test.ts … (+2)
 servidor/testes/resumo/  gerente-resumos.test.ts, resumidor.test.ts, segmentos.test.ts
-servidor/testes/robustez/  guardrails.test.ts, metadados-retomada.test.ts, recuperacao-boot.test.ts, watchdog.test.ts
+servidor/testes/robustez/  guardrails.test.ts, metadados-retomada.test.ts, recuperacao-boot.test.ts, teto-consumido.test.ts, watchdog.test.ts
 servidor/testes/rotas/  catalogo-acoes.test.ts, equipe-rota.test.ts, fabrica.test.ts, git.test.ts, projetos.test.ts, publicacao.test.ts
 web/  index.html, package.json, tsconfig.json, vite.config.ts, vitest.config.ts
 web/src/  App.tsx, estilos.css, main.tsx
 web/src/componentes/  Documento.tsx, Estados.tsx, ExplicaAcao.tsx, GrafoGit.tsx, Indicadores.tsx, Markdown.tsx, PainelCommit.tsx, PublicacaoRepo.tsx, TextoLongo.tsx
-web/src/lib/  api.ts, atividade.ts, avisos-job.ts, custo.ts, documento.ts, formato.ts, gestao.ts, grafo-git.ts, limite-uso.ts, markdown.ts, tipos.ts, useAgora.ts … (+3)
+web/src/lib/  api.ts, atividade.ts, avisos-job.ts, cota.ts, custo-tarefas.ts, custo.ts, desfecho.ts, documento.ts, formato.ts, gestao.ts, grafo-git.ts, limite-uso.ts … (+8)
 web/src/paginas/ajustes/  Ajustes.tsx
 web/src/paginas/como-funciona/  ComoFunciona.tsx
 web/src/paginas/git/  Git.tsx
 web/src/paginas/inicio/  Inicio.tsx
 web/src/paginas/jobs/  Jobs.tsx
-web/src/paginas/projeto/  AcoesProjeto.tsx, EquipeAoVivo.tsx, EspecialistasProjeto.tsx, MapaPlano.tsx, PainelAnalise.tsx, Projeto.tsx, SecaoEquipe.tsx, SecaoGestao.tsx, proximo-passo.ts
+web/src/paginas/projeto/  AcoesProjeto.tsx, CustoPorTarefa.tsx, EquipeAoVivo.tsx, EspecialistasProjeto.tsx, MapaPlano.tsx, PainelAnalise.tsx, Projeto.tsx, SecaoEquipe.tsx, SecaoGestao.tsx, proximo-passo.ts
 web/src/paginas/projeto/ci/  PainelCi.tsx
-web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.test.ts, custo.test.ts, documento.test.ts, estrategia.test.ts, gestao.test.ts, grafo-git.test.ts, limite-uso.test.ts, markdown.test.ts, proximo-passo.test.ts … (+2)
+web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.test.ts, cota.test.ts, custo-tarefas.test.ts, custo.test.ts, desfecho.test.ts, documento.test.ts, estrategia.test.ts, gestao.test.ts, grafo-git.test.ts … (+7)
 ```
 
 ## Símbolos públicos por arquivo
@@ -78,7 +83,13 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 
 ### `servidor/integracao/canusetool.ts` — TESTE DE INTEGRAÇÃO PAGO — validação real do `canUseTool` (T-010) com o SDK.
 
+### `servidor/integracao/dry-coleta.ts` — DRY RUN da coleta de órfãos: lê a tabela de processos REAL e imprime o que SERIA recolhido.
+
 ### `servidor/integracao/medir-esforco.ts` — Mede o efeito REAL do `effort` nas ações mecânicas (T-042).
+
+### `servidor/integracao/rodar-pipeline.ts` — RODA O PIPELINE DE VERDADE — gasta a assinatura.
+
+### `servidor/integracao/simular-pipeline.ts` — SIMULAÇÃO do pipeline contra a fábrica REAL — sem gastar um centavo.
 
 ### `servidor/integracao/veredito.ts` — Julgamento de um A/B de esforço: as duas pernas entregaram a MESMA coisa? (T-051) Separado de `medir-esforco.ts` porque aquele arquivo roda `git` na …
 - `Entrega` *(interface)* — O que uma perna do experimento entregou.
@@ -106,6 +117,7 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 ### `servidor/src/acoes/acoes.ts`
 - `ErroAcaoDesconhecida` *(classe)* — Ação inexistente (a rota traduz para 404).
 - `PedidoAcao` *(interface)*
+- `usaPipelineEmCodigo(id: string, argumentos: string, motor?: string)` — Um `/trabalhar <projeto>` deve rodar pelo pipeline em CÓDIGO? Sim quando há exatamente um projeto no argumento — que é o caso comum e o caro.
 - `montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string)`
 
 ### `servidor/src/acoes/agentes-dinamicos.ts`
@@ -154,6 +166,7 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `MotivoEncerramento` *(tipo)* — Execução de um comando de estágio de CI (T-017): spawn via shell (necessário no Windows — `npm` é `npm.cmd`), streaming de stdout/stderr linha a linh…
 - `ResultadoProcesso` *(interface)*
 - `OpcoesExecutarComando` *(interface)*
+- `encerrarArvore(pid: number)` — Mata a ÁRVORE de processos, não só o processo.
 - `executarComando(opcoes: OpcoesExecutarComando)` — Executa um comando de estágio.
 
 ### `servidor/src/ci/resultados.ts`
@@ -175,6 +188,21 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `config` *(valor)*
 - `resolverEstrategia(id: string)` — Resolve uma estratégia pelo id (ou undefined se não existir).
 - `fabricaRaizExiste()`
+
+### `servidor/src/contexto/montador.ts`
+- `PapelAgente` *(tipo)* — Papel no pipeline. É ele — e não o nome do agente — que decide o contexto, porque a fábrica tem duas trilhas com nomes diferentes para o mesmo papel …
+- `papelDoAgente(nome: string)` — Papel de um agente pelo nome, tolerante às duas formas que o despacho produz: o sufixo `-reforcado` (retrabalho) e o prefixo `<projeto>__` (colisão d…
+- `MedidaContexto` *(interface)* — Medição do que foi montado — vai para o log e para a UI.
+- `BlocosContexto` *(interface)*
+- `TETO_ESPECIFICO_BYTES` *(valor)* — Teto do bloco específico.
+- `aproxTokens(texto: string)` — Aproximação de tokens usada em toda a fábrica (bytes/4).
+- `semCabecalhoVolatil(mapa: string)` — Remove do MAPA o comentário de geração, que carrega hash do HEAD e data.
+- `resolverArea(dirProjeto: string, area: string)` — Resolve um caminho declarado em `areas` DENTRO do projeto.
+- `lerDiff(dirRepo: string, hash: string, tetoBytes = TETO_ESPECIFICO_BYTES)` — Diff de um commit, para o revisor.
+- `PedidoContexto` *(interface)* — Entrada do montador: tudo que ele precisa saber, e nada de I/O do chamador.
+- `montarCompartilhado(dirProjeto: string, raizFabrica?: string)` — Bloco COMPARTILHADO de um projeto: ferramental da fábrica + `CLAUDE.md` + MAPA (sem o cabeçalho volátil).
+- `montarEspecifico(pedido: PedidoContexto)` — Bloco ESPECÍFICO: o que este papel precisa para ESTA tarefa.
+- `montarContexto(pedido: PedidoContexto)` — Monta os dois blocos de uma vez, já medidos.
 
 ### `servidor/src/eventos/hub.ts`
 - `EventoNumerado` *(interface)* — Hub de eventos SSE (T-009): canal ÚNICO multiplexado (cada evento carrega `jobId`).
@@ -219,6 +247,11 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `ehTrilhaGenerica(equipe: EquipeProjeto)` — `true` quando o projeto roda na trilha genérica (qualquer domínio != software).
 - `agentesValidos(equipe: EquipeProjeto)` — Só os agentes prontos para injeção (id + prompt válidos, sem erros de validação).
 
+### `servidor/src/fabrica/escrita-tarefas.ts`
+- `ResultadoEscrita` *(tipo)*
+- `gravarStatusTarefa(arquivo: string, novoStatus: string, hoje = new Date().toISOString().slice(0, 10))` — Troca o `status:` de uma tarefa e atualiza `atualizada:` para hoje.
+- `anexarNaSecao(arquivo: string, titulo: string, texto: string)` — Anexa texto ao fim de uma seção do corpo (`## Verificação`, `## Notas de execução`…).
+
 ### `servidor/src/fabrica/fabrica.ts`
 - `lerFabrica(raiz: string)` — Visão geral da fábrica: todos os projetos (resumo com tarefas, contagem por status e fase atual), ideias da caixa de entrada e o log diário mais rece…
 - `lerProjeto(raiz: string, nome: string)` — Visão completa de um projeto: tarefas com corpo (seções), plano inteiro, e textos de DECISOES.md, PROGRESSO.md e ANALISE.md (null quando o arquivo nã…
@@ -243,6 +276,9 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `lerAlteracoes(dirRepo: string)` — O que está pendente de commit no repositório.
 - `ErroCommit` *(classe)*
 - `commitar(dirRepo: string, mensagem: string)` — Faz `git add -A` + `git commit` no repositório.
+- `commitarCaminhos(dirRepo: string, mensagem: string, caminhos: readonly string[])` — Commit LIMITADO a certos caminhos (`git add -- <caminhos>`), para quem não quer varrer a árvore inteira.
+- `alteracoesForaDe(dirRepo: string, prefixos: readonly string[])` — Arquivos alterados FORA dos caminhos dados (relativos ao repositório).
+- `lerHead(dirRepo: string)` — Hash do HEAD, ou `null` se não der para ler (pasta sem git, repositório sem commit).
 - `lerBranch(dirRepo: string)`
 
 ### `servidor/src/fabrica/index.ts` — Leitor do estado da fábrica — módulo SOMENTE-LEITURA que transforma os arquivos da fábrica (projetos, tarefas, planos, ideias, logs) em dados tipados.
@@ -425,6 +461,140 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `ContextoExecucao` *(interface)* — O que o gerenciador entrega ao runner durante a execução.
 - `Runner` *(interface)* — Runner plugável: executa um job do seu tipo.
 
+### `servidor/src/pipeline/coleta-processos.ts`
+- `ProcessoVivo` *(interface)* — Um processo vivo, no mínimo que a decisão precisa.
+- `FAMILIA_AGENTE` *(valor)* — Executáveis que os agentes usam para rodar comando.
+- `CriterioColeta` *(interface)*
+- `escolherOrfaos(processos: readonly ProcessoVivo[], criterio: CriterioColeta)` — Decide QUEM recolher. Função pura: é onde mora todo o julgamento, e por isso é ela que os testes exercitam — sem matar processo nenhum. Devolve as RA…
+- `listarProcessos()` — Lê a tabela de processos do sistema.
+- `analisarLinhas(saida: string)` — Formato do Windows: `pid|ppid|nome|criadoEmMs|comando`.
+- `descendentesDe(processos: readonly ProcessoVivo[], painelPid: number)` — Descendentes VIVOS do painel, agora.
+- `RastreadorDescendentes` *(classe)* — Anota, enquanto o job roda, tudo que passou pendurado no painel — é a PROVA DE PROPRIEDADE que a coleta exige.
+- `RelatorioColeta` *(interface)*
+- `coletarOrfaos(criterio: CriterioColeta)` — Recolhe os órfãos. Chamado no FIM do job, quando não há mais etapa desta rodada em voo. Nunca lança: coleta de lixo não pode derrubar o fechamento de…
+
+### `servidor/src/pipeline/criterios.ts` — Critérios de aceite com FORMA EXECUTÁVEL (I5 de `_sistema/CUSTO_DE_CONTEXTO.md`).
+- `Criterio` *(interface)* — Um critério de aceite lido do arquivo da tarefa.
+- `BINARIOS_PERMITIDOS` *(valor)* — Binários permitidos. Allowlist, nunca lista de proibições — mesma doutrina da URL de remoto em `publicacao.ts`, onde `ext::<comando>` mostrou que "pr…
+- `MotivoRecusa` *(tipo)*
+- `avaliarComando(comando: string)` — O comando é seguro para rodar sem supervisão?
+- `lerCriterios(secao: string)` — Lê os critérios da seção `## Critérios de aceite` de uma tarefa.
+- `ClasseFalha` *(tipo)* — POR QUE UM COMANDO NÃO PASSOU — e esta distinção é a razão de ser da T-054.
+- `ResultadoCriterio` *(interface)* — Resultado de um critério depois da passada mecânica.
+- `ContextoDeFalha` *(interface)*
+- `classificarFalha(ctx: ContextoDeFalha)` — Classifica POR QUE o comando não passou.
+- `executarCriterios(criterios: readonly Criterio[], dirProjeto: string, opcoes: { timeoutMs?: number } = {})` — Executa os critérios que têm comando.
+- `chaveDeComando(argv: readonly string[])` — Chave de identidade de um comando, para reconhecer repetição dentro do lote (T-059).
+- `relatorioCriterios(resultados: readonly ResultadoCriterio[])` — Relatório em markdown para a seção `## Verificação` da tarefa, no formato da escada de `DOMINIOS.md`.
+- `reprovouNaMecanica(resultados: readonly ResultadoCriterio[])` — Algum critério com comando falhou DE VERDADE? Aí não vale gastar verificador — devolva ao construtor.
+- `criteriosComFerramentaQuebrada(resultados: readonly ResultadoCriterio[])` — Critérios cujo COMANDO está quebrado.
+- `reexecucoesPorAmbiente(resultados: readonly ResultadoCriterio[])` — Quantos comandos precisaram de uma segunda execução por falha de ambiente (T-055).
+- `mesmoComando(a: string, b: string)` — Dois comandos escritos diferente são o MESMO comando? Usa a chave da deduplicação, então a resposta é consistente com o que `executarCriterios` faz —…
+- `criterioDaSuite(comandoTestes: string | null)` — Critério IMPLÍCITO que vale para toda tarefa de software: **a suíte do projeto continua passando.** Não está escrito em tarefa nenhuma e mesmo assim …
+
+### `servidor/src/pipeline/despachante.ts`
+- `OpcoesDespachante` *(interface)* — Transforma UM passo do pipeline numa `query()` do SDK.
+- `MetaEtapa` *(interface)* — QUEM produziu esta linha de log, em campos — não em prosa (16/08).
+- `orcamentoDeFerramentas(papel: string, areas: number)` — ORÇAMENTO DE FERRAMENTAS DECLARADO NOS PROMPTS (T-065), resolvido em número.
+- `limiarDeDebate(papel: string)` — Medido sobre 135 etapas reais de `dados/jobs/*.log.jsonl` (contando as linhas `ferramenta` de cada etapa, sem gastar um centavo de modelo): | papel |…
+- `criarDespachante(o: OpcoesDespachante)` — Cria a função `despachar` que o motor consome.
+
+### `servidor/src/pipeline/diagnostico.ts` — DIAGNÓSTICO DE REPROVAÇÃO — decide COMO refazer, e não só que é preciso refazer.
+- `PortaoQueReprovou` *(tipo)* — Qual portão devolveu a tarefa ao construtor.
+- `Gravidade` *(tipo)*
+- `Achado` *(interface)*
+- `Conformidade` *(tipo)* — Veredito de conformidade do revisor (contrato do `.claude/agents/revisor.md`).
+- `NaturezaFalha` *(tipo)*
+- `Diagnostico` *(interface)*
+- `DIAGNOSTICO_DESCONHECIDO` *(valor)*
+- `lerConformidade(secao: string)` — Lê o veredito `Conformidade: ...` mais recente da seção Conformidade.
+- `lerAchados(secao: string)` — Achados do revisor, no formato do contrato: `[gravidade] arquivo:linha — problema`.
+- `lerImpedimento(notas: string)` — IMPEDIMENTO DECLARADO PELO CONSTRUTOR (T-058).
+- `SecoesRevisao` *(interface)*
+- `classificar(portao: PortaoQueReprovou | null, secoes: SecoesRevisao | null)` — Classifica a reprovação a partir do portão observado.
+- `PoliticaRetrabalho` *(interface)* — O que o motor decide a partir do diagnóstico.
+- `VOLTAS_PONTUAL` *(valor)* — Voltas de um retrabalho ESTREITO.
+- `VOLTAS_MEDIO` *(valor)* — Voltas de um conserto de verdade (defeito grave, falha funcional).
+- `SinaisDaRodada` *(interface)* — Traduz diagnóstico em política.
+- `politicaDe(diag: Diagnostico, tentativas: number, temReforco: boolean, sinais: SinaisDaRodada = {})`
+- `blocoDeFoco(diag: Diagnostico)` — Bloco de FOCO para o despacho pontual: os achados nomeados, em ordem de gravidade.
+
+### `servidor/src/pipeline/guarda-ferramental.ts` — GUARDA DE FERRAMENTAL — o agente não pode reinventar uma ferramenta que a fábrica já tem.
+- `avaliarReinvencao(comando: string)` — Avalia um comando de shell antes de ele rodar.
+
+### `servidor/src/pipeline/guarda-processos.ts` — GUARDA DE PROCESSOS — o agente não pode matar o painel que o está executando.
+- `VeredictoGuarda` *(interface)* — Decisão da guarda sobre um comando de shell.
+- `avaliarComandoDeProcesso(comando: string)` — Avalia um comando de shell antes de ele rodar.
+- `comandoDoToolInput(entrada: unknown)` — Extrai o texto do comando de um `tool_input` de Bash/PowerShell, seja qual for a shell.
+
+### `servidor/src/pipeline/maquina.ts`
+- `Trilha` *(tipo)* — Trilha do projeto, resolvida pelo `dominio` do `equipe.json` (CLAUDE.md, "As duas trilhas").
+- `ETAPAS` *(valor)* — Sequência de papéis de uma tarefa, por trilha.
+- `AGENTE_GENERICO` *(valor)* — Agentes genéricos de cada papel, por trilha.
+- `MAX_TENTATIVAS` *(valor)* — Máximo de ciclos antes de bloquear (CLAUDE.md, "Pipeline de cada tarefa").
+- `trilhaDe(equipe: EquipeProjeto | null | undefined)` — Trilha de um projeto. Ausência de `equipe.json` ou de `dominio` é software, SEMPRE.
+- `promoverProntas(tarefas: readonly TarefaResumo[])` — Tarefas a promover de `backlog` para `pronta`: todas as `dependencias` `concluida`.
+- `Passo` *(interface)* — Uma unidade de trabalho a despachar: a tarefa e o papel que vem agora.
+- `proximosPassos(tarefas: readonly TarefaResumo[], trilha: Trilha, maxConstrutores = 3)` — Próximos passos despacháveis, já respeitando as regras de paralelismo do CLAUDE.md.
+- `AgenteResolvido` *(interface)* — Resultado da resolução de agente: nome a despachar + como se chegou nele.
+- `resolverAgente(…)` — Resolve QUEM despacha um passo — os 3 passos determinísticos do CLAUDE.md ("Equipe do projeto"), mais o escalonamento de modelo por `tentativas`.
+- `podePularVerificacao(tarefa: TarefaResumo)` — A tarefa é só de documentação/texto? Aí o verificador não tem o que executar.
+- `deveBloquear(tarefa: TarefaResumo)` — A tarefa esgotou os 3 ciclos? (`tentativas` conta execuções, não reprovações.)
+- `deveReplanejar(tarefa: TarefaResumo)` — Ao bloquear: replanejar ou entregar ao usuário? Autocorreção vale UMA vez por linhagem — tarefa que já nasceu de replanejamento (`replanejada-de` pre…
+
+### `servidor/src/pipeline/marco.ts`
+- `FaseParaMarco` *(interface)* — Uma fase pronta para ter o marco verificado.
+- `fasesProntasParaMarco(plano: Plano | null, tarefas: readonly TarefaResumo[])` — Fases cujas tarefas estão TODAS concluídas e cujo marco ainda está `pendente`.
+- `VeredictoMarco` *(tipo)*
+- `lerVeredicto(texto: string)` — Lê o veredito do texto final do agente.
+- `textoDoMarco(veredicto: Exclude<VeredictoMarco, "indefinido">, data: string, correcoes: readonly strin…)` — Valor novo da linha `Marco:`, no formato do contrato (`_sistema/templates/PLANO.md`).
+- `ResultadoMarco` *(tipo)*
+- `gravarMarco(arquivoPlano: string, nomeFase: string, valor: string)` — Grava a linha `Marco:` de UMA fase do PLANO.md.
+
+### `servidor/src/pipeline/motor.ts`
+- `PedidoDespacho` *(interface)* — Um despacho a fazer: tudo que o driver precisa para chamar o agente.
+- `ResultadoDespacho` *(interface)*
+- `DependenciasMotor` *(interface)*
+- `ContextoMotor` *(interface)*
+- `CustoDeTarefa` *(interface)* — CUSTO DE UMA TAREFA NESTA RODADA (T-060).
+- `RelatorioMotor` *(interface)*
+- `rodarPipeline(ctx: ContextoMotor, dep: DependenciasMotor)` — Roda o pipeline até acabar o trabalho, o orçamento, ou algo dar errado.
+
+### `servidor/src/pipeline/orcamento.ts` — Teto de custo por job, com PARADA LIMPA.
+- `CUSTO_TAREFA_PADRAO` *(valor)* — Custo médio de um ciclo completo (construtor + verificador + revisor) antes de haver medição própria.
+- `FATOR_SEGURANCA` *(valor)* — Multiplicador de segurança sobre o custo estimado da próxima tarefa.
+- `AcaoOrcamento` *(tipo)*
+- `SituacaoOrcamento` *(tipo)* — Estado nomeado, mais fino que a ação.
+- `DecisaoOrcamento` *(interface)*
+- `EstadoOrcamento` *(interface)*
+- `semTeto()` — Orçamento sem teto — o comportamento anterior, explícito em vez de implícito.
+- `novoOrcamento(tetoUsd: number | null)`
+- `estimativaProximaTarefa(estado: EstadoOrcamento)` — Custo estimado da próxima tarefa: a média do que ESTE job já mediu, ou o padrão quando ainda não há medição.
+- `decidir(estado: EstadoOrcamento)` — Decide o que fazer, dado o estado atual.
+- `registrarTarefaConcluida(estado: EstadoOrcamento, custoUsd: number)` — Registra o custo de uma tarefa concluída — alimenta a autocalibragem.
+- `FRACAO_TETO_POR_TAREFA` *(valor)* — TETO POR TAREFA — a trava que faltava, e a que responde à queixa real do usuário (10/08): "gastar 70% do limite e não entregar UMA tarefa".
+- `DecisaoTarefa` *(interface)*
+- `decidirTarefa(estado: EstadoOrcamento, custoDaTarefaUsd: number)` — Esta tarefa ainda pode receber outro despacho? Puro — quem chama aplica.
+- `comGasto(estado: EstadoOrcamento, gastoUsd: number)` — Atualiza o gasto corrente.
+- `comAgentesEmVoo(estado: EstadoOrcamento, n: number)` — Atualiza quantos agentes estão em voo.
+
+### `servidor/src/pipeline/prompts-agente.ts`
+- `AgenteCarregado` *(interface)* — Um agente pronto para virar uma `query()`.
+- `limparCacheAgentes()` — Esvazia o cache. Usado nos testes, que criam fábricas falsas em pastas temporárias.
+- `carregarAgente(raizFabrica: string, nome: string)` — Lê `<raizFabrica>/.claude/agents/<nome>.md`.
+- `FERRAMENTAS_PROIBIDAS` *(valor)* — Família REMOVIDA do contexto do agente (`disallowedTools`), por cima da allowlist.
+- `FERRAMENTAS_PIPELINE` *(valor)*
+
+### `servidor/src/pipeline/runner-pipeline.ts`
+- `ParamsPipeline` *(interface)* — Runner do PIPELINE EM CÓDIGO — o `/trabalhar` sem orquestrador-modelo.
+- `ResultadoPipeline` *(interface)*
+- `VigiaDeProcessos` *(interface)* — O que o runner usa da vigilância de processos — só isto, e é injetável de propósito.
+- `VigilanciaProcessos` *(interface)*
+- `RunnerPipeline` *(classe)*
+
+### `servidor/src/pipeline/trabalho-parcial.ts`
+- `temTrabalhoParcial(dirProjeto: string, areas: readonly string[])` — Existe trabalho NÃO COMMITADO nas `areas` de uma tarefa? É o sinal que o saneamento de abertura precisa, e a primeira versão errava o alvo.
+
 ### `servidor/src/projetos/importar.ts`
 - `PASTAS_IGNORADAS` *(valor)* — Pastas de DEPENDÊNCIA e CACHE que não são copiadas na importação — a fábrica constrói qualquer tipo de projeto, então ignorar só `node_modules` deixa…
 - `ErroImportacao` *(classe)* — Erro de importação com status HTTP para a rota mapear (400 validação, 409 conflito).
@@ -547,15 +717,19 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `api(caminho: string, init?: RequestInit)` — Helper genérico de fetch para a API do painel.
 
 ### `web/src/lib/atividade.ts`
+- `temMetaEstruturada(linhas: readonly LinhaLog[])` — DOIS MOTORES, DOIS FORMATOS DE LOG — e a tela precisa dos dois (16/08).
+- `CabecalhoAntigo` *(interface)*
+- `lerCabecalhoAntigo(texto: string)` — Agente/papel/tarefa deduzidos de um cabeçalho antigo, ou `null` se a linha não é um.
 - `AtividadeAgente` *(interface)*
 - `agenteAtivo(linhas: readonly LinhaLog[])` — Id do agente do despacho mais recente, ou null se nenhum despacho no log.
+- `papelAtivo(linhas: readonly LinhaLog[])` — Papel do agente que produziu a última linha (só no pipeline em código).
 - `atividadePorAgente(linhas: readonly LinhaLog[])` — Quantas vezes cada agente foi despachado, do mais recente para o mais antigo.
 - `EtapaPipeline` *(tipo)* — Etapa do pipeline da fábrica, deduzida de QUEM está trabalhando.
-- `etapaDoAgente(agente: string | null)` — Testador e revisor são fixos; qualquer outro agente é um construtor.
+- `etapaDoAgente(agente: string | null, papel?: string | null)` — Etapa da trilha a partir do papel (quando o log o traz) ou do nome do agente.
 - `SegmentoAgente` *(interface)*
 - `segmentarPorAgente(linhas: readonly LinhaLog[])` — Agrupa o log em TRECHOS POR AGENTE (T-024): cada despacho `Agent → X` abre um trecho, e tudo que vem depois pertence a ele até o próximo despacho.
 - `segmentarPorEstagio(linhas: readonly LinhaLog[])` — Segmenta o log de um job de CI por ESTÁGIO (T-026).
-- `tarefaEmFoco(linhas: readonly LinhaLog[])` — Última tarefa (T-NNN) citada no log — o orquestrador cita o id ao despachar.
+- `tarefaEmFoco(linhas: readonly LinhaLog[])` — Última tarefa em foco.
 - `TETO_PARALELO` *(valor)* — Teto de construtores em paralelo no mesmo projeto (regra de ouro do CLAUDE.md raiz).
 - `NivelExecucao` *(interface)*
 - `GrafoExecucao` *(interface)*
@@ -569,6 +743,17 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `avisoDespachoFundo(resultado: ResultadoComDespachos | null | undefined)` — Texto do aviso quando o fluxo despachou agente sem pedir execução bloqueante, ou `null` quando não despachou (o caso normal).
 - `avisoDespachoEmVoo(resultado: ResultadoComDespachos | null | undefined)` — Aviso de trabalho COMPROVADAMENTE abandonado: agentes que não devolveram resultado até a sessão fechar.
 
+### `web/src/lib/cota.ts`
+- `ParedeDeCota` *(interface)*
+- `paredeDeCota(jobs: readonly Job[], agora: number = Date.now())` — A cota está batida agora? `null` = pode disparar à vontade.
+- `avisoParede(parede: ParedeDeCota)` — Texto do aviso. Diz o que fazer, não só o que aconteceu.
+
+### `web/src/lib/custo-tarefas.ts` — CUSTO POR TAREFA, somado ao longo dos jobs de um projeto (T-060).
+- `CustoDaTarefa` *(interface)* — Uma tarefa, com o que ela custou somado em todos os jobs que a tocaram.
+- `custoPorTarefa(jobs: readonly Job[])` — Soma a contabilidade de todos os jobs de pipeline recebidos, por tarefa.
+- `RetratoDeCusto` *(interface)* — Retrato do projeto: as duas réguas da Fase 4, mais o que sustenta a leitura delas.
+- `retratoDeCusto(jobs: readonly Job[])`
+
 ### `web/src/lib/custo.ts`
 - `CustoJob` *(interface)* — Leitura de custo de um job (T-049) — o ÚNICO ponto da UI que decide o que é "o custo".
 - `custoDoJob(job: Job)` — Custo de um job, real ou estimado.
@@ -578,6 +763,14 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `FatiaAgente` *(interface)* — Rateio do custo do job entre os agentes (T-050), ordenado do mais caro para o mais barato.
 - `ratearPorAgente(job: Job)`
 - `explicarCusto(c: CustoJob | TotalCusto)` — Texto de ajuda (title) coerente com o prefixo — o "~" sozinho não se explica.
+
+### `web/src/lib/desfecho.ts`
+- `TomDesfecho` *(tipo)* — Tom visual — decide a cor do selo.
+- `Desfecho` *(interface)*
+- `JobParaDesfecho` *(interface)* — Só o que este módulo lê de um job — mantém o contrato estreito e testável.
+- `entregaDoJob(resultado: unknown)` — O QUE JÁ ESTÁ VALENDO, em fatos contáveis.
+- `desfechoDoJob(job: JobParaDesfecho)` — Desfecho de um job. Nunca lança e nunca inventa: sem dado no `resultado`, devolve o estado cru da fila com `qualificado: false`, que é o comportament…
+- `classeDesfecho(tom: TomDesfecho)` — Classe CSS do selo a partir do tom.
 
 ### `web/src/lib/documento.ts`
 - `EntradaDoc` *(interface)* — Quebra um documento de gestão (`ANALISE.md`, `DECISOES.md`, `PROGRESSO.md`) nas seções de que ele é feito, para a tela mostrar ENTRADAS em vez de um …
@@ -600,6 +793,9 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `ESTADOS_JOB_ATIVOS` *(valor)* — Estados não-terminais: job ainda ocupa o lock do escopo dele (T-016 usa para "job ativo").
 - `jobCancelavel(estado: string)`
 - `ESTADOS_JOB_TERMINAIS` *(valor)*
+- `projetoDoEscopo(escopo: string)` — Nome do projeto a partir do escopo do lock (`projeto:banco-imobiliario` → o nome).
+- `argumentoEhTextoLongo(idAcao: string)`
+- `diaLegivel(iso: string, agora: Date = new Date())` — Dia legível para agrupar o histórico ("Hoje", "Ontem", "14/08").
 - `duracaoLegivel(ms: number)` — Duração legível a partir de milissegundos.
 - `decorrido(inicioIso: string | undefined, fimMs: number)` — Tempo decorrido entre duas marcas ISO (ou até `agora`).
 - `ROTULO_PESO` *(valor)* — ----------------------------- Peso e custo -----------------------------
@@ -640,6 +836,10 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `parseInline(texto: string)` — Quebra uma linha em pedaços (texto/negrito/código/link/ênfase).
 - `textoPuro(conteudo: Inline[])` — Texto sem marcação — para prévias e para casar título com data.
 - `parseMarkdown(texto: string)` — Converte o texto inteiro em blocos.
+
+### `web/src/lib/teto-custo.ts` — Aviso de parada pelo TETO DE CUSTO.
+- `ResultadoComTeto` *(interface)* — Trecho de `job.resultado` que interessa para este aviso.
+- `avisoTetoCusto(resultado: ResultadoComTeto | null | undefined)` — Texto do aviso quando o job parou pelo teto de custo, ou `null` quando não foi o caso.
 
 ### `web/src/lib/tipos.ts` — Tipos do frontend que espelham o contrato da API de leitura (T-004), definido no servidor em `servidor/src/fabrica/tipos.ts` e `servidor/src/fabrica/…
 - `STATUS_TAREFA` *(valor)* — Tipos do frontend que espelham o contrato da API de leitura (T-004), definido no servidor em `servidor/src/fabrica/tipos.ts` e `servidor/src/fabrica/…
@@ -708,6 +908,12 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `UsoAgente` *(interface)* — Consumo de um agente do pipeline dentro de um job.
 - `ResultadoContabil` *(interface)* — Contabilidade de um job, como o servidor a grava em `job.resultado` (T-049).
 
+### `web/src/lib/topicos.ts`
+- `TipoTopico` *(tipo)* — ATIVIDADE EM MINI-TÓPICOS, do mais recente para o mais antigo (16/08).
+- `Topico` *(interface)*
+- `LIMITE_TOPICOS` *(valor)* — Tópicos exibidos por padrão.
+- `montarTopicos(linhas: readonly LinhaLog[], opcoes: { limite?: number } = {})` — Condensa o log em tópicos, **do mais recente para o mais antigo**.
+
 ### `web/src/lib/useAgora.ts`
 - `useAgora(ativo: boolean, intervaloMs = 1000)` — Relógio que avança de segundo em segundo — é o que faz o tempo decorrido de uma execução ANDAR na tela, em vez de congelar no valor do último evento …
 
@@ -737,7 +943,7 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 - `Inicio()`
 
 ### `web/src/paginas/jobs/Jobs.tsx`
-- `Jobs()` — Página de Jobs (T-024): acompanhar a execução VENDO, não lendo.
+- `Jobs()` — Página de Jobs: acompanhar a execução VENDO, não lendo.
 
 ### `web/src/paginas/projeto/AcoesProjeto.tsx`
 - `jobAtivoDoProjeto(jobs: Job[], projeto: string)` — Job ativo (não-terminal) com lock neste projeto; null se nenhum.
@@ -745,6 +951,9 @@ web/testes/  acoes-projeto.test.ts, api.test.ts, atividade.test.ts, avisos-job.t
 
 ### `web/src/paginas/projeto/ci/PainelCi.tsx`
 - `SecaoCi({ projeto, jobAtivo, aoVivo, }: { projeto: string; /** Job ativo do projeto (T-016) — usa…)`
+
+### `web/src/paginas/projeto/CustoPorTarefa.tsx` — CUSTO POR TAREFA E FATIA DE RETRABALHO (T-060).
+- `CustoPorTarefa({ jobs }: { jobs: Job[] })`
 
 ### `web/src/paginas/projeto/EquipeAoVivo.tsx`
 - `EquipeAoVivo({ equipe, tarefas, logs, jobAtivo, }: { equipe: EquipeProjeto; tarefas: TarefaCompleta[];…)`

@@ -29,6 +29,7 @@ function fabricaTemp(): string {
   writeFileSync(join(tpl, "CLAUDE-projeto.md"), "# <nome do projeto>\n\n<descrição>\n");
   writeFileSync(join(tpl, "DECISOES.md"), "# Decisões — <nome do projeto>\n");
   writeFileSync(join(tpl, "PROGRESSO.md"), "# Progresso — <nome do projeto>\n");
+  writeFileSync(join(tpl, "GUIA.md"), "# GUIA — <nome do projeto>\n");
   return raiz;
 }
 
@@ -118,6 +119,9 @@ describe("executarImportacao", () => {
     expect(readFileSync(join(destino, "_gestao", "DECISOES.md"), "utf8")).toContain("app");
     expect(readFileSync(join(destino, "_gestao", "PROGRESSO.md"), "utf8")).toContain("importado");
     expect(readFileSync(join(destino, "CLAUDE.md"), "utf8")).toContain("app");
+    // GUIA.md — padrão de documentação da fábrica (`_sistema/PADRAO_DE_PROJETO.md`). Projeto
+    // importado é o que chega SEM documentação nenhuma, então é onde o esqueleto mais vale.
+    expect(readFileSync(join(destino, "_gestao", "GUIA.md"), "utf8")).toContain("app");
     // git inicializado com o commit do painel
     expect(existsSync(join(destino, ".git"))).toBe(true);
     const log = execFileSync("git", ["log", "--oneline"], { cwd: destino }).toString();

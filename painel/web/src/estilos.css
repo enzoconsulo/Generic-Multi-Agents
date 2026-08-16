@@ -219,8 +219,9 @@ a:hover {
 /* ---------- Grades e cards ---------- */
 .grade-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
   gap: 1rem;
+  align-items: start;
 }
 
 .card {
@@ -263,6 +264,11 @@ a:hover {
   font-size: 0.68rem;
 }
 .card-args code {
+  /* `align-self` porque `.card-args` é uma coluna flex: sem isto o `<code>` se estica pela
+     largura inteira do cartão, e no cartão ABERTO (que ocupa a grade toda) vira uma faixa de
+     1000px em volta de "/ideia". */
+  align-self: flex-start;
+  max-width: 100%;
   font-family: var(--fonte-mono);
   background-color: var(--cor-superficie-2);
   border: 1px solid var(--cor-borda);
@@ -793,36 +799,58 @@ a:hover {
 }
 
 .form-acao {
-  margin-top: 0.9rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--cor-borda);
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.9rem;
 }
+/* O rótulo é uma pergunta ao usuário, não uma legenda: precisa de peso e de tamanho legível.
+   Em 0.78rem sem peso ele desaparecia ao lado do campo. */
 .campo-form {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.78rem;
-  color: var(--cor-texto-suave);
+  gap: 0.35rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--cor-texto);
 }
 .campo-form input,
-.campo-form select {
+.campo-form select,
+.campo-form textarea {
   font: inherit;
-  font-size: 0.85rem;
-  background-color: var(--cor-superficie-2);
+  font-weight: 400;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  background-color: var(--cor-fundo);
   color: var(--cor-texto);
   border: 1px solid var(--cor-borda-forte);
   border-radius: var(--raio-sm);
-  padding: 0.4rem 0.5rem;
+  padding: 0.55rem 0.65rem;
+  width: 100%;
+}
+.campo-form input::placeholder,
+.campo-form textarea::placeholder {
+  color: var(--cor-texto-suave);
+  opacity: 0.75;
 }
 .campo-form input:focus,
-.campo-form select:focus {
+.campo-form select:focus,
+.campo-form textarea:focus {
   outline: none;
   border-color: var(--cor-acento);
+  box-shadow: 0 0 0 2px rgba(93, 169, 255, 0.25);
 }
 .form-acoes {
   display: flex;
   gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+/* `.botao-acao` traz margem de topo para quando ele é o único elemento do card; dentro do
+   formulário quem dá o respiro é o `gap`, e as duas somadas abriam um buraco. */
+.form-acoes .botao-acao {
+  margin-top: 0;
 }
 .aviso-compacto {
   margin-top: 0;
@@ -881,20 +909,32 @@ a:hover {
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
-.input-motivo {
-  flex: 1 1 8rem;
-  min-width: 6rem;
+.input-motivo,
+.input-resposta {
+  flex: 1 1 12rem;
+  min-width: 10rem;
   font: inherit;
-  font-size: 0.85rem;
-  background-color: var(--cor-superficie-2);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  background-color: var(--cor-fundo);
   color: var(--cor-texto);
   border: 1px solid var(--cor-borda-forte);
   border-radius: var(--raio-sm);
-  padding: 0.4rem 0.5rem;
+  padding: 0.5rem 0.6rem;
 }
-.input-motivo:focus {
+/* Responder a uma pergunta do fluxo é escrever uma instrução, não preencher um campo:
+   uma linha só escondia o que a pessoa acabou de digitar. */
+.input-resposta {
+  flex-basis: 100%;
+  resize: vertical;
+  min-height: 4.5rem;
+  font-family: inherit;
+}
+.input-motivo:focus,
+.input-resposta:focus {
   outline: none;
   border-color: var(--cor-acento);
+  box-shadow: 0 0 0 2px rgba(93, 169, 255, 0.25);
 }
 
 /* Peso da ação (badge) */
@@ -997,20 +1037,46 @@ a:hover {
   background-color: var(--cor-borda-forte);
   border-radius: 4px;
 }
+/* Marco de dia no histórico. Sem ele a coluna é uma pilha de horários soltos: dá para ver o
+   que aconteceu, não QUANDO — e "14:32" sozinho não localiza nada num histórico de cem itens. */
+.jobs-dia {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0.6rem 0 0.35rem;
+  padding: 0.15rem 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cor-texto-suave);
+  background-color: var(--cor-fundo);
+}
+.jobs-grupo:first-child .jobs-dia {
+  margin-top: 0;
+}
 .job-item {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
   text-align: left;
   width: 100%;
   cursor: pointer;
   background-color: var(--cor-superficie);
   border: 1px solid var(--cor-borda);
+  /* Faixa de desfecho na lateral: a cor responde "deu certo?" antes da leitura. */
+  border-left: 3px solid var(--cor-borda-forte);
   border-radius: var(--raio-sm);
-  padding: 0.6rem 0.7rem;
+  padding: 0.55rem 0.7rem;
   color: inherit;
   font: inherit;
+  transition: border-color 0.12s ease;
 }
+.job-item.desfecho-ok { border-left-color: var(--cor-sucesso); }
+.job-item.desfecho-atencao { border-left-color: var(--cor-alerta); }
+.job-item.desfecho-erro { border-left-color: var(--cor-erro); }
+.job-item.desfecho-vivo { border-left-color: var(--cor-acento); }
+.job-item.desfecho-neutro { border-left-color: #6e7681; }
 .job-item:hover {
   border-color: var(--cor-borda-forte);
 }
@@ -1027,7 +1093,40 @@ a:hover {
 .job-item-hora {
   font-size: 0.72rem;
   color: var(--cor-texto-suave);
+  flex: 0 0 auto;
 }
+/* Projeto, duração e custo numa linha só: são as três perguntas do histórico ("sobre o quê,
+   quanto tempo, quanto custou") e cada uma sozinha não vale uma linha. */
+.job-item-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+}
+.job-item-projeto {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cor-acento);
+}
+/* Selo de desfecho: fundo forte o bastante para ser lido de relance na coluna estreita. */
+.job-selo {
+  border-color: transparent;
+  color: #06121f;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+.job-selo.desfecho-ok { background-color: var(--cor-sucesso); }
+.job-selo.desfecho-atencao { background-color: var(--cor-alerta); }
+.job-selo.desfecho-erro { background-color: var(--cor-erro); }
+.job-selo.desfecho-vivo { background-color: var(--cor-acento); }
+.job-selo.desfecho-neutro { background-color: #8b93a3; }
 /* O título de um job de /ideia é o PROMPT INTEIRO: sem corte, um único item ocupava
    dez linhas e engolia a lista. Duas linhas + reticências; o texto completo fica no
    `title` do botão. */
@@ -1057,10 +1156,98 @@ a:hover {
   justify-content: space-between;
   gap: 1rem;
 }
+.job-detalhe-ident {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
 .job-detalhe-titulo {
-  margin: 0.4rem 0 0;
+  flex-basis: 100%;
+  margin: 0.2rem 0 0;
   font-size: 1rem;
   overflow-wrap: anywhere;
+}
+/* O estado CRU da fila, ao lado do desfecho. Aparece só quando os dois divergem: é ele que
+   explica por que um job "parado na cota" não consta como erro em lugar nenhum do sistema. */
+.job-estado-cru {
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
+  border: 1px dashed var(--cor-borda-forte);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  cursor: help;
+}
+
+/* Parede de cota — aviso GLOBAL, acima de qualquer página: disparar contra a parede gasta
+   segundos e não entrega nada, e o botão que faz isso está na página inicial. Ver `lib/cota.ts`. */
+.faixa-cota {
+  margin-bottom: 1.25rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(255, 123, 114, 0.5);
+  border-left-width: 3px;
+  border-radius: var(--raio-sm);
+  background-color: rgba(255, 123, 114, 0.09);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+/* ---------- Painel de desfecho ----------
+   Fica logo abaixo do título, antes de qualquer número: é a única parte da tela que muda a
+   DECISÃO do usuário. Custo, tokens e rateio são para depois de saber se o trabalho está de pé. */
+.desfecho {
+  margin: 0.9rem 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-left-width: 3px;
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-superficie-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.desfecho.desfecho-ok { border-left-color: var(--cor-sucesso); }
+.desfecho.desfecho-atencao {
+  border-left-color: var(--cor-alerta);
+  background-color: rgba(227, 179, 65, 0.07);
+}
+.desfecho.desfecho-erro {
+  border-left-color: var(--cor-erro);
+  background-color: rgba(255, 123, 114, 0.07);
+}
+.desfecho.desfecho-neutro { border-left-color: #6e7681; }
+.desfecho.desfecho-vivo { border-left-color: var(--cor-acento); }
+.desfecho-frase {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+/* "Ao redisparar" é a pergunta seguinte do usuário e por isso ganha rótulo próprio, em vez
+   de virar mais uma frase no meio do parágrafo. */
+.desfecho-retomada {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--cor-texto);
+}
+.desfecho-rot {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cor-acento);
+  vertical-align: 1px;
+}
+.desfecho-detalhe {
+  margin: 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--cor-texto-suave);
 }
 .job-campos {
   display: grid;
@@ -1582,13 +1769,31 @@ ul.md-lista ul.md-lista {
   color: var(--cor-texto-suave);
 }
 
-/* Trilha construir → testar → revisar */
+/* Trilha construir → verificar → revisar.
+   As bolinhas ficaram apagadas em todo `/trabalhar <projeto>` por semanas — não por causa
+   destes estilos, e sim porque a segmentação não reconhecia o log do pipeline em código
+   (ver `lib/atividade.ts`). O visual ganhou moldura própria para elas voltarem a ler como
+   um progresso, e não como três pontos soltos sobre o fundo da página. */
 .trilha {
   list-style: none;
   display: flex;
+  flex-wrap: wrap;
   gap: 0;
   margin: 0.9rem 0;
-  padding: 0;
+  padding: 0.75rem 0.9rem 0.6rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-superficie-2);
+}
+/* Qual tarefa esta trilha descreve. Sem isto, numa rodada de 5 tarefas as bolinhas eram
+   verdadeiras e sem sentido: mostravam o ciclo de alguma tarefa, sem dizer de qual. */
+.trilha-tarefa {
+  flex-basis: 100%;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+  color: var(--cor-texto-suave);
 }
 .trilha-etapa {
   flex: 1;
@@ -1637,6 +1842,147 @@ ul.md-lista ul.md-lista {
   font-weight: 600;
 }
 
+/* ---------- Linha do tempo em mini-tópicos (16/08) ----------
+   A visão PADRÃO da execução, e ela existe para um uso específico que o usuário descreveu:
+   deixar o computador ligado, a tela parada, e acompanhar sem rolar. Isso impõe o desenho:
+
+   · o mais recente fica na PRIMEIRA linha e o antigo desce (a lista já vem invertida de
+     `lib/topicos.ts`);
+   · um evento ocupa uma linha — rajada de ferramenta vira um tópico com contagem;
+   · SEM autoscroll, de propósito: autoscroll rouba a rolagem de quem está lendo, e é
+     justamente quando algo interessante aparece que a pessoa para para ler.
+
+   O teto de altura é generoso (não há o que rolar no caso normal) mas existe: sem ele, uma
+   execução de 40 minutos empurraria o log técnico para 3 mil pixels abaixo. */
+.linha-tempo {
+  list-style: none;
+  margin: 0.6rem 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 34rem;
+  overflow-y: auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-sm);
+  background-color: var(--cor-superficie-2);
+}
+.linha-tempo::-webkit-scrollbar {
+  width: 8px;
+}
+.linha-tempo::-webkit-scrollbar-thumb {
+  background-color: var(--cor-borda-forte);
+  border-radius: 4px;
+}
+.tt {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr auto;
+  align-items: baseline;
+  gap: 0.1rem 0.6rem;
+  padding: 0.45rem 0.7rem;
+  background-color: var(--cor-superficie);
+  border-left: 3px solid transparent;
+  font-size: 0.85rem;
+}
+.tt-icone {
+  text-align: center;
+  color: var(--cor-texto-suave);
+  user-select: none;
+}
+.tt-corpo {
+  min-width: 0;
+}
+.tt-linha {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.tt-titulo {
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.tt-vezes {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--cor-acento);
+}
+/* Duas linhas no máximo: o detalhe é contexto, não conteúdo — o integral está no log. */
+.tt-detalhe {
+  margin-top: 0.1rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.74rem;
+  color: var(--cor-texto-suave);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.tt-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 0.7rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+.tt-agente {
+  font-family: var(--fonte-mono);
+  color: var(--cor-acento);
+}
+.tt-tarefa {
+  font-family: var(--fonte-mono);
+}
+.tt-hora {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cor por tipo — o olho separa antes de ler. Ordem de intensidade deliberada: erro e etapa
+   saltam, ação de ferramenta recua (é o volume). */
+.tt-etapa {
+  border-left-color: var(--cor-acento);
+  background-color: rgba(93, 169, 255, 0.07);
+}
+.tt-etapa .tt-titulo {
+  font-family: var(--fonte-mono);
+  font-weight: 600;
+}
+.tt-etapa .tt-icone {
+  color: var(--cor-acento);
+}
+.tt-acoes .tt-titulo {
+  color: var(--cor-texto-suave);
+}
+.tt-estado {
+  border-left-color: #bc8cff;
+}
+.tt-estado .tt-titulo {
+  font-family: var(--fonte-mono);
+}
+.tt-erro {
+  border-left-color: var(--cor-erro);
+  background-color: rgba(255, 123, 114, 0.06);
+}
+.tt-erro .tt-icone,
+.tt-erro .tt-titulo {
+  color: var(--cor-erro);
+}
+.tt-resultado {
+  border-left-color: var(--cor-sucesso);
+}
+.tt-resultado .tt-icone {
+  color: var(--cor-sucesso);
+}
+.tt-inicio .tt-titulo {
+  color: var(--cor-texto-suave);
+}
+/* O tópico do topo, com o job ainda rodando: é o "agora". */
+.tt-agora {
+  box-shadow: inset 2px 0 0 0 var(--cor-alerta);
+}
+
 /* Trechos: o que cada agente fez */
 .trechos {
   list-style: none;
@@ -1653,7 +1999,9 @@ ul.md-lista ul.md-lista {
   overflow: hidden;
 }
 .trecho-construtor { border-left-color: var(--cor-acento); }
-.trecho-testador { border-left-color: var(--cor-alerta); }
+/* Renomeado de `.trecho-testador` junto com a etapa: o portão do meio é o VERIFICADOR, que
+   na trilha de software é o `testador` e na genérica é o `conferente`. */
+.trecho-verificador { border-left-color: var(--cor-alerta); }
 .trecho-revisor { border-left-color: #bc8cff; }
 .trecho-orquestrador { border-left-color: var(--cor-borda-forte); }
 .trecho-cab {
@@ -2087,21 +2435,51 @@ ul.md-lista ul.md-lista {
   color: var(--cor-texto-suave);
   line-height: 1.5;
 }
+/* ---------- Caixas de prompt ----------
+   O QUE ESTAVA ERRADO (16/08, relatado pelo usuário): *"não dá nem para ler a própria
+   mensagem dentro da box"*. Duas causas somadas, e nenhuma era o `rows` do textarea:
+
+   1. **A caixa nascia dentro de um cartão de 17rem.** `.grade-cards` é uma grade de cartões
+      estreitos, ótima para o catálogo de ações e péssima para escrever: o pedido de uma
+      funcionalidade — o texto mais importante que se digita no painel — ficava numa coluna
+      de ~250px, com 4 linhas visíveis. Por isso o cartão ABERTO agora ocupa a linha inteira
+      da grade (`.card-acao.aberto`): a caixa cresce com ele.
+   2. **A altura era fixa e pequena.** `min-height` + `resize: vertical` deixam a caixa
+      começar em ~8 linhas e crescer conforme a pessoa escreve.
+
+   Lição embutida: campo de digitação não herda o layout do catálogo em que o botão vive. */
 .form-acao textarea {
   width: 100%;
+  min-height: 9rem;
   resize: vertical;
   font-family: inherit;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  padding: 0.5rem 0.6rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  padding: 0.7rem 0.8rem;
   border-radius: var(--raio-sm);
   border: 1px solid var(--cor-borda-forte);
   background-color: var(--cor-fundo);
   color: var(--cor-texto);
 }
 .form-acao textarea:focus {
-  outline: 2px solid var(--cor-acento);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--cor-acento);
+  box-shadow: 0 0 0 2px rgba(93, 169, 255, 0.25);
+}
+/* O cartão aberto vira um formulário de largura inteira. `1 / -1` atravessa a grade
+   independentemente de quantas colunas o viewport produziu. */
+.card-acao.aberto,
+.card.aberto {
+  grid-column: 1 / -1;
+}
+/* Linha de leitura confortável: mesmo com o cartão largo, o texto não deve atravessar
+   1200px — depois de ~46rem o olho perde o começo da linha seguinte. */
+.card-acao.aberto .form-acao {
+  max-width: 52rem;
+}
+/* Editor de equipe: o prompt do especialista é o campo mais longo do painel. */
+.fieldset-agente textarea {
+  min-height: 8rem;
 }
 
 /* Campo de texto com botão colado (ex.: caminho + "Escolher...") */

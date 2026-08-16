@@ -63,6 +63,12 @@ possível roda com um portão só, e quem decide aceitar isso é o usuário — 
    comandos reais e commit inicial. Toda tarefa seguinte depende dela. Sem essa base, todo
    critério do projeto desaba para rubrica e o `conferente` não tem o que executar.
 
+   **A T-001 entrega também o `_gestao/GUIA.md`**, a partir de
+   `_sistema/templates/GUIA.md` — onde fica o quê, as receitas do projeto e a lista do que
+   já existe. É o padrão de documentação da fábrica (`_sistema/PADRAO_DE_PROJETO.md`), e na
+   trilha genérica o item mais valioso dele é a seção "já existe": é ela que impede o
+   capítulo 4 de inventar um estilo de tabela que o capítulo 2 já resolveu.
+
 3. **Tarefas** em `_gestao/tarefas/T-NNN-slug.md` — cada uma:
    - **no máximo 3 `areas`** (as pastas/arquivos que a tarefa toca) — é a regra mais
      importante desta lista, e vale aqui pelo mesmo motivo que na trilha de software: o

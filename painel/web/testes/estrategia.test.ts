@@ -1,4 +1,24 @@
+import { argumentoEhTextoLongo } from "../src/lib/formato";
 import { describe, expect, it } from "vitest";
+
+/**
+ * A ideia de um projeto — o texto que mais decide a qualidade do plano — era digitada num
+ * `<input>` de uma linha, ao lado da instrução para descrever o que é, para quem, o que
+ * entra na v1 e o que NÃO entra. Nome de projeto continua no input: é um identificador.
+ */
+describe("argumentoEhTextoLongo", () => {
+  it("ideia e projeto novo pedem caixa grande", () => {
+    expect(argumentoEhTextoLongo("novo-projeto")).toBe(true);
+    expect(argumentoEhTextoLongo("ideia")).toBe(true);
+  });
+
+  it("quem recebe nome de projeto continua no campo de uma linha", () => {
+    expect(argumentoEhTextoLongo("trabalhar")).toBe(false);
+    expect(argumentoEhTextoLongo("status")).toBe(false);
+    expect(argumentoEhTextoLongo("manutencao")).toBe(false);
+    expect(argumentoEhTextoLongo("acao-que-nao-existe")).toBe(false);
+  });
+});
 import { textoEstrategia } from "../src/lib/formato";
 
 /**

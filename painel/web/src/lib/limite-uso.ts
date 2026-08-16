@@ -17,6 +17,15 @@ export interface ResultadoComMotivo {
   reabreEm?: string | null;
   /** Turnos concluídos antes da parada — decide se houve entrega. Ver abaixo. */
   numTurnos?: number | null;
+  /**
+   * Tarefas que FECHARAM antes da parada (pipeline em código, 16/08).
+   *
+   * Prova de entrega mais forte que `numTurnos`, e a única que o pipeline tem: ele não conta
+   * turnos de SDK, conta tarefas. Sem este campo, todo `/trabalhar` cortado pela cota caía no
+   * ramo "nada foi entregue" — o pior conselho possível, porque manda refazer o que já está
+   * commitado. É a terceira vez que esta mensagem erra por olhar o sinal do outro motor.
+   */
+  tarefasConcluidas?: readonly string[];
 }
 
 /**
@@ -36,6 +45,17 @@ export function avisoLimiteDeUso(resultado: ResultadoComMotivo | null | undefine
     typeof resultado.reabreEm === "string" && resultado.reabreEm.trim() !== ""
       ? ` A cota retoma após ${resultado.reabreEm.trim()}.`
       : "";
+
+  // Tarefas fechadas vêm antes dos turnos: é o sinal do pipeline em código e o mais forte
+  // dos dois — turno é esforço, tarefa concluída é entrega.
+  const concluidas = resultado.tarefasConcluidas ?? [];
+  if (concluidas.length > 0) {
+    return (
+      `${concluidas.length} tarefa(s) fecharam e foram commitadas antes de a cota acabar` +
+      ` (${concluidas.join(", ")}) — isso está valendo e NÃO precisa ser refeito.${quando}` +
+      " Ao redisparar, a rodada relê os arquivos das tarefas e retoma de onde parou."
+    );
+  }
 
   const turnos = resultado.numTurnos;
   if (typeof turnos === "number" && turnos > 0) {
