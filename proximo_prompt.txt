@@ -1,153 +1,74 @@
-TRABALHO PENDENTE DA FÁBRICA — reescrito em 2026-08-15. Este arquivo é AUTOSSUFICIENTE e
-é o ÚNICO handoff: não existe proximo_prompt_2. Você não precisa de conversa anterior, só
-dele e dos arquivos que ele aponta.
+TRABALHO PENDENTE DA FÁBRICA — reescrito em 2026-08-16 (madrugada). Este arquivo é
+AUTOSSUFICIENTE e é o ÚNICO handoff. Você não precisa de conversa anterior, só dele e dos
+arquivos que ele aponta.
 
 Enzo vai dizer só "roda o proximo_prompt.txt". Isso significa: execute os itens NA ORDEM, um
 de cada vez, e pare quando o item terminar. Não emende três numa sessão só.
 
-Arquivo ROTATIVO: diz o que fazer AGORA. Regra, armadilha e decisão fechada NÃO moram aqui —
-moram em `CLAUDE.md` (constituição), `_sistema/DECISOES_FECHADAS.md` (não reabrir sem fato
-novo) e `painel/CLAUDE.md` (armadilhas técnicas do cockpit).
-**Leia `_sistema/DECISOES_FECHADAS.md` antes de propor qualquer otimização.**
+Regra, armadilha e decisão fechada NÃO moram aqui — moram em `CLAUDE.md` (constituição),
+`_sistema/DECISOES_FECHADAS.md` (não reabrir sem fato novo) e `painel/CLAUDE.md` (armadilhas
+técnicas do cockpit). **Leia `DECISOES_FECHADAS.md` antes de propor qualquer otimização.**
 
 ═══════════════════════════════════════════════════════════════════════════════
-ANTES DE COMEÇAR — três coisas que mudam o resultado
+FECHADO NA MADRUGADA DE 16/08 — não reabrir (commits f0793e5 e 6ff2b94)
 ═══════════════════════════════════════════════════════════════════════════════
 
-1. ESTA SESSÃO é o item mais caro da fábrica (78% da conta de 9 dias, contra 14% do
-   pipeline inteiro). Faça UM item, entregue, e peça `/clear` antes do próximo. A conta de
-   uma sessão cresce ao quadrado.
-
-2. Os itens de PAINEL são mantidos à mão pelo orquestrador (o painel fica fora do pipeline
-   executor/testador/revisor). Você mesmo edita. Rode `cd painel && npm test` antes de
-   commitar. Commite na raiz com prefixo `painel:`.
-
-3. Rodada de pipeline Enzo dispara PELO PAINEL. Se você for despachar agente daqui, o
-   despacho tem de ser SÍNCRONO e você não pode encerrar o turno com agente em voo
-   (CLAUDE.md, regra de ouro 7 — já destruiu trabalho duas vezes).
-
-═══════════════════════════════════════════════════════════════════════════════
-ESTADO DA FÁBRICA (fim de 2026-08-15)
-═══════════════════════════════════════════════════════════════════════════════
-
-- **ia-hibrida-limpa**: T-001..T-006 concluídas, nada aberto.
-- **banco-imobiliario, Fase 6: 9 de 11 concluídas.** Concluídas hoje: T-037, T-039, T-040,
-  T-041, T-042, T-043, T-045. Faltam:
-  - **T-047 `pronta`** — ack de `sala:entrar`/`sala:reconectar` passa a devolver o marco do
-    log. É a ENTRADA da próxima rodada; sem ela a T-044 não tem como ser feita.
-  - **T-044 `backlog`** (dep: T-047), `tentativas: 2` — a primeira rolagem da sessão não
-    anima. **Ciclo 3 é o último**; leia a seção "Decisão do orquestrador" no arquivo dela.
-  - **T-038 `backlog`** (dep: T-044) — auditoria das animações no fluxo mobile real.
-  - **T-046 `backlog`** (dep: T-037) — fixture + canário do log; endurecimento, não é da fase.
-- **Marco da Fase 6 ainda NÃO pode ser verificado.** Quando T-038 e T-044 concluírem,
-  despache o testador em modo marco e grave a linha `Marco:` no PLANO.md.
-
-Do handoff anterior (11/08): o ITEM 3 (T-043 + backfill dos `verificar:`) está FECHADO — a
-T-043 concluiu, mas o backfill para T-037/T-040/T-041 foi decidido CONTRA, com a conta
-escrita em `projetos/banco-imobiliario/_gestao/DECISOES.md` (2026-08-15). Os itens 1 e 2
-continuam abertos e viraram os itens 1 e 3 abaixo.
+- **ITEM 1 (estouro sem atuador): FECHADO.** Antes de ligar o atuador foi preciso consertar o
+  termômetro: medindo as 135 etapas reais de `painel/dados/jobs/*.log.jsonl`, o teto declarado
+  estourava em 52% dos verificadores e 36% dos construtores. Alarme que toca em metade das
+  rodadas não carrega informação. Agora há dois números: `orcamentoDeFerramentas` é o ALVO do
+  prompt; `limiarDeDebate` é o ALARME, no p90 (construtor 65, verificador 37, revisor 28,
+  disparo de 6-12%). O atuador é a trava 3 de `politicaDe` — ciclo que se debateu não recebe
+  caminho barato no ciclo seguinte. Descoberta colateral: **`areas` não prevê número de
+  chamadas** (mediana 21 com ≤2 areas contra 12 com 3), então a escada 30/45/60 escala numa
+  variável que não correlaciona.
+- **ITEM 2 (portão do meio não independente): FECHADO.** `testador.md`/`conferente.md` exigem
+  UMA mutação quando a prova foi criada no mesmo ciclo; `executor.md`/`construtor.md` deixam
+  comando copiável de reprodução nas Notas.
+- **ITEM 4 (mutex de areas): FECHADO.** `alteracoesForaDe` roda POR ETAPA e escreve nas Notas
+  (que é o que o revisor recebe). Não commita: sob paralelismo isso roubaria trabalho alheio.
+- **Marco da Fase 2 do banco-imobiliario: APROVADO** por execução real (5 partidas completas
+  entre 2 clientes socket.io, 343 rolagens uniformes, animação medida quadro a quadro no
+  navegador). Estava `pendente` desde sempre. Fase 3 segue `reprovado` DE PROPÓSITO.
 
 ═══════════════════════════════════════════════════════════════════════════════
-ITEM 1 — `estouros` continua sendo sensor sem atuador (era o item 1 de 11/08)
+ITEM 1 (era o 3) — a recuperação por árvore git chega um despacho tarde
 ═══════════════════════════════════════════════════════════════════════════════
-(painel; maior retorno da lista)
+(painel; INVESTIGAÇÃO CONCLUÍDA, falta o conserto — é provavelmente UMA LINHA)
 
-CONFIRMADO NO CÓDIGO em 15/08: `estouros` é empilhado em `motor.ts:899` e lido em UM lugar
-só — `runner-pipeline.ts:410`, para imprimir uma linha de relatório. Não influencia
-escalonamento de modelo, não influencia replanejamento, não influencia a estimativa do
-despacho seguinte.
+A investigação do handoff anterior está feita. O que se sabe agora:
 
-NÃO "conserte" cortando o despacho no meio: isso é DECISÃO FECHADA (`DECISOES_FECHADAS.md`,
-"Orçamento de ferramentas MEDE e não corta, de propósito"), e a razão está no comentário de
-`orcamentoDeFerramentas` em `despachante.ts` — cortar converte chamadas em voltas, e despacho
-interrompido custa igual sem entregar nada (US$ 4,11 medidos).
+A recuperação NÃO é de fim de rodada — é por etapa, em `motor.ts` (~linha 1188, dentro de
+`if (depois.status === statusAntes)`). O que atrasa é a **assimetria da linha ~1214**:
 
-O ATUADOR consistente com a doutrina age ANTES de começar o PRÓXIMO despacho da MESMA
-tarefa: estourar o teto é evidência de que o agente estava se debatendo, e debater-se repete.
-O lugar natural é `pipeline/diagnostico.ts` → `politicaDe`, que já escolhe modelo, `maxTurns`
-e escopo por natureza da reprovação; hoje ela decide pelo portão observado e ignora que a
-etapa anterior estourou. Landmarks: `despachante.ts:75` (`orcamentoDeFerramentas`),
-`motor.ts:898-903`, `diagnostico.ts` (`politicaDe`), `orcamento.ts` (`decidir`/`decidirTarefa`,
-a forma já implementada de "não começar o que não cabe" — função pura + teste).
-Traga a proposta ANTES de implementar se ela mudar comportamento de despacho.
+    vezes >= 2 ? "todos" : "commit"
 
-═══════════════════════════════════════════════════════════════════════════════
-ITEM 2 — o portão do meio não é independente quando o teste é do próprio construtor
-═══════════════════════════════════════════════════════════════════════════════
-(doutrina + prompt do testador; barato, e é o achado mais forte de 15/08)
+Na 1ª repetição só o sinal de COMMIT é consultado; o sinal de ÁRVORE SUJA espera a 2ª. Foi
+isso que deu à T-035 três construtores seguidos (23:11:03, 23:16:38, 23:19:39 no job
+`0345125c`), com o trabalho já no disco desde o primeiro — US$ 2,13 por trabalho pronto.
 
-O FATO, medido numa rodada só: **as 3 reprovações do dia vieram do REVISOR, nenhuma do
-testador** — e em duas delas o testador tinha a evidência do defeito na mão.
-- T-044 ciclo 1: o testador rodou a cena que o PRÓPRIO EXECUTOR escreveu, com rolagem limpa
-  e destino em casa neutra, e aprovou. O revisor achou o caso da carta de movimento
-  (>10% de chance na primeira rolagem de qualquer sessão) lendo o código.
-- T-037 ciclo 1: o testador registrou "25 casos; 24 passaram" e fechou o placar em
-  3 PASSOU / 0 FALHOU, sem abrir achado. O caso que falhava era real.
+**A razão escrita para a assimetria não se sustenta neste ponto do fluxo, e é isso que o
+conserto precisa checar.** O comentário do parâmetro `sinais` (T-062) justifica o atraso
+dizendo que árvore suja é ambígua: "pode ser entrega pronta sem registro (T-025) ou agente
+cortado no meio de uma edição". Mas **agente cortado devolve `r.concluiu === false`, e esse
+caso é tratado ~250 linhas ANTES** (`if (!r.concluiu)`, ~linha 1034), que tira a tarefa de
+circulação. Quando o fluxo chega à recuperação, o agente terminou normalmente e declarou
+resultado — a ambiguidade citada não é alcançável ali. O gate de impedimento (~1146), que é o
+outro caso legítimo de "terminou sem mexer no status", também já rodou antes.
 
-A causa NÃO é o modelo do testador (Haiku é decisão de custo com nove dias de medição atrás).
-A causa é estrutural: **quando o construtor escreve a correção E a prova, o portão do meio
-não é independente.** O revisor é independente porque lê o diff e pergunta outra coisa.
+CONFIRME ISSO NO CÓDIGO antes de mudar (é a única premissa do conserto), e então o conserto é
+trocar a linha por `"todos"`. Continua auto-limitado: o commit limpa a árvore, então a
+segunda ocorrência não acha trabalho parcial e cai no encerramento por `sem-progresso`.
 
-O CONSERTO, que já foi demonstrado funcionando nesta mesma rodada: no ciclo 2 da T-044 o
-`executor-reforcado` recolocou temporariamente o gate antigo e mostrou a cena nova
-REPROVANDO com o sintoma exato — teste de mutação. Foi a evidência mais forte produzida no
-dia, e saiu de graça. Proposta: quando as cenas/`verificar:` de uma tarefa foram CRIADAS OU
-ALTERADAS no mesmo ciclo pelo construtor, o testador deve fazer UMA mutação — quebrar a
-correção e confirmar que o teste falha — antes de aprovar. Alterar `.claude/agents/testador.md`
-(e o par `conferente.md`, que já tem a escada de graus). Sem código de painel.
+Escreva teste que falhe antes e passe depois — `motor-retrabalho.test.ts` já tem o mundo
+roteirável, com as opções `construtorMudo` e `trabalhoParcial` prontas para exatamente isto.
 
-Corolário barato, também demonstrado hoje: o construtor que deixa nas Notas um COMANDO
-copiável que reexecuta a prova transforma o portão do meio de "refazer o ritual" em "repetir
-um comando". O ciclo 2 da T-037 deixou um `node --input-type=module` com o corpus de 35 casos
-embutido; o testador conferiu em 0,2 s. Vale virar linha no prompt dos construtores.
+Armadilha (`painel/CLAUDE.md`): não conserte de um jeito que faça o motor commitar trabalho
+que o revisor nunca vai ver. A recuperação atual já faz certo — commita em nome da tarefa e
+registra o hash nas Notas, para haver DIFF.
 
-═══════════════════════════════════════════════════════════════════════════════
-ITEM 3 — por que a recuperação por árvore git não pegou na T-035 (era o item 2 de 11/08)
-═══════════════════════════════════════════════════════════════════════════════
-(investigação; provavelmente conserto pequeno — CONTINUA ABERTO, ninguém encostou)
-
-O FATO: na rodada `0345125c`, a T-035 recebeu TRÊS despachos de construtor seguidos, sem
-verificador entre eles. O terceiro diz nas Notas que a sessão anterior implementou na árvore
-sem commitar e encerrou antes de gerar evidência — e aproveitou 100% do trabalho. Custo dos
-dois primeiros: US$ 2,13 por trabalho que já estava no disco.
-
-As `areas` da T-035 (`public/js/tabuleiro.js`, `public/css/tabuleiro.css`) eram exatamente os
-arquivos sujos, então a recuperação deveria ter commitado em nome da tarefa e promovido a
-`em-teste` no PRIMEIRO despacho. Landmarks: `motor.ts` a partir da ~linha 1160 (comentários
-longos sobre recuperação — leia, contam dois casos reais), `trabalho-parcial.ts`,
-`painel/dados/jobs/0345125c.json` e `.log.jsonl`, e a tarefa
-`projetos/banco-imobiliario/_gestao/tarefas/T-035-tabuleiro-mobile-fit.md`.
-`MAX_DESPACHOS_POR_TAREFA` = 12, então o teto de vaivém não agiu nem perto — o freio esperado
-era a recuperação.
-
-Armadilha ao consertar (`painel/CLAUDE.md`): não conserte de um jeito que faça o motor
-commitar trabalho que o revisor nunca vai ver.
-
-═══════════════════════════════════════════════════════════════════════════════
-ITEM 4 — o mutex de `areas` guarda a ESCOLHA, não a execução
-═══════════════════════════════════════════════════════════════════════════════
-(painel; achado novo de 14-15/08)
-
-`maquina.ts:185-197` monta `areasTomadas` e recusa construtor cujas `areas` colidam. Mas isso
-usa as areas DECLARADAS — nada confere se o agente ficou dentro delas. Em 14/08 o próprio
-orquestrador furou o mutex só escrevendo uma linha de "Contexto extra" mandando a T-042
-editar `ferramentas/cenario.mjs`, que era `area` da T-043, e a checagem de disjunção disse
-"ok" porque olhava o frontmatter.
-
-O agravante que fecha o ciclo: `runner-pipeline.ts:177` commita apenas `t.areas` + o arquivo
-da tarefa. Então trabalho feito FORA das areas (a) não trip a nenhuma checagem, (b) não entra
-no commit, (c) fica solto na árvore, onde o `temTrabalhoParcial` do PRÓXIMO agente pode
-atribuí-lo a outra tarefa. Instância viva em 15/08: o executor da T-037 regenerou o
-`MAPA.md` enquanto um descartável da T-041 estava na árvore, e a entrada morta entrou no
-commit da T-037.
-
-O sensor JÁ EXISTE — `alteracoesForaDe` denuncia a sobra no relatório final. É a família
-"sensor sem atuador" de novo: a denúncia chega no fim, quando a rodada acabou. Proposta:
-detectar POR ETAPA, e tratar como sinal de primeira classe (o despacho estava errado ou o
-agente extrapolou), em vez de linha no relatório que ninguém lê.
-
-═══════════════════════════════════════════════════════════════════════════════
-ITEM 5 — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura
+═══
+ITEM 2 (era o 5) — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura
 ═══════════════════════════════════════════════════════════════════════════════
 (painel; estrutural, avalie antes de implementar)
 
@@ -168,16 +89,22 @@ voltam; custo de disco e de `npm install` por worktree; e se o ganho de vazão p
 complexidade num cockpit local de uma máquina com 7,9 GB. **Traga números antes de
 implementar** — pode ser que não pague.
 
+═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+SOBRAS PEQUENAS — todas viraram tarefa em 16/08, NÃO faça à mão
 ═══════════════════════════════════════════════════════════════════════════════
-SOBRAS PEQUENAS (faça de passagem)
-═══════════════════════════════════════════════════════════════════════════════
-- `projetos/banco-imobiliario/CLAUDE.md`, seção "Armadilhas conhecidas": MENTE. Diz que
-  `trocas.js` "nem chegou a ser criado" e que `log-eventos.js`/`fim-de-jogo.js` são stub
-  vazio — falso desde T-025/T-026/T-027, e reconfirmado por dois revisores em 15/08
-  (`trocas.js` tem 419 linhas, `painel-propriedades.js` 363). Documentação que mente é pior
-  que ausente. Tarefa para o `documentador`, com `areas` declarada.
-- `projetos/banco-imobiliario/server-error.log` (0 bytes) não rastreado — apagar ou pôr no
-  `.gitignore` do projeto.
-- `public/css/estilo.css:386` — chips "vez"/"desconectado" em mobile a 0,75rem (12px), o
-  menor texto da tela numa área cujo critério pede legibilidade. Achado `menor` do revisor
-  da T-040; não reprovou.
+As três sobras que moravam aqui estão fechadas ou roteadas:
+
+- CLAUDE.md do banco-imobiliario que mente → **T-050** (`pronta`).
+- chips a 0,75rem → **T-052** (`backlog`, depende da T-051). O escopo cresceu ao escrever o
+  critério: são QUATRO regras abaixo de 0,8rem, duas delas a 0,7rem.
+- `server-error.log` → já não existe; árvore limpa.
+
+Abertas junto, do marco da Fase 2 (ver `_sistema/logs/2026-08-16.md`):
+- **T-053 (alta)** — teste de broadcast em `tests/turno.test.js` depende de sorte no dado;
+  falha rara vira reprovação falsa no portão do meio.
+- **T-049 (media)** — `opcoes` de `liquidar-divida` omite `falir`.
+- **T-051 (baixa)** — "Sala criada" sai em vermelho, pela função de erro.
+
+Elas são trabalho do PIPELINE, não seu: dispare `/trabalhar banco-imobiliario` pelo painel.
+Os cinco comandos `verificar:` foram executados antes de entrar nas tarefas — todos falham
+hoje e passam quando o trabalho estiver feito.
