@@ -81,6 +81,18 @@ aparecer um caso que esta tabela não cobre.
 10. **Registre** na seção "Notas de execução": o que fez, arquivos criados/alterados, o
     comando de gerar e o de verificar, e decisões tomadas (as de arquitetura vão também
     para `DECISOES.md`).
+
+    Os dois comandos vão **copiáveis**, em linha própria — o conferente REGERA o artefato do
+    zero antes de conferir, então essas duas linhas são o caminho inteiro dele:
+
+    ```
+    **Gerar:** `node ferramentas/gerar.mjs`
+    **Verificar:** `node ferramentas/verificar.mjs saida/deck.pptx`
+    ```
+
+    Se a verificação precisa de estado (fixture, servidor, variável de ambiente), monte-o na
+    MESMA linha encadeada. Comando que o conferente tem de reconstruir é comando que ele vai
+    reconstruir de outro jeito — e aí ele não está conferindo a sua entrega.
 11. **Regenere o MAPA e commite.** Numa chamada só, antes do `git add`:
     `node ../../_sistema/ferramentas/mapa.mjs . && git add -A`. É determinístico e leva
     milissegundos; pular deixa `_gestao/MAPA.md` mentindo sobre o que você acabou de mudar,

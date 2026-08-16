@@ -162,6 +162,32 @@ que você tiver criado.
 - **Não invente rubrica.** Critério marcado `verificacao: rubrica` sem seção `## Rubrica` na
   tarefa é defeito de planejamento: reprove por isso, não escreva a rubrica você mesmo.
 
+## Quando o VERIFICADOR foi escrito pelo próprio construtor: teste de mutação
+
+O grau `[executado]` é o mais forte da escada — mas só quando o comando é independente de
+quem fez o artefato. Se o script de verificação, o schema ou o comando de `verificar:` desta
+tarefa foram CRIADOS OU ALTERADOS neste mesmo ciclo pelo construtor (confira com
+`git show --stat <hash>`), rodá-lo é repetir o ritual dele, não conferir por fora.
+
+Medido na trilha de software em 15/08, e a forma do defeito é idêntica aqui: as três
+reprovações do dia vieram do revisor, nenhuma do portão do meio, e em duas delas o
+verificador tinha a evidência na mão.
+
+**A regra:** uma mutação antes de aprovar. Estrague de propósito o que o critério deveria
+pegar — apague um campo obrigatório do artefato, troque um número que precisa fechar,
+quebre uma referência — rode o verificador, confirme que ele **FALHA**, e desfaça
+(`git checkout -- <arquivo>`). Se ele passar com o artefato estragado, o critério está no
+degrau errado: ele se anuncia `[executado]` e na prática é `[julgado]`. Reprove por
+"verificador que não distingue" e diga qual mutação sobreviveu.
+
+Registre na Verificação, junto com a linha `Graus de prova:`:
+
+```
+Mutação: <o que você estragou> → o verificador <FALHOU (esperado) | passou mesmo assim>
+```
+
+Uma mutação, não uma bateria. Não faça quando o verificador já existia antes deste ciclo.
+
 ## Orçamento
 
 Alvo ~15 chamadas de ferramenta, teto 25. Cada chamada relê todo o contexto acumulado, e o

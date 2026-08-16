@@ -112,8 +112,13 @@ export interface ResultadoDespacho {
   limiteDeUso?: string;
   /** Chamadas de ferramenta que a etapa gastou (T-065). */
   chamadas?: number;
-  /** Teto DECLARADO no prompt do papel para esta tarefa (T-065). */
+  /** Teto DECLARADO no prompt do papel para esta tarefa (T-065). Alvo, não alarme. */
   orcadoFerramentas?: number;
+  /**
+   * p90 medido de chamadas para o papel (`limiarDeDebate`). Passar daqui é o ALARME: o agente
+   * se debateu. É o que alimenta a política do ciclo seguinte — ver `debatesPorTarefa`.
+   */
+  limiarDebate?: number;
 }
 
 export interface DependenciasMotor {
@@ -162,6 +167,17 @@ export interface DependenciasMotor {
    * commitar está bem treinado no prompt dos construtores, mexer no frontmatter nem tanto.
    */
   hashHead?(): Promise<string | null>;
+  /**
+   * Arquivos alterados e NÃO commitados que estão fora das `areas` da tarefa (e fora de
+   * `_gestao/`). Consultado logo depois de cada construtor — ver `extrapolou`.
+   *
+   * `ignorar` recebe as `areas` das outras tarefas em voo: sob paralelismo, sujeira na area
+   * ALHEIA é trabalho de outro agente, e atribuí-la a esta tarefa seria pior que não olhar.
+   */
+  alteracoesForaDasAreas?(
+    tarefa: TarefaResumo,
+    ignorar: readonly string[],
+  ): Promise<readonly string[]>;
   log(nivel: "info" | "erro", texto: string): void;
 }
 
@@ -262,6 +278,19 @@ export interface RelatorioMotor {
    * Mede, não corta: idas ao modelo custam ao quadrado, e sem registro o estouro some.
    */
   estouros: { tarefa: string; agente: string; chamadas: number; orcado: number }[];
+  /**
+   * Construtores que deixaram alteração FORA das `areas` que a tarefa declarou (16/08).
+   *
+   * `areas` é o mutex do paralelismo, mas ele guardava só a ESCOLHA: `maquina.ts` recusa
+   * tarefas com areas colidentes e nada conferia se o agente ficou dentro delas. Em 14/08 o
+   * próprio orquestrador furou o mutex escrevendo uma linha de "Contexto extra" que mandava a
+   * T-042 editar a `area` da T-043 — e a checagem de disjunção disse "ok", porque olhava o
+   * frontmatter. O agravante fechava o ciclo: o commit de recuperação leva `areas` + arquivo
+   * da tarefa, então trabalho fora delas não entrava no commit, não era revisado, e ficava
+   * solto na árvore, onde o `temTrabalhoParcial` do próximo agente podia atribuí-lo a outra
+   * tarefa.
+   */
+  foraDeAreas: { tarefa: string; agente: string; arquivos: string[] }[];
   /** Marcos de fase verificados nesta rodada. */
   marcos: { fase: string; veredicto: VeredictoMarco }[];
   /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
@@ -349,6 +378,7 @@ export async function rodarPipeline(
     impedimentos: [],
     tentativasIgnoradas: [],
     estouros: [],
+    foraDeAreas: [],
     marcos: [],
     saneadas: [],
     etapasFalhas: [],
@@ -417,6 +447,16 @@ export async function rodarPipeline(
   const impedimentosAtendidos = new Set<string>();
   /** Fases cujo marco já foi repetido uma vez por veredito ilegível. */
   const marcosRetentados = new Set<string>();
+  /**
+   * Tarefas em que ALGUM agente passou do `limiarDeDebate` nesta rodada. É o atuador do
+   * estouro de ferramentas: uma vez marcada, a tarefa não recebe mais despacho barato.
+   *
+   * Memória por RODADA, pela mesma razão assumida em `naturezasPorTarefa`: o número de
+   * chamadas de uma etapa não sobrevive no arquivo da tarefa, e reconstruí-lo de prosa seria
+   * o erro que `diagnostico.ts` alerta para não cometer. Entre rodadas o sinal se perde, e
+   * está certo — a rodada nova começa com o orçamento e o histórico limpos.
+   */
+  const debatesPorTarefa = new Set<string>();
   /** Etapas que falharam EM SEQUÊNCIA. Zera a cada sucesso. Ver `MAX_FALHAS_SEGUIDAS`. */
   let falhasSeguidas = 0;
   /** Portão que devolveu cada tarefa — a base do diagnóstico de retrabalho. */
@@ -808,7 +848,9 @@ export async function rodarPipeline(
               ? await dep.lerRevisaoDe(passo.tarefa)
               : null,
           );
-    const politica = politicaDe(diag, passo.tarefa.tentativas, ctx.reforco !== null);
+    const politica = politicaDe(diag, passo.tarefa.tentativas, ctx.reforco !== null, {
+      debateuAntes: debatesPorTarefa.has(passo.tarefa.id),
+    });
 
     // ---- GATILHO B: CONFORMIDADE REPROVADA DUAS VEZES (T-058) -------------------------
     // "Entregou outra coisa" já roda SEMPRE no calibre máximo, com escopo completo
@@ -895,13 +937,76 @@ export async function rodarPipeline(
       ...(politica.escopo === "pontual" ? { foco: blocoDeFoco(diag) } : {}),
     });
     rel.despachos += 1;
-    if (r.chamadas !== undefined && r.orcadoFerramentas !== undefined && r.chamadas > r.orcadoFerramentas) {
+    // O relatório passa a listar o ALARME (p90 medido), não o alvo declarado. Calibrado no
+    // alvo, isto acusava 36-52% dos despachos — e lista que acusa metade das linhas não é
+    // lida, muito menos vira decisão. Ver `limiarDeDebate` em `despachante.ts`.
+    if (r.chamadas !== undefined && r.limiarDebate !== undefined && r.chamadas > r.limiarDebate) {
       rel.estouros.push({
         tarefa: passo.tarefa.id,
         agente: agente.nome,
         chamadas: r.chamadas,
-        orcado: r.orcadoFerramentas,
+        orcado: r.limiarDebate,
       });
+      // O ATUADOR (item 1 do handoff de 15/08). O estouro era empilhado e lido em UM lugar
+      // só — para imprimir uma linha. Aqui ele passa a agir onde a doutrina permite: ANTES de
+      // começar o PRÓXIMO despacho da MESMA tarefa. Nunca corta o despacho em voo, que é
+      // decisão fechada (interromper custa igual sem entregar nada, US$ 4,11 medidos).
+      //
+      // O que ele significa: debater-se REPETE. Um agente que gastou o decil superior de
+      // chamadas e ainda assim voltou reprovado não vai resolver a mesma tarefa com o
+      // caminho barato — e o caminho barato é exatamente o que `politicaDe` escolhe em
+      // `mecanica` e em `defeito menor`.
+      debatesPorTarefa.add(passo.tarefa.id);
+    }
+
+    // ---- EXTRAPOLAÇÃO DE `areas`, POR ETAPA (16/08) -----------------------------------
+    // O sensor já existia (`alteracoesForaDe`), e denunciava a sobra no relatório FINAL —
+    // quando a rodada acabou e não há mais o que fazer com a informação. Aqui ele passa a
+    // ser lido no único momento em que ainda serve: logo depois do construtor, com o revisor
+    // da MESMA tarefa ainda por vir.
+    //
+    // O atuador é escrever nas Notas, e a escolha é deliberada. Commitar os arquivos de fora
+    // seria a correção "óbvia" e está proibida: sob paralelismo isso rouba trabalho de outra
+    // tarefa, e é o mesmo erro do `git add -A` que fazia código entrar sem revisão. O que se
+    // pode fazer com segurança é tornar o fato VISÍVEL para quem julga — o revisor recebe as
+    // Notas, e assim decide sobre um fato em vez de sobre um silêncio.
+    if (passo.papel === "construtor" && dep.alteracoesForaDasAreas !== undefined) {
+      // Sob paralelismo, sujeira na area ALHEIA é trabalho de outro agente. Atribuí-la a esta
+      // tarefa produziria acusação falsa toda vez que duas tarefas rodam na mesma rodada.
+      const areasAlheias = tarefas
+        .filter((t) => t.id !== passo.tarefa.id)
+        .flatMap((t) => t.areas);
+      let fora: readonly string[] = [];
+      try {
+        fora = await dep.alteracoesForaDasAreas(passo.tarefa, areasAlheias);
+      } catch {
+        // Diagnóstico nunca derruba a rodada.
+      }
+      if (fora.length > 0) {
+        const lista = fora.slice(0, 10).join(", ") + (fora.length > 10 ? ` … (+${fora.length - 10})` : "");
+        rel.foraDeAreas.push({ tarefa: passo.tarefa.id, agente: agente.nome, arquivos: [...fora] });
+        dep.log(
+          "erro",
+          `${passo.tarefa.id}: ${agente.nome} alterou arquivo FORA das \`areas\` declaradas —` +
+            ` ${lista}. O mutex do paralelismo guarda a escolha, não a execução: ou o despacho` +
+            " pediu algo fora do escopo, ou o agente extrapolou. Registrado nas Notas para o" +
+            " revisor julgar; NÃO entra no commit da tarefa.",
+        );
+        if (dep.anexarNotas !== undefined) {
+          await dep.anexarNotas(
+            passo.tarefa,
+            [
+              "",
+              `**Fora das \`areas\` (detectado pelo motor):** ${lista}`,
+              "",
+              "Estes arquivos foram alterados por esta etapa e estão FORA das `areas` que a",
+              "tarefa declarou. Não entram no commit da tarefa, então não aparecem no diff que",
+              "o revisor julga — confira se a alteração era legítima (e a `area` é que estava",
+              "incompleta) ou se é sobra que precisa ser desfeita.",
+            ].join("\n"),
+          );
+        }
+      }
     }
     orcamento = comGasto(orcamento, orcamento.gastoUsd + r.custoUsd);
     // A autocalibragem NÃO é alimentada aqui — ver o topo do laço. O revisor aprovar é o

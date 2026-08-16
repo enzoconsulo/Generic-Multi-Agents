@@ -2,7 +2,11 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { criarDespachante, orcamentoDeFerramentas } from "../../src/pipeline/despachante.js";
+import {
+  criarDespachante,
+  limiarDeDebate,
+  orcamentoDeFerramentas,
+} from "../../src/pipeline/despachante.js";
 import { limparCacheAgentes, FERRAMENTAS_PROIBIDAS } from "../../src/pipeline/prompts-agente.js";
 import type { Consulta } from "../../src/jobs/claude/runner-claude.js";
 import type { PedidoDespacho } from "../../src/pipeline/motor.js";
@@ -169,5 +173,40 @@ describe("orcamentoDeFerramentas — o teto declarado nos prompts, em número (T
   it("papel desconhecido não vira teto zero", () => {
     expect(orcamentoDeFerramentas("planejador", 0)).toBeGreaterThanOrEqual(60);
     expect(orcamentoDeFerramentas("papel-que-nao-existe", 2)).toBeGreaterThanOrEqual(60);
+  });
+});
+
+describe("limiarDeDebate — o ALARME, calibrado no p90 medido (16/08)", () => {
+  /**
+   * A invariante que separa alvo de alarme, e que é a razão de existirem dois números.
+   *
+   * O alvo (`orcamentoDeFerramentas`) é o que o prompt pede ao agente: apertado de propósito,
+   * e excedido em 36-52% dos despachos reais. Enquanto ELE era o gatilho do relatório, a
+   * lista de estouros acusava metade da rodada — e nada pode ser ligado a um sinal que
+   * dispara sempre sem virar, na prática, "sempre o caro".
+   *
+   * O limiar é o p90 de 135 etapas de `dados/jobs/*.log.jsonl`. Se algum dia ele descer até o
+   * alvo, o alarme volta a ser ruído e o atuador de `politicaDe` perde o sentido.
+   */
+  it("é estritamente maior que o alvo declarado, em todo papel", () => {
+    expect(limiarDeDebate("construtor")).toBeGreaterThan(orcamentoDeFerramentas("construtor", 4));
+    expect(limiarDeDebate("verificador")).toBeGreaterThan(orcamentoDeFerramentas("verificador", 2));
+    expect(limiarDeDebate("revisor")).toBeGreaterThan(orcamentoDeFerramentas("revisor", 2));
+  });
+
+  /**
+   * A medição derrubou a premissa da escada 30/45/60: mediana de 21 chamadas com ≤2 areas
+   * contra 12 com 3 areas, e p90 de 57 e 58. O número de `areas` NÃO prevê o de chamadas, e
+   * um limiar que escala nele erra nos dois sentidos ao mesmo tempo.
+   */
+  it("não escala com `areas` — a medição mostrou que elas não preveem chamadas", () => {
+    expect(limiarDeDebate("construtor")).toBe(65);
+    expect(limiarDeDebate("verificador")).toBe(37);
+    expect(limiarDeDebate("revisor")).toBe(28);
+  });
+
+  it("papel desconhecido não vira limiar zero", () => {
+    expect(limiarDeDebate("planejador")).toBeGreaterThanOrEqual(60);
+    expect(limiarDeDebate("papel-que-nao-existe")).toBeGreaterThanOrEqual(60);
   });
 });

@@ -216,10 +216,30 @@ export const VOLTAS_MEDIO = 40;
  *    arrisca queimar a tarefa. Sempre reforça, sempre voltas cheias.
  * 2. **Conformidade nunca barateia.** É o caso em que o barato já falhou por não entender.
  */
+export interface SinaisDaRodada {
+  /**
+   * Algum agente desta MESMA tarefa passou do `limiarDeDebate` (p90 medido de chamadas de
+   * ferramenta) nesta rodada.
+   *
+   * É o atuador que faltava ao estouro de orçamento (item 1 do handoff de 15/08): o sinal
+   * existia, era empilhado em `motor.ts` e lido num lugar só, para imprimir uma linha de
+   * relatório. Aqui ele age no único momento em que a doutrina permite — ANTES de começar o
+   * próximo despacho, nunca cortando o que está em voo.
+   *
+   * O que ele acrescenta ao diagnóstico: o portão diz **por que** a tarefa voltou; isto diz
+   * **como foi** a tentativa anterior. Um agente que gastou o decil superior de chamadas e
+   * ainda assim voltou reprovado não estava fazendo um ajuste de duas linhas — estava
+   * procurando, e procurar de novo com menos capacidade repete o mesmo resultado por
+   * dinheiro igual. Debater-se repete.
+   */
+  debateuAntes?: boolean;
+}
+
 export function politicaDe(
   diag: Diagnostico,
   tentativas: number,
   temReforco: boolean,
+  sinais: SinaisDaRodada = {},
 ): PoliticaRetrabalho {
   const completoCaro = (motivo: string): PoliticaRetrabalho => ({
     reforcar: temReforco,
@@ -277,24 +297,48 @@ export function politicaDe(
     return completoCaro("reprovado por CONFORMIDADE — erro de entendimento, calibre máximo");
   }
 
+  // TRAVA 3: o ciclo anterior se DEBATEU. Vale só para os dois caminhos baratos abaixo —
+  // `mecanica` e `defeito menor` são os únicos que apostam num modelo NÃO reforçado, e é
+  // exatamente essa aposta que o debate desmente. Os demais já estão no calibre alto, então
+  // aqui não há nada a subir e a trava não precisa aparecer.
+  //
+  // O escopo continua PONTUAL de propósito: o foco (achado nomeado, saída do comando) segue
+  // sendo a informação certa, e alargá-lo mandaria o construtor reabrir o que já passa —
+  // o desperdício que `blocoDeFoco` existe para evitar. O que muda é a CAPACIDADE, e o teto
+  // de voltas sobe junto: mandar um agente que já procurou muito procurar de novo com menos
+  // espaço é a pior combinação das duas.
+  const debateu = sinais.debateuAntes === true;
+  const porDebate = (base: string): PoliticaRetrabalho => ({
+    reforcar: temReforco,
+    maxTurns: VOLTAS_MEDIO,
+    escopo: "pontual",
+    motivo: `${base}, MAS o ciclo anterior se debateu (chamadas no decil superior) — debater-se repete: reforça`,
+  });
+
   if (diag.natureza === "mecanica") {
     // O comando já disse o que quebrou. Modelo mais forte não acrescenta nada aqui.
-    return {
-      reforcar: false,
-      maxTurns: VOLTAS_PONTUAL,
-      escopo: "pontual",
-      motivo: "falha mecânica (critério executável) — objetiva e localizada, sem escalar modelo",
-    };
+    return debateu
+      ? porDebate("falha mecânica (critério executável)")
+      : {
+          reforcar: false,
+          maxTurns: VOLTAS_PONTUAL,
+          escopo: "pontual",
+          motivo:
+            "falha mecânica (critério executável) — objetiva e localizada, sem escalar modelo",
+        };
   }
 
   if (diag.natureza === "defeito") {
-    return diag.grave
-      ? {
-          reforcar: temReforco,
-          maxTurns: VOLTAS_MEDIO,
-          escopo: "pontual",
-          motivo: "defeito grave nomeado pelo revisor — reforça, mas ataca o que foi apontado",
-        }
+    if (diag.grave) {
+      return {
+        reforcar: temReforco,
+        maxTurns: VOLTAS_MEDIO,
+        escopo: "pontual",
+        motivo: "defeito grave nomeado pelo revisor — reforça, mas ataca o que foi apontado",
+      };
+    }
+    return debateu
+      ? porDebate("só achados `menor`")
       : {
           reforcar: false,
           maxTurns: VOLTAS_PONTUAL,

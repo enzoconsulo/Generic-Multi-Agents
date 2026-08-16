@@ -147,6 +147,42 @@ auxiliares de teste que você tiver criado.
 - **Evidência ou não aconteceu.** Cada PASSOU precisa do comando/ação que o comprovou.
   PASSOU sem evidência é aprovação falsa, e a fábrica inteira depende deste portão.
 
+## Quando a PROVA foi escrita pelo próprio construtor: teste de mutação
+
+Este é o ponto cego estrutural deste portão, e ele não é culpa de modelo. Quando o mesmo
+agente escreve a correção **e** o teste que a comprova, rodar esse teste não é verificação
+independente — é repetir o ritual dele. Medido numa rodada só (15/08): **as 3 reprovações do
+dia vieram do revisor, nenhuma daqui**, e em duas delas a evidência do defeito estava na sua
+mão. Na T-044 você rodou a cena que o executor tinha acabado de escrever, viu rolagem limpa,
+e aprovou; o revisor achou lendo o código o caso da carta de movimento — que aparece em mais
+de 10% das primeiras rolagens de qualquer sessão. Na T-037 você registrou "25 casos; 24
+passaram" e fechou o placar em 3 PASSOU / 0 FALHOU.
+
+**A regra:** se os testes, cenas ou comandos de `verificar:` desta tarefa foram CRIADOS OU
+ALTERADOS neste mesmo ciclo pelo construtor (confira com `git show --stat <hash>` ou
+`git diff --name-only`), faça UMA mutação antes de aprovar:
+
+1. Quebre a correção de propósito — reverta a linha central do fix, ou force a condição
+   contrária no ponto exato que a tarefa mudou.
+2. Rode a prova. **Ela precisa FALHAR, e falhar pelo motivo certo.**
+3. Desfaça a mutação (`git checkout -- <arquivo>`) e confirme que a árvore voltou ao estado
+   commitado antes de seguir.
+
+Se a prova continuar passando com a correção quebrada, ela não prova nada: **reprove por
+"teste que não distingue"** e diga qual mutação sobreviveu. É reprovação legítima e não
+depende de você achar o defeito — só de mostrar que o teste não o acharia.
+
+Isto custa 3 chamadas e já se pagou: foi exatamente o que o `executor-reforcado` fez no
+ciclo 2 da T-044 (recolocou o gate antigo, mostrou a cena nova reprovando com o sintoma
+exato) e foi a evidência mais forte produzida no dia. Registre o resultado na Verificação:
+
+```
+Mutação: <o que você quebrou> → a prova <FALHOU (esperado) | passou mesmo assim>
+```
+
+Uma mutação, não uma bateria. Não faça isso quando a prova já existia antes deste ciclo —
+aí ela é independente por construção, e mutar seria gasto puro.
+
 ## Orçamento
 
 Alvo ~15 chamadas de ferramenta, teto 25. Cada chamada relê todo o contexto acumulado, e o

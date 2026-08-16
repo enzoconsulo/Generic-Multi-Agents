@@ -88,6 +88,8 @@ function mundo(
     construtorCommita?: boolean;
     /** Driver sem as deps opcionais de recuperação. */
     semRecuperacao?: boolean;
+    /** Arquivos sujos que o construtor deixa FORA das `areas` da tarefa (item 4, 16/08). */
+    sujeiraForaDasAreas?: readonly string[];
   } = {},
 ) {
   const tarefas = new Map(iniciais.map((t) => [t.id, { ...t }]));
@@ -134,6 +136,12 @@ function mundo(
       notasAnexadas.push({ id: t.id, texto });
     },
     hashHead: async () => head,
+    // Espelha o contrato real: `_gestao/` e as areas da própria tarefa já saíram da conta no
+    // runner, e o motor ainda passa as areas ALHEIAS para não acusar trabalho de outro agente.
+    alteracoesForaDasAreas: async (t, alheias) =>
+      (opcoes.sujeiraForaDasAreas ?? []).filter(
+        (a) => !t.areas.includes(a) && !alheias.includes(a),
+      ),
     despachar: async (pedido) => {
       const custoDespacho = opcoes.custoPorDespacho ?? 0.1;
       despachos.push(pedido);
@@ -660,22 +668,42 @@ describe("limite da assinatura para a rodada NA HORA (T-064)", () => {
   });
 });
 
-describe("orçamento de ferramentas declarado vira MEDIDA (T-065)", () => {
-  it("registra a etapa que passou do teto do papel", async () => {
+describe("chamadas de ferramenta: o ALARME é o p90, não o alvo (T-065, recalibrado 16/08)", () => {
+  it("registra a etapa que passou do LIMIAR DE DEBATE", async () => {
     const { dep } = mundo([tarefa({ id: "T-500", status: "pronta", areas: ["a.js", "b.js"] })]);
     const original = dep.despachar;
     dep.despachar = async (pedido) => {
       const r = await original(pedido);
-      // Construtor com 2 areas: teto declarado 30. 39 foi o número real da T-032.
+      // Construtor: limiar 57 (p90 medido em 70 etapas reais). 74 foi o máximo observado.
       return pedido.papel === "construtor"
-        ? { ...r, chamadas: 39, orcadoFerramentas: 30 }
-        : { ...r, chamadas: 5, orcadoFerramentas: 20 };
+        ? { ...r, chamadas: 74, orcadoFerramentas: 30, limiarDebate: 57 }
+        : { ...r, chamadas: 5, orcadoFerramentas: 20, limiarDebate: 28 };
     };
 
     const rel = await rodarPipeline(ctxBase, dep);
 
     expect(rel.estouros).toHaveLength(1);
-    expect(rel.estouros[0]).toMatchObject({ tarefa: "T-500", chamadas: 39, orcado: 30 });
+    expect(rel.estouros[0]).toMatchObject({ tarefa: "T-500", chamadas: 74, orcado: 57 });
+  });
+
+  /**
+   * A regressão que motivou a recalibragem. 39 chamadas contra o ALVO de 30 era o caso comum —
+   * 36% dos despachos de construtor medidos. Enquanto isso entrava em `estouros`, a lista
+   * acusava metade da rodada e nada podia ser ligado a ela sem virar "sempre o caro".
+   */
+  it("passar do ALVO declarado, sem chegar ao p90, não entra no relatório", async () => {
+    const { dep } = mundo([tarefa({ id: "T-500", status: "pronta", areas: ["a.js", "b.js"] })]);
+    const original = dep.despachar;
+    dep.despachar = async (pedido) => ({
+      ...(await original(pedido)),
+      chamadas: 39,
+      orcadoFerramentas: 30,
+      limiarDebate: 57,
+    });
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.estouros).toEqual([]);
   });
 
   it("etapa dentro do teto não vira ruído no relatório", async () => {
@@ -685,6 +713,7 @@ describe("orçamento de ferramentas declarado vira MEDIDA (T-065)", () => {
       ...(await original(pedido)),
       chamadas: 10,
       orcadoFerramentas: 30,
+      limiarDebate: 57,
     });
 
     const rel = await rodarPipeline(ctxBase, dep);
@@ -736,5 +765,76 @@ describe("teto por tarefa — uma tarefa que gira não pode zerar a rodada", () 
 
     expect(rel.impedimentos).toEqual([]);
     expect(rel.tarefasConcluidas).toContain("T-303");
+  });
+});
+
+/**
+ * ITEM 4 do handoff de 15/08 — o mutex de `areas` guardava a ESCOLHA, não a execução.
+ *
+ * `maquina.ts` recusa despachar tarefas com `areas` colidentes, mas isso usa as areas
+ * DECLARADAS: nada conferia se o agente ficou dentro delas. Em 14/08 o próprio orquestrador
+ * furou o mutex com uma linha de "Contexto extra" mandando a T-042 editar a `area` da T-043,
+ * e a checagem de disjunção disse "ok" porque olhava o frontmatter.
+ *
+ * O sensor (`alteracoesForaDe`) existia e falava no relatório FINAL — quando a rodada acabou.
+ * Aqui ele passa a falar por ETAPA, com o revisor da mesma tarefa ainda por vir.
+ */
+describe("extrapolação de `areas`, detectada por etapa (16/08)", () => {
+  it("acusa o construtor que alterou arquivo fora das areas e avisa o revisor nas Notas", async () => {
+    const { dep, logs, notasAnexadas } = mundo(
+      [tarefa({ id: "T-600", status: "pronta", areas: ["src/a.js"] })],
+      { sujeiraForaDasAreas: ["ferramentas/cenario.mjs"] },
+    );
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.foraDeAreas).toHaveLength(1);
+    expect(rel.foraDeAreas[0]).toMatchObject({
+      tarefa: "T-600",
+      arquivos: ["ferramentas/cenario.mjs"],
+    });
+    expect(logs.some((l) => l.includes("FORA das `areas`"))).toBe(true);
+    // O atuador: o revisor recebe as Notas, então escrever ali é o que transforma um silêncio
+    // num fato julgável. Commitar seria a correção "óbvia" e está proibida — sob paralelismo
+    // rouba trabalho de outra tarefa, o mesmo erro do `git add -A`.
+    const nota = notasAnexadas.find((n) => n.id === "T-600");
+    expect(nota?.texto).toContain("ferramentas/cenario.mjs");
+    expect(nota?.texto).toContain("Fora das `areas`");
+  });
+
+  /**
+   * A guarda que impede acusação falsa. Sob paralelismo, sujeira na area ALHEIA é trabalho de
+   * outro agente: atribuí-la a esta tarefa produziria denúncia errada toda vez que duas
+   * tarefas rodam na mesma rodada — e denúncia errada some do radar tão rápido quanto silêncio.
+   */
+  it("não acusa sujeira que pertence à `area` de OUTRA tarefa da rodada", async () => {
+    const { dep } = mundo(
+      [
+        tarefa({ id: "T-601", status: "pronta", areas: ["src/a.js"] }),
+        tarefa({ id: "T-602", status: "backlog", areas: ["ferramentas/cenario.mjs"] }),
+      ],
+      { sujeiraForaDasAreas: ["ferramentas/cenario.mjs"] },
+    );
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.foraDeAreas).toEqual([]);
+  });
+
+  it("árvore limpa não produz linha nenhuma", async () => {
+    const { dep } = mundo([tarefa({ id: "T-603", status: "pronta" })]);
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.foraDeAreas).toEqual([]);
+  });
+
+  /** Só o construtor entrega artefato: verificador e revisor não são acusados por isso. */
+  it("não olha para etapas que não são de construção", async () => {
+    const { dep } = mundo([tarefa({ id: "T-604", status: "em-teste", areas: ["src/a.js"] })], {
+      sujeiraForaDasAreas: ["outro.js"],
+    });
+
+    const rel = await rodarPipeline(ctxBase, dep);
+
+    expect(rel.foraDeAreas).toEqual([]);
   });
 });

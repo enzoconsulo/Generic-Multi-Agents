@@ -185,6 +185,11 @@ export class RunnerPipeline implements Runner {
         }
       },
       hashHead: () => lerHead(dirProjeto),
+      // `_gestao/` sempre sai da conta: o motor escreve lá por contrato (promoção, bloqueio,
+      // marco), e o próprio agente grava o arquivo da tarefa. As areas alheias saem porque,
+      // sob paralelismo, sujeira delas é trabalho de outro agente — ver `motor.ts`.
+      alteracoesForaDasAreas: async (t, alheias) =>
+        alteracoesForaDe(dirProjeto, ["_gestao", ...t.areas, ...alheias]),
       anexarNotas: async (t, texto) => {
         const r = await anexarNaSecao(join(dirTarefas, t.arquivo), "Notas de execução", texto);
         if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });
@@ -412,8 +417,20 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
       .map((e) => `${e.tarefa}/${e.agente} ${e.chamadas} de ${e.orcado}`)
       .join("; ");
     linhas.push(
-      `Orçamento de ferramentas estourado (idas ao modelo custam ao quadrado): ${lista}.`,
+      "Agente(s) se DEBATENDO — chamadas de ferramenta no decil superior medido" +
+        ` (o próximo despacho da tarefa não usa caminho barato): ${lista}.`,
     );
+  }
+  if (r.foraDeAreas.length > 0) {
+    for (const f of r.foraDeAreas) {
+      linhas.push(
+        `MUTEX FURADO — ${f.agente} alterou, em ${f.tarefa}, arquivo fora das \`areas\`` +
+          ` declaradas: ${f.arquivos.slice(0, 6).join(", ")}` +
+          `${f.arquivos.length > 6 ? ` … (+${f.arquivos.length - 6})` : ""}.` +
+          " Não entra no commit da tarefa nem no diff do revisor; está anotado nas Notas." +
+          " Se a alteração era legítima, a `area` da tarefa é que está incompleta.",
+      );
+    }
   }
   if (r.tentativasIgnoradas.length > 0) {
     for (const t of r.tentativasIgnoradas) {

@@ -81,6 +81,18 @@ testador e do revisor. Abra `_sistema/PROTOCOLO_TAREFAS.md` (raiz do Gerador_de_
 8. **Registre** na seção "Notas de execução" da tarefa: o que fez, arquivos
    criados/alterados, como rodar/testar, e qualquer decisão tomada no caminho (decisões
    de arquitetura vão também para `_gestao/DECISOES.md`).
+
+   Nas Notas, deixe um **comando COPIÁVEL que reexecuta a prova** — uma linha que o testador
+   possa colar e rodar sem reconstruir nada:
+
+   ```
+   **Reproduzir:** `node --test tests/movimento.test.js`
+   ```
+
+   Isso transforma o portão do meio de "refazer o ritual" em "repetir um comando", e o ganho
+   é medido: no ciclo 2 da T-037 o executor deixou um `node --input-type=module` com o corpus
+   de 35 casos embutido, e o testador conferiu em 0,2 s. Se a prova precisa de estado (servidor
+   no ar, fixture, porta), diga como montá-lo na MESMA linha encadeada.
 9. **Regenere o MAPA e commite.** Numa chamada só, antes do `git add`:
    `node ../../_sistema/ferramentas/mapa.mjs . && git add -A`. Regenerar é determinístico
    e leva milissegundos — mas pular deixa `_gestao/MAPA.md` mentindo sobre o código que

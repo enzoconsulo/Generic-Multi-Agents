@@ -79,6 +79,51 @@ export function orcamentoDeFerramentas(papel: string, areas: number): number {
   return 60;
 }
 
+/**
+ * LIMIAR DE DEBATE — a partir de quantas chamadas o agente deixou de trabalhar e passou a se
+ * debater. É OUTRO número, e a confusão entre os dois é o defeito que isto conserta (16/08).
+ *
+ * `orcamentoDeFerramentas` é um ALVO: o número que o prompt diz ao agente para ele economizar.
+ * Alvo é exortação, e alvo bom é apertado — é normal e saudável que seja excedido às vezes.
+ * O relatório, porém, usava esse mesmo número como SENSOR de anomalia, e um sensor calibrado
+ * no alvo não carrega informação nenhuma.
+ *
+ * Medido sobre 135 etapas reais de `dados/jobs/*.log.jsonl` (contando as linhas `ferramenta`
+ * de cada etapa, sem gastar um centavo de modelo):
+ *
+ * | papel | teto declarado | estourava em | p90 real |
+ * |---|---|---|---|
+ * | verificador | 25 | **52%** dos despachos | 37 |
+ * | construtor  | 30 | **36%** | 57 |
+ * | revisor     | 20 | 20% | 28 |
+ *
+ * Um alarme que toca em metade das rodadas é ruído, e ruído é o que impede o sinal de virar
+ * ATUADOR: ligar política de retrabalho a um gatilho que dispara sempre equivale a "sempre o
+ * caro" — exatamente o que `diagnostico.ts` existe para desfazer. Por isso o limiar é o p90:
+ * dispara em ~1 despacho em 10, e aí "estourou" volta a significar alguma coisa.
+ *
+ * A OUTRA descoberta da mesma medição, e ela derruba uma premissa: **o número de `areas` não
+ * prevê o número de chamadas.** Mediana de 21 com ≤2 areas contra 12 com 3 areas; p90 de 57 e
+ * 58, respectivamente. A escada 30/45/60 escala numa variável que não correlaciona — o que
+ * varia é a natureza do trabalho, não quantos arquivos a tarefa declarou. O limiar, por isso,
+ * é PLANO para o construtor. (O alvo do prompt segue escalonado de propósito: lá ele é
+ * conselho de dimensionamento, e conselho por tamanho de tarefa continua fazendo sentido.)
+ *
+ * INVARIANTE que o teste trava: o limiar é sempre MAIOR que o maior alvo declarado do papel.
+ * Alarme abaixo do próprio alvo é incoerente — acusaria de debate um agente que respeitou o
+ * que o prompt pediu. É por isso que o construtor fica em 65 e não no p90 puro (57): o alvo
+ * da faixa de 4 `areas` é 60. Taxas de disparo resultantes, na mesma amostra: construtor 6%,
+ * verificador 12%, revisor 10%.
+ *
+ * Refazer a calibragem depois de mais rodadas: o script está no log de 2026-08-16.
+ */
+export function limiarDeDebate(papel: string): number {
+  if (papel === "construtor") return 65;
+  if (papel === "verificador") return 37;
+  if (papel === "revisor") return 28;
+  return 60;
+}
+
 /** Quebra de linha usada para montar os blocos de despacho. */
 const QUEBRA = String.fromCharCode(10);
 
@@ -372,23 +417,50 @@ export function criarDespachante(
 
     // Estouro do orçamento DECLARADO (T-065): mede, não corta. O custo de um agente cresce
     // com o quadrado das idas ao modelo, então passar do teto é caro — e sem registro isso
-    // some. Quem lê o relatório decide se é o agente que precisa de disciplina ou a tarefa
-    // que está grande demais para as `areas` que declarou.
+    // some. Fica em `info`: passar do ALVO é frequente e normal (36-52% dos despachos,
+    // medido), então isto é termômetro para leitura humana, nunca alarme.
     const orcado = orcamentoDeFerramentas(papel, pedido.tarefa.areas.length);
     if (chamadas > orcado) {
       o.emitir(
-        "erro",
+        "info",
         `${pedido.tarefa.id}: ${pedido.agente} usou ${chamadas} chamadas de ferramenta,` +
-          ` acima do teto declarado de ${orcado} para ${papel} com` +
+          ` acima do alvo declarado de ${orcado} para ${papel} com` +
           ` ${pedido.tarefa.areas.length} area(s). Idas ao modelo custam ao quadrado.`,
+      );
+    }
+
+    // O ALARME é outro número — ver `limiarDeDebate`. Passar daqui é o decil superior medido:
+    // o agente parou de trabalhar e passou a se debater. É este, e só este, que vira decisão
+    // no ciclo seguinte (`politicaDe`).
+    const limiar = limiarDeDebate(papel);
+    if (chamadas > limiar) {
+      o.emitir(
+        "erro",
+        `${pedido.tarefa.id}: ${pedido.agente} se DEBATEU — ${chamadas} chamadas, acima do` +
+          ` p90 medido para ${papel} (${limiar}). O próximo despacho desta tarefa não usa` +
+          " caminho barato.",
       );
     }
 
     if (!terminou || erro) {
       o.emitir("erro", `Etapa ${pedido.agente} terminou sem resultado válido.`);
-      return { custoUsd, concluiu: false, texto: textoFinal, chamadas, orcadoFerramentas: orcado };
+      return {
+        custoUsd,
+        concluiu: false,
+        texto: textoFinal,
+        chamadas,
+        orcadoFerramentas: orcado,
+        limiarDebate: limiar,
+      };
     }
-    return { custoUsd, concluiu: true, texto: textoFinal, chamadas, orcadoFerramentas: orcado };
+    return {
+      custoUsd,
+      concluiu: true,
+      texto: textoFinal,
+      chamadas,
+      orcadoFerramentas: orcado,
+      limiarDebate: limiar,
+    };
   };
 }
 

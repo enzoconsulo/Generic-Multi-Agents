@@ -267,6 +267,85 @@ describe("politicaDe — as duas travas que impedem economia burra", () => {
   });
 });
 
+/**
+ * TRAVA 3 — o ciclo anterior se DEBATEU (item 1 do handoff de 15/08, fechado em 16/08).
+ *
+ * O estouro de orçamento de ferramentas era o exemplar mais puro do defeito recorrente da
+ * fábrica: sensor sem atuador. Era empilhado em `motor.ts` e lido num lugar só, para imprimir
+ * uma linha de relatório — sem influenciar escalonamento, replanejamento nem estimativa.
+ *
+ * Ligá-lo exigiu consertar o termômetro primeiro: calibrado no ALVO do prompt, o sinal
+ * disparava em 36-52% dos despachos, e um atuador nesse gatilho é indistinguível de "sempre o
+ * caro" — exatamente o que este módulo existe para desfazer. Com o limiar no p90 medido, ele
+ * volta a valer alguma coisa.
+ */
+describe("politicaDe — trava 3: debater-se repete", () => {
+  const diag = (parcial: Partial<Diagnostico>): Diagnostico => ({
+    natureza: "defeito",
+    achados: [],
+    grave: false,
+    conformidade: null,
+    ...parcial,
+  });
+
+  it("falha mecânica que veio de um ciclo debatendo NÃO usa o caminho barato", () => {
+    const p = politicaDe(diag({ natureza: "mecanica" }), 1, true, { debateuAntes: true });
+    expect(p.reforcar).toBe(true);
+    expect(p.maxTurns).toBe(VOLTAS_MEDIO);
+    // O foco continua certo: o que muda é a capacidade, não o escopo. Alargar mandaria o
+    // construtor reabrir o que já passa — o desperdício que `blocoDeFoco` evita.
+    expect(p.escopo).toBe("pontual");
+    expect(p.motivo).toMatch(/debateu/);
+  });
+
+  it("achado `menor` que veio de um ciclo debatendo também sobe de calibre", () => {
+    const p = politicaDe(diag({ natureza: "defeito", grave: false }), 1, true, {
+      debateuAntes: true,
+    });
+    expect(p.reforcar).toBe(true);
+    expect(p.maxTurns).toBe(VOLTAS_MEDIO);
+    expect(p.escopo).toBe("pontual");
+  });
+
+  /**
+   * A trava só existe para desfazer aposta em modelo fraco. Onde o calibre já é máximo ela
+   * não tem o que subir, e fazê-la "aparecer" ali seria alargar escopo por um sinal que não
+   * diz nada sobre entendimento do pedido.
+   */
+  it("não mexe no que já está no calibre alto", () => {
+    const semDebate = politicaDe(diag({ natureza: "conformidade" }), 1, true);
+    const comDebate = politicaDe(diag({ natureza: "conformidade" }), 1, true, {
+      debateuAntes: true,
+    });
+    expect(comDebate).toEqual(semDebate);
+
+    const funcional = politicaDe(diag({ natureza: "funcional" }), 1, true, { debateuAntes: true });
+    expect(funcional.escopo).toBe("pontual");
+    expect(funcional.maxTurns).toBe(VOLTAS_MEDIO);
+  });
+
+  /** Primeira execução não tem ciclo anterior: o sinal não pode inventar retrabalho. */
+  it("não age na primeira execução", () => {
+    const p = politicaDe(diag({ natureza: "nenhuma" }), 0, true, { debateuAntes: true });
+    expect(p.reforcar).toBe(false);
+    expect(p.motivo).toBe("primeira execução");
+  });
+
+  /** Sem reforço configurado não há para onde subir, e o sinal não pode inventar modelo. */
+  it("sem reforço disponível, o debate não fabrica reforço", () => {
+    const p = politicaDe(diag({ natureza: "mecanica" }), 1, false, { debateuAntes: true });
+    expect(p.reforcar).toBe(false);
+    expect(p.maxTurns).toBe(VOLTAS_MEDIO);
+  });
+
+  /** O padrão do parâmetro é "não debateu": todo chamador antigo mantém o comportamento. */
+  it("omitir o sinal preserva exatamente a política anterior", () => {
+    expect(politicaDe(diag({ natureza: "mecanica" }), 1, true)).toEqual(
+      politicaDe(diag({ natureza: "mecanica" }), 1, true, { debateuAntes: false }),
+    );
+  });
+});
+
 describe("blocoDeFoco", () => {
   it("ordena por gravidade e manda NÃO recomeçar", () => {
     const texto = blocoDeFoco({
