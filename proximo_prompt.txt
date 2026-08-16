@@ -64,6 +64,12 @@ Commits `f0793e5`, `ac2cb55` (painel) e `6ff2b94`, `beb602e` (gestão/carga de t
 - **Portão do meio.** `testador.md`/`conferente.md` exigem uma mutação quando a prova foi
   criada no mesmo ciclo pelo construtor; `executor.md`/`construtor.md` deixam comando copiável
   de reprodução nas Notas.
+- **Botão Retomar + teto de custo recalibrado** (commit `c3cbd4b`). Job cortado pela cota
+  agora continua pela MESMA sessão (`options.resume`); teto do `/ideia` 3→6 e do
+  `/novo-projeto` 4→8, medidos. Detalhe e números em `painel/_gestao/DECISOES.md`.
+  Achado que vale para sempre: **teto que nunca disparou pode ser teto ERRADO**, não folgado
+  — zero dos 108 jobs encerrou por `teto-custo` e mesmo assim o teto estava abaixo do custo
+  medido do trabalho, porque o medidor ao vivo lê baixo.
 
 ═══════════════════════════════════════════════════════════════════════════════
 ITEM 1 — O DOCUMENTADOR NUNCA RODOU. Nem uma vez, em 41 rodadas.
@@ -197,6 +203,18 @@ ANOTADO, NÃO É TAREFA AINDA
   MECANISMO de subagente do SDK: quem despacha é a máquina de estados, que monta a `query()`
   inteira, então não há a quem oferecer um subagente. `CLAUDE.md` corrigido — dizia que os
   passos 1-2 eram "o que o painel usa".
+- **`AcumuladorDeUso.fechar()` NÃO é idempotente e o runner o chama a cada mensagem.**
+  `porModelo`/`total` são objetos novos a cada chamada (então o TETO DE CUSTO está certo),
+  mas `this.porAgente` é o MESMO objeto e leva `+=` em toda passada — o job soma a si mesmo
+  uma vez por mensagem do SDK. O efeito está visível na tela: o job `9ba81214` mostra o
+  orquestrador com 122M de cache lido e 1.722 voltas, num job de 26 turnos cujo total real
+  (`modelUsage`) foi 4,4M. **A faixa "custo por agente" da aba Jobs é ficção**, e a
+  proporção entre agentes também, porque cada um é inflado pelo número de chamadas de
+  `fechar()` que aconteceram DEPOIS da primeira mensagem dele. Conserto provável: agregar
+  por agente numa cópia local, como já é feito com `porModelo`. Achado em 16/08, não
+  consertado — mexe em contabilidade, que nesta casa tem histórico próprio de armadilhas.
+- **`<synthetic>` não tem preço em `precos.ts`** e faz toda estimativa de job cortado sair
+  com o aviso "modelo sem preço / estimativa SUBESTIMADA". Aparece em execução real.
 - **`tarefas.ts:74`** tem o mesmo `/^T-\d+/` que causou o bug do marco, mas só como fallback do
   `id:` do frontmatter. Latente. Alinhe para `/^T-\d+[a-z]*/i` quando encostar no arquivo.
 - **`paraReplanejar` teve 2 entradas (T-030, T-032) e nenhuma `bloqueada` em 41 rodadas.** O
