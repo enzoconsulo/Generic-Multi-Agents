@@ -1,76 +1,172 @@
-TRABALHO PENDENTE DA FÁBRICA — reescrito em 2026-08-16 (madrugada). Este arquivo é
-AUTOSSUFICIENTE e é o ÚNICO handoff. Você não precisa de conversa anterior, só dele e dos
-arquivos que ele aponta.
+TRABALHO PENDENTE DO PAINEL — reescrito em 2026-08-16.
 
-Enzo vai dizer só "roda o proximo_prompt.txt". Isso significa: execute os itens NA ORDEM, um
-de cada vez, e pare quando o item terminar. Não emende três numa sessão só.
+ESTE ARQUIVO É SOBRE O PAINEL, o produto. `projetos/banco-imobiliario` é CARGA DE TESTE:
+serve para exercitar o algoritmo de orquestração e revelar defeito dele. Achado que só vale
+para o jogo vira tarefa no projeto e sai daqui. Achado que vale para QUALQUER projeto que a
+fábrica venha a construir fica aqui.
+
+Enzo vai dizer só "roda o proximo_prompt.txt". Execute os itens NA ORDEM, um de cada vez, e
+pare quando o item terminar. Não emende três numa sessão só.
 
 Regra, armadilha e decisão fechada NÃO moram aqui — moram em `CLAUDE.md` (constituição),
 `_sistema/DECISOES_FECHADAS.md` (não reabrir sem fato novo) e `painel/CLAUDE.md` (armadilhas
 técnicas do cockpit). **Leia `DECISOES_FECHADAS.md` antes de propor qualquer otimização.**
 
-═══════════════════════════════════════════════════════════════════════════════
-FECHADO NA MADRUGADA DE 16/08 — não reabrir (commits f0793e5 e 6ff2b94)
-═══════════════════════════════════════════════════════════════════════════════
-
-- **ITEM 1 (estouro sem atuador): FECHADO.** Antes de ligar o atuador foi preciso consertar o
-  termômetro: medindo as 135 etapas reais de `painel/dados/jobs/*.log.jsonl`, o teto declarado
-  estourava em 52% dos verificadores e 36% dos construtores. Alarme que toca em metade das
-  rodadas não carrega informação. Agora há dois números: `orcamentoDeFerramentas` é o ALVO do
-  prompt; `limiarDeDebate` é o ALARME, no p90 (construtor 65, verificador 37, revisor 28,
-  disparo de 6-12%). O atuador é a trava 3 de `politicaDe` — ciclo que se debateu não recebe
-  caminho barato no ciclo seguinte. Descoberta colateral: **`areas` não prevê número de
-  chamadas** (mediana 21 com ≤2 areas contra 12 com 3), então a escada 30/45/60 escala numa
-  variável que não correlaciona.
-- **ITEM 2 (portão do meio não independente): FECHADO.** `testador.md`/`conferente.md` exigem
-  UMA mutação quando a prova foi criada no mesmo ciclo; `executor.md`/`construtor.md` deixam
-  comando copiável de reprodução nas Notas.
-- **ITEM 4 (mutex de areas): FECHADO.** `alteracoesForaDe` roda POR ETAPA e escreve nas Notas
-  (que é o que o revisor recebe). Não commita: sob paralelismo isso roubaria trabalho alheio.
-- **Marco da Fase 2 do banco-imobiliario: APROVADO** por execução real (5 partidas completas
-  entre 2 clientes socket.io, 343 rolagens uniformes, animação medida quadro a quadro no
-  navegador). Estava `pendente` desde sempre. Fase 3 segue `reprovado` DE PROPÓSITO.
+Trabalho de painel é MANTIDO À MÃO pelo orquestrador (o painel fica fora do pipeline
+executor/testador/revisor, que só opera em `projetos/`). Rode `cd painel && npm test` antes de
+commitar. Commite na raiz com prefixo `painel:`.
 
 ═══════════════════════════════════════════════════════════════════════════════
-ITEM 1 (era o 3) — a recuperação por árvore git chega um despacho tarde
+COMO CAÇAR DEFEITO DE ORQUESTRAÇÃO NESTA FÁBRICA (leia antes dos itens)
 ═══════════════════════════════════════════════════════════════════════════════
-(painel; INVESTIGAÇÃO CONCLUÍDA, falta o conserto — é provavelmente UMA LINHA)
 
-A investigação do handoff anterior está feita. O que se sabe agora:
+**A evidência está em disco e é de graça.** `painel/dados/jobs/*.json` tem o `resultado`
+estruturado de 41 rodadas; `*.log.jsonl` tem uma linha por chamada de ferramenta. Dá para
+medir distribuição de custo, de chamadas, de motivo de encerramento e de resolução de agente
+sem gastar um centavo de modelo. Foi assim que saíram os três achados de 16/08. **Meça antes
+de propor.**
 
-A recuperação NÃO é de fim de rodada — é por etapa, em `motor.ts` (~linha 1188, dentro de
-`if (depois.status === statusAntes)`). O que atrasa é a **assimetria da linha ~1214**:
+**O defeito recorrente tem uma forma só: sensor sem atuador** — o sinal existe, é calculado
+corretamente, e ninguém age sobre ele. A variante mais perigosa é o **silêncio bem-formado**:
+não há erro, não há log, não há contador; a coisa simplesmente não acontece. Foi o caso do
+marco de fase e é o do documentador. Ao auditar, a pergunta certa não é "o que está quebrado?"
+e sim **"o que deveria ter acontecido e nunca aconteceu?"** — e o instrumento para isso é
+contar OCORRÊNCIAS por campo do relatório ao longo de TODAS as rodadas. Campo que é sempre
+`false`, sempre `[]` ou sempre `0` é a pista.
+
+**Ao terminar um mecanismo, use-o pelo caminho real antes de dar por pronto.** Teste verde e
+documentação escrita não provam alcançabilidade.
+
+═══════════════════════════════════════════════════════════════════════════════
+FECHADO EM 16/08 — não reabrir
+═══════════════════════════════════════════════════════════════════════════════
+
+Commits `f0793e5`, `ac2cb55` (painel) e `6ff2b94`, `beb602e` (gestão/carga de teste).
+
+- **Marco de fase desligado por sufixo de letra no ID — o pior achado até aqui.**
+  `plano.ts` lia `Tarefas: T-017a, T-017b, T-017c` com `/T-\d+/g` → `T-017` três vezes. Como
+  a T-017 foi CANCELADA (é o que gera as substitutas com sufixo), `fasesProntasParaMarco`
+  procurava tarefa inexistente e concluía que a fase não estava completa. O marco nunca
+  entrava na lista de pendentes, **sem erro nem log**. Como sufixo de letra é a convenção da
+  fábrica para REPLANEJAMENTO, o efeito geral era: *replanejar uma tarefa desativava
+  permanentemente o portão de marco da fase dela, em qualquer projeto*. Corrigido para
+  `/T-\d+[a-z]*/gi`, com teste e prova contra os arquivos reais.
+- **Estouro de orçamento de ferramentas: termômetro recalibrado e atuador ligado.** O teto
+  declarado estourava em 52% dos verificadores e 36% dos construtores — alarme que toca em
+  metade das rodadas não carrega informação. Agora `orcamentoDeFerramentas` é o ALVO do prompt
+  e `limiarDeDebate` é o ALARME, no p90 (construtor 65, verificador 37, revisor 28; disparo de
+  6-12%). O atuador é a trava 3 de `politicaDe`. Colateral que derruba uma premissa: **`areas`
+  não prevê número de chamadas** (mediana 21 com ≤2 areas contra 12 com 3), então a escada
+  30/45/60 escala numa variável que não correlaciona.
+- **Mutex de `areas` verificado por etapa.** `alteracoesForaDe` roda logo após o construtor e
+  escreve nas Notas (que é o que o revisor recebe). Não commita: sob paralelismo isso roubaria
+  trabalho alheio.
+- **Portão do meio.** `testador.md`/`conferente.md` exigem uma mutação quando a prova foi
+  criada no mesmo ciclo pelo construtor; `executor.md`/`construtor.md` deixam comando copiável
+  de reprodução nas Notas.
+
+═══════════════════════════════════════════════════════════════════════════════
+ITEM 1 — O DOCUMENTADOR NUNCA RODOU. Nem uma vez, em 41 rodadas.
+═══════════════════════════════════════════════════════════════════════════════
+(painel; maior retorno da lista, e é silêncio bem-formado puro)
+
+`documentou: false` em **41 de 41** jobs de pipeline. O mecanismo existe, está implementado e
+está testado — e é inalcançável pelo caminho real.
+
+O portão é `motor.ts:~1248`: `rel.tarefasConcluidas.length >= MIN_TAREFAS_PARA_DOCUMENTAR`,
+com a constante em 3. O contador é **por RODADA**. Medido nas 41 rodadas: o máximo já
+concluído numa rodada foi **2**, e a mediana é 0. Sob o teto de US$ 8 (11 das 41 rodadas
+encerram por orçamento), três tarefas numa rodada praticamente não acontece.
+
+A doutrina do `CLAUDE.md` diz "após lote de tarefas concluídas (3+)" — e "lote" ali é
+CUMULATIVO, não "três de uma vez". O motor transplantou o número e trocou a unidade.
+
+**A consequência é visível e já custou uma tarefa:** a documentação dos projetos nunca é
+atualizada pela fábrica. O `CLAUDE.md` do banco-imobiliario passou semanas afirmando que
+`trocas.js` "nem chegou a ser criado" (tem 419 linhas) — e o `CLAUDE.md` do projeto é o
+primeiro arquivo que todo agente lê. Documentação que mente é pior que ausente: ausente manda
+o agente olhar o código; mentirosa faz ele decidir sem olhar. Virou a T-050 lá, mas a CAUSA é
+aqui.
+
+O que resolver, em ordem de preferência:
+1. **Tornar a contagem cumulativa sem inventar estado novo.** O repositório já sabe: conte os
+   commits `^T-\d+[a-z]*:` desde o último commit que tocou `README.md`/`CLAUDE.md`/
+   `_gestao/PROGRESSO.md`. É derivável, não precisa de arquivo de marcador (a convenção do
+   painel é escrever POUCO em `_gestao/`), e usa o repositório como fonte de verdade — o mesmo
+   princípio que a recuperação de trabalho já adota.
+2. Alternativa a considerar: disparar no MARCO DE FASE aprovado, que é uma fronteira de lote
+   de verdade. Muda a semântica do `CLAUDE.md`, então exige atualizar a constituição junto.
+
+Cuidado ao medir depois: `documentou` virando `true` não prova valor. Confira que o
+documentador ACHOU divergência (a armadilha "execução que não faz nada é sempre a mais
+barata" está em `painel/CLAUDE.md`).
+
+═══════════════════════════════════════════════════════════════════════════════
+ITEM 2 — a recuperação por árvore git chega um despacho tarde
+═══════════════════════════════════════════════════════════════════════════════
+(painel; INVESTIGAÇÃO CONCLUÍDA, o conserto é provavelmente UMA LINHA)
+
+A recuperação não é de fim de rodada — é por etapa, em `motor.ts:~1188`, dentro de
+`if (depois.status === statusAntes)`. O que atrasa é a assimetria da linha ~1214:
 
     vezes >= 2 ? "todos" : "commit"
 
-Na 1ª repetição só o sinal de COMMIT é consultado; o sinal de ÁRVORE SUJA espera a 2ª. Foi
-isso que deu à T-035 três construtores seguidos (23:11:03, 23:16:38, 23:19:39 no job
-`0345125c`), com o trabalho já no disco desde o primeiro — US$ 2,13 por trabalho pronto.
+Na 1ª repetição só o sinal de COMMIT é consultado; o de ÁRVORE SUJA espera a 2ª. Foi isso que
+deu à T-035 três construtores seguidos (23:11:03, 23:16:38, 23:19:39 no job `0345125c`) com o
+trabalho já no disco desde o primeiro — US$ 2,13 por trabalho pronto.
 
-**A razão escrita para a assimetria não se sustenta neste ponto do fluxo, e é isso que o
-conserto precisa checar.** O comentário do parâmetro `sinais` (T-062) justifica o atraso
+**A razão escrita para a assimetria não é alcançável naquele ponto do fluxo, e confirmar isso
+é o único trabalho que resta.** O comentário do parâmetro `sinais` (T-062) justifica o atraso
 dizendo que árvore suja é ambígua: "pode ser entrega pronta sem registro (T-025) ou agente
 cortado no meio de uma edição". Mas **agente cortado devolve `r.concluiu === false`, e esse
-caso é tratado ~250 linhas ANTES** (`if (!r.concluiu)`, ~linha 1034), que tira a tarefa de
-circulação. Quando o fluxo chega à recuperação, o agente terminou normalmente e declarou
-resultado — a ambiguidade citada não é alcançável ali. O gate de impedimento (~1146), que é o
-outro caso legítimo de "terminou sem mexer no status", também já rodou antes.
+caso é tratado ~150 linhas ANTES** (`if (!r.concluiu)`, ~linha 1034), que tira a tarefa de
+circulação. O gate de impedimento (~1146) — o outro caso legítimo de "terminou sem mexer no
+status" — também já rodou. Quando o fluxo chega à recuperação, o agente terminou normalmente e
+declarou resultado.
 
-CONFIRME ISSO NO CÓDIGO antes de mudar (é a única premissa do conserto), e então o conserto é
-trocar a linha por `"todos"`. Continua auto-limitado: o commit limpa a árvore, então a
-segunda ocorrência não acha trabalho parcial e cai no encerramento por `sem-progresso`.
-
-Escreva teste que falhe antes e passe depois — `motor-retrabalho.test.ts` já tem o mundo
-roteirável, com as opções `construtorMudo` e `trabalhoParcial` prontas para exatamente isto.
+Confirme a premissa no código e então troque a linha por `"todos"`. Continua auto-limitado: o
+commit limpa a árvore, então a 2ª ocorrência não acha trabalho parcial e cai em
+`sem-progresso`. `motor-retrabalho.test.ts` já tem o mundo roteirável com `construtorMudo` e
+`trabalhoParcial` prontos — escreva o teste que falha antes e passa depois.
 
 Armadilha (`painel/CLAUDE.md`): não conserte de um jeito que faça o motor commitar trabalho
-que o revisor nunca vai ver. A recuperação atual já faz certo — commita em nome da tarefa e
-registra o hash nas Notas, para haver DIFF.
+que o revisor nunca vai ver. A recuperação atual já faz certo (commita em nome da tarefa e
+registra o hash nas Notas, para haver DIFF).
 
-═══
-ITEM 2 (era o 5) — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura
 ═══════════════════════════════════════════════════════════════════════════════
-(painel; estrutural, avalie antes de implementar)
+ITEM 3 — a economia da rodada: US$ 6,90 por tarefa concluída
+═══════════════════════════════════════════════════════════════════════════════
+(medição feita; falta DECIDIR o que fazer — traga proposta antes de implementar)
+
+Números das 41 rodadas de pipeline, do `resultado` de cada job:
+
+- **US$ 165,60 gastos, ~24 tarefas concluídas → US$ 6,90 por tarefa.**
+- **0,6 tarefa concluída por rodada.** Máximo já visto numa rodada: 2.
+- Motivo de encerramento: `orcamento` 11, `sem-trabalho` 12, `cota` 5, `agente-cortado` 5,
+  `sem-progresso` 4, e 4 rodadas mortas sem resultado (todas de 08-08/08-09, antes do
+  `uncaughtException`; `dados/quedas.log` não existe, então não houve queda nova).
+
+**27% das rodadas param no teto de US$ 8 antes de acabar o trabalho.** Isso não é bug — o teto
+é do usuário e a parada é limpa, por decisão fechada (nunca cortar no meio, só não COMEÇAR o
+que não cabe). O que a medição levanta é outra coisa: o teto foi calibrado quando não se sabia
+o custo por tarefa, e hoje se sabe. Um teto de US$ 8 com tarefa a US$ 6,90 garante que a
+maioria das rodadas termine 1 tarefa e pare — o usuário paga o custo fixo de abertura de
+rodada (saneamento, promoção, leitura de plano) com frequência alta.
+
+Perguntas a responder com os dados que já existem, ANTES de mexer em qualquer coisa:
+1. Qual a fatia do gasto que é retrabalho? `custoPorTarefa[].retrabalhoUsd` já traz isso por
+   tarefa — some ao longo das rodadas.
+2. O `limiarDeDebate` recém-ligado muda a distribuição? Só dá para saber depois de algumas
+   rodadas novas. **Meça antes de mexer no próximo parâmetro** — duas mudanças de calibragem
+   ao mesmo tempo tornam ambas inavaliáveis.
+3. Vale sugerir teto por rodada em função do custo medido do projeto (`custosObservados` já
+   alimenta a autocalibragem)? Ou o certo é deixar o usuário escolher e só MOSTRAR a
+   estimativa antes do disparo?
+
+═══════════════════════════════════════════════════════════════════════════════
+ITEM 4 — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura
+═══════════════════════════════════════════════════════════════════════════════
+(painel; estrutural, avalie antes de implementar — continua aberto)
 
 `maquina.ts:182`: havendo verificador, ele sai SOZINHO (só com revisores). Construtor vai a
 3-wide; verificador é sempre 1-wide, porque a árvore de trabalho é uma só e bateria completa
@@ -78,33 +174,36 @@ sobre árvore com edições alheias gera reprovação falsa.
 
 Isso está CERTO hoje. O problema é que a proporção muda com a maturidade do projeto: toda
 tarefa passa por 1 construtor, mas por 1 testador + 1 revisor. Numa fase madura o pipeline
-deixa de ser limitado por construção e passa a ser limitado por verificação. Medido em
-15/08: quatro testadores tiveram de rodar em fila (545 s + 497 s + 233 s + 97 s), e cada
-espera é também uma volta do orquestrador — que é o item de 78% da conta, não os 14%.
+deixa de ser limitado por construção e passa a ser limitado por verificação. Medido em 15/08:
+quatro testadores em fila (545 s + 497 s + 233 s + 97 s).
 
 Saída a AVALIAR (não está em DECISOES_FECHADAS): `git worktree` por verificador. O testador
-verifica trabalho COMMITADO, que é exatamente o que um worktree entrega isolado. Pontos a
-resolver antes de decidir: onde as evidências (`_gestao/evidencias/`) são gravadas e como
-voltam; custo de disco e de `npm install` por worktree; e se o ganho de vazão paga a
-complexidade num cockpit local de uma máquina com 7,9 GB. **Traga números antes de
-implementar** — pode ser que não pague.
+verifica trabalho COMMITADO, que é o que um worktree entrega isolado. Resolver antes de
+decidir: onde as evidências (`_gestao/evidencias/`) são gravadas e como voltam; custo de disco
+e de `npm install` por worktree; e se o ganho paga a complexidade num cockpit local de uma
+máquina com 7,9 GB. **Traga números antes de implementar** — pode ser que não pague.
 
-═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-SOBRAS PEQUENAS — todas viraram tarefa em 16/08, NÃO faça à mão
 ═══════════════════════════════════════════════════════════════════════════════
-As três sobras que moravam aqui estão fechadas ou roteadas:
+ANOTADO, NÃO É TAREFA AINDA
+═══════════════════════════════════════════════════════════════════════════════
 
-- CLAUDE.md do banco-imobiliario que mente → **T-050** (`pronta`).
-- chips a 0,75rem → **T-052** (`backlog`, depende da T-051). O escopo cresceu ao escrever o
-  critério: são QUATRO regras abaixo de 0,8rem, duas delas a 0,7rem.
-- `server-error.log` → já não existe; árvore limpa.
-
-Abertas junto, do marco da Fase 2 (ver `_sistema/logs/2026-08-16.md`):
-- **T-053 (alta)** — teste de broadcast em `tests/turno.test.js` depende de sorte no dado;
-  falha rara vira reprovação falsa no portão do meio.
-- **T-049 (media)** — `opcoes` de `liquidar-divida` omite `falir`.
-- **T-051 (baixa)** — "Sala criada" sai em vermelho, pela função de erro.
-
-Elas são trabalho do PIPELINE, não seu: dispare `/trabalhar banco-imobiliario` pelo painel.
-Os cinco comandos `verificar:` foram executados antes de entrar nas tarefas — todos falham
-hoje e passam quando o trabalho estiver feito.
+- **A equipe do projeto NUNCA é injetada pelo caminho do pipeline.** Em 51 de 51 despachos com
+  `agente:`, a resolução caiu no passo 3 ("genérico com prompt colado"). É DELIBERADO e está
+  comentado em `runner-pipeline.ts:271` — quem despacha é código, então colar o prompt é o
+  único modo que funciona. O que está errado é a CONSTITUIÇÃO: a seção "Equipe do projeto" do
+  `CLAUDE.md` descreve o passo 2 (`<projeto>__<id>`) como "o nome qualificado, que o painel
+  usa", e esse caminho nunca executa no pipeline. Ou o `CLAUDE.md` passa a dizer que o passo 3
+  é o normal no painel, ou o passo 2 vira código morto declarado. Decida e escreva.
+- **`tarefas.ts:74`** tem o mesmo `/^T-\d+/` que causou o bug do marco, mas só como fallback do
+  `id:` do frontmatter. Latente. Alinhe para `/^T-\d+[a-z]*/i` quando encostar no arquivo.
+- **`paraReplanejar` teve 2 entradas (T-030, T-032) e nenhuma `bloqueada` em 41 rodadas.** O
+  canal existe e o motor não replaneja por esgotamento — é do orquestrador, por design. Só
+  confirme que a linha do relatório está sendo lida, senão é mais um sensor sem atuador.
+- **`criteriosSemComando` e `criteriosQuebrados` vieram vazios em todas as rodadas.** Sinal
+  saudável (todo critério teve ao menos um `verificar:` decidido), mas vale reconferir que o
+  campo é de fato preenchível — campo sempre vazio é indistinguível de campo quebrado, e essa
+  é exatamente a assinatura do bug do marco.
+- **Carga de teste em aberto no banco-imobiliario:** T-049..T-053 (`/trabalhar
+  banco-imobiliario` pelo painel). A T-053 (teste que depende de sorte no dado) é a que mais
+  interessa AO PAINEL: teste intermitente vira reprovação falsa no portão do meio, e é bom ter
+  um caso vivo desse tipo para observar como o motor reage.
