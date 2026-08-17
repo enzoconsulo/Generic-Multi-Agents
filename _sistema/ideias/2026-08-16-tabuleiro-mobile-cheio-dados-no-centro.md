@@ -1,7 +1,8 @@
 ---
-status: nova
+status: roteada
 projeto: banco-imobiliario
 data: 2026-08-16
+tarefas: [T-054, T-055]
 ---
 
 # Tabuleiro mobile em tela cheia + botão de rolar dados no centro
