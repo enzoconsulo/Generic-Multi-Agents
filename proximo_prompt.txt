@@ -1,4 +1,4 @@
-TRABALHO PENDENTE DO PAINEL — reescrito em 2026-08-16.
+TRABALHO PENDENTE DO PAINEL — reescrito em 2026-08-16, atualizado em 2026-08-21.
 
 ESTE ARQUIVO É SOBRE O PAINEL, o produto. `projetos/banco-imobiliario` é CARGA DE TESTE:
 serve para exercitar o algoritmo de orquestração e revelar defeito dele. Achado que só vale
@@ -29,7 +29,7 @@ de propor.**
 **O defeito recorrente tem uma forma só: sensor sem atuador** — o sinal existe, é calculado
 corretamente, e ninguém age sobre ele. A variante mais perigosa é o **silêncio bem-formado**:
 não há erro, não há log, não há contador; a coisa simplesmente não acontece. Foi o caso do
-marco de fase e é o do documentador. Ao auditar, a pergunta certa não é "o que está quebrado?"
+marco de fase e foi o do documentador — os dois já consertados, e os dois achados assim. Ao auditar, a pergunta certa não é "o que está quebrado?"
 e sim **"o que deveria ter acontecido e nunca aconteceu?"** — e o instrumento para isso é
 contar OCORRÊNCIAS por campo do relatório ao longo de TODAS as rodadas. Campo que é sempre
 `false`, sempre `[]` ou sempre `0` é a pista.
@@ -72,75 +72,29 @@ Commits `f0793e5`, `ac2cb55` (painel) e `6ff2b94`, `beb602e` (gestão/carga de t
   medido do trabalho, porque o medidor ao vivo lê baixo.
 
 ═══════════════════════════════════════════════════════════════════════════════
-ITEM 1 — O DOCUMENTADOR NUNCA RODOU. Nem uma vez, em 41 rodadas.
+FECHADO EM 21/08 — não reabrir
 ═══════════════════════════════════════════════════════════════════════════════
-(painel; maior retorno da lista, e é silêncio bem-formado puro)
 
-`documentou: false` em **41 de 41** jobs de pipeline. O mecanismo existe, está implementado e
-está testado — e é inalcançável pelo caminho real.
-
-O portão é `motor.ts:~1248`: `rel.tarefasConcluidas.length >= MIN_TAREFAS_PARA_DOCUMENTAR`,
-com a constante em 3. O contador é **por RODADA**. Medido nas 41 rodadas: o máximo já
-concluído numa rodada foi **2**, e a mediana é 0. Sob o teto de US$ 8 (11 das 41 rodadas
-encerram por orçamento), três tarefas numa rodada praticamente não acontece.
-
-A doutrina do `CLAUDE.md` diz "após lote de tarefas concluídas (3+)" — e "lote" ali é
-CUMULATIVO, não "três de uma vez". O motor transplantou o número e trocou a unidade.
-
-**A consequência é visível e já custou uma tarefa:** a documentação dos projetos nunca é
-atualizada pela fábrica. O `CLAUDE.md` do banco-imobiliario passou semanas afirmando que
-`trocas.js` "nem chegou a ser criado" (tem 419 linhas) — e o `CLAUDE.md` do projeto é o
-primeiro arquivo que todo agente lê. Documentação que mente é pior que ausente: ausente manda
-o agente olhar o código; mentirosa faz ele decidir sem olhar. Virou a T-050 lá, mas a CAUSA é
-aqui.
-
-O que resolver, em ordem de preferência:
-1. **Tornar a contagem cumulativa sem inventar estado novo.** O repositório já sabe: conte os
-   commits `^T-\d+[a-z]*:` desde o último commit que tocou `README.md`/`CLAUDE.md`/
-   `_gestao/PROGRESSO.md`. É derivável, não precisa de arquivo de marcador (a convenção do
-   painel é escrever POUCO em `_gestao/`), e usa o repositório como fonte de verdade — o mesmo
-   princípio que a recuperação de trabalho já adota.
-2. Alternativa a considerar: disparar no MARCO DE FASE aprovado, que é uma fronteira de lote
-   de verdade. Muda a semântica do `CLAUDE.md`, então exige atualizar a constituição junto.
-
-Cuidado ao medir depois: `documentou` virando `true` não prova valor. Confira que o
-documentador ACHOU divergência (a armadilha "execução que não faz nada é sempre a mais
-barata" está em `painel/CLAUDE.md`).
+- **O documentador nunca rodou em 41 rodadas — a unidade do lote estava trocada.** O portão
+  contava tarefas concluídas NA RODADA (máximo já visto: 2; mediana 0) e a doutrina fala em
+  lote CUMULATIVO. Hoje o lote vem do repositório: `tarefasSemDocumentacao` (`fabrica/git.ts`)
+  conta commits `^T-\d+[a-z]*:` desde o último commit que tocou README.md/CLAUDE.md/
+  _gestao/PROGRESSO.md — derivado, sem marcador novo em `_gestao/`. O contador da rodada ficou
+  de PISO (git mudo = comportamento antigo), e o portão exige pelo menos 1 tarefa concluída
+  agora, senão toda rodada `sem-trabalho` pagaria um despacho para não mudar nada. Testes:
+  `git.test.ts` (4, contra repositório de verdade) e `motor.test.ts` (4 casos do portão).
+  **O que FALTA e é do próximo:** confirmar em rodada real que `documentou: true` veio com
+  divergência ACHADA — `documentou` virando `true` não prova valor. Olhe o diff do commit do
+  documentador, não o campo.
+- **A recuperação por árvore git chegava um despacho tarde — era uma linha.** A premissa da
+  assimetria da T-062 foi conferida no código e não se sustenta neste ponto do fluxo: agente
+  cortado devolve `concluiu: false` e sai de circulação ~150 linhas antes (`if (!r.concluiu)`),
+  e o gate de impedimento também já rodou. `motor.ts` agora pede `"todos"` já na 1ª repetição;
+  o parâmetro `sinais` continua existindo. Continua auto-limitado (o commit limpa a árvore).
+  O teste que afirmava o contrário virou o teste da correção, em `motor-retrabalho.test.ts`.
 
 ═══════════════════════════════════════════════════════════════════════════════
-ITEM 2 — a recuperação por árvore git chega um despacho tarde
-═══════════════════════════════════════════════════════════════════════════════
-(painel; INVESTIGAÇÃO CONCLUÍDA, o conserto é provavelmente UMA LINHA)
-
-A recuperação não é de fim de rodada — é por etapa, em `motor.ts:~1188`, dentro de
-`if (depois.status === statusAntes)`. O que atrasa é a assimetria da linha ~1214:
-
-    vezes >= 2 ? "todos" : "commit"
-
-Na 1ª repetição só o sinal de COMMIT é consultado; o de ÁRVORE SUJA espera a 2ª. Foi isso que
-deu à T-035 três construtores seguidos (23:11:03, 23:16:38, 23:19:39 no job `0345125c`) com o
-trabalho já no disco desde o primeiro — US$ 2,13 por trabalho pronto.
-
-**A razão escrita para a assimetria não é alcançável naquele ponto do fluxo, e confirmar isso
-é o único trabalho que resta.** O comentário do parâmetro `sinais` (T-062) justifica o atraso
-dizendo que árvore suja é ambígua: "pode ser entrega pronta sem registro (T-025) ou agente
-cortado no meio de uma edição". Mas **agente cortado devolve `r.concluiu === false`, e esse
-caso é tratado ~150 linhas ANTES** (`if (!r.concluiu)`, ~linha 1034), que tira a tarefa de
-circulação. O gate de impedimento (~1146) — o outro caso legítimo de "terminou sem mexer no
-status" — também já rodou. Quando o fluxo chega à recuperação, o agente terminou normalmente e
-declarou resultado.
-
-Confirme a premissa no código e então troque a linha por `"todos"`. Continua auto-limitado: o
-commit limpa a árvore, então a 2ª ocorrência não acha trabalho parcial e cai em
-`sem-progresso`. `motor-retrabalho.test.ts` já tem o mundo roteirável com `construtorMudo` e
-`trabalhoParcial` prontos — escreva o teste que falha antes e passa depois.
-
-Armadilha (`painel/CLAUDE.md`): não conserte de um jeito que faça o motor commitar trabalho
-que o revisor nunca vai ver. A recuperação atual já faz certo (commita em nome da tarefa e
-registra o hash nas Notas, para haver DIFF).
-
-═══════════════════════════════════════════════════════════════════════════════
-ITEM 3 — a economia da rodada: US$ 6,90 por tarefa concluída
+ITEM 1 — a economia da rodada: US$ 6,90 por tarefa concluída
 ═══════════════════════════════════════════════════════════════════════════════
 (medição feita; falta DECIDIR o que fazer — traga proposta antes de implementar)
 
@@ -170,7 +124,7 @@ Perguntas a responder com os dados que já existem, ANTES de mexer em qualquer c
    estimativa antes do disparo?
 
 ═══════════════════════════════════════════════════════════════════════════════
-ITEM 4 — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura
+ITEM 2 — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura
 ═══════════════════════════════════════════════════════════════════════════════
 (painel; estrutural, avalie antes de implementar — continua aberto)
 
