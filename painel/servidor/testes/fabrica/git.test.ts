@@ -9,6 +9,7 @@ import {
   lerAlteracoes,
   lerDetalheCommit,
   lerHistorico,
+  tarefasSemDocumentacao,
 } from "../../src/fabrica/git.js";
 
 /**
@@ -202,6 +203,73 @@ describe("commitar", () => {
     try {
       writeFileSync(join(dir, "a.txt"), "1\n");
       await expect(commitar(dir, "oi")).rejects.toThrow(/repositório git/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * O LOTE CUMULATIVO DO DOCUMENTADOR — o portão que passou 41 rodadas desligado por contar
+ * tarefas da RODADA em vez do lote acumulado. A contagem é derivada do repositório: nada de
+ * arquivo de marcador em `_gestao/`.
+ */
+describe("tarefasSemDocumentacao", () => {
+  it("conta commits de tarefa desde o último commit de documentação", async () => {
+    const dir = repoTemp();
+    try {
+      writeFileSync(join(dir, "README.md"), "doc\n");
+      commitarNoRepo(dir, "docs: README");
+
+      writeFileSync(join(dir, "a.txt"), "a\n");
+      commitarNoRepo(dir, "T-001: primeira");
+      writeFileSync(join(dir, "b.txt"), "b\n");
+      commitarNoRepo(dir, "chore: gestão 2026-08-21"); // não é tarefa, não conta
+      writeFileSync(join(dir, "c.txt"), "c\n");
+      // Sufixo de letra é a convenção de REPLANEJAMENTO: `/^T-\d+:/` cru deixaria de fora
+      // justamente as tarefas que mais mexem no projeto — o mesmo bug do marco de fase.
+      commitarNoRepo(dir, "T-002a: substituta");
+
+      expect(await tarefasSemDocumentacao(dir)).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("zera quando a documentação é atualizada depois das tarefas", async () => {
+    const dir = repoTemp();
+    try {
+      writeFileSync(join(dir, "a.txt"), "a\n");
+      commitarNoRepo(dir, "T-001: primeira");
+      mkdirSync(join(dir, "_gestao"), { recursive: true });
+      writeFileSync(join(dir, "_gestao", "PROGRESSO.md"), "progresso\n");
+      commitarNoRepo(dir, "docs: progresso");
+
+      expect(await tarefasSemDocumentacao(dir)).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("sem commit de documentação nenhum, conta o histórico inteiro", async () => {
+    const dir = repoTemp();
+    try {
+      writeFileSync(join(dir, "a.txt"), "a\n");
+      commitarNoRepo(dir, "T-001: primeira");
+      writeFileSync(join(dir, "b.txt"), "b\n");
+      commitarNoRepo(dir, "T-002: segunda");
+
+      expect(await tarefasSemDocumentacao(dir)).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  /** Em dúvida devolve 0: quem chama tem o contador da rodada de piso. */
+  it("pasta que não é repositório devolve 0 em vez de lançar", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "sem-git-"));
+    try {
+      expect(await tarefasSemDocumentacao(dir)).toBe(0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

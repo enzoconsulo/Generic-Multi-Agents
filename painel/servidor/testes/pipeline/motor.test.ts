@@ -42,6 +42,8 @@ function mundo(
     trabalhoParcial?: boolean;
     /** Texto que o agente de marco devolve — de onde sai o veredito. */
     textoMarco?: string;
+    /** Lote CUMULATIVO do documentador (commits de tarefa desde o último commit de docs). */
+    semDocumentacao?: number;
   } = {},
 ) {
   const tarefas = new Map(iniciais.map((t) => [t.id, { ...t }]));
@@ -73,6 +75,9 @@ function mundo(
     commitarGestao: async (mensagem) => {
       commits.push(mensagem);
     },
+    ...(opcoes.semDocumentacao === undefined
+      ? {}
+      : { tarefasSemDocumentacao: async () => opcoes.semDocumentacao as number }),
     despachar: async (pedido) => {
       despachos.push(pedido);
       const atual = tarefas.get(pedido.tarefa.id);
@@ -419,11 +424,52 @@ describe("rodarPipeline — documentador e commit da gestão", () => {
     expect(despachos[despachos.length - 1]?.papel).toBe("documentador");
   });
 
-  it("menos de 3 concluídas não gasta documentador", async () => {
-    const { dep, despachos } = mundo([tarefa({ id: "T-001" })]);
+  it("menos de 3 no lote CUMULATIVO não gasta documentador", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001" })], { semDocumentacao: 1 });
     const rel = await rodarPipeline(ctxBase, dep);
     expect(rel.documentou).toBe(false);
     expect(despachos.some((d) => d.papel === "documentador")).toBe(false);
+  });
+
+  /**
+   * O BUG QUE ESTE TESTE TRAVA — `documentou: false` em 41 de 41 rodadas.
+   *
+   * O portão contava tarefas concluídas NA RODADA e o `CLAUDE.md` fala em lote CUMULATIVO.
+   * Medido: o máximo já concluído numa rodada foi 2, a mediana é 0 e 11 das 41 rodadas
+   * encerram por orçamento — então "3 numa rodada só" praticamente não acontece, e o
+   * documentador era inalcançável pelo caminho real, sem erro nem log. O efeito visível foi
+   * documentação que MENTE (o `CLAUDE.md` de um projeto afirmando por semanas que um arquivo
+   * de 419 linhas "nem chegou a ser criado").
+   */
+  it("1 tarefa nesta rodada + lote cumulativo de 3 dispara o documentador", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001" })], { semDocumentacao: 3 });
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.documentou).toBe(true);
+    expect(despachos.filter((d) => d.papel === "documentador")).toHaveLength(1);
+  });
+
+  /**
+   * Rodada sem NENHUMA tarefa concluída não documenta, mesmo com lote pendente: senão toda
+   * rodada `sem-trabalho` pagaria um despacho para não mudar nada — e "execução que não faz
+   * nada é sempre a mais barata".
+   */
+  it("lote pendente sem tarefa concluída agora NÃO dispara o documentador", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "concluida" })], {
+      semDocumentacao: 9,
+    });
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(rel.documentou).toBe(false);
+    expect(despachos.some((d) => d.papel === "documentador")).toBe(false);
+  });
+
+  /** Sem a dep opcional (git mudo), vale o contador da rodada — o comportamento antigo. */
+  it("sem `tarefasSemDocumentacao`, 3 concluídas na rodada ainda documentam", async () => {
+    const { dep } = mundo([
+      tarefa({ id: "T-001", areas: ["a.js"] }),
+      tarefa({ id: "T-002", areas: ["b.js"] }),
+      tarefa({ id: "T-003", areas: ["c.js"] }),
+    ]);
+    expect((await rodarPipeline(ctxBase, dep)).documentou).toBe(true);
   });
 
   it("documentação é adiada quando o orçamento não comporta", async () => {

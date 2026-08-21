@@ -1,7 +1,12 @@
 import { join } from "node:path";
 import { appendFile, readFile } from "node:fs/promises";
 import { lerEquipe, lerResumosTarefas, parsearPlano, parsearTarefa } from "../fabrica/index.js";
-import { alteracoesForaDe, commitarCaminhos, lerHead } from "../fabrica/git.js";
+import {
+  alteracoesForaDe,
+  commitarCaminhos,
+  lerHead,
+  tarefasSemDocumentacao,
+} from "../fabrica/git.js";
 import { gravarMarco, textoDoMarco } from "./marco.js";
 import { temTrabalhoParcial } from "./trabalho-parcial.js";
 import { anexarNaSecao, gravarStatusTarefa } from "../fabrica/escrita-tarefas.js";
@@ -217,6 +222,9 @@ export class RunnerPipeline implements Runner {
         }
       },
       hashHead: () => lerHead(dirProjeto),
+      // Lote CUMULATIVO do documentador, derivado do repositório: commits `T-XXX:` desde o
+      // último commit que tocou README/CLAUDE.md/PROGRESSO.md. Ver `motor.ts`.
+      tarefasSemDocumentacao: () => tarefasSemDocumentacao(dirProjeto),
       // `_gestao/` sempre sai da conta: o motor escreve lá por contrato (promoção, bloqueio,
       // marco), e o próprio agente grava o arquivo da tarefa. As areas alheias saem porque,
       // sob paralelismo, sujeira delas é trabalho de outro agente — ver `motor.ts`.

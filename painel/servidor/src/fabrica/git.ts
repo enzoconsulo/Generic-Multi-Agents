@@ -375,3 +375,50 @@ export async function lerBranch(dirRepo: string): Promise<string> {
     return "";
   }
 }
+
+/** Arquivos cuja alteração conta como "a documentação foi atualizada". */
+const ARQUIVOS_DE_DOCUMENTACAO = ["README.md", "CLAUDE.md", "_gestao/PROGRESSO.md"];
+
+/**
+ * Quantas tarefas foram commitadas DESDE a última vez que a documentação mudou.
+ *
+ * O portão do documentador contava tarefas concluídas NA RODADA, e o `CLAUDE.md` fala em
+ * "lote de 3+" no sentido CUMULATIVO. A diferença desligava o mecanismo inteiro: em 41
+ * rodadas medidas o máximo já concluído numa rodada foi 2 (mediana 0), então `documentou`
+ * saiu `false` 41 vezes de 41 — silêncio bem-formado, sem erro nem log. O efeito visível
+ * foi documentação que MENTE (o `CLAUDE.md` de um projeto afirmando por semanas que um
+ * arquivo de 419 linhas "nem chegou a ser criado"), e documentação mentirosa é pior que
+ * ausente: a ausente manda o agente olhar o código, a mentirosa o faz decidir sem olhar.
+ *
+ * A contagem é DERIVADA do repositório — nada de arquivo de marcador novo em `_gestao/`.
+ * A fábrica commita uma vez por tarefa (`T-XXX: ...`, com sufixo de letra no replanejamento),
+ * e o documentador commita o que altera; então "commits de tarefa desde o último commit de
+ * documentação" é exatamente o lote pendente.
+ *
+ * Nunca lança: em dúvida devolve 0 — quem chama trata isso como "não sei", e o piso continua
+ * sendo o que a própria rodada concluiu.
+ */
+export async function tarefasSemDocumentacao(dirRepo: string): Promise<number> {
+  if (!existsSync(join(dirRepo, ".git"))) return 0;
+  try {
+    const { stdout: ultimo } = await exec(
+      "git",
+      ["log", "-1", "--format=%H", "--", ...ARQUIVOS_DE_DOCUMENTACAO],
+      { cwd: dirRepo, windowsHide: true },
+    );
+    const marco = ultimo.trim();
+    const intervalo = marco === "" ? "HEAD" : `${marco}..HEAD`;
+    const { stdout } = await exec("git", ["log", intervalo, "--format=%s"], {
+      cwd: dirRepo,
+      windowsHide: true,
+    });
+    return stdout
+      .split("\n")
+      .map((l) => l.trim())
+      // O mesmo `[a-z]*` do marco de fase: `T-017a` é a convenção de REPLANEJAMENTO, e um
+      // `/^T-\d+:/` cru deixaria de fora justamente as tarefas que mais mexem no projeto.
+      .filter((l) => /^T-\d+[a-z]*:/i.test(l)).length;
+  } catch {
+    return 0;
+  }
+}

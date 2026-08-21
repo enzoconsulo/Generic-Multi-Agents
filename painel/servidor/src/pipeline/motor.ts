@@ -168,6 +168,14 @@ export interface DependenciasMotor {
    */
   hashHead?(): Promise<string | null>;
   /**
+   * Quantas tarefas foram commitadas desde a última alteração de documentação — o LOTE
+   * CUMULATIVO do portão do documentador. Derivado do repositório, sem estado novo.
+   *
+   * Opcional: quem não implementa cai no contador por rodada, que é o comportamento antigo
+   * (e o que mantinha o documentador desligado — ver `MIN_TAREFAS_PARA_DOCUMENTAR`).
+   */
+  tarefasSemDocumentacao?(): Promise<number>;
+  /**
    * Arquivos alterados e NÃO commitados que estão fora das `areas` da tarefa (e fora de
    * `_gestao/`). Consultado logo depois de cada construtor — ver `extrapolou`.
    *
@@ -333,7 +341,16 @@ type MapaDeRetornos = Map<string, PortaoQueReprovou>;
 /** Teto de voltas do laço — rede contra bug de estado que não avança (nunca deve disparar). */
 const MAX_VOLTAS = 200;
 
-/** Lote mínimo para valer um despacho de documentador (CLAUDE.md: "após lote de 3+"). */
+/**
+ * Lote mínimo para valer um despacho de documentador (CLAUDE.md: "após lote de 3+").
+ *
+ * O número está certo; a UNIDADE estava errada. O portão contava tarefas concluídas NA
+ * RODADA, e "lote" no `CLAUDE.md` é CUMULATIVO. Em 41 rodadas medidas o máximo concluído
+ * numa rodada foi 2 (mediana 0), então `documentou` deu `false` 41 vezes de 41: o mecanismo
+ * existia, estava testado e era inalcançável pelo caminho real. Hoje o lote vem de
+ * `tarefasSemDocumentacao` (commits `T-XXX:` desde o último commit de documentação), com o
+ * contador da rodada de piso.
+ */
 const MIN_TAREFAS_PARA_DOCUMENTAR = 3;
 
 /**
@@ -1211,17 +1228,25 @@ export async function rodarPipeline(
       // então uma segunda ocorrência não encontra trabalho parcial e cai no encerramento
       // abaixo. A recuperação é auto-limitada por construção.
       //
-      // T-062: o sinal de COMMIT é consultado já na 1ª repetição, os demais só na 2ª. O
-      // porquê da assimetria está no parâmetro `sinais` — commit é declaração do agente,
-      // árvore suja é ambígua. Antes os dois esperavam a 2ª, e o caso comum (agente commita e
-      // esquece o frontmatter) pagava um despacho de `opus` inteiro para ser descoberto.
+      // OS DOIS SINAIS VALEM JÁ NA 1ª REPETIÇÃO. A T-062 consultava só o commit aqui e
+      // guardava a árvore suja para a 2ª, porque árvore suja seria ambígua — "entrega pronta
+      // sem registro (T-025) ou agente cortado no meio de uma edição". A segunda metade dessa
+      // ambiguidade NÃO É ALCANÇÁVEL neste ponto do fluxo: agente cortado devolve
+      // `r.concluiu === false` e sai de circulação ~150 linhas acima, e o gate de impedimento
+      // — o outro caso legítimo de "terminou sem mexer no status" — também já rodou. Quem
+      // chega aqui terminou normalmente e declarou resultado; árvore suja é entrega.
+      //
+      // O que a assimetria custava: a T-035 (job `0345125c`) levou três construtores seguidos
+      // (23:11:03, 23:16:38, 23:19:39) com o trabalho no disco desde o primeiro — US$ 2,13
+      // por trabalho pronto. Continua auto-limitado: o commit limpa a árvore, então a 2ª
+      // ocorrência não acha trabalho parcial e cai em `sem-progresso`.
       const recuperou = await recuperarTrabalhoNaoRegistrado(
         passo,
         depois,
         ctx,
         dep,
         headAntes,
-        vezes >= 2 ? "todos" : "commit",
+        "todos",
       );
       if (recuperou) {
         repeticoes.delete(passo.tarefa.id);
@@ -1255,15 +1280,30 @@ export async function rodarPipeline(
   //
   // Respeita o orçamento como qualquer outro despacho — documentação é importante e não é
   // mais importante que terminar a tarefa que já começou.
-  if (rel.tarefasConcluidas.length >= MIN_TAREFAS_PARA_DOCUMENTAR) {
+  //
+  // O LOTE É CUMULATIVO (commits de tarefa desde o último commit de documentação), não o
+  // que esta rodada concluiu — foi a unidade errada que manteve o mecanismo desligado em
+  // 41 de 41 rodadas. O contador da rodada fica de piso: se o git não responder, o
+  // comportamento antigo continua valendo em vez de sumir.
+  //
+  // Exige pelo menos UMA tarefa concluída agora, de propósito: sem isso, uma rodada que
+  // acaba em `sem-trabalho` com lote pendente despacharia o documentador toda vez que
+  // rodasse, e "execução que não faz nada é sempre a mais barata" — pagaria-se um despacho
+  // por rodada para não mudar nada.
+  const loteCumulativo = Math.max(
+    rel.tarefasConcluidas.length,
+    (await dep.tarefasSemDocumentacao?.()) ?? 0,
+  );
+  if (rel.tarefasConcluidas.length > 0 && loteCumulativo >= MIN_TAREFAS_PARA_DOCUMENTAR) {
     const decisao = decidir(comAgentesEmVoo(comGasto(orcamento, orcamento.gastoUsd), 0));
     if (decisao.acao === "seguir") {
       const tarefas = await lerTarefas();
-      const alvo = tarefas.find((t) => rel.tarefasConcluidas.includes(t.id));
+      const alvo =
+        tarefas.find((t) => rel.tarefasConcluidas.includes(t.id)) ?? tarefas[0];
       if (alvo !== undefined) {
         dep.log(
           "info",
-          `${rel.tarefasConcluidas.length} tarefas concluídas — atualizando a documentação.`,
+          `${loteCumulativo} tarefa(s) sem documentação — atualizando a documentação.`,
         );
         const r = await dep.despachar({
           tarefa: alvo,
@@ -1271,7 +1311,7 @@ export async function rodarPipeline(
           agente: "documentador",
           modelo: null,
           promptColado: null,
-          motivo: `lote de ${rel.tarefasConcluidas.length} tarefa(s) concluída(s)`,
+          motivo: `lote de ${loteCumulativo} tarefa(s) sem documentação`,
           notas: "",
         });
         rel.despachos += 1;
@@ -1340,9 +1380,11 @@ async function recuperarTrabalhoNaoRegistrado(
    *   significa "terminei"; um agente não commita trabalho pela metade de propósito. Por isso
    *   ele é consultado já na 1ª repetição: esperar a 2ª só paga um despacho de `opus` para
    *   descobrir o que o commit já dizia.
-   * - `todos` acrescenta o sinal 2 (árvore suja), que é AMBÍGUO: pode ser entrega pronta sem
-   *   registro (T-025) ou agente cortado no meio de uma edição. Aí a segunda chance vale o
-   *   despacho, porque o trabalho pode estar de fato incompleto.
+   * - `todos` acrescenta o sinal 2 (árvore suja). Ele foi tratado como AMBÍGUO (entrega pronta
+   *   sem registro, ou agente cortado no meio de uma edição) e por isso ficava para a 2ª
+   *   repetição — mas a segunda leitura não acontece no caminho que chama daqui: agente
+   *   cortado devolve `concluiu: false` e sai de circulação antes. Hoje o motor pede `todos`
+   *   já na 1ª; `commit` continua existindo para quem chamar com sinal parcial de propósito.
    *
    * Medido no job `fc211543`: o `executor-reforcado` da T-032 corrigiu o achado e commitou
    * `e6f4aa7` sem gravar status; o motor despachou `opus` de novo, o segundo agente escreveu

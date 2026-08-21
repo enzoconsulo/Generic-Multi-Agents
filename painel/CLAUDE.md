@@ -546,3 +546,29 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   aí nomeie-a como defeito, não como detalhe de implementação. Corolário para auditoria:
   antes de concluir que um mecanismo está degradado a partir de uma linha de log, **confirme
   o efeito no código ou num teste** — a linha descreve a trilha de decisão, não o resultado.
+- **Número transplantado com a UNIDADE trocada desliga o mecanismo inteiro, em silêncio.** O
+  `CLAUDE.md` da fábrica manda documentar "após lote de tarefas concluídas (3+)", e ali "lote"
+  é CUMULATIVO. O motor levou o 3 e trocou a unidade para "concluídas NESTA rodada" — e o
+  máximo já concluído numa rodada, em 41 rodadas medidas, foi 2 (mediana 0, com 11 rodadas
+  encerrando por orçamento). Resultado: `documentou: false` em 41 de 41, sem erro, sem log,
+  sem contador — o mecanismo existia, tinha teste e era inalcançável. O dano não foi
+  documentação ausente e sim documentação que MENTE: o `CLAUDE.md` de um projeto passou
+  semanas afirmando que um arquivo de 419 linhas "nem chegou a ser criado", e é o primeiro
+  arquivo que todo agente lê (ausente manda olhar o código; mentirosa faz decidir sem olhar).
+  Hoje o lote vem do REPOSITÓRIO (`tarefasSemDocumentacao`: commits `T-XXX:` desde o último
+  commit que tocou README/CLAUDE.md/PROGRESSO.md) — derivado, sem marcador novo em `_gestao/`.
+  Ao portar um limiar de um documento para o código, **escreva a unidade ao lado do número** e
+  confira a distribuição real da grandeza antes: limiar acima do máximo observado é mecanismo
+  desligado, não mecanismo exigente. Corolário de auditoria: campo de relatório que dá sempre
+  `false`, sempre `[]` ou sempre `0` é a pista — conte OCORRÊNCIAS por campo ao longo de todas
+  as rodadas.
+- **Justificativa envelhece: o caso que ela evita pode já ter dono em outro ponto do fluxo.**
+  A recuperação de trabalho não registrado consultava o sinal de árvore suja só na 2ª
+  repetição, porque árvore suja seria ambígua ("entrega pronta sem registro, ou agente cortado
+  no meio de uma edição"). A segunda metade dessa ambiguidade não é alcançável ali: agente
+  cortado devolve `concluiu: false` e sai de circulação ~150 linhas antes, e o gate de
+  impedimento também já rodou. Quem chega à recuperação terminou normalmente. A espera custou
+  três construtores seguidos na T-035 (job `0345125c`) com o trabalho no disco desde o
+  primeiro — US$ 2,13 por trabalho pronto. Ao ler um comentário que justifica um atraso ou uma
+  cautela, **confirme que o caso temido ainda chega àquele ponto** — guardas acrescentadas
+  depois costumam já tê-lo interceptado.

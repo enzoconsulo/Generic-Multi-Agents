@@ -221,11 +221,18 @@ describe("recuperação de trabalho não registrado (o caso T-025)", () => {
   });
 
   /**
-   * A contrapartida da T-062: árvore suja é sinal AMBÍGUO (entrega pronta sem registro, ou
-   * agente cortado no meio de uma edição), então ela NÃO encurta o caminho — o construtor
-   * ganha a segunda chance, que pode ser o que termina o trabalho.
+   * A CORREÇÃO DE 21/08 — a recuperação chegava um despacho tarde.
+   *
+   * A T-062 guardava o sinal de árvore suja para a 2ª repetição, alegando ambiguidade
+   * ("entrega pronta sem registro, ou agente cortado no meio de uma edição"). A segunda
+   * metade dessa ambiguidade não é alcançável neste ponto do fluxo: agente cortado devolve
+   * `concluiu: false` e sai de circulação ~150 linhas antes, e o gate de impedimento já
+   * rodou. Quem chega à recuperação terminou normalmente.
+   *
+   * O preço da espera foi medido: a T-035 (job `0345125c`) levou TRÊS construtores seguidos
+   * com o trabalho no disco desde o primeiro — US$ 2,13 por trabalho pronto.
    */
-  it("árvore suja sem commit continua esperando a 2ª repetição", async () => {
+  it("árvore suja sem commit é recuperada JÁ na 1ª repetição", async () => {
     const { dep, despachos, commitsDeTarefa } = mundo([tarefa({ id: "T-111", status: "pronta" })], {
       construtorMudo: true,
       construtorCommita: false, // não commitou: HEAD parado
@@ -233,7 +240,10 @@ describe("recuperação de trabalho não registrado (o caso T-025)", () => {
     });
     const rel = await rodarPipeline(ctxBase, dep);
 
-    expect(construtores(despachos), "a segunda chance vale o despacho aqui").toHaveLength(2);
+    expect(
+      construtores(despachos),
+      "o trabalho já estava na árvore: um segundo construtor é dinheiro por nada",
+    ).toHaveLength(1);
     expect(commitsDeTarefa).toHaveLength(1); // o motor fecha o ciclo em nome da tarefa
     expect(rel.encerrouPor).not.toBe("sem-progresso");
   });
