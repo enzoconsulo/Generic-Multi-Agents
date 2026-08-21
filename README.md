@@ -1,12 +1,48 @@
-# Gerador de Projetos — Manual completo de operação
+<h1 align="center">Gerador de Projetos</h1>
 
-Fábrica de software autônoma sobre Claude Code: você dá a ideia, os agentes planejam,
-programam, testam, revisam, documentam e commitam sozinhos. Este manual diz **exatamente**
-o que digitar, o que esperar, onde mexer e como ajustar.
+<p align="center">
+  <b>Uma fábrica de software multi-agente sobre o Claude Code.</b><br>
+  Você dá a ideia. Os agentes planejam, constroem, verificam, revisam, documentam e commitam.
+</p>
 
-**Índice:** 1. Como funciona · 2. Primeira vez · 3. Rotina diária · 4. Receitas passo a
-passo · 5. Intervenções manuais · 6. Estendendo o sistema · 7. Ajustes finos de
-desempenho · 8. Solução de problemas · 9. Mapa de arquivos
+<p align="center">
+  <img alt="Claude Code" src="https://img.shields.io/badge/roda%20sobre-Claude%20Code-2A78D6">
+  <img alt="12 agentes" src="https://img.shields.io/badge/agentes-12-4A3AA7">
+  <img alt="2 trilhas" src="https://img.shields.io/badge/trilhas-software%20%2B%20gen%C3%A9rica-1BAF7A">
+  <img alt="Painel" src="https://img.shields.io/badge/painel%20web-Node%2022%2B-C24E1E">
+</p>
+
+---
+
+A intervenção humana obrigatória acontece **uma vez**: no pedido inicial. Daí em diante o
+sistema decompõe o trabalho em tarefas pequenas, despacha um agente por tarefa, e faz cada
+entrega passar por **dois portões operados por quem não construiu** antes de contá-la como
+pronta.
+
+```mermaid
+flowchart LR
+    P["📥 pedido<br/><i>a única intervenção</i>"] --> PL["planejador<br/><i>especificação, plano,<br/>8–20 tarefas, equipe</i>"]
+    PL --> F["fila<br/><i>tarefas prontas,<br/>ordenadas por dependência</i>"]
+    F --> C["construtor"]
+    C --> V["verificador<br/><i>“funciona?”</i>"]
+    V --> R["revisor<br/><i>“é o que foi pedido?”</i>"]
+    R --> D["✅ concluída<br/><i>+ commit</i>"]
+    V -. reprova .-> C
+    R -. reprova .-> C
+    D --> F
+```
+
+Este README é o **manual de operação**: o que digitar, o que esperar, onde mexer e como
+ajustar. Para a arquitetura e o racional por trás dela, veja
+[`_sistema/ARQUITETURA.md`](_sistema/ARQUITETURA.md) e a [seção 10](#10-documentos-de-arquitetura).
+
+### Índice
+
+| | | |
+|---|---|---|
+| [1. Como funciona em um minuto](#1-como-funciona-em-um-minuto) | [4. Receitas passo a passo](#4-receitas-passo-a-passo) | [7. Ajustes finos de desempenho](#7-ajustes-finos-de-desempenho) |
+| [2. Primeira vez](#2-primeira-vez-preparação-3-minutos) | [5. Intervenções manuais](#5-intervenções-manuais) | [8. Solução de problemas](#8-solução-de-problemas) |
+| [3. Rotina diária](#3-rotina-diária-recomendada) | [6. Estendendo o sistema](#6-estendendo-o-sistema) | [9. Mapa de arquivos](#9-mapa-de-arquivos-quem-escreve-o-quê) |
 
 ---
 
@@ -298,27 +334,61 @@ A raiz da fábrica é um repositório git que versiona só o sistema — `projet
 `.gitignore` (cada projeto tem repositório próprio).
 
 ```
-CLAUDE.md                          regras do orquestrador          edita: você/orquestrador
-README.md                          este manual                     edita: você/orquestrador
+CLAUDE.md                          regras do orquestrador           edita: você/orquestrador
+README.md                          este manual                      edita: você/orquestrador
 INICIAR.bat / iniciar.ps1          sobe o painel web (duplo-clique) edita: você
-.gitignore                         raiz ignora projetos/ e afins   edita: você
-.claude/settings.json              permissões pré-aprovadas        edita: você (§6.3)
-.claude/agents/*.md                definição dos 6 agentes         edita: você (§6.1)
-.claude/commands/*.md              os 6 comandos /                 edita: você (§6.2)
-_sistema/PROTOCOLO_TAREFAS.md      contrato de tarefas             raramente muda
-_sistema/BIBLIOTECAS.md            doutrina de stack e catálogo    edita: você (cresce com o uso)
-_sistema/ARQUITETURA.md            desenho e racional do sistema   raramente muda
-_sistema/templates/                modelos de documentos           raramente muda
-_sistema/ideias/                   caixa de entrada                escreve: /ideia
-_sistema/logs/AAAA-MM-DD.md        memória diária da fábrica       escreve: orquestrador
+.gitignore                         raiz ignora projetos/ e afins    edita: você
+.claude/settings.json              permissões pré-aprovadas         edita: você (§6.3)
+.claude/agents/*.md                definição dos 12 agentes         edita: você (§6.1)
+.claude/commands/*.md              os 6 comandos /                  edita: você (§6.2)
+_sistema/PROTOCOLO_TAREFAS.md      contrato de tarefas              raramente muda
+_sistema/ARQUITETURA.md            desenho e racional do sistema    raramente muda
+_sistema/BIBLIOTECAS.md            doutrina da trilha SOFTWARE      edita: você (cresce com o uso)
+_sistema/DOMINIOS.md               doutrina da trilha GENÉRICA      edita: você (cresce com o uso)
+_sistema/PADRAO_DE_PROJETO.md      como todo projeto se documenta   raramente muda
+_sistema/CUSTO_DE_CONTEXTO.md      modelo de custo medido           escreve: orquestrador
+_sistema/DECISOES_FECHADAS.md      perguntas já respondidas         só adiciona
+_sistema/ferramentas/captura.mjs   PNG de tela (prova visual)       raramente muda
+_sistema/ferramentas/mapa.mjs      gera o índice denso do projeto   raramente muda
+_sistema/templates/                modelos de documentos            raramente muda
+_sistema/ideias/                   caixa de entrada                 escreve: /ideia
+_sistema/logs/AAAA-MM-DD.md        memória diária da fábrica        escreve: orquestrador
+_sistema/documentos-tcc/           documentos de arquitetura (§10)  edita: você/orquestrador
 painel/                            cockpit web (opcional, Node 22+) edita: você/orquestrador
-  CLAUDE.md                        stack e como rodar/testar       ver painel/CLAUDE.md
+  CLAUDE.md                        stack e como rodar/testar        ver painel/CLAUDE.md
 projetos/<nome>/                   um projeto = um repositório git
-  CLAUDE.md                        contexto do projeto             escreve: documentador
-  _gestao/ESPECIFICACAO.md         o que o projeto é               escreve: planejador
-  _gestao/PLANO.md                 fases e ordem                   escreve: planejador
-  _gestao/DECISOES.md              decisões datadas (só adiciona)  escrevem: todos
-  _gestao/PROGRESSO.md             diário do projeto               escrevem: documentador/orquestrador
-  _gestao/pesquisas/               relatórios técnicos             escreve: pesquisador
-  _gestao/tarefas/T-NNN-*.md       AS TAREFAS (status = verdade)   escrevem: todos, via protocolo
+  CLAUDE.md                        contexto do projeto              escreve: documentador
+  _gestao/MAPA.md                  índice denso (GERADO)            escreve: mapa.mjs
+  _gestao/GUIA.md                  como se faz aqui (à mão)         escreve: documentador
+  _gestao/ESPECIFICACAO.md         o que o projeto é                escreve: planejador
+  _gestao/PLANO.md                 fases e ordem                    escreve: planejador
+  _gestao/DECISOES.md              decisões datadas (só adiciona)   escrevem: todos
+  _gestao/PROGRESSO.md             diário do projeto                escrevem: documentador/orquestrador
+  _gestao/equipe.json              domínio + especialistas          escreve: planejador
+  _gestao/pesquisas/               relatórios técnicos              escreve: pesquisador
+  _gestao/evidencias/              capturas de tela das tarefas     escreve: verificador
+  _gestao/tarefas/T-NNN-*.md       AS TAREFAS (status = verdade)    escrevem: todos, via protocolo
 ```
+
+## 10. Documentos de arquitetura
+
+Esta fábrica é o TCC do autor, e os documentos que a **apresentam** ficam na raiz —
+gerados por script (python-docx + matplotlib), não escritos à mão no Word. Eles descrevem
+a **versão 2 do sistema: uma reimplementação em Elixir/OTP**; a versão 1 é o que roda neste
+repositório.
+
+| Documento | Pág. | O que é |
+|---|---|---|
+| `fabrica-multi-agente-arquitetura-6.docx` | 7 | versão resumida, para apresentar |
+| `fabrica-multi-agente-arquitetura-7.docx` | 19 | documentação completa: 8 partes, 21 figuras, 28 seções |
+| `multi-agent-software-factory-SUMMARY-en.docx` | 7 | tradução da resumida |
+| `multi-agent-software-factory-COMPLETE-en.docx` | 19 | tradução da completa |
+
+Os geradores estão em `_sistema/documentos-tcc/geradores/`, e as figuras em inglês saem dos
+**mesmos** geradores — um arreio traduz os textos e reexecuta o desenho, então corrigir uma
+figura vale para os dois idiomas de uma vez. As figuras (`figs3/`, `figs_en/`) e os PDFs de
+conferência não são versionados: regenere com `python figuras3.py && python figuras5.py &&
+python figuras6.py && python figuras7.py && python figuras_en.py`.
+
+Como retomar o trabalho sobre eles numa sessão nova, o que já foi decidido e as armadilhas
+que custaram tempo: [`_sistema/documentos-tcc/CONTEXTO.md`](_sistema/documentos-tcc/CONTEXTO.md).
