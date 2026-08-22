@@ -839,6 +839,38 @@ describe("linha-base do critério, antes do primeiro despacho (T-057)", () => {
     expect(execucoes(), "a suíte devia rodar UMA vez na rodada").toBe(1);
   }, 60_000);
 
+  /**
+   * `criteriosSemComando` veio VAZIO em todas as 43 rodadas reais. Isso deve ser sinal
+   * saudável — todo critério teve ao menos um `verificar:` decidido —, mas campo sempre
+   * vazio é indistinguível de campo quebrado, e essa é exatamente a assinatura do bug do
+   * marco de fase (que nunca entrava na lista, sem erro nem log). Este teste prova que ele é
+   * PREENCHÍVEL pelo caminho real: tarefa cujo portão do meio é julgamento puro.
+   */
+  it("tarefa sem NENHUM `verificar:` é registrada em criteriosSemComando", async () => {
+    const { ctx } = projeto();
+    const { dep, logs } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      criterios: "- [ ] o texto ficou claro\n- [ ] o tom combina com o resto do site",
+    });
+
+    const rel = await rodarPipeline(ctx, dep);
+
+    expect(rel.criteriosSemComando).toHaveLength(1);
+    expect(rel.criteriosSemComando[0]).toEqual({ tarefa: "T-001", julgados: 2 });
+    expect(logs.join("\n")).toContain("NENHUM");
+  }, 60_000);
+
+  /** E o contrário: havendo comando decidido, não vira alarme — senão tocaria sempre. */
+  it("critério decidido por comando NÃO entra em criteriosSemComando", async () => {
+    const { ctx } = projeto();
+    const { dep } = mundo([tarefa({ id: "T-001", status: "pronta" })], {
+      criterios:
+        "- [ ] roda\n      `verificar: node conta.js`\n- [ ] o texto ficou claro",
+    });
+
+    const rel = await rodarPipeline(ctx, dep);
+    expect(rel.criteriosSemComando).toHaveLength(0);
+  }, 60_000);
+
   /** Em retrabalho a árvore já tem a entrega — "intocada" deixaria de ser verdade. */
   it("não faz linha-base em retrabalho (tentativas >= 1)", async () => {
     const { ctx } = projeto();

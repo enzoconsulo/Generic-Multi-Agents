@@ -170,34 +170,29 @@ isso incomodar, o alvo é a FILA (tarefas independentes com areas disjuntas pron
 tempo), não a largura do portão.
 
 ═══════════════════════════════════════════════════════════════════════════════
-ITEM 1 — a faixa "custo por agente" da aba Jobs é ficção
+FECHADO EM 22/08 — a faixa "custo por agente" era ficção; agora não é
 ═══════════════════════════════════════════════════════════════════════════════
-(painel; diagnosticado em 16/08, promovido a item em 21/08 — os anteriores fecharam)
 
-`AcumuladorDeUso.fechar()` NÃO é idempotente e o runner o chama A CADA MENSAGEM.
-`porModelo`/`total` são objetos NOVOS a cada chamada — por isso o TETO DE CUSTO está certo e
-não é preciso mexer nele —, mas `this.porAgente` é o MESMO objeto e leva `+=` em toda
-passada: o job soma a si mesmo uma vez por mensagem do SDK.
-
-O efeito está na tela: o job `9ba81214` mostra o orquestrador com 122M de cache lido e 1.722
-voltas, num job de 26 turnos cujo total real (`modelUsage`) foi 4,4M. A proporção ENTRE
-agentes também é ficção, porque cada um é inflado pelo número de `fechar()` que aconteceram
-depois da primeira mensagem dele — quem aparece cedo infla mais.
-
-Conserto provável, de uma linha de ideia: agregar por agente numa CÓPIA local, como já é
-feito com `porModelo`. O cuidado é o de sempre nesta casa — contabilidade tem histórico
-próprio de armadilhas, então: teste que chama `fechar()` várias vezes e exige o mesmo
-resultado, e conferência contra o `modelUsage` FINAL (nunca no meio do fluxo, ver
-`painel/CLAUDE.md`).
-
-Duas conferências baratas que cabem na mesma sessão, porque são do mesmo tipo (campo que
-pode estar quebrado sem ninguém notar):
-- `paraReplanejar` teve 2 entradas (T-030, T-032) e nenhuma `bloqueada` em 43 rodadas. O
-  motor não replaneja por esgotamento — é do orquestrador, por design. Confirme só que a
-  linha do relatório está sendo LIDA.
-- `criteriosSemComando` e `criteriosQuebrados` vieram vazios em TODAS as rodadas. Deve ser
-  sinal saudável, mas campo sempre vazio é indistinguível de campo quebrado — e essa é
-  exatamente a assinatura do bug do marco.
+- **Causa confirmada e corrigida.** `AcumuladorDeUso.fechar()` agregava o consumo por agente
+  em `this.porAgente` (estado PERSISTENTE) enquanto `porModelo`/`total` eram objetos novos a
+  cada chamada — e o runner chama `fechar()` a cada mensagem do SDK para conferir o teto.
+  Cada passada resomava todas as voltas já vistas. Hoje há `agregarPorAgente(voltas)`, que
+  monta uma cópia, e os contadores de EVENTO (ferramentas, despachos) entram por cópia porque
+  já são somados uma vez por ocorrência.
+- **O teto de custo nunca esteve errado** (lê `porModelo`, o caminho que já copiava) e não foi
+  tocado.
+- **Testes que travam o bug:** o mesmo fluxo com e sem teto tem de dar o MESMO `porAgente`
+  (com teto, `fechar()` roda a cada mensagem), e a soma dos agentes tem de bater com o total
+  do job. Os dois falham no código anterior — conferido revertendo o fonte.
+- **O histórico continua no disco inflado**, então a TELA se defende sozinha: `ratearPorAgente`
+  esconde a faixa quando a soma dos agentes passa do total do job (5% de folga para
+  arredondamento). Medido: **10 dos 14 jobs com a faixa estavam inflados**, o pior em 129×
+  (488,4M contra 3,8M reais).
+- **As duas conferências de campo sempre-vazio, feitas:** `paraReplanejar` É lido
+  (`runner-pipeline.ts:527` vira linha do relatório) e tem teste; `criteriosQuebrados` já
+  tinha teste que o preenche; `criteriosSemComando` NÃO tinha — agora tem, provando que ele é
+  preenchível pelo caminho real (tarefa cujo portão do meio é julgamento puro) e que não
+  dispara quando há comando decidido.
 
 ═══════════════════════════════════════════════════════════════════════════════
 ANOTADO, NÃO É TAREFA AINDA

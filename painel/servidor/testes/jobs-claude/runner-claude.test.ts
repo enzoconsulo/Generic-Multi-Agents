@@ -1015,6 +1015,69 @@ describe("RunnerClaude — rateio por agente e sua auto-verificação", () => {
     expect(porAgente["orquestrador"]?.voltas).toBe(1);
   });
 
+  /**
+   * O BUG DE 16/08, corrigido em 22/08: a agregação por agente somava num objeto
+   * PERSISTENTE, e o runner chama `fechar()` a cada mensagem para conferir o teto de custo.
+   * Cada passada resomava todas as voltas já vistas — o consumo de um agente saía
+   * multiplicado pelo número de mensagens que chegaram depois da primeira dele, e a
+   * PROPORÇÃO entre agentes (que é para o que a faixa serve) ia junto. Na tela, o job
+   * `9ba81214` mostrava o orquestrador com 122M de cache lido num job cujo real foi 4,4M.
+   *
+   * O teste roda o MESMO fluxo com e sem teto: com teto, `fechar()` é chamado a cada
+   * mensagem; sem teto, uma vez só. As duas leituras têm de bater.
+   */
+  it("com teto de custo (fechar() a cada mensagem) o rateio por agente NÃO infla", async () => {
+    const mensagens = [
+      { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+      despacho("tu_1", "revisor"),
+      doSubagente("m1", "tu_1"),
+      doSubagente("m2", "tu_1"),
+      doSubagente("m3", "tu_1"),
+      { type: "result", is_error: false, num_turns: 4, result: "ok" },
+    ];
+    const { ctx } = contexto(new AbortController().signal);
+    const comTeto = await new RunnerClaude(consultaDe(mensagens)).executar(
+      jobFake({ ...PARAMS, tetoUsd: 999 }),
+      ctx,
+    );
+    const semTeto = await new RunnerClaude(consultaDe(mensagens)).executar(
+      jobFake(PARAMS),
+      contexto(new AbortController().signal).ctx,
+    );
+
+    expect(comTeto.tokens?.porAgente).toEqual(semTeto.tokens?.porAgente);
+    // E o valor absoluto é o das voltas de verdade: 3 do subagente, 1 do orquestrador.
+    expect(comTeto.tokens?.porAgente?.["revisor"]?.voltas).toBe(3);
+    expect(comTeto.tokens?.porAgente?.["revisor"]?.cacheLeitura).toBe(600_000);
+    expect(comTeto.tokens?.porAgente?.["orquestrador"]?.voltas).toBe(1);
+    // Contador de EVENTO não é reagregado: uma ferramenta por mensagem do filho.
+    expect(comTeto.tokens?.porAgente?.["revisor"]?.ferramentas).toBe(3);
+    expect(comTeto.tokens?.porAgente?.["revisor"]?.despachos).toBe(1);
+  });
+
+  /** A soma por agente tem de fechar com o TOTAL do job — a invariante que a tela promete. */
+  it("a soma dos agentes bate com o total do job", async () => {
+    const runner = new RunnerClaude(
+      consultaDe([
+        { type: "system", subtype: "init", session_id: "s1", model: "claude-sonnet-5" },
+        despacho("tu_1", "revisor"),
+        doSubagente("m1", "tu_1"),
+        doSubagente("m2", "tu_1"),
+        { type: "result", is_error: false, num_turns: 3, result: "ok" },
+      ]),
+    );
+    const { ctx } = contexto(new AbortController().signal);
+    const r = await runner.executar(jobFake({ ...PARAMS, tetoUsd: 999 }), ctx);
+    const agentes = Object.values(r.tokens?.porAgente ?? {});
+    const soma = (campo: "entrada" | "saida" | "cacheLeitura" | "cacheEscrita") =>
+      agentes.reduce((t, a) => t + a[campo], 0);
+
+    expect(soma("entrada")).toBe(r.tokens?.entrada);
+    expect(soma("saida")).toBe(r.tokens?.saida);
+    expect(soma("cacheLeitura")).toBe(r.tokens?.cacheLeitura);
+    expect(soma("cacheEscrita")).toBe(r.tokens?.cacheEscrita);
+  });
+
   it("DENUNCIA quando houve despacho e nada foi atribuído a subagente", async () => {
     const runner = new RunnerClaude(
       consultaDe([

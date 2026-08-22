@@ -338,7 +338,15 @@ class AcumuladorDeUso {
   private readonly voltasUso = new Map<string, VoltaUso>();
   /** Voltas sem `message.id`: não dá para deduplicar nem para reconciliar; entram somadas. */
   private readonly semIdUso: VoltaUso[] = [];
-  private readonly porAgente: Record<string, UsoAgente> = {};
+  /**
+   * Contadores por agente que vêm de EVENTOS, não de agregação: ferramentas e despachos.
+   *
+   * Eles são incrementados uma vez por ocorrência (`registrarFerramenta`,
+   * `registrarDespacho`) e por isso podem viver aqui. O consumo de tokens NÃO pode: ele é
+   * agregado a partir das voltas, e agregação em estado persistente somada por `fechar()`
+   * foi exatamente o bug de 16/08 — ver `agregarPorAgente`.
+   */
+  private readonly eventosPorAgente: Record<string, UsoAgente> = {};
   /**
    * `tool_use.id` do despacho → nome do agente. É assim que se liga uma mensagem de
    * subagente ao agente que a produziu: o SDK marca cada mensagem do filho com
@@ -366,7 +374,7 @@ class AcumuladorDeUso {
   }
 
   private baldeAgente(nome: string): UsoAgente {
-    return (this.porAgente[nome] ??= {
+    return (this.eventosPorAgente[nome] ??= {
       entrada: 0,
       saida: 0,
       cacheLeitura: 0,
@@ -486,7 +494,7 @@ class AcumuladorDeUso {
       cacheLeitura: 0,
       cacheEscrita: 0,
       porModelo,
-      porAgente: this.porAgente,
+      porAgente: this.agregarPorAgente(voltas),
     };
 
     for (const v of voltas) {
@@ -502,14 +510,6 @@ class AcumuladorDeUso {
       m.cacheLeitura += v.cacheLeitura;
       m.cacheEscrita += v.cacheEscrita;
 
-      const a = this.baldeAgente(v.agente);
-      a.entrada += v.entrada;
-      a.saida += v.saida;
-      a.cacheLeitura += v.cacheLeitura;
-      a.cacheEscrita += v.cacheEscrita;
-      a.voltas += 1;
-      if (!a.modelos.includes(v.modelo)) a.modelos.push(v.modelo);
-
       total.entrada += v.entrada;
       total.saida += v.saida;
       total.cacheLeitura += v.cacheLeitura;
@@ -519,12 +519,64 @@ class AcumuladorDeUso {
   }
 
   /**
+   * Consumo por agente, agregado numa CÓPIA a cada chamada — como `porModelo` sempre foi.
+   *
+   * O BUG QUE ISTO CONSERTA (achado em 16/08, corrigido em 22/08): a agregação somava
+   * direto em `this.porAgente`, um objeto PERSISTENTE, e o runner chama `fechar()` a cada
+   * mensagem do SDK para conferir o teto de custo. Cada passada resomava todas as voltas já
+   * vistas, então o consumo de um agente era multiplicado pelo número de mensagens que
+   * chegaram DEPOIS da primeira dele — quem aparece cedo infla mais, o que estraga também a
+   * PROPORÇÃO entre agentes, que é justamente para o que a faixa serve. Na tela: o job
+   * `9ba81214` mostrava o orquestrador com 122M de cache lido e 1.722 voltas num job de 26
+   * turnos cujo `modelUsage` real foi 4,4M.
+   *
+   * `porModelo` e `total` escaparam porque já eram objetos novos a cada chamada — e é por
+   * isso que o TETO DE CUSTO nunca esteve errado, apesar de ler o mesmo `fechar()`.
+   *
+   * Os contadores de EVENTO (ferramentas, despachos) entram por cópia: eles são somados uma
+   * vez por ocorrência, fora daqui, e reagregá-los seria repetir o mesmo erro.
+   */
+  private agregarPorAgente(voltas: readonly VoltaUso[]): Record<string, UsoAgente> {
+    const porAgente: Record<string, UsoAgente> = {};
+    const balde = (nome: string): UsoAgente => {
+      const evt = this.eventosPorAgente[nome];
+      return (porAgente[nome] ??= {
+        entrada: 0,
+        saida: 0,
+        cacheLeitura: 0,
+        cacheEscrita: 0,
+        voltas: 0,
+        ferramentas: evt?.ferramentas ?? 0,
+        despachos: evt?.despachos ?? 0,
+        modelos: [],
+      });
+    };
+
+    // Agentes que só aparecem em evento (despachados, sem volta atribuída) não podem sumir
+    // da faixa: zero consumo com despacho registrado é informação — é o sinal de rateio que
+    // não casou, que `atribuiuSubagente` denuncia.
+    for (const nome of Object.keys(this.eventosPorAgente)) balde(nome);
+
+    for (const v of voltas) {
+      const a = balde(v.agente);
+      a.entrada += v.entrada;
+      a.saida += v.saida;
+      a.cacheLeitura += v.cacheLeitura;
+      a.cacheEscrita += v.cacheEscrita;
+      a.voltas += 1;
+      if (!a.modelos.includes(v.modelo)) a.modelos.push(v.modelo);
+    }
+    return porAgente;
+  }
+
+  /**
    * Uso por agente mesmo quando o `modelUsage` do `result` for a fonte dos totais. Sem
    * isto, job COMPLETO — o caso normal — ficaria sem a única visão que diz onde otimizar,
    * porque `modelUsage` agrega por modelo e não conhece subagente.
    */
   agentes(): Record<string, UsoAgente> | undefined {
-    return Object.keys(this.porAgente).length > 0 ? this.porAgente : undefined;
+    const porAgente = this.agregarPorAgente(this.todasAsVoltas);
+    return Object.keys(porAgente).length > 0 ? porAgente : undefined;
   }
 }
 

@@ -607,3 +607,18 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   `erros.length > 0`: alarme por detalhe cosmético é alarme que ninguém lê depois. Ao escrever
   tarefa com dois-pontos no título, aspar o valor INTEIRO; ao ler tarefas em código novo,
   pergunte se o `status` sobreviveu antes de confiar na lista de erros.
+- **Agregação em estado PERSISTENTE dentro de um método chamado a cada mensagem soma o mesmo
+  dado N vezes.** `AcumuladorDeUso.fechar()` agregava o consumo por agente em `this.porAgente`
+  — objeto vivo do acumulador — enquanto `porModelo` e `total` eram objetos NOVOS a cada
+  chamada. Como o runner chama `fechar()` a cada mensagem do SDK para conferir o teto de
+  custo, cada passada resomava todas as voltas já vistas: o job `9ba81214` aparecia com o
+  orquestrador em 122M de cache lido e 1.722 voltas num job de 26 turnos cujo `modelUsage`
+  real foi 4,4M. Pior que o valor absoluto, a PROPORÇÃO entre agentes — que é a única coisa
+  para a qual a faixa serve — também saía errada, porque cada agente é inflado pelo número de
+  `fechar()` que ocorreram depois da primeira mensagem DELE. O teto de custo nunca esteve
+  errado, e é por isso que ninguém percebeu: ele lê `porModelo`, o caminho que já copiava.
+  Medido em 22/08: 10 dos 14 jobs com a faixa estavam inflados, o pior em 129×. Regra:
+  **método idempotente por contrato não pode escrever em campo de instância** — se um irmão
+  dele monta objeto novo e o outro não, o segundo é o bug. E ao consertar contabilidade já
+  gravada, defenda a TELA com uma invariante aritmética (a soma das partes não passa do
+  total), porque os JSONs antigos continuam no disco.

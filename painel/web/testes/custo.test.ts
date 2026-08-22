@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { custoDoJob, explicarCusto, formatarCusto, somarCusto } from "../src/lib/custo";
+import {
+  custoDoJob,
+  explicarCusto,
+  formatarCusto,
+  ratearPorAgente,
+  somarCusto,
+} from "../src/lib/custo";
 import type { Job } from "../src/lib/tipos";
 
 /**
@@ -99,5 +105,89 @@ describe("formatarCusto — o prefixo carrega a qualidade do número", () => {
     expect(explicarCusto({ usd: 1, estimado: false, incompleto: false })).toContain("real");
     expect(explicarCusto({ usd: 1, estimado: true, incompleto: false })).toContain("Estimado");
     expect(explicarCusto({ usd: 1, estimado: true, incompleto: true })).toContain("Piso");
+  });
+});
+
+/**
+ * A FAIXA "CUSTO POR AGENTE" E A CONTABILIDADE INFLADA (bug de 16/08, corrigido no servidor
+ * em 22/08).
+ *
+ * O acumulador agregava o consumo por agente num objeto persistente e o runner chama
+ * `fechar()` a cada mensagem do SDK — cada passada resomava tudo. Os JSONs já gravados
+ * continuam no disco com números impossíveis, então a tela precisa se defender sozinha: a
+ * soma dos agentes não pode passar do total do job.
+ */
+describe("ratearPorAgente", () => {
+  const agente = (p: Partial<Record<string, number>> = {}) => ({
+    entrada: 0,
+    saida: p["saida"] ?? 0,
+    cacheLeitura: p["cacheLeitura"] ?? 0,
+    cacheEscrita: 0,
+    voltas: p["voltas"] ?? 1,
+    ferramentas: p["ferramentas"] ?? 0,
+    despachos: p["despachos"] ?? 0,
+    modelos: ["claude-sonnet-5"],
+  });
+
+  it("rateia pelo peso de cache lido e saída, com as contagens de evento junto", () => {
+    const fatias = ratearPorAgente(
+      job("r1", {
+        custoUsd: 1,
+        tokens: {
+          entrada: 0,
+          saida: 0,
+          cacheLeitura: 1000,
+          cacheEscrita: 0,
+          porModelo: {},
+          porAgente: {
+            orquestrador: agente({ cacheLeitura: 250, ferramentas: 2 }),
+            revisor: agente({ cacheLeitura: 750, ferramentas: 9, despachos: 1 }),
+          },
+        },
+      }),
+    );
+
+    expect(fatias.map((f) => f.agente)).toEqual(["revisor", "orquestrador"]);
+    expect(fatias[0]?.fracao).toBeCloseTo(0.75);
+    expect(fatias[0]?.usd).toBeCloseTo(0.75);
+    expect(fatias[0]?.ferramentas).toBe(9);
+  });
+
+  it("SOME quando a soma dos agentes passa do total do job — não mente a proporção", () => {
+    const fatias = ratearPorAgente(
+      job("r2", {
+        custoUsd: 1,
+        tokens: {
+          entrada: 0,
+          saida: 0,
+          cacheLeitura: 4_400_000,
+          cacheEscrita: 0,
+          porModelo: {},
+          // A forma do job `9ba81214`: 122M lidos num job cujo total real foi 4,4M.
+          porAgente: {
+            orquestrador: agente({ cacheLeitura: 122_000_000, voltas: 1722 }),
+            revisor: agente({ cacheLeitura: 3_000_000 }),
+          },
+        },
+      }),
+    );
+    expect(fatias).toEqual([]);
+  });
+
+  it("tolera diferença de arredondamento (até 5%) sem esconder a faixa", () => {
+    const fatias = ratearPorAgente(
+      job("r3", {
+        custoUsd: 1,
+        tokens: {
+          entrada: 0,
+          saida: 0,
+          cacheLeitura: 1000,
+          cacheEscrita: 0,
+          porModelo: {},
+          porAgente: { orquestrador: agente({ cacheLeitura: 1020 }), revisor: agente({ cacheLeitura: 10 }) },
+        },
+      }),
+    );
+    expect(fatias.length).toBe(2);
   });
 });

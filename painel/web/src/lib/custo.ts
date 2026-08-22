@@ -121,6 +121,28 @@ export function ratearPorAgente(job: Job): FatiaAgente[] {
   const total = custoDoJob(job);
   if (porAgente === undefined || total === null) return [];
 
+  // CONTABILIDADE INFLADA (jobs gravados até 22/08). O acumulador do runner agregava o
+  // consumo por agente num objeto persistente e o runner chamava `fechar()` a cada mensagem
+  // do SDK: cada passada resomava tudo que já tinha visto. O conserto é no servidor, mas os
+  // JSONs já gravados continuam no disco com números impossíveis — o job `9ba81214` mostra o
+  // orquestrador com 122M de cache lido num job cujo total real foi 4,4M.
+  //
+  // O sinal é aritmético e não depende de saber a versão que gravou: a soma dos agentes não
+  // pode passar do total do job. Quando passa, a faixa SOME em vez de mentir — inclusive as
+  // proporções, que é para o que ela serve (cada agente foi inflado por um fator diferente,
+  // o número de `fechar()` que aconteceram depois da primeira mensagem dele).
+  const t = r?.tokens;
+  if (t !== undefined && t !== null) {
+    const somaCache = Object.values(porAgente).reduce((sm, u) => sm + u.cacheLeitura, 0);
+    const somaSaida = Object.values(porAgente).reduce((sm, u) => sm + u.saida, 0);
+    // 5% de folga: a agregação por agente e a total percorrem as mesmas voltas, então em
+    // dado são: qualquer diferença real é arredondamento, não contabilidade.
+    const estourou =
+      (t.cacheLeitura > 0 && somaCache > t.cacheLeitura * 1.05) ||
+      (t.saida > 0 && somaSaida > t.saida * 1.05);
+    if (estourou) return [];
+  }
+
   const peso = (u: { cacheLeitura: number; saida: number }) => u.cacheLeitura + u.saida * 10;
   const nomes = Object.keys(porAgente);
   const soma = nomes.reduce((s, n) => s + peso(porAgente[n]!), 0);
