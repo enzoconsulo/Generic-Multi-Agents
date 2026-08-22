@@ -94,37 +94,52 @@ FECHADO EM 21/08 — não reabrir
   O teste que afirmava o contrário virou o teste da correção, em `motor-retrabalho.test.ts`.
 
 ═══════════════════════════════════════════════════════════════════════════════
-ITEM 1 — a economia da rodada: US$ 6,90 por tarefa concluída
+FECHADO EM 21/08 (2ª rodada) — a economia da rodada, respondida e medida
 ═══════════════════════════════════════════════════════════════════════════════
-(medição feita; falta DECIDIR o que fazer — traga proposta antes de implementar)
 
-Números das 41 rodadas de pipeline, do `resultado` de cada job:
+Medição sobre os 47 jobs de pipeline em `painel/dados/jobs/`, sem gastar modelo.
 
-- **US$ 165,60 gastos, ~24 tarefas concluídas → US$ 6,90 por tarefa.**
-- **0,6 tarefa concluída por rodada.** Máximo já visto numa rodada: 2.
-- Motivo de encerramento: `orcamento` 11, `sem-trabalho` 12, `cota` 5, `agente-cortado` 5,
-  `sem-progresso` 4, e 4 rodadas mortas sem resultado (todas de 08-08/08-09, antes do
-  `uncaughtException`; `dados/quedas.log` não existe, então não houve queda nova).
+- **Retrabalho é 46% do gasto, não 25%.** O `custoPorTarefa` é da T-060 e vem VAZIO nos jobs
+  anteriores; somando só os 22 jobs onde o campo existe, o custo atribuído a tarefas é 98% do
+  gasto (overhead fora dos despachos é ruído) e o retrabalho dá US$ 43,99 de US$ 94,75.
+  **Metade dele (US$ 22,89) está em tarefa que nem fechou naquela rodada.** Lição de método,
+  de novo: campo novo dilui a média para trás — filtre pelo universo em que o instrumento
+  existia antes de calcular fatia.
+- **"US$ 6,90 por tarefa" é razão contábil, não custo de tarefa.** A tarefa que FECHA custa
+  mediana US$ 2,08 (p90 US$ 4,37, 14 tarefas). A distância entre os dois números É o
+  desperdício: retrabalho + trabalho pago em tarefa que não fechou (US$ 57,03 em 19
+  tarefas-rodada, contra US$ 35,91 nas 14 que fecharam).
+- **CAI a premissa do item: não existe custo fixo de abertura de rodada.** Saneamento,
+  promoção e leitura de plano são código puro; o único job com zero despachos gastou
+  US$ 0,00. Parar no teto e redisparar não cobra pedágio — o teto de US$ 8 NÃO é o gargalo,
+  e por isso não foi mexido.
+- **Pergunta 2 (o `limiarDeDebate` mudou a distribuição?):** 5 rodadas depois de `f0793e5` →
+  US$ 13,88 / 4 tarefas = **US$ 3,47 por tarefa**, contra US$ 7,53 antes; 1 alarme em 12
+  despachos; nenhuma parou por orçamento. n pequeno demais para conclusão — e é justamente
+  por isso que nenhuma outra calibragem entrou junto.
+- **Pergunta 3, decidida pelo usuário: MOSTRAR, não autocalibrar.** O cartão "Trabalhar neste
+  projeto" passou a trazer a estimativa medida DESTE projeto (`web/src/lib/estimativa-rodada.ts`)
+  e o teto vigente num campo editável; `POST /api/acoes/:id` aceita `tetoUsd` (faixa 0–100,
+  anteparo de digitação), e `AcaoFabrica.tetoUsd` vem da tabela de guardrails para a tela não
+  ter uma segunda cópia do número. O estimador divide TODO o gasto pelas tarefas ENTREGUES —
+  usar o custo da tarefa que fechou daria um número sempre otimista.
 
-**27% das rodadas param no teto de US$ 8 antes de acabar o trabalho.** Isso não é bug — o teto
-é do usuário e a parada é limpa, por decisão fechada (nunca cortar no meio, só não COMEÇAR o
-que não cabe). O que a medição levanta é outra coisa: o teto foi calibrado quando não se sabia
-o custo por tarefa, e hoje se sabe. Um teto de US$ 8 com tarefa a US$ 6,90 garante que a
-maioria das rodadas termine 1 tarefa e pare — o usuário paga o custo fixo de abertura de
-rodada (saneamento, promoção, leitura de plano) com frequência alta.
+**Dois defeitos que só apareceram porque a tela foi OLHADA** (a captura é o único caminho
+que os pega):
 
-Perguntas a responder com os dados que já existem, ANTES de mexer em qualquer coisa:
-1. Qual a fatia do gasto que é retrabalho? `custoPorTarefa[].retrabalhoUsd` já traz isso por
-   tarefa — some ao longo das rodadas.
-2. O `limiarDeDebate` recém-ligado muda a distribuição? Só dá para saber depois de algumas
-   rodadas novas. **Meça antes de mexer no próximo parâmetro** — duas mudanças de calibragem
-   ao mesmo tempo tornam ambas inavaliáveis.
-3. Vale sugerir teto por rodada em função do custo medido do projeto (`custosObservados` já
-   alimenta a autocalibragem)? Ou o certo é deixar o usuário escolher e só MOSTRAR a
-   estimativa antes do disparo?
+- **`proximoPasso` contava backlog inteiro como "pronta para executar".** A tela dizia "2
+  tarefa(s) na fila, prontas para executar" logo acima de "nada despachável agora" — e quem
+  estava certo era a estimativa: as duas estavam presas por dependência. Corrigido para
+  prontas + PROMOVÍVEIS (`tarefasPromoviveis`), com teste.
+- **Quatro tarefas do banco-imobiliario estão com frontmatter YAML ilegível: T-025, T-038,
+  T-050, T-051.** Causa comum: título com aspas e dois-pontos (`titulo: "Sala criada: XXXX" é
+  ...`). O leitor devolve a tarefa com campos VAZIOS e a lista `erros` preenchida — sensor
+  que existia e ninguém lia —, o pipeline ignora a tarefa em silêncio e a tela dizia "tudo
+  concluído". Agora a tela denuncia. **Consertar os 4 arquivos é trabalho na carga de teste e
+  está PENDENTE** — enquanto não for, `/trabalhar banco-imobiliario` não tem o que despachar.
 
 ═══════════════════════════════════════════════════════════════════════════════
-ITEM 2 — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura
+ITEM 1 — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura
 ═══════════════════════════════════════════════════════════════════════════════
 (painel; estrutural, avalie antes de implementar — continua aberto)
 
