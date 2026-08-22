@@ -42,6 +42,17 @@ describe("parsearTarefa (unidade)", () => {
     expect(tarefa.secoes.objetivo).toBe("Sem frontmatter.");
   });
 
+  /**
+   * Sufixo de letra é a convenção de REPLANEJAMENTO da fábrica. Com o `/^T-\d+/` cru, uma
+   * substituta cujo frontmatter não abrisse herdaria o id da tarefa CANCELADA que a
+   * originou — dois arquivos com o mesmo id, e o pipeline escolhendo um deles. É o mesmo
+   * padrão que desligou o marco de fase em silêncio; aqui estava latente.
+   */
+  it("fallback do id preserva o sufixo de letra do replanejamento", () => {
+    const t = parsearTarefa("T-017a-refeita.md", "## Objetivo\nSem frontmatter.\n");
+    expect(t.id).toBe("T-017a");
+  });
+
   it("prioridade fora do vocabulário gera erro mantendo o valor bruto", () => {
     const tarefa = parsearTarefa(
       "T-012-x.md",

@@ -71,7 +71,12 @@ export function parsearTarefa(
   const { dados, corpo, erro } = separarFrontmatter(texto);
   if (erro !== null) erros.push(erro);
 
-  const idDoNome = arquivo.match(/^T-\d+/)?.[0] ?? "";
+  // `[a-z]*` porque sufixo de letra é a convenção de REPLANEJAMENTO da fábrica (T-017a): sem
+  // ele, uma tarefa substituta cujo frontmatter não abre cairia neste fallback e ganharia o id
+  // da tarefa CANCELADA que a originou — dois arquivos com o mesmo id, e o pipeline decidindo
+  // por um deles. É o mesmo `/T-\d+/` que desligou o marco de fase em silêncio (16/08),
+  // aqui em estado latente até 22/08.
+  const idDoNome = arquivo.match(/^T-\d+[a-z]*/i)?.[0] ?? "";
 
   const id = lerTextoObrigatorio(dados, "id", erros) ?? idDoNome;
   const titulo = lerTextoObrigatorio(dados, "titulo", erros) ?? "";

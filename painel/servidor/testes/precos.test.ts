@@ -85,6 +85,30 @@ describe("tabela de preços", () => {
     expect(est?.usd).toBe(0);
   });
 
+  /**
+   * `<synthetic>` é o pseudo-modelo que o SDK carimba em mensagem que ele mesmo fabricou
+   * (erro, aviso, interrupção). Ele chega com os quatro campos zerados — está assim em 6
+   * jobs de `dados/jobs/` — e fazia TODA estimativa de job cortado sair com "modelo sem
+   * preço / estimativa SUBESTIMADA", que é alarme falso justamente no desfecho em que a
+   * estimativa é a única contabilidade que existe.
+   */
+  it("pseudo-modelo sem consumo NÃO é denunciado como estimativa subestimada", () => {
+    const est = estimarCusto({
+      "claude-sonnet-5": { entrada: 1000, saida: 100, cacheLeitura: 0, cacheEscrita: 0 },
+      "<synthetic>": { entrada: 0, saida: 0, cacheLeitura: 0, cacheEscrita: 0 },
+    });
+    expect(est?.modelosDesconhecidos).toEqual([]);
+    expect(est?.usd).toBeGreaterThan(0);
+  });
+
+  /** Mas modelo NOVO de verdade chega com consumo — e aí o aviso tem de continuar tocando. */
+  it("modelo desconhecido COM consumo continua denunciado", () => {
+    const est = estimarCusto({
+      "claude-modelo-7": { entrada: 0, saida: 0, cacheLeitura: 1, cacheEscrita: 0 },
+    });
+    expect(est?.modelosDesconhecidos).toEqual(["claude-modelo-7"]);
+  });
+
   it("distingue 'sem uso' de 'custou zero'", () => {
     expect(estimarCusto({})).toBeNull();
   });

@@ -8,6 +8,13 @@ fábrica venha a construir fica aqui.
 Enzo vai dizer só "roda o proximo_prompt.txt". Execute os itens NA ORDEM, um de cada vez, e
 pare quando o item terminar. Não emende três numa sessão só.
 
+**ESTADO EM 22/08: não há ITEM aberto.** Os quatro que existiam foram fechados em 21-22/08 e
+os dois pendentes da seção ANOTADO também. O que sobra pede outra coisa que não é código do
+painel: (a) confirmar em RODADA REAL que o documentador achou divergência — `documentou:
+true` não prova valor, e isso gasta; (b) a carga de teste do banco-imobiliario (T-051 →
+T-052 → T-055, destravadas em 21/08). Quem abrir o próximo item, escreva-o aqui ANTES de
+começar — item que só existe na conversa morre com a sessão.
+
 Regra, armadilha e decisão fechada NÃO moram aqui — moram em `CLAUDE.md` (constituição),
 `_sistema/DECISOES_FECHADAS.md` (não reabrir sem fato novo) e `painel/CLAUDE.md` (armadilhas
 técnicas do cockpit). **Leia `DECISOES_FECHADAS.md` antes de propor qualquer otimização.**
@@ -208,12 +215,15 @@ ANOTADO, NÃO É TAREFA AINDA
   MECANISMO de subagente do SDK: quem despacha é a máquina de estados, que monta a `query()`
   inteira, então não há a quem oferecer um subagente. `CLAUDE.md` corrigido — dizia que os
   passos 1-2 eram "o que o painel usa".
-- **`<synthetic>` não tem preço em `precos.ts`** e faz toda estimativa de job cortado sair
-  com o aviso "modelo sem preço / estimativa SUBESTIMADA". Aparece em execução real.
-- **`tarefas.ts:74`** tem o mesmo `/^T-\d+/` que causou o bug do marco, mas só como fallback do
-  `id:` do frontmatter. Latente. Alinhe para `/^T-\d+[a-z]*/i` quando encostar no arquivo.
-- **`paraReplanejar` / `criteriosSemComando` / `criteriosQuebrados`** viraram parte do ITEM 1
-  acima — são o mesmo tipo de conferência (campo que pode estar quebrado sem ninguém notar).
+- **RESOLVIDOS em 22/08 — os dois pendentes de `precos.ts` e `tarefas.ts`.** O `<synthetic>`
+  é pseudo-modelo do SDK (mensagem que ele mesmo fabrica) e chega SEMPRE com os quatro campos
+  zerados — está assim em 6 jobs de `dados/jobs/`. A regra virou aritmética em vez de lista de
+  nomes: modelo sem preço e sem consumo não subestima nada e não é denunciado; modelo NOVO de
+  verdade chega com consumo e continua sendo. E o `/^T-\d+/` do fallback de id em
+  `tarefas.ts` virou `/^T-\d+[a-z]*/i`, para uma substituta de replanejamento com frontmatter
+  quebrado não herdar o id da tarefa CANCELADA que a originou. Ambos com teste.
+- **`paraReplanejar` / `criteriosSemComando` / `criteriosQuebrados`** foram conferidos em
+  22/08 (bloco FECHADO acima): os três são lidos e os três agora têm teste que os preenche.
 - **Carga de teste em aberto no banco-imobiliario:** T-051 (destravada em 21/08, quando o
   frontmatter dela foi consertado), e atrás dela T-052 e T-055 por dependência. A T-053 (teste
   que depende de sorte no dado) é a que mais interessa AO PAINEL: teste intermitente vira

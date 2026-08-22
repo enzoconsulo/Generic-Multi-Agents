@@ -148,7 +148,20 @@ export function estimarCusto(porModelo: Record<string, UsoModelo>): EstimativaCu
     if (uso === undefined) continue;
     const preco = precoDe(nome);
     if (preco === null) {
-      modelosDesconhecidos.push(nome);
+      // Modelo sem preço e SEM CONSUMO não subestima nada — e o aviso existe para dizer
+      // exatamente isso ("`usd` está subestimado"). O caso real é o `<synthetic>`, o
+      // pseudo-modelo que o SDK carimba em mensagem que ele mesmo fabricou (erro, aviso,
+      // interrupção): ele aparece com os quatro campos zerados em 6 jobs de `dados/jobs/`, e
+      // fazia TODA estimativa de job cortado sair com "modelo sem preço / estimativa
+      // SUBESTIMADA" — alarme falso justamente no desfecho em que a estimativa é a única
+      // contabilidade que existe.
+      //
+      // A regra é aritmética de propósito, e não uma lista de nomes: qualquer pseudo-modelo
+      // futuro entra por ela, enquanto um modelo NOVO de verdade — que chega com consumo —
+      // continua sendo denunciado, que é o modo de falha que este campo protege.
+      if (uso.entrada + uso.saida + uso.cacheLeitura + uso.cacheEscrita > 0) {
+        modelosDesconhecidos.push(nome);
+      }
       continue;
     }
     usd +=
