@@ -2,10 +2,18 @@ import { describe, expect, it } from "vitest";
 import { proximoPasso } from "../src/paginas/projeto/proximo-passo";
 import type { Job, ProjetoDetalhe, TarefaCompleta } from "../src/lib/tipos";
 
-function tarefa(status: string): TarefaCompleta {
+/**
+ * `id` único por chamada: a fila passou a consultar as DEPENDÊNCIAS (`tarefasPromoviveis`),
+ * que indexa por id — duas tarefas com o mesmo id faziam a contagem dobrar, e o teste
+ * quebrava por defeito do dublê, não do código.
+ */
+let seq = 0;
+function tarefa(status: string, p: Partial<TarefaCompleta> = {}): TarefaCompleta {
+  seq += 1;
+  const id = p.id ?? `T-${String(seq).padStart(3, "0")}`;
   return {
-    arquivo: `T-${status}.md`,
-    id: "T-001",
+    arquivo: `${id}.md`,
+    id,
     titulo: "Tarefa",
     status,
     prioridade: "media",
@@ -26,6 +34,7 @@ function tarefa(status: string): TarefaCompleta {
       conformidade: "",
       revisao: "",
     },
+    ...p,
   };
 }
 
@@ -92,9 +101,39 @@ describe("proximoPasso", () => {
   });
 
   it("fila com trabalho: manda trabalhar (caminho feliz)", () => {
+    // Backlog SEM dependência é promovível — o motor o promove na abertura da rodada.
     const p = proximoPasso(projeto([tarefa("pronta"), tarefa("backlog")]), null);
     expect(p.acao).toBe("trabalhar");
     expect(p.titulo).toContain("2");
+  });
+
+  /**
+   * O BUG QUE ESTE TESTE TRAVA (21/08). A fila contava `pronta || backlog`, backlog inteiro,
+   * sem olhar dependência. No banco-imobiliario isso anunciava "2 tarefa(s) na fila, prontas
+   * para executar" com as duas presas — clicar abriria e fecharia a rodada sem fazer nada.
+   * Só ficou visível quando o cartão passou a mostrar a estimativa medida e a MESMA tela
+   * passou a dizer as duas coisas.
+   */
+  it("backlog preso por dependência NÃO conta como fila", () => {
+    const presa = tarefa("backlog", { id: "T-900", dependencias: ["T-901"] });
+    const dependencia = tarefa("backlog", { id: "T-901", dependencias: ["T-902"] });
+    const p = proximoPasso(projeto([presa, dependencia]), null);
+    // As duas estão presas (a T-901 depende de uma tarefa que nem existe na lista), então
+    // não há o que despachar e a tela não pode mandar clicar em Trabalhar.
+    expect(p.acao).not.toBe("trabalhar");
+  });
+
+  /**
+   * Frontmatter ilegível: o leitor devolve campos vazios + `erros`, o pipeline ignora a
+   * tarefa em silêncio e nenhuma outra frase da tela diria isso. Sensor que existia e não
+   * era lido — a família de defeito mais comum desta fábrica.
+   */
+  it("tarefa com frontmatter quebrado é dita em voz alta, e não vira 'tudo concluído'", () => {
+    const quebrada = tarefa("", { id: "T-051", erros: ["frontmatter inválido: ..."] });
+    const p = proximoPasso(projeto([tarefa("concluida"), quebrada]), null);
+    expect(p.tom).toBe("atencao");
+    expect(p.titulo).toMatch(/ileg/i);
+    expect(p.detalhe).toContain("T-051");
   });
 
   it("tudo concluído: parabeniza e pede o próximo passo", () => {

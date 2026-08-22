@@ -39,6 +39,12 @@ export interface AcaoFabrica {
   argumentos: string | null;
   peso: PesoAcao;
   disponivel: boolean;
+  /**
+   * Teto de custo vigente da ação (US$), da tabela de guardrails do servidor; `null` = sem
+   * teto. Vem da API para o cartão não precisar repetir o número — teto escrito em dois
+   * lugares é teto que diverge no dia da recalibragem.
+   */
+  tetoUsd: number | null;
 }
 
 /**

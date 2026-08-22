@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { campoTexto, separarFrontmatter } from "./frontmatter.js";
+import { guardrailsParaAcao } from "../jobs/robustez/guardrails.js";
 
 /**
  * Catálogo das 6 ações globais da fábrica (/novo-projeto, /ideia, /trabalhar, /status,
@@ -51,6 +52,14 @@ export interface AcaoFabrica {
   peso: PesoAcao;
   /** false até existirem os endpoints de disparo (T-011). */
   disponivel: boolean;
+  /**
+   * Teto de custo VIGENTE desta ação (US$), da tabela de guardrails. `null` = sem teto.
+   *
+   * Vai para a tela porque o cartão de disparo passou a mostrar o teto e a deixá-lo
+   * editável: sem este campo a UI teria de repetir o número, e teto repetido em dois
+   * lugares é teto que diverge no dia da recalibragem.
+   */
+  tetoUsd: number | null;
 }
 
 /** Fallbacks em PT-BR usados quando `.claude/commands/<id>.md` falta ou está quebrado. */
@@ -123,7 +132,15 @@ export async function catalogoAcoes(raiz: string): Promise<AcaoFabrica[]> {
         }
       }
 
-      return { id, nome: `/${id}`, descricao, argumentos, peso: PESO_ACAO[id], disponivel: true };
+      return {
+        id,
+        nome: `/${id}`,
+        descricao,
+        argumentos,
+        peso: PESO_ACAO[id],
+        disponivel: true,
+        tetoUsd: guardrailsParaAcao(id).maxBudgetUsd,
+      };
     }),
   );
 }

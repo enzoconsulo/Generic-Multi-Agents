@@ -1000,6 +1000,14 @@ a:hover {
   font-size: 0.75rem;
   color: var(--cor-texto-suave);
 }
+/* Estimativa MEDIDA do /trabalhar: frase inteira, não selo. Quebra em bloco próprio porque
+   ela é a informação que decide o teto — comprimida ao lado do rótulo, ninguém lê. */
+.estimativa-medida {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--cor-texto);
+}
 
 .aviso-alerta {
   color: var(--cor-alerta);

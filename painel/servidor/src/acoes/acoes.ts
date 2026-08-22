@@ -47,6 +47,14 @@ export interface PedidoAcao {
   /** Guarda de custo opcional. */
   maxTurns?: number;
   /**
+   * Teto de custo ESCOLHIDO no disparo (US$), sobrepondo a tabela de guardrails.
+   *
+   * Existe porque o cartão passou a mostrar a estimativa medida do projeto ao lado do teto:
+   * ver o número e não poder mexer nele seria informar sem dar decisão. A tabela continua
+   * sendo o padrão — este campo só entra quando o usuário digitou outro valor.
+   */
+  tetoUsd?: number;
+  /**
    * Qual motor roda o `/trabalhar`. Ausente = automático (ver `montarJobAcao`).
    *
    * - `"codigo"` — pipeline determinístico (`RunnerPipeline`): o laço é código, cada etapa
@@ -95,6 +103,19 @@ export function usaPipelineEmCodigo(id: string, argumentos: string, motor?: stri
   return partes.length === 1 && /^[a-zA-Z0-9._-]+$/.test(partes[0] ?? "");
 }
 
+/**
+ * Teto que vale para ESTE disparo: o escolhido pelo usuário, ou o da tabela.
+ *
+ * O escolhido vence inclusive quando é MENOR — quem digitou um teto apertado está pedindo
+ * uma rodada curta, e o motor para limpo, sem cortar agente no meio. A retomada é que não
+ * herda isso para baixo (`tetoDaRetomada` usa o maior entre o do job e o da tabela), e é de
+ * propósito: retomar com teto menor pararia antes de onde a execução original já chegou.
+ */
+function tetoEscolhido(pedido: PedidoAcao, daTabela: number | null): number | null {
+  const p = pedido.tetoUsd;
+  return typeof p === "number" && Number.isFinite(p) && p > 0 ? p : daTabela;
+}
+
 export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob {
   if (!(IDS_ACOES as readonly string[]).includes(pedido.id)) {
     throw new ErroAcaoDesconhecida(pedido.id);
@@ -106,6 +127,7 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
   // nenhum — não há orquestrador para instruir.
   if (usaPipelineEmCodigo(id, args, pedido.motor)) {
     const g = guardrailsParaAcao(id);
+    const tetoPipeline = tetoEscolhido(pedido, g.maxBudgetUsd);
     return {
       tipo: "pipeline",
       titulo: `/trabalhar ${args}`,
@@ -120,7 +142,7 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
         modelo: pedido.modelo,
         ...(pedido.fallback ? { fallback: pedido.fallback } : {}),
         ...(pedido.reforco ? { reforco: pedido.reforco } : {}),
-        ...(g.maxBudgetUsd !== null ? { tetoUsd: g.maxBudgetUsd } : {}),
+        ...(tetoPipeline !== null ? { tetoUsd: tetoPipeline } : {}),
         watchdogMs: g.watchdogMs,
       },
     };
@@ -132,6 +154,7 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
   // o watchdog vai respeitar para ESTE job (T-037).
   const guardrails = guardrailsParaAcao(id);
   const maxTurns = pedido.maxTurns ?? guardrails.maxTurns;
+  const teto = tetoEscolhido(pedido, guardrails.maxBudgetUsd);
 
   // Escalonamento só é anunciado quando existe de verdade: estratégia com `reforco` E
   // especialistas injetados (é deles que saem os gêmeos `-reforcado`).
@@ -169,7 +192,7 @@ export function montarJobAcao(pedido: PedidoAcao, fabricaRaiz: string): NovoJob 
       // Teto de custo do job (proxy da cota). `null` na tabela = sem teto, e por isso o
       // campo só entra quando existe: mandar `tetoUsd: null` seria indistinguível de um
       // valor válido para quem lê `params` cru.
-      ...(guardrails.maxBudgetUsd !== null ? { tetoUsd: guardrails.maxBudgetUsd } : {}),
+      ...(teto !== null ? { tetoUsd: teto } : {}),
       ...(guardrails.esforco !== undefined ? { esforco: guardrails.esforco } : {}),
     },
   };

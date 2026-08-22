@@ -92,12 +92,26 @@ router.post("/analisar", async (req, res) => {
   }
 });
 
-/** POST /api/acoes/:id — corpo { argumentos?, estrategia?, maxTurns? } → cria o job. */
+/**
+ * Teto máximo aceito num disparo (US$). Não é política de custo — é anteparo de DIGITAÇÃO:
+ * um zero a mais num campo de texto vira uma rodada de US$ 800 sem que nada pergunte nada.
+ * Quem quiser mais que isto edita a tabela de guardrails, que é onde a decisão mora.
+ */
+const TETO_MAXIMO_USD = 100;
+
+/**
+ * POST /api/acoes/:id — corpo { argumentos?, estrategia?, maxTurns?, tetoUsd? } → cria o job.
+ *
+ * `tetoUsd` sobrepõe o teto da tabela para ESTE disparo. Existe desde 21/08, quando o cartão
+ * passou a mostrar a estimativa medida do projeto ao lado do teto vigente: mostrar o número
+ * sem deixar mexer nele seria informar e não dar decisão.
+ */
 router.post("/:id", async (req, res) => {
   const corpo = (req.body ?? {}) as {
     argumentos?: unknown;
     estrategia?: unknown;
     maxTurns?: unknown;
+    tetoUsd?: unknown;
   };
 
   // Estratégia de modelo: valida contra a lista; ausente = padrão da config.
@@ -123,6 +137,15 @@ router.post("/:id", async (req, res) => {
     res.status(400).json({ erro: "Campo `maxTurns` deve ser inteiro." });
     return;
   }
+  if (corpo.tetoUsd !== undefined) {
+    const t = corpo.tetoUsd;
+    if (typeof t !== "number" || !Number.isFinite(t) || t <= 0 || t > TETO_MAXIMO_USD) {
+      res.status(400).json({
+        erro: `Campo \`tetoUsd\` deve ser um número entre 0 e ${TETO_MAXIMO_USD}.`,
+      });
+      return;
+    }
+  }
 
   const argumentos = typeof corpo.argumentos === "string" ? corpo.argumentos : "";
 
@@ -144,6 +167,7 @@ router.post("/:id", async (req, res) => {
         reforco: estrategia.reforco,
         ...(agentes ? { agentes } : {}),
         ...(typeof corpo.maxTurns === "number" ? { maxTurns: corpo.maxTurns } : {}),
+        ...(typeof corpo.tetoUsd === "number" ? { tetoUsd: corpo.tetoUsd } : {}),
       },
       config.fabricaRaiz,
     );

@@ -1,3 +1,4 @@
+import { mapaDependencias, tarefasPromoviveis } from "../../lib/gestao";
 import type { Job, ProjetoDetalhe } from "../../lib/tipos";
 
 /**
@@ -39,8 +40,19 @@ export function proximoPasso(projeto: ProjetoDetalhe, jobAtivo: Job | null): Pas
   const contar = (f: (s: string) => boolean) => tarefas.filter((t) => f(t.status)).length;
   const bloqueadas = contar((s) => s === "bloqueada");
   const andando = contar((s) => EM_ANDAMENTO.has(s));
-  const naFila = contar((s) => s === "pronta" || s === "backlog");
+  // A FILA É O QUE O MOTOR PODE DESPACHAR, e por muito tempo isto foi `pronta || backlog`.
+  // Backlog inteiro NÃO é fila: tarefa presa por dependência é o plano funcionando, e
+  // anunciá-la como "pronta para executar" mandava o usuário clicar num botão que abriria e
+  // fecharia a rodada sem fazer nada. Ficou visível em 21/08, quando o cartão passou a
+  // mostrar a estimativa: a mesma tela dizia "2 tarefas prontas para executar" logo acima de
+  // "nada despachável agora" — e quem estava certo era a estimativa.
+  const promoviveis = tarefasPromoviveis(tarefas, mapaDependencias(tarefas)).length;
+  const naFila = contar((s) => s === "pronta") + promoviveis;
   const concluidas = contar((s) => s === "concluida");
+  // Frontmatter ilegível: o leitor devolve a tarefa com campos vazios e a lista de erros. O
+  // sinal existia desde sempre e ninguém o lia — e tarefa sem `status` some do pipeline em
+  // silêncio, que é o pior desfecho possível para quem acha que o trabalho está na fila.
+  const quebradas = tarefas.filter((t) => t.erros.length > 0);
 
   // 2. Sem tarefa nenhuma: é o caso do projeto recém-importado — o beco sem saída.
   if (tarefas.length === 0) {
@@ -93,7 +105,23 @@ export function proximoPasso(projeto: ProjetoDetalhe, jobAtivo: Job | null): Pas
     };
   }
 
-  // 6. Nada na fila e tudo concluído: pedir o próximo passo.
+  // 6. Fila vazia, mas há tarefa que o leitor não conseguiu ler: é isso que trava, e
+  // nenhuma outra frase da tela diria. Vem antes de "tudo concluído" porque, do ponto de
+  // vista do usuário, tudo concluído com uma tarefa ilegível no meio é mentira.
+  if (quebradas.length > 0) {
+    const ids = quebradas.map((t) => t.id || t.arquivo).join(", ");
+    return {
+      tom: "atencao",
+      titulo: `${quebradas.length} tarefa(s) com frontmatter ilegível`,
+      detalhe:
+        `${ids}: o YAML do topo do arquivo não abre, então a tarefa fica sem status e o ` +
+        "pipeline a ignora em silêncio. Corrija o frontmatter (aspas e dois-pontos no " +
+        "título são a causa comum) para ela voltar a circular.",
+      acao: null,
+    };
+  }
+
+  // 7. Nada na fila e tudo concluído: pedir o próximo passo.
   if (concluidas > 0) {
     return {
       tom: "ok",
@@ -103,7 +131,7 @@ export function proximoPasso(projeto: ProjetoDetalhe, jobAtivo: Job | null): Pas
     };
   }
 
-  // 7. Resto (só canceladas, por exemplo).
+  // 8. Resto (só canceladas, por exemplo).
   return {
     tom: "acao",
     titulo: "Nenhuma tarefa executável no momento",

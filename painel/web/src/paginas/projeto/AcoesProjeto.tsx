@@ -17,6 +17,8 @@ import {
   rotuloPeso,
   textoEstrategia,
 } from "../../lib/formato";
+import { jobsDoProjeto } from "../../lib/gestao";
+import { estimarRodada, textoEstimativa, type EstimativaRodada } from "../../lib/estimativa-rodada";
 import { proximoPasso, type AcaoSugerida } from "./proximo-passo";
 
 /**
@@ -44,9 +46,12 @@ export function jobAtivoDoProjeto(jobs: Job[], projeto: string): Job | null {
 export function AcoesProjeto({
   projeto,
   jobAtivo,
+  jobs,
 }: {
   projeto: ProjetoDetalhe;
   jobAtivo: Job | null;
+  /** Todos os jobs conhecidos — a estimativa do `/trabalhar` sai da medição DESTE projeto. */
+  jobs: Job[];
 }) {
   const fabrica = useDados<RespostaFabrica>("/api/fabrica");
   const refPedir = useRef<HTMLDivElement>(null);
@@ -60,6 +65,13 @@ export function AcoesProjeto({
   const trabalhar = acaoPor("trabalhar");
   const status = acaoPor("status");
   const ehPainelFabrica = projeto.nome === "painel-fabrica";
+
+  // Estimativa da próxima rodada, com o teto VIGENTE da tabela como ponto de partida. Sai
+  // dos jobs deste projeto: média de outro projeto pareceria medida e não diria nada.
+  const estimativa =
+    trabalhar !== undefined
+      ? estimarRodada(jobsDoProjeto(jobs, projeto.nome), projeto.tarefas, trabalhar.tetoUsd)
+      : null;
 
   /** O CTA do "próximo passo" leva direto para a ação certa, sem o usuário caçar botão. */
   function irPara(acao: AcaoSugerida) {
@@ -133,6 +145,8 @@ export function AcoesProjeto({
                 : null
             }
             campoTexto={null}
+            estimativaRodada={estimativa}
+            tetoPadrao={trabalhar.tetoUsd}
           />
         )}
         {status && (
@@ -171,6 +185,8 @@ function CartaoAcaoProjeto({
   avisoEspecial,
   campoTexto,
   forcarAberto = false,
+  estimativaRodada = null,
+  tetoPadrao = null,
 }: {
   acao: AcaoFabrica;
   rotulo: string;
@@ -182,6 +198,13 @@ function CartaoAcaoProjeto({
   avisoEspecial: string | null;
   campoTexto: CampoTexto | null;
   forcarAberto?: boolean;
+  /**
+   * Estimativa MEDIDA da rodada (só o `/trabalhar` tem). Quando existe, ela substitui o selo
+   * qualitativo peso × modelo: "Alto" não sai de execução nenhuma e não ajuda a escolher teto.
+   */
+  estimativaRodada?: EstimativaRodada | null;
+  /** Teto vigente da tabela de guardrails; vira o valor inicial do campo. `null` = sem teto. */
+  tetoPadrao?: number | null;
 }) {
   const navegar = useNavigate();
   const [aberto, setAberto] = useState(false);
@@ -189,6 +212,9 @@ function CartaoAcaoProjeto({
   const [estrategiaId, setEstrategiaId] = useState(estrategiaPadrao);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Texto, não número: o campo precisa poder ficar vazio enquanto o usuário digita, e um
+  // `number` obrigaria a inventar um valor para o estado intermediário.
+  const [teto, setTeto] = useState(tetoPadrao === null ? "" : String(tetoPadrao));
 
   const estrategia = estrategias.find((e) => e.id === estrategiaId) ?? estrategias[0];
   const estimativa = estrategia ? estimarCusto(acao.peso, estrategia.custo) : null;
@@ -200,9 +226,18 @@ function CartaoAcaoProjeto({
     setErro(null);
     try {
       const argumentos = campoTexto ? campoTexto.montarArgumentos(texto.trim()) : projeto;
+      const tetoNum = Number(teto.replace(",", "."));
       const { job } = await api<RespostaAcao>(`/api/acoes/${acao.id}`, {
         method: "POST",
-        body: JSON.stringify({ argumentos, estrategia: estrategiaId }),
+        body: JSON.stringify({
+          argumentos,
+          estrategia: estrategiaId,
+          // Só viaja quando o cartão tem campo de teto E o valor é utilizável: mandar lixo
+          // faria a rota devolver 400 no lugar de simplesmente usar a tabela.
+          ...(estimativaRodada !== null && Number.isFinite(tetoNum) && tetoNum > 0
+            ? { tetoUsd: tetoNum }
+            : {}),
+        }),
       });
       navegar(`/jobs?job=${encodeURIComponent(job.id)}`);
     } catch (e) {
@@ -268,11 +303,40 @@ function CartaoAcaoProjeto({
             {estrategia && <span className="campo-ajuda">{textoEstrategia(estrategia)}</span>}
           </label>
 
-          {estimativa && (
-            <div className="estimativa">
-              <span className="estimativa-rot">Custo estimado</span>
-              <span className={`badge custo-${estimativa.tier}`}>{estimativa.rotulo}</span>
-            </div>
+          {/* Estimativa MEDIDA (só o /trabalhar tem) com o teto editável ao lado. No painel
+              não existe disparo a seco — o POST já executa —, então este é o único momento
+              em que o número muda uma decisão. */}
+          {estimativaRodada !== null ? (
+            <>
+              <div className="estimativa">
+                <span className="estimativa-rot">Esta rodada</span>
+                <span className="estimativa-medida">{textoEstimativa(estimativaRodada)}</span>
+              </div>
+              <label className="campo-form">
+                <span>Teto desta rodada (US$)</span>
+                <input
+                  type="number"
+                  min="0.5"
+                  max="100"
+                  step="0.5"
+                  value={teto}
+                  onChange={(e) => setTeto(e.target.value)}
+                  placeholder={tetoPadrao === null ? "sem teto" : String(tetoPadrao)}
+                />
+                <span className="campo-ajuda">
+                  A rodada para LIMPA ao atingir o teto — nenhum agente é cortado no meio, e o
+                  que já foi entregue vale. Vazio usa o padrão da fábrica
+                  {tetoPadrao === null ? " (sem teto)" : ` (US$ ${tetoPadrao})`}.
+                </span>
+              </label>
+            </>
+          ) : (
+            estimativa && (
+              <div className="estimativa">
+                <span className="estimativa-rot">Custo estimado</span>
+                <span className={`badge custo-${estimativa.tier}`}>{estimativa.rotulo}</span>
+              </div>
+            )
           )}
 
           {avisoEspecial !== null && (

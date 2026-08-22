@@ -572,3 +572,32 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   primeiro — US$ 2,13 por trabalho pronto. Ao ler um comentário que justifica um atraso ou uma
   cautela, **confirme que o caso temido ainda chega àquele ponto** — guardas acrescentadas
   depois costumam já tê-lo interceptado.
+- **Campo novo dilui a média para trás — filtre pelo universo em que o instrumento existia.**
+  A fatia de retrabalho do pipeline foi lida como 25% do gasto somando `custoPorTarefa` sobre
+  TODOS os 47 jobs; o campo é da T-060 e vem vazio nos anteriores, então metade do
+  denominador era gasto sem numerador. Restrito aos 22 jobs em que o instrumento existia, o
+  custo atribuído a tarefas é 98% do gasto e o retrabalho é **46%** — quase o dobro, e a
+  diferença muda o alvo da otimização. Antes de calcular uma fração sobre histórico, pergunte
+  desde quando cada campo é gravado.
+- **Média por entrega e custo da unidade entregue são números diferentes — não troque um pelo
+  outro.** A fábrica gastou US$ 179,48 em 26 tarefas concluídas (US$ 6,90 cada), enquanto a
+  tarefa que FECHA custa mediana US$ 2,08. Os dois estão certos: a distância entre eles É o
+  desperdício (retrabalho + trabalho pago em tarefa que não fechou naquela rodada). Para
+  ESTIMAR o que uma rodada vai custar, o número certo é a razão contábil — estimar pela
+  mediana da tarefa que fechou produz previsão sistematicamente otimista, que é a pior
+  espécie. Para CAÇAR desperdício, o número certo é a diferença entre as duas.
+- **Tela que se contradiz só aparece na captura.** O cartão passou a mostrar "nada despachável
+  agora" dois centímetros abaixo de "2 tarefa(s) na fila, prontas para executar", escrito pelo
+  `proximoPasso` — que contava o backlog INTEIRO como fila, sem olhar dependência. As duas
+  tarefas estavam presas, e o botão abriria e fecharia a rodada sem fazer nada. Nenhum teste
+  pegaria: cada metade estava certa sozinha. Sempre que duas partes da mesma tela derivarem o
+  mesmo fato por caminhos diferentes, **capture e leia as duas juntas** — e prefira que a
+  segunda consuma a primeira a que ela recalcule.
+- **Frontmatter YAML ilegível apaga a tarefa do pipeline em silêncio.** Quatro tarefas do
+  banco-imobiliario (T-025, T-038, T-050, T-051) voltam do leitor com TODOS os campos vazios e
+  `erros` preenchido — causa comum: título com aspas e dois-pontos (`titulo: "Sala criada:
+  XXXX" é ...`). Sem `status`, o motor não as vê, e a tela dizia "tudo concluído". O sensor
+  (`tarefa.erros`) existia desde sempre e nenhuma tela o lia: é a família *sensor sem atuador*
+  outra vez, agora do lado do leitor. Hoje o "próximo passo" denuncia. Ao escrever tarefa com
+  dois-pontos no título, aspar o valor INTEIRO — e ao ler tarefas em código novo, olhe `erros`
+  antes de confiar em `status`.
