@@ -141,24 +141,63 @@ que os pega):
   As três tarefas destravadas (T-051 → T-052 → T-055) são carga de teste em aberto.
 
 ═══════════════════════════════════════════════════════════════════════════════
-ITEM 1 — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura
+FECHADO EM 21/08 (3ª rodada) — o portão do meio 1-wide: NÃO É GARGALO
 ═══════════════════════════════════════════════════════════════════════════════
-(painel; estrutural, avalie antes de implementar — continua aberto)
 
-`maquina.ts:182`: havendo verificador, ele sai SOZINHO (só com revisores). Construtor vai a
-3-wide; verificador é sempre 1-wide, porque a árvore de trabalho é uma só e bateria completa
-sobre árvore com edições alheias gera reprovação falsa.
+Avaliado com os 43 jobs de pipeline que têm `.log.jsonl`, sem gastar modelo. A resposta é
+NÃO IMPLEMENTAR `git worktree` por verificador, e está registrada em
+`_sistema/DECISOES_FECHADAS.md` (seção "Paralelismo e vazão do pipeline").
 
-Isso está CERTO hoje. O problema é que a proporção muda com a maturidade do projeto: toda
-tarefa passa por 1 construtor, mas por 1 testador + 1 revisor. Numa fase madura o pipeline
-deixa de ser limitado por construção e passa a ser limitado por verificação. Medido em 15/08:
-quatro testadores em fila (545 s + 497 s + 233 s + 97 s).
+- **O portão 1-wide nunca enfileirou ninguém: 0 s de espera em 0 rodadas.** Não existe um
+  único par de verificadores CONSECUTIVOS em nenhum log — o ganho teórico de uma verificação
+  infinitamente larga é zero.
+- **O paralelismo de CONSTRUTOR também não acontece.** Em 43 rodadas há 2 etapas realmente
+  sobrepostas, e as duas são replanejador × outra etapa. O 3-wide nunca foi exercido: falta
+  par de tarefas despacháveis com `areas` disjuntas, e o teto encerra antes.
+- Repartição do tempo medido: construtor 65,5% (n=78, mediana 359 s), verificador 21,4%
+  (n=35, mediana 282 s), revisor 13,0%. Otimizar o portão do meio é mexer em um quinto do
+  relógio de um recurso que não está em fila.
+- Custos do outro lado, para o registro: `npm install` por worktree, branch por verificador,
+  evidências gravadas fora da árvore principal — e **memória**: 7,9 GB com ~1,3 GB livres,
+  numa máquina onde uma suíte de projeto já deixou 8 `node.exe` órfãos por estouro.
+- **A evidência que motivou o item não é reencontrável.** O handoff citava "quatro testadores
+  em fila (545 s + 497 s + 233 s + 97 s)" em 15/08; as duas rodadas daquele dia tiveram UM
+  verificador cada, e nenhum job do pipeline tem quatro. Número citado sem o arquivo de onde
+  saiu vira premissa que ninguém consegue conferir.
 
-Saída a AVALIAR (não está em DECISOES_FECHADAS): `git worktree` por verificador. O testador
-verifica trabalho COMMITADO, que é o que um worktree entrega isolado. Resolver antes de
-decidir: onde as evidências (`_gestao/evidencias/`) são gravadas e como voltam; custo de disco
-e de `npm install` por worktree; e se o ganho paga a complexidade num cockpit local de uma
-máquina com 7,9 GB. **Traga números antes de implementar** — pode ser que não pague.
+**O gargalo real da vazão, este sim aberto:** a rodada não tem o que paralelizar. Se algum dia
+isso incomodar, o alvo é a FILA (tarefas independentes com areas disjuntas prontas ao mesmo
+tempo), não a largura do portão.
+
+═══════════════════════════════════════════════════════════════════════════════
+ITEM 1 — a faixa "custo por agente" da aba Jobs é ficção
+═══════════════════════════════════════════════════════════════════════════════
+(painel; diagnosticado em 16/08, promovido a item em 21/08 — os anteriores fecharam)
+
+`AcumuladorDeUso.fechar()` NÃO é idempotente e o runner o chama A CADA MENSAGEM.
+`porModelo`/`total` são objetos NOVOS a cada chamada — por isso o TETO DE CUSTO está certo e
+não é preciso mexer nele —, mas `this.porAgente` é o MESMO objeto e leva `+=` em toda
+passada: o job soma a si mesmo uma vez por mensagem do SDK.
+
+O efeito está na tela: o job `9ba81214` mostra o orquestrador com 122M de cache lido e 1.722
+voltas, num job de 26 turnos cujo total real (`modelUsage`) foi 4,4M. A proporção ENTRE
+agentes também é ficção, porque cada um é inflado pelo número de `fechar()` que aconteceram
+depois da primeira mensagem dele — quem aparece cedo infla mais.
+
+Conserto provável, de uma linha de ideia: agregar por agente numa CÓPIA local, como já é
+feito com `porModelo`. O cuidado é o de sempre nesta casa — contabilidade tem histórico
+próprio de armadilhas, então: teste que chama `fechar()` várias vezes e exige o mesmo
+resultado, e conferência contra o `modelUsage` FINAL (nunca no meio do fluxo, ver
+`painel/CLAUDE.md`).
+
+Duas conferências baratas que cabem na mesma sessão, porque são do mesmo tipo (campo que
+pode estar quebrado sem ninguém notar):
+- `paraReplanejar` teve 2 entradas (T-030, T-032) e nenhuma `bloqueada` em 43 rodadas. O
+  motor não replaneja por esgotamento — é do orquestrador, por design. Confirme só que a
+  linha do relatório está sendo LIDA.
+- `criteriosSemComando` e `criteriosQuebrados` vieram vazios em TODAS as rodadas. Deve ser
+  sinal saudável, mas campo sempre vazio é indistinguível de campo quebrado — e essa é
+  exatamente a assinatura do bug do marco.
 
 ═══════════════════════════════════════════════════════════════════════════════
 ANOTADO, NÃO É TAREFA AINDA
@@ -174,28 +213,14 @@ ANOTADO, NÃO É TAREFA AINDA
   MECANISMO de subagente do SDK: quem despacha é a máquina de estados, que monta a `query()`
   inteira, então não há a quem oferecer um subagente. `CLAUDE.md` corrigido — dizia que os
   passos 1-2 eram "o que o painel usa".
-- **`AcumuladorDeUso.fechar()` NÃO é idempotente e o runner o chama a cada mensagem.**
-  `porModelo`/`total` são objetos novos a cada chamada (então o TETO DE CUSTO está certo),
-  mas `this.porAgente` é o MESMO objeto e leva `+=` em toda passada — o job soma a si mesmo
-  uma vez por mensagem do SDK. O efeito está visível na tela: o job `9ba81214` mostra o
-  orquestrador com 122M de cache lido e 1.722 voltas, num job de 26 turnos cujo total real
-  (`modelUsage`) foi 4,4M. **A faixa "custo por agente" da aba Jobs é ficção**, e a
-  proporção entre agentes também, porque cada um é inflado pelo número de chamadas de
-  `fechar()` que aconteceram DEPOIS da primeira mensagem dele. Conserto provável: agregar
-  por agente numa cópia local, como já é feito com `porModelo`. Achado em 16/08, não
-  consertado — mexe em contabilidade, que nesta casa tem histórico próprio de armadilhas.
 - **`<synthetic>` não tem preço em `precos.ts`** e faz toda estimativa de job cortado sair
   com o aviso "modelo sem preço / estimativa SUBESTIMADA". Aparece em execução real.
 - **`tarefas.ts:74`** tem o mesmo `/^T-\d+/` que causou o bug do marco, mas só como fallback do
   `id:` do frontmatter. Latente. Alinhe para `/^T-\d+[a-z]*/i` quando encostar no arquivo.
-- **`paraReplanejar` teve 2 entradas (T-030, T-032) e nenhuma `bloqueada` em 41 rodadas.** O
-  canal existe e o motor não replaneja por esgotamento — é do orquestrador, por design. Só
-  confirme que a linha do relatório está sendo lida, senão é mais um sensor sem atuador.
-- **`criteriosSemComando` e `criteriosQuebrados` vieram vazios em todas as rodadas.** Sinal
-  saudável (todo critério teve ao menos um `verificar:` decidido), mas vale reconferir que o
-  campo é de fato preenchível — campo sempre vazio é indistinguível de campo quebrado, e essa
-  é exatamente a assinatura do bug do marco.
-- **Carga de teste em aberto no banco-imobiliario:** T-049..T-053 (`/trabalhar
-  banco-imobiliario` pelo painel). A T-053 (teste que depende de sorte no dado) é a que mais
-  interessa AO PAINEL: teste intermitente vira reprovação falsa no portão do meio, e é bom ter
-  um caso vivo desse tipo para observar como o motor reage.
+- **`paraReplanejar` / `criteriosSemComando` / `criteriosQuebrados`** viraram parte do ITEM 1
+  acima — são o mesmo tipo de conferência (campo que pode estar quebrado sem ninguém notar).
+- **Carga de teste em aberto no banco-imobiliario:** T-051 (destravada em 21/08, quando o
+  frontmatter dela foi consertado), e atrás dela T-052 e T-055 por dependência. A T-053 (teste
+  que depende de sorte no dado) é a que mais interessa AO PAINEL: teste intermitente vira
+  reprovação falsa no portão do meio, e é bom ter um caso vivo desse tipo para observar como o
+  motor reage.

@@ -49,3 +49,28 @@ rotativo por natureza; regra e decisão não podem morar nele.)
   escopo declarado: confira o `areas:` em vez de confiar que "já foi coberto" (um README
   ficou mentindo por dois dias assim).
 - **Mensagem de erro que assume um cenário e afirma categoricamente sobre outro é BUG.**
+
+## Paralelismo e vazão do pipeline
+
+- **`git worktree` por verificador: NÃO FAZER.** A hipótese era que o portão do meio, sendo
+  1-wide, viraria o teto de vazão de um projeto maduro. Medido em 21/08 sobre os 43 jobs de
+  pipeline com `.log.jsonl`: **o portão 1-wide nunca enfileirou ninguém — zero segundos de
+  espera, em zero rodadas.** Não há um único par de verificadores consecutivos em nenhum log;
+  o ganho teórico de uma verificação infinitamente larga é 0 s.
+  A razão é que o gargalo é outro: **o paralelismo de CONSTRUTOR também não acontece.** Em 43
+  rodadas houve 2 ocorrências de etapas realmente sobrepostas, e as duas são replanejador ×
+  outra etapa — nenhuma é o 3-wide de construtores. A rodada típica despacha em série porque
+  raramente há duas tarefas despacháveis com `areas` disjuntas ao mesmo tempo, e porque o teto
+  de custo encerra antes.
+  Custo do lado oposto: branch por verificador, `npm install` por worktree, e — o que decide —
+  **memória**. A máquina tem 7,9 GB com ~1,3 GB livres, e a suíte de projeto já tem histórico
+  de deixar 8 `node.exe` órfãos por estouro de tempo (ver `painel/CLAUDE.md`); duas suítes
+  simultâneas é a receita do painel morrendo com job em voo. Some as evidências
+  (`_gestao/evidencias/`), que num worktree seriam gravadas fora da árvore principal e
+  precisariam voltar.
+  Nota sobre a evidência que motivou o item: o handoff citava "quatro testadores em fila
+  (545 s + 497 s + 233 s + 97 s)" medidos em 15/08. **Isso não é reencontrável** — as duas
+  rodadas de 15/08 tiveram UM verificador cada, e nenhum job do pipeline tem quatro. Lição:
+  número citado sem o arquivo de onde saiu vira premissa que ninguém consegue conferir.
+  **Reabrir SÓ SE** um `.log.jsonl` mostrar verificadores consecutivos com espera real — o
+  instrumento para isso é contar pares de etapas `verificador` sem nada entre elas.
