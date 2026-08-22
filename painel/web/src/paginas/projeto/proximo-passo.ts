@@ -52,7 +52,12 @@ export function proximoPasso(projeto: ProjetoDetalhe, jobAtivo: Job | null): Pas
   // Frontmatter ilegível: o leitor devolve a tarefa com campos vazios e a lista de erros. O
   // sinal existia desde sempre e ninguém o lia — e tarefa sem `status` some do pipeline em
   // silêncio, que é o pior desfecho possível para quem acha que o trabalho está na fila.
-  const quebradas = tarefas.filter((t) => t.erros.length > 0);
+  //
+  // O gatilho é o STATUS VAZIO, não `erros.length > 0`: erro de CAMPO (uma data com
+  // comentário depois, por exemplo) deixa a tarefa perfeitamente circulável, e transformar
+  // isso em alarme de tela seria um aviso que toca sempre — a maneira conhecida de um aviso
+  // morrer. Sem status, a tarefa não existe para o motor; aí é defeito de verdade.
+  const quebradas = tarefas.filter((t) => t.status === "" && t.erros.length > 0);
 
   // 2. Sem tarefa nenhuma: é o caso do projeto recém-importado — o beco sem saída.
   if (tarefas.length === 0) {

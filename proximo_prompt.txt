@@ -131,12 +131,14 @@ que os pega):
   tarefa(s) na fila, prontas para executar" logo acima de "nada despachável agora" — e quem
   estava certo era a estimativa: as duas estavam presas por dependência. Corrigido para
   prontas + PROMOVÍVEIS (`tarefasPromoviveis`), com teste.
-- **Quatro tarefas do banco-imobiliario estão com frontmatter YAML ilegível: T-025, T-038,
-  T-050, T-051.** Causa comum: título com aspas e dois-pontos (`titulo: "Sala criada: XXXX" é
-  ...`). O leitor devolve a tarefa com campos VAZIOS e a lista `erros` preenchida — sensor
-  que existia e ninguém lia —, o pipeline ignora a tarefa em silêncio e a tela dizia "tudo
-  concluído". Agora a tela denuncia. **Consertar os 4 arquivos é trabalho na carga de teste e
-  está PENDENTE** — enquanto não for, `/trabalhar banco-imobiliario` não tem o que despachar.
+- **A T-051 do banco-imobiliario estava com frontmatter YAML ilegível** (título que começa
+  com aspas e tem dois-pontos dentro). O leitor devolvia campos VAZIOS e `erros` preenchido —
+  sensor que existia e ninguém lia —, o pipeline ignorava a tarefa em silêncio, ela travava a
+  T-052 e a T-055 por dependência, e a tela dizia "tudo concluído". CORRIGIDO em 21/08, junto
+  com o `atualizada: <data> (revisão)` de T-025, T-038 e T-050 — estes últimos eram erro de
+  CAMPO com `status` íntegro, e circulavam normalmente: foram lidos como "quatro tarefas
+  invisíveis" quando só uma era. O alarme da tela dispara em status VAZIO por causa disso.
+  As três tarefas destravadas (T-051 → T-052 → T-055) são carga de teste em aberto.
 
 ═══════════════════════════════════════════════════════════════════════════════
 ITEM 1 — o portão do meio é 1-wide e vira o teto de vazão da fábrica madura

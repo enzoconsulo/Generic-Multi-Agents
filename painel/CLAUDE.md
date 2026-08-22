@@ -593,11 +593,17 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   pegaria: cada metade estava certa sozinha. Sempre que duas partes da mesma tela derivarem o
   mesmo fato por caminhos diferentes, **capture e leia as duas juntas** — e prefira que a
   segunda consuma a primeira a que ela recalcule.
-- **Frontmatter YAML ilegível apaga a tarefa do pipeline em silêncio.** Quatro tarefas do
-  banco-imobiliario (T-025, T-038, T-050, T-051) voltam do leitor com TODOS os campos vazios e
-  `erros` preenchido — causa comum: título com aspas e dois-pontos (`titulo: "Sala criada:
-  XXXX" é ...`). Sem `status`, o motor não as vê, e a tela dizia "tudo concluído". O sensor
-  (`tarefa.erros`) existia desde sempre e nenhuma tela o lia: é a família *sensor sem atuador*
-  outra vez, agora do lado do leitor. Hoje o "próximo passo" denuncia. Ao escrever tarefa com
-  dois-pontos no título, aspar o valor INTEIRO — e ao ler tarefas em código novo, olhe `erros`
-  antes de confiar em `status`.
+- **Frontmatter YAML ilegível apaga a tarefa do pipeline em silêncio — e erro de CAMPO não.**
+  A T-051 do banco-imobiliario voltava do leitor com TODOS os campos vazios e `erros`
+  preenchido, por um título que começa com aspas e tem dois-pontos dentro (`titulo: "Sala
+  criada: XXXX" é ...`, que o YAML lê como escalar aspado seguido de lixo). Sem `status`, o
+  motor não a via, ela travava a T-052 e a T-055 por dependência, e a tela dizia "tudo
+  concluído". O sensor (`tarefa.erros`) existia desde sempre e nenhuma tela o lia — *sensor
+  sem atuador* outra vez, agora do lado do leitor.
+  A distinção importa e custou uma leitura errada no mesmo dia: T-025, T-038 e T-050 também
+  tinham `erros`, mas só por `atualizada: <data> (revisão)` — **campo inválido com `status`
+  íntegro, e a tarefa circula normalmente**. Foram lidas como "quatro tarefas invisíveis"
+  quando só uma era. Por isso o alarme da tela dispara em STATUS VAZIO, não em
+  `erros.length > 0`: alarme por detalhe cosmético é alarme que ninguém lê depois. Ao escrever
+  tarefa com dois-pontos no título, aspar o valor INTEIRO; ao ler tarefas em código novo,
+  pergunte se o `status` sobreviveu antes de confiar na lista de erros.

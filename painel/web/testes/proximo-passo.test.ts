@@ -128,12 +128,23 @@ describe("proximoPasso", () => {
    * tarefa em silêncio e nenhuma outra frase da tela diria isso. Sensor que existia e não
    * era lido — a família de defeito mais comum desta fábrica.
    */
-  it("tarefa com frontmatter quebrado é dita em voz alta, e não vira 'tudo concluído'", () => {
+  it("tarefa SEM STATUS por frontmatter quebrado é dita em voz alta, e não vira 'tudo concluído'", () => {
     const quebrada = tarefa("", { id: "T-051", erros: ["frontmatter inválido: ..."] });
     const p = proximoPasso(projeto([tarefa("concluida"), quebrada]), null);
     expect(p.tom).toBe("atencao");
     expect(p.titulo).toMatch(/ileg/i);
     expect(p.detalhe).toContain("T-051");
+  });
+
+  /**
+   * Erro de CAMPO com status íntegro não é alarme: três tarefas do banco-imobiliario tinham
+   * `atualizada: <data> (revisão)` e circulavam normalmente. Aviso que toca por detalhe
+   * cosmético é aviso que ninguém lê depois — a armadilha do alarme em metade das rodadas.
+   */
+  it("erro de campo com status válido NÃO vira alarme de tela", () => {
+    const morna = tarefa("concluida", { id: "T-025", erros: ["campo atualizada inválido"] });
+    const p = proximoPasso(projeto([morna]), null);
+    expect(p.titulo).not.toMatch(/ileg/i);
   });
 
   it("tudo concluído: parabeniza e pede o próximo passo", () => {
