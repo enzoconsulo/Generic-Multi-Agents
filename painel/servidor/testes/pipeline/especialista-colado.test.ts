@@ -66,14 +66,14 @@ describe("equipe especializada no pipeline em código", () => {
   });
 
   it("cada especialista traz o SEU prompt, não o do vizinho", () => {
-    const doFrontend = resolverAgente(
-      { tarefa: tarefaCom("frontend"), papel: "construtor" },
+    const doTabuleiro = resolverAgente(
+      { tarefa: tarefaCom("tabuleiro"), papel: "construtor" },
       trilhaDe(equipe), equipe,
       { disponiveis: new Set<string>(), projeto: "banco-imobiliario", reforco: "opus" },
     );
-    expect(doFrontend.promptColado).toBe(equipe.agentes.find((a) => a.id === "frontend")?.prompt);
+    expect(doTabuleiro.promptColado).toBe(equipe.agentes.find((a) => a.id === "tabuleiro")?.prompt);
     // E não é o do vizinho: os prompts precisam ser de fato distintos entre si.
-    expect(doFrontend.promptColado).not.toBe(equipe.agentes.find((a) => a.id === "engine")?.prompt);
+    expect(doTabuleiro.promptColado).not.toBe(equipe.agentes.find((a) => a.id === "engine")?.prompt);
   });
 
   /** `agente:` que não consta é defeito de PLANEJAMENTO e tem mensagem própria. */
@@ -169,12 +169,12 @@ describe("id do especialista, para o log", () => {
 
   it("acompanha o prompt colado", () => {
     const r = resolverAgente(
-      { tarefa: tarefaCom("frontend"), papel: "construtor" },
+      { tarefa: tarefaCom("tabuleiro"), papel: "construtor" },
       trilhaDe(equipe),
       equipe,
       opcoes,
     );
-    expect(r.especialista).toBe("frontend");
+    expect(r.especialista).toBe("tabuleiro");
     expect(r.promptColado).not.toBeNull();
   });
 
@@ -191,7 +191,7 @@ describe("id do especialista, para o log", () => {
   it("é null nos papéis fixos da trilha (verificador e revisor)", () => {
     for (const papel of ["verificador", "revisor"] as const) {
       const r = resolverAgente(
-        { tarefa: tarefaCom("frontend"), papel },
+        { tarefa: tarefaCom("tabuleiro"), papel },
         trilhaDe(equipe),
         equipe,
         opcoes,
@@ -202,7 +202,7 @@ describe("id do especialista, para o log", () => {
 
   it("é null quando `tentativas >= 2` descarta a especialização — e o prompt também", () => {
     const r = resolverAgente(
-      { tarefa: tarefaCom("frontend", 2), papel: "construtor" },
+      { tarefa: tarefaCom("tabuleiro", 2), papel: "construtor" },
       trilhaDe(equipe),
       equipe,
       opcoes,
