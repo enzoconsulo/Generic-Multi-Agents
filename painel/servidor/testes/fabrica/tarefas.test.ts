@@ -146,3 +146,52 @@ Rodou.
     expect(ruim.erros.join(" ")).toMatch(/status/);
   });
 });
+
+/**
+ * `ultima-reprovacao` é campo do MOTOR, e por isso o leitor é desconfiado com ele: só os três
+ * portões conhecidos passam. Valor estranho não vira erro de tarefa (o planejador não escreve
+ * este campo) — vira `null`, que o diagnóstico lê como "não sei" e resolve pelo caminho caro.
+ * É a regra de ouro do `diagnostico.ts` aplicada já na leitura.
+ */
+describe("parsearTarefa — ultima-reprovacao", () => {
+  function comCampo(linha: string | null): ReturnType<typeof parsearTarefa> {
+    return parsearTarefa(
+      "T-020-x.md",
+      [
+        "---",
+        "id: T-020",
+        "titulo: x",
+        "status: em-execucao",
+        "prioridade: alta",
+        "dependencias: []",
+        "areas: [src/a.js]",
+        "tentativas: 1",
+        ...(linha === null ? [] : [linha]),
+        "criada: 2026-08-23",
+        "atualizada: 2026-08-23",
+        "---",
+        "",
+        "## Objetivo",
+        "x",
+      ].join("\n"),
+    );
+  }
+
+  it("lê os três portões válidos", () => {
+    for (const portao of ["mecanica", "verificador", "revisor"]) {
+      expect(comCampo(`ultima-reprovacao: ${portao}`).ultimaReprovacao, portao).toBe(portao);
+    }
+  });
+
+  it("ausente é null, e não é erro de tarefa", () => {
+    const t = comCampo(null);
+    expect(t.ultimaReprovacao).toBe(null);
+    expect(t.erros).toEqual([]);
+  });
+
+  it("valor desconhecido vira null (na dúvida, o caminho caro) sem poluir `erros`", () => {
+    const t = comCampo("ultima-reprovacao: sei-la");
+    expect(t.ultimaReprovacao).toBe(null);
+    expect(t.erros).toEqual([]);
+  });
+});

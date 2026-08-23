@@ -9,7 +9,11 @@ import {
 } from "../fabrica/git.js";
 import { gravarMarco, textoDoMarco } from "./marco.js";
 import { temTrabalhoParcial } from "./trabalho-parcial.js";
-import { anexarNaSecao, gravarStatusTarefa } from "../fabrica/escrita-tarefas.js";
+import {
+  anexarNaSecao,
+  gravarCampoFrontmatter,
+  gravarStatusTarefa,
+} from "../fabrica/escrita-tarefas.js";
 import { consultaReal, type Consulta } from "../jobs/claude/runner-claude.js";
 import type { ContextoExecucao, Job, Runner } from "../jobs/tipos.js";
 import type { SecoesTarefa, TarefaResumo } from "../fabrica/tipos.js";
@@ -230,6 +234,18 @@ export class RunnerPipeline implements Runner {
       // sob paralelismo, sujeira delas é trabalho de outro agente — ver `motor.ts`.
       alteracoesForaDasAreas: async (t, alheias) =>
         alteracoesForaDe(dirProjeto, ["_gestao", ...t.areas, ...alheias]),
+      // Espelha no frontmatter o portão que reprovou, para o diagnóstico do retrabalho
+      // sobreviver ao fim da rodada. Sem isto, uma reprovação num job e o retrabalho no job
+      // seguinte perdiam o sinal e caíam no caminho caro por FALTA de informação — que é
+      // exatamente o oposto da regra "na dúvida, o caminho caro" (a dúvida era artificial).
+      gravarUltimaReprovacao: async (t, portao) => {
+        const r = await gravarCampoFrontmatter(
+          join(dirTarefas, t.arquivo),
+          "ultima-reprovacao",
+          portao,
+        );
+        if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });
+      },
       anexarNotas: async (t, texto) => {
         const r = await anexarNaSecao(join(dirTarefas, t.arquivo), "Notas de execução", texto);
         if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });

@@ -339,6 +339,24 @@ cadeia (`especialista-colado.test.ts` e `despachante.test.ts`).
 
 Os passos 1 e 2 continuam valendo para VOCÊ, no chat interativo, onde há de fato subagentes.
 
+**E desde 23/08 a especialização é VISÍVEL no log** (`frontend@executor`, não `executor` seco).
+Não é cosmético: a linha antiga nomeava o arquivo de agente, e como no painel o especialista
+nunca é subagente, 64 despachos especializados do banco-imobiliario apareciam na tela como
+genéricos. É a segunda vez que essa invisibilidade produz a conclusão errada de que a equipe
+não roda — a primeira foi a auditoria de 16/08, pelo lado do `motivo`. **Antes de concluir
+que um mecanismo está desligado a partir do que a tela mostra, confirme no código ou num
+teste.**
+
+**O prompt do especialista é DOMÍNIO PURO.** O `executor` já vai no despacho, num bloco
+`<seu-papel>`; o especialista entra logo abaixo. Repetir ali commit, status, Notas,
+confinamento ou "leia o protocolo" é a mesma regra dita duas vezes com palavras diferentes —
+e as duas últimas ainda mandam o agente para fora do alcance dele, porque o `cwd` é o projeto.
+Medido: os três especialistas do banco-imobiliario gastavam ~70% do texto repetindo o
+executor, e isso é o que fazia a equipe parecer inútil por dentro enquanto o log a fazia
+parecer inexistente por fora. Se você reescrever um `equipe.json`, escreva só o que o genérico
+não teria como saber: arquivos da área, invariantes, o comando que prova um critério dela, e
+as armadilhas já pagas.
+
 Sem `agente:`, use o genérico da trilha. Com um `agente:` que **não consta** no
 `equipe.json`: use o genérico **e anote no log** — apontar para especialista inexistente é
 defeito de planejamento que só aparece se alguém escrever.

@@ -44,6 +44,7 @@ function tarefa(): TarefaResumo {
     areas: [],
     tentativas: 0,
     replanejadaDe: null,
+    ultimaReprovacao: null,
     agente: null,
     criada: null,
     atualizada: null,
@@ -246,5 +247,91 @@ describe("despachante — o prompt do especialista chega à mensagem", () => {
     const { prompt } = await despachar("domínio X");
     expect(prompt).toContain("<seu-papel>");
     expect(prompt.indexOf("<seu-papel>")).toBeLessThan(prompt.indexOf("<especialista>"));
+  });
+});
+
+/**
+ * A LINHA DE LOG É A ÚNICA JANELA DO USUÁRIO PARA O ROTEAMENTO (23/08).
+ *
+ * Ela escrevia `executor` seco, que é o nome do ARQUIVO de agente — e no pipeline em código
+ * esse é sempre o nome, porque o especialista nunca vira subagente. Resultado: 64 despachos
+ * especializados do banco-imobiliario apareceram na tela como genéricos, e a conclusão
+ * natural de quem lê foi que o `equipe.json` não fazia nada.
+ *
+ * É a armadilha já registrada no CLAUDE.md do painel — "linha de log descreve o que
+ * ACONTECEU" — do lado da execução, não do lado do motivo.
+ */
+describe("linha de execução mostra o agente EFETIVO", () => {
+  async function linhas(pedidoExtra: Partial<PedidoDespacho>): Promise<string[]> {
+    const { raiz, dirProjeto } = await fabricaFalsa();
+    const { consulta } = espiao();
+    const emitidas: string[] = [];
+    const despachante = criarDespachante({
+      raizFabrica: raiz,
+      dirProjeto,
+      projeto: "app",
+      modeloFluxo: "sonnet",
+      equipe: null,
+      consulta,
+      abortController: new AbortController(),
+      emitir: (_n, texto) => emitidas.push(texto),
+    });
+    await despachante({
+      tarefa: tarefa(),
+      papel: "construtor",
+      agente: "executor",
+      modelo: null,
+      promptColado: null,
+      motivo: "teste",
+      notas: "",
+      ...pedidoExtra,
+    } as PedidoDespacho);
+    return emitidas;
+  }
+
+  it("prefixa o id do especialista quando há um conduzindo a etapa", async () => {
+    const l = await linhas({ especialista: "frontend", promptColado: "sou o frontend" });
+    expect(l.some((t) => t.includes("frontend@executor"))).toBe(true);
+  });
+
+  it("sem especialista, a linha continua nomeando só o agente", async () => {
+    const l = await linhas({});
+    expect(l.some((t) => t.includes("· executor ·"))).toBe(true);
+    expect(l.some((t) => t.includes("@"))).toBe(false);
+  });
+});
+
+/**
+ * `areas` com DIRETÓRIO não embute nada, e antes isso sumia entre os "omitidos" — bloco que
+ * ninguém lê. Vira erro visível porque é defeito de PLANEJAMENTO: só se conserta se aparecer.
+ */
+describe("alarme de `areas` com diretório", () => {
+  it("emite erro nomeando o caminho e dizendo de quem é o defeito", async () => {
+    const { raiz, dirProjeto } = await fabricaFalsa();
+    await mkdir(join(dirProjeto, "public"), { recursive: true });
+    const { consulta } = espiao();
+    const erros: string[] = [];
+    const despachante = criarDespachante({
+      raizFabrica: raiz,
+      dirProjeto,
+      projeto: "app",
+      modeloFluxo: "sonnet",
+      equipe: null,
+      consulta,
+      abortController: new AbortController(),
+      emitir: (nivel, texto) => {
+        if (nivel === "erro") erros.push(texto);
+      },
+    });
+    await despachante({
+      tarefa: { ...tarefa(), areas: ["public"] },
+      papel: "construtor",
+      agente: "executor",
+      modelo: null,
+      promptColado: null,
+      motivo: "teste",
+      notas: "",
+    });
+    expect(erros.some((t) => t.includes("public") && t.includes("DIRETÓRIO"))).toBe(true);
   });
 });

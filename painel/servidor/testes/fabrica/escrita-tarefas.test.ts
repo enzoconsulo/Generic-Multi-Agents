@@ -2,7 +2,11 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { anexarNaSecao, gravarStatusTarefa } from "../../src/fabrica/escrita-tarefas.js";
+import {
+  anexarNaSecao,
+  gravarCampoFrontmatter,
+  gravarStatusTarefa,
+} from "../../src/fabrica/escrita-tarefas.js";
 
 function arquivoTarefa(conteudo: string, nl = "\n"): string {
   const dir = mkdtempSync(join(tmpdir(), "escrita-"));
@@ -156,5 +160,64 @@ describe("anexarNaSecao", () => {
     const a = arquivoTarefa(TAREFA, "\r\n");
     await anexarNaSecao(a, "Verificação", "linha");
     expect(readFileSync(a, "utf8")).not.toMatch(/[^\r]\n/);
+  });
+});
+
+/**
+ * O portão que reprovou precisa SOBREVIVER ao fim da rodada — é essa persistência que faz o
+ * diagnóstico de retrabalho existir entre jobs, em vez de todo retrabalho cruzado cair no
+ * caminho caro por falta de sinal. Ver `gravarCampoFrontmatter`.
+ */
+describe("gravarCampoFrontmatter", () => {
+  it("insere campo novo no fim do frontmatter, sem tocar no resto", async () => {
+    const arq = arquivoTarefa(TAREFA);
+    const r = await gravarCampoFrontmatter(arq, "ultima-reprovacao", "revisor");
+    expect(r).toEqual({ ok: true, de: "(ausente)", para: "revisor" });
+
+    const texto = readFileSync(arq, "utf8");
+    expect(texto).toContain("ultima-reprovacao: revisor");
+    // Campos existentes intactos e na ordem original: o diff da tarefa é revisado por humano.
+    expect(texto.indexOf("id: T-001")).toBeLessThan(texto.indexOf("ultima-reprovacao"));
+    expect(texto).toContain("agente: engine");
+    expect(texto).toContain("## Objetivo");
+  });
+
+  it("sobrescreve o valor quando o campo já existe", async () => {
+    const arq = arquivoTarefa(TAREFA);
+    await gravarCampoFrontmatter(arq, "ultima-reprovacao", "mecanica");
+    const r = await gravarCampoFrontmatter(arq, "ultima-reprovacao", "revisor");
+    expect(r).toEqual({ ok: true, de: "mecanica", para: "revisor" });
+    const texto = readFileSync(arq, "utf8");
+    expect(texto).toContain("ultima-reprovacao: revisor");
+    expect(texto).not.toContain("ultima-reprovacao: mecanica");
+  });
+
+  it("remove a linha com valor null — é assim que o ciclo fechado apaga o sinal", async () => {
+    const arq = arquivoTarefa(TAREFA);
+    await gravarCampoFrontmatter(arq, "ultima-reprovacao", "revisor");
+    const r = await gravarCampoFrontmatter(arq, "ultima-reprovacao", null);
+    expect(r.ok).toBe(true);
+    expect(readFileSync(arq, "utf8")).not.toContain("ultima-reprovacao");
+  });
+
+  it("remover campo ausente é no-op, não erro", async () => {
+    const arq = arquivoTarefa(TAREFA);
+    const r = await gravarCampoFrontmatter(arq, "ultima-reprovacao", null);
+    expect(r).toEqual({ ok: true, de: "(ausente)", para: "(ausente)" });
+  });
+
+  it("preserva CRLF (o repositório vive em Windows)", async () => {
+    const arq = arquivoTarefa(TAREFA, "\r\n");
+    await gravarCampoFrontmatter(arq, "ultima-reprovacao", "verificador");
+    const texto = readFileSync(arq, "utf8");
+    expect(texto).toContain("ultima-reprovacao: verificador\r\n");
+    // Nenhuma linha ficou com LF solto no meio de um arquivo CRLF.
+    expect(texto.split("\r\n").every((l) => !l.includes("\n"))).toBe(true);
+  });
+
+  it("arquivo sem frontmatter não derruba o pipeline", async () => {
+    const arq = arquivoTarefa("sem frontmatter aqui");
+    const r = await gravarCampoFrontmatter(arq, "ultima-reprovacao", "revisor");
+    expect(r.ok).toBe(false);
   });
 });

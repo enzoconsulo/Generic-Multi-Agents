@@ -37,9 +37,10 @@ projeto: nome-do-projeto
 status: backlog
 prioridade: alta        # alta | media | baixa
 dependencias: []        # ex.: [T-002, T-003] — IDs que precisam estar concluida
-areas: []               # pastas/arquivos que a tarefa toca, ex.: [src/api/, src/db/schema.sql]
+areas: []               # ARQUIVOS que a tarefa toca — nunca pastas. Ex.: [src/api/usuarios.ts, src/db/schema.sql]
 tentativas: 0           # incrementado pelo construtor a cada vez que pega a tarefa
 agente: <id>            # OPCIONAL: especialista da equipe (_gestao/equipe.json) que executa; vazio = construtor genérico
+ultima-reprovacao:      # NÃO ESCREVA. Campo do MOTOR (mecanica|verificador|revisor); ver regra 12
 verificacao: rubrica    # OPCIONAL (trilha genérica): ausente = critérios executáveis/inspecionáveis.
                         # `rubrica` EXIGE a seção `## Rubrica` abaixo — ver regra 13.
 replanejada-de: T-NNN   # OPCIONAL: só em tarefas criadas por replanejamento automático
@@ -181,6 +182,17 @@ Regras:
     **Duas reprovações seguidas sob o MESMO especialista** (`tentativas >= 2`) trocam o
     construtor por prevenção: vá para o reforçado genérico da trilha e registre a troca —
     o `agente:` foi decidido no planejamento, antes de se saber onde a tarefa falharia.
+
+    **Nem toda reprovação pede o mesmo calibre, e o campo `ultima-reprovacao` é o que
+    permite distinguir.** Quando o pipeline em código devolve uma tarefa ao construtor, ele
+    grava ali QUAL portão reprovou — `mecanica` (um `verificar:` falhou), `verificador` ou
+    `revisor` —, e apaga o campo assim que a tarefa avança. Falha mecânica é objetiva e
+    localizada: modelo mais forte não faz um teste passar melhor, então ela NÃO escala e roda
+    com escopo estreito. Reprovação por conformidade nunca barateia: o modelo barato já
+    provou que não entendeu o pedido. **Ninguém além do motor escreve esse campo** — nem o
+    construtor, nem o planejador, nem você; valor ausente ou desconhecido significa "não sei"
+    e cai no caminho caro, que é o comportamento seguro.
+
 13. **Grau de prova (trilha genérica).** Fora de software, "verificar" não é uma coisa só.
     Todo critério fica num de três degraus, e o `conferente` **registra em qual**:
     `[executado]` (um comando roda e a saída é o veredito), `[inspecionado]` (um script

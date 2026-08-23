@@ -69,6 +69,16 @@ export interface PedidoDespacho {
   modelo: string | null;
   /** Prompt do especialista a colar, quando o agente nomeado não foi injetado. */
   promptColado: string | null;
+  /**
+   * Id do especialista do `equipe.json` que está de fato conduzindo esta etapa. Só o NOME,
+   * para o log; o conteúdo vai em `promptColado`.
+   *
+   * Existe porque no painel o especialista nunca é subagente (ver `maquina.ts`, passo 3), e
+   * a linha de log escrevia só `executor` — a especialização ficava invisível e passava por
+   * inexistente. Ausente = não há especialista nesta etapa (papel fixo da trilha, tarefa sem
+   * `agente:`, ou especialização descartada pela regra de `tentativas >= 2`).
+   */
+  especialista?: string;
   /** Como se chegou neste agente — vai para o log, permite auditar roteamento errado. */
   motivo: string;
   /**
@@ -161,6 +171,20 @@ export interface DependenciasMotor {
   commitarTarefa?(tarefa: TarefaResumo, mensagem: string): Promise<string | null>;
   /** Anexa texto à seção `## Notas de execução` — usado para registrar o hash recuperado. */
   anexarNotas?(tarefa: TarefaResumo, texto: string): Promise<void>;
+  /**
+   * Persiste (ou limpa) o portão que reprovou a tarefa, no frontmatter dela.
+   *
+   * O motor observa esse fato de graça — foi ele que despachou o portão e viu o status
+   * voltar para `em-execucao` —, mas até 23/08 o guardava só em memória. Como as rodadas do
+   * painel fecham em uma ou duas tarefas, o retrabalho quase sempre acontece no job
+   * SEGUINTE, com a memória já perdida: o diagnóstico não rodava e o escalonamento caía na
+   * regra antiga (`tentativas >= 1` → modelo caro, escopo completo). Gravar no disco é o que
+   * transforma o sensor em atuador.
+   *
+   * Opcional: sem esta dependência o motor volta a esquecer entre rodadas — comportamento
+   * anterior, conservador e caro, nunca incorreto.
+   */
+  gravarUltimaReprovacao?(tarefa: TarefaResumo, portao: PortaoQueReprovou | null): Promise<void>;
   /**
    * Hash do HEAD do repositório do projeto. Comparado ANTES e DEPOIS de uma etapa, diz se o
    * agente commitou — o sinal mais forte de "houve trabalho", e o mais comum na prática:
@@ -813,6 +837,7 @@ export async function rodarPipeline(
         // Registra QUEM reprovou: falha mecânica é objetiva e localizada, e o próximo
         // despacho pode ser barato e estreito em vez de subir para `opus`.
         retornos.set(passo.tarefa.id, "mecanica");
+        await dep.gravarUltimaReprovacao?.(passo.tarefa, "mecanica");
         dep.log(
           "erro",
           `${passo.tarefa.id}: critério objetivo falhou na passada mecânica — volta ao` +
@@ -862,7 +887,19 @@ export async function rodarPipeline(
     // decide se esta etapa é uma construção de novo (calibre máximo) ou um conserto nomeado
     // (barato e estreito). O portão que reprovou foi OBSERVADO nesta rodada; tarefa herdada
     // de outra sessão não tem registro e cai, de propósito, no caminho caro.
-    const portao = passo.papel === "construtor" ? (retornos.get(passo.tarefa.id) ?? null) : null;
+    // Observado NESTA rodada primeiro; se não houver, o que ficou gravado no frontmatter pelo
+    // motor de uma rodada anterior. A ordem importa: o de memória é sempre mais fresco, e o
+    // do disco pode ser de um ciclo que já fechou — por isso ele é APAGADO assim que a tarefa
+    // passa do construtor (ver a limpeza junto de `retornos.delete`).
+    //
+    // Isto NÃO é ler prosa acumulada, que `diagnostico.ts` proíbe: é um fato observado pelo
+    // motor, escrito por ele, com um valor por ciclo e apagado ao fechar o ciclo.
+    const portao =
+      passo.papel === "construtor"
+        ? (retornos.get(passo.tarefa.id) ??
+          (passo.tarefa.ultimaReprovacao as PortaoQueReprovou | null) ??
+          null)
+        : null;
     const diag =
       portao === null
         ? DIAGNOSTICO_DESCONHECIDO
@@ -957,6 +994,7 @@ export async function rodarPipeline(
       agente: agente.nome,
       modelo: agente.modelo,
       promptColado: agente.promptColado,
+      ...(agente.especialista !== null ? { especialista: agente.especialista } : {}),
       motivo: agente.motivo,
       notas: passo.papel === "revisor" ? await dep.lerNotasDe(passo.tarefa) : "",
       ...(politica.maxTurns !== null ? { maxTurns: politica.maxTurns } : {}),
@@ -1149,13 +1187,22 @@ export async function rodarPipeline(
     // para `em-execucao`. É daqui que sai o diagnóstico do próximo retrabalho — fato visto,
     // não prosa interpretada.
     if (depois?.status === "em-execucao" && statusAntes !== "em-execucao") {
-      if (passo.papel === "verificador") retornos.set(passo.tarefa.id, "verificador");
-      else if (passo.papel === "revisor") retornos.set(passo.tarefa.id, "revisor");
+      const quem: PortaoQueReprovou | null =
+        passo.papel === "verificador" ? "verificador" : passo.papel === "revisor" ? "revisor" : null;
+      if (quem !== null) {
+        retornos.set(passo.tarefa.id, quem);
+        // Espelha no disco: a rodada pode acabar aqui (teto de custo, backlog em corrente), e
+        // é justamente aí que o sinal se perdia.
+        await dep.gravarUltimaReprovacao?.(passo.tarefa, quem);
+      }
     }
     // Avançou para além do construtor: o diagnóstico daquele ciclo cumpriu seu papel e não
     // pode sobreviver para envenenar o próximo (o motivo da reprovação seguinte será outro).
     if (passo.papel === "construtor" && depois?.status !== statusAntes) {
       retornos.delete(passo.tarefa.id);
+      if (passo.tarefa.ultimaReprovacao !== null) {
+        await dep.gravarUltimaReprovacao?.(passo.tarefa, null);
+      }
     }
 
     // ---- GATILHO A: IMPEDIMENTO DECLARADO (T-058) ------------------------------------

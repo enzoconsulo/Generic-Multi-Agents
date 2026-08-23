@@ -209,6 +209,19 @@ export interface AgenteResolvido {
   /** Prompt do especialista a COLAR no despacho, quando o agente nomeado não existe. */
   promptColado: string | null;
   /**
+   * Id do especialista do `equipe.json` que conduz esta etapa, ou `null`.
+   *
+   * Separado de `promptColado` porque serve a outro propósito: o prompt vai para o modelo, o
+   * id vai para o LOG. Sem ele a linha de execução escrevia só `executor` e a especialização
+   * ficava invisível na tela — foi a leitura que fez a equipe do `equipe.json` passar por
+   * inútil enquanto rodava em 64 de 88 despachos.
+   *
+   * `null` também quando a especialização foi DESCARTADA de propósito (regra de
+   * `tentativas >= 2`) — ali o despacho realmente não tem especialista, e dizer que tem
+   * seria a mesma mentira ao contrário.
+   */
+  especialista: string | null;
+  /**
    * Trilha de decisão, para o log — é o que permite auditar roteamento errado.
    *
    * **DESCREVA O QUE ACONTECEU, NUNCA O QUE FALTOU.** Esta linha é lida meses depois, fora
@@ -281,6 +294,7 @@ export function resolverAgente(
       nome: generico,
       modelo: null,
       promptColado: null,
+      especialista: null,
       motivo: `papel ${passo.papel}: agente fixo da trilha ${trilha}`,
     };
   }
@@ -291,6 +305,7 @@ export function resolverAgente(
       nome: `${generico}${sufixo}`,
       modelo,
       promptColado: null,
+      especialista: null,
       motivo: `sem \`agente:\` → genérico da trilha${reforcar ? " (reforçado)" : ""}`,
     };
   }
@@ -303,6 +318,7 @@ export function resolverAgente(
       nome: `${generico}${sufixo}`,
       modelo,
       promptColado: null,
+      especialista: null,
       // Aqui a ausência É o defeito, então ela lidera — mas o efeito vem junto, para quem lê
       // o log saber o que de fato rodou.
       motivo:
@@ -318,6 +334,7 @@ export function resolverAgente(
       nome: `${generico}${SUFIXO_REFORCO}`,
       modelo: opcoes.reforco,
       promptColado: null,
+      especialista: null,
       motivo:
         `\`${id}\` reprovou ${tentativas}× — troca para o reforçado genérico antes da` +
         " última tentativa (a especialização está enviesando o ataque)",
@@ -330,6 +347,7 @@ export function resolverAgente(
         nome: candidato,
         modelo,
         promptColado: null,
+        especialista: id,
         // "subagente" explícito para distinguir do passo 3, que aplica o MESMO especialista
         // por outro meio. Sem isso as duas linhas ficariam idênticas no log e não daria para
         // auditar por qual caminho o roteamento passou.
@@ -352,6 +370,7 @@ export function resolverAgente(
     nome: `${generico}${sufixo}`,
     modelo,
     promptColado: especialista.prompt,
+    especialista: id,
     motivo: `especialista \`${id}\` colado no despacho${reforcar ? " (reforçado)" : ""}`,
   };
 }

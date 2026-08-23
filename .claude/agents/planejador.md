@@ -107,6 +107,20 @@ contrato. Peça de uma vez:
      refez do zero o ritual inteiro do executor — subir servidor, forçar a jogada, dirigir o
      navegador — só para remedir números que o executor já tinha medido e escrito nas Notas.
      Duas contas caras para a mesma pergunta, uma delas evitável de graça;
+   - **CONFIRA ANTES DE GRAVAR: nenhuma tarefa sai com zero `verificar:`.** As três regras
+     acima já estavam escritas quando a T-059 do banco-imobiliario foi criada com 4 critérios
+     e **um** comando — e ela foi a única tarefa recente a gastar dois ciclos e um `opus`,
+     reprovada por CONFORMIDADE. As tarefas vizinhas, com 4 a 8 comandos cada (T-054, T-055,
+     T-057, T-058), fecharam em um ciclo. A correlação é limpa e a explicação é simples:
+     critério sem comando vira opinião do construtor contra opinião do revisor, e opinião
+     reprova.
+     Então trate isto como conferência mecânica, não como conselho: ao terminar cada arquivo
+     de tarefa, conte os critérios e conte os `verificar:`. **Zero comando numa tarefa que
+     toca código é defeito seu** — volte e parta os critérios até que a metade objetiva de
+     pelo menos um deles seja executável. Se genuinamente não houver nada mensurável, a
+     tarefa que falta é a da FERRAMENTA que torna essa área mensurável, e ela vem antes.
+     Isto é a única parte do ciclo que ninguém corrige por dentro: o construtor não pode
+     consertar o critério que o julga, e o verificador só executa o que você escreveu.
    - **nunca escreva "a suíte continua passando" como critério executável, e nunca invente o
      comando de cabeça.** A suíte do projeto já roda em TODA verificação, sozinha, com o
      comando do ecossistema — escrevê-la à mão não acrescenta verificação e cria uma segunda
@@ -129,10 +143,18 @@ contrato. Peça de uma vez:
      exatamente por ter nascido depois. Medido: a T-043 do banco-imobiliario era fundação
      declarada no próprio texto, ficou por último, e dois jobs (US$ 14) foram gastos fazendo
      à mão, três vezes, o ritual que ela existia para eliminar — enquanto ela esperava.
-   - `areas` preenchido com as pastas/arquivos que a tarefa deve tocar. **Se a tarefa vai
-     precisar acrescentar uma cena de verificação, o arquivo da cena entra nas `areas`** — é
-     por elas que se decide quais construtores rodam em paralelo, e trabalho feito fora delas
-     nem entra no commit de recuperação;
+   - `areas` preenchido com os ARQUIVOS que a tarefa deve tocar — **arquivos, nunca pastas**.
+     `public/css` não é uma area; `public/css/modais.css` é. A fábrica embute o conteúdo das
+     `areas` no despacho, e uma pasta não tem conteúdo para embutir: o construtor recebe zero
+     arquivo e vai trabalhar às cegas justamente na parte que a tarefa mais mexe. Foi o que
+     aconteceu na T-059 do banco-imobiliario (`areas: [public/css, public/js]`) — único
+     despacho recente com "0 arquivo(s) embutido(s)", dois ciclos e um `opus` para uma
+     correção de CSS. `areas` é também o mutex do paralelismo, e "a pasta inteira" trava
+     qualquer outra tarefa vizinha sem precisar.
+     Não sabe ainda quais arquivos? Então a tarefa começa por uma de investigação, ou você
+     abre o `_gestao/MAPA.md` e descobre — não declare a pasta "por garantia".
+     **Se a tarefa vai precisar acrescentar uma cena de verificação, o arquivo da cena entra
+     nas `areas`** — trabalho feito fora delas nem entra no commit de recuperação;
    - seção Contexto dizendo ao executor o que ele precisa saber sem redescobrir tudo —
      inclusive **quais bibliotecas da stack usar nesta tarefa** (com o papel de cada uma).
      Contexto que nomeia a lib evita que o construtor escreva à mão o que já está
@@ -174,8 +196,7 @@ errada: reagrupe por COMPORTAMENTO entregue, não por arquivo tocado.
 4. Se tomou decisões relevantes (stack, arquitetura, corte de escopo), registre cada uma
    em `_gestao/DECISOES.md` com data e motivo.
 5. **Equipe do projeto** em `_gestao/equipe.json` — os ESPECIALISTAS que a fábrica usa para
-   CONSTRUIR este projeto (agentes sob demanda, sintetizados da ideia/stack). O painel
-   injeta essa equipe como subagentes quando roda o /trabalhar. Formato:
+   CONSTRUIR este projeto (agentes sob demanda, sintetizados da ideia/stack). Formato:
    ```json
    {
      "agentes": [
@@ -183,23 +204,56 @@ errada: reagrupe por COMPORTAMENTO entregue, não por arquivo tocado.
          "id": "frontend",
          "nome": "Especialista Frontend",
          "descricao": "Quando a tarefa toca UI/componentes/estilos",
-         "prompt": "Você é o <papel> deste projeto. Siga integralmente a disciplina do agente `executor` — leia `.claude/agents/executor.md` na raiz do Gerador_de_projetos e cumpra aquela sequência, o contrato de estado e o orçamento de chamadas. O que muda aqui é o DOMÍNIO: <stack e bibliotecas desta área, com o papel de cada uma>; <convenções do projeto: estrutura de pastas, padrão de nomes, como rodar e testar>; <armadilhas conhecidas>. Prefira a biblioteca já instalada a código artesanal (doutrina em `_sistema/BIBLIOTECAS.md`). Confinado a projetos/<nome>/.",
+         "prompt": "Domínio: <pastas>.
+
+O QUE VIVE AQUI: <arquivos e o papel de cada um>.
+
+INVARIANTES: <o que não se negocia nesta área, e por quê>.
+
+COMO SE PROVA: <o comando/cena que torna um critério desta área executável>.
+
+ARMADILHAS JÁ PAGAS: <defeitos que já custaram ciclos aqui>.",
          "ferramentas": ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "PowerShell"]
        }
      ]
    }
    ```
-   Regras: **2–5 especialistas**, cada um cobrindo uma ÁREA de construção (ex.: frontend,
-   api, dados, infra) — genéricos ao TIPO de projeto (web, CLI, pipeline, lib...). O
-   especialista É um executor especializado: o `prompt` **delega a disciplina** ao
-   `executor.md` (não a reescreve — cópia desatualiza) e gasta suas linhas no que o
-   executor genérico não sabe: as libs desta área, as convenções deste projeto e as
-   armadilhas. Especialista cujo prompt só repete o executor não vale o arquivo.
-   `ferramentas` é opcional (omitir = herda todas). Projeto muito simples pode ter equipe
-   vazia (`{"agentes": []}`) → a fábrica usa o executor genérico. **Testador e revisor NÃO
-   entram na equipe** (são fixos e genéricos). Ao criar as tarefas, preencha o campo
-   opcional `agente:` no frontmatter com o `id` do especialista que deve executá-la (pela
-   área/natureza); sem `agente:`, cai no executor genérico.
+
+   **O `prompt` é DOMÍNIO PURO. Nada de processo — e isto é uma regra dura, não um estilo.**
+   Quando a fábrica despacha, o prompt do `executor` já está no despacho, num bloco
+   `<seu-papel>`, e o do especialista entra logo abaixo num bloco `<especialista>`. Então
+   tudo que você repetir ali — "faça commit `T-XXX:`", "mude o status conforme o protocolo",
+   "registre Notas de execução", "confinado a projetos/<nome>/", "leia
+   `_sistema/PROTOCOLO_TAREFAS.md`", "leia `.claude/agents/executor.md`" — é a MESMA
+   instrução dita duas vezes, com palavras diferentes, no mesmo prompt. Duas redações da
+   mesma regra não reforçam: competem.
+
+   Pior, duas dessas mandam o agente para fora do alcance dele: o construtor roda com o
+   `cwd` no projeto e confinado a ele, então "leia um arquivo da raiz da fábrica" é uma volta
+   jogada fora — e voltas custam ao quadrado.
+
+   Medido no banco-imobiliario (23/08): os três especialistas gastavam ~70% do texto
+   repetindo o executor, e a especialização real vinha depois de ~400 tokens de ruído em 64
+   despachos. Da tela, a equipe parecia não existir; do prompt, parecia redundante. As duas
+   leituras vinham do mesmo defeito de redação.
+
+   Escreva só o que o executor genérico **não teria como saber**: os arquivos desta área e o
+   papel de cada um, as invariantes ("nada em `server/engine/` faz I/O — é isso que permite
+   testar sem subir servidor"), o comando que prova um critério desta área, e as armadilhas
+   que já custaram ciclos. Se você apagar do prompt tudo que o `executor.md` já diz e sobrar
+   pouca coisa, o especialista não vale o arquivo — junte-o a outro.
+
+   Demais regras: **2–5 especialistas**, cada um cobrindo uma ÁREA de construção (ex.:
+   frontend, api, dados, infra). `ferramentas` é opcional (omitir = herda todas). Projeto
+   muito simples pode ter equipe vazia (`{"agentes": []}`) → a fábrica usa o executor
+   genérico. **Testador e revisor NÃO entram na equipe** (são fixos e genéricos). Ao criar as
+   tarefas, preencha o campo opcional `agente:` no frontmatter com o `id` do especialista que
+   deve executá-la; sem `agente:`, cai no executor genérico.
+
+   **A equipe é do projeto de HOJE, não do dia em que ele nasceu.** Quando um replanejamento
+   te trouxer aqui e você notar que uma fase inteira aponta para o mesmo `id` enquanto os
+   outros não são despachados há semanas, a equipe degenerou — um especialista que cobre tudo
+   é o executor genérico com outro nome. Redivida por onde o trabalho REALMENTE está caindo.
 
 ## Escreva as tarefas EM LOTES PARALELOS
 

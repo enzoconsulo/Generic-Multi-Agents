@@ -70,7 +70,9 @@ possível roda com um portão só, e quem decide aceitar isso é o usuário — 
    capítulo 4 de inventar um estilo de tabela que o capítulo 2 já resolveu.
 
 3. **Tarefas** em `_gestao/tarefas/T-NNN-slug.md` — cada uma:
-   - **no máximo 3 `areas`** (as pastas/arquivos que a tarefa toca) — é a regra mais
+   - **no máximo 3 `areas`, e sempre ARQUIVOS, nunca pastas** — a fábrica embute o conteúdo
+     das `areas` no despacho, e pasta não tem conteúdo para embutir: o construtor recebe zero
+     arquivo e trabalha às cegas justamente onde a tarefa mais mexe. É também a regra mais
      importante desta lista, e vale aqui pelo mesmo motivo que na trilha de software: o
      custo de um agente cresce com o **quadrado** das idas ao modelo. Medido nesta fábrica:
      2 `areas` ≈ 22 chamadas de ferramenta, 3 ≈ 29, **5 ≈ 70 (~10× o custo)**. Com 5 ou
@@ -116,7 +118,15 @@ possível roda com um portão só, e quem decide aceitar isso é o usuário — 
          "id": "roteirista",
          "nome": "Roteirista do deck",
          "descricao": "Quando a tarefa define narrativa, sequência ou texto dos slides",
-         "prompt": "Você é o <papel> deste projeto. Siga integralmente a disciplina do agente `construtor` — leia `.claude/agents/construtor.md` na raiz do Gerador_de_projetos e cumpra aquela sequência, o contrato de estado e o orçamento de chamadas. O que muda aqui é o DOMÍNIO: <ferramentas desta área e o papel de cada uma>; <convenções do projeto: estrutura de pastas, padrão de título/citação, como gerar e como verificar>; <armadilhas conhecidas>. Prefira a ferramenta já instalada ao trabalho artesanal (doutrina em `_sistema/DOMINIOS.md`). Confinado a projetos/<nome>/.",
+         "prompt": "Domínio: <pastas e arquivos-fonte desta área>.
+
+O QUE VIVE AQUI: <cada arquivo e seu papel>.
+
+INVARIANTES: <o que não se negocia nesta área, e por quê>.
+
+COMO SE GERA E COMO SE PROVA: <a ferramenta de geração e o comando do verificador desta área>.
+
+ARMADILHAS JÁ PAGAS: <defeitos que já custaram ciclos aqui>.",
          "ferramentas": ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "PowerShell"]
        }
      ]
@@ -127,12 +137,22 @@ possível roda com um portão só, e quem decide aceitar isso é o usuário — 
    trilha genérica — sem ele, o orquestrador trata o projeto como software e despacha os
    agentes errados. Nunca escreva `"dominio": "software"` aqui.
 
-   Regras: **2–5 especialistas**, cada um cobrindo uma ÁREA de construção, genéricos ao
-   TIPO de projeto. O especialista É um construtor especializado: o `prompt` **delega a
-   disciplina** ao `construtor.md` (não a reescreve — cópia desatualiza) e gasta as linhas
-   dele no que o construtor genérico não sabe: as ferramentas desta área, as convenções
-   deste projeto e as armadilhas. Especialista cujo prompt só repete o construtor não vale
-   o arquivo. `ferramentas` é opcional (omitir = herda todas). Projeto simples pode ter
+   **O `prompt` é DOMÍNIO PURO. Nada de processo — regra dura, não estilo.** Quando a fábrica
+   despacha, o prompt do `construtor` já vai no bloco `<seu-papel>` e o do especialista entra
+   logo abaixo, num bloco `<especialista>`. Tudo que você repetir ali — commit, status,
+   Notas, confinamento, "leia `_sistema/PROTOCOLO_TAREFAS.md`", "leia
+   `.claude/agents/construtor.md`" — é a mesma instrução dita duas vezes no mesmo prompt, com
+   palavras diferentes. Duas redações da mesma regra não reforçam: competem. E as duas
+   últimas mandam o agente para fora do alcance dele (o `cwd` é o projeto, e ele está
+   confinado a ele), gastando volta — que custa ao quadrado.
+
+   Escreva só o que o construtor genérico **não teria como saber**: os arquivos-fonte desta
+   área, as invariantes, a ferramenta de geração, o comando do verificador e as armadilhas já
+   pagas. Apagou tudo que o `construtor.md` já diz e sobrou pouco? Então o especialista não
+   vale o arquivo — junte-o a outro.
+
+   Demais regras: **2–5 especialistas**, cada um cobrindo uma ÁREA de construção, genéricos
+   ao TIPO de projeto. `ferramentas` é opcional (omitir = herda todas). Projeto simples pode ter
    `{"dominio": "<x>", "agentes": []}` → a fábrica usa o construtor genérico.
    **Conferente e revisor NÃO entram na equipe** (são fixos: portão não se especializa no
    domínio que ele julga). Ao criar as tarefas, preencha o campo opcional `agente:` do

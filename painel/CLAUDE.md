@@ -144,6 +144,14 @@ porque foi ele que despachou o portão e viu o status mudar. As seções acumula
 veredito velho envenenaria a decisão seguinte — o texto só é lido para medir GRAVIDADE, e só
 quando quem reprovou foi o revisor.
 
+**E o portão observado é GRAVADO no frontmatter** (`ultima-reprovacao:`, desde 23/08), porque
+a rodada quase nunca cobre o ciclo inteiro: ela fecha em uma ou duas tarefas, então reprova
+num job e refaz no seguinte. Enquanto o sinal vivia só em memória, esse caso — o comum — caía
+no caminho caro por FALTA de sinal, não por decisão. Quem escreve o campo é o motor, a partir
+do que ele viu; ele é apagado assim que a tarefa passa do construtor, para um ciclo fechado
+não envenenar o próximo. Nada disso relaxa a regra de ouro: valor desconhecido no campo vira
+`null`, e `null` é o caminho caro.
+
 Duas travas impedem economia burra, e valem mais que a tabela: **`tentativas >= 2` é sempre
 calibre máximo** (a próxima reprovação bloqueia a tarefa — poupar centavos e arriscar
 queimá-la é péssimo negócio) e **conformidade nunca barateia** (o modelo barato já provou
@@ -622,3 +630,32 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   dele monta objeto novo e o outro não, o segundo é o bug. E ao consertar contabilidade já
   gravada, defenda a TELA com uma invariante aritmética (a soma das partes não passa do
   total), porque os JSONs antigos continuam no disco.
+- **Sinal que morre na fronteira do PROCESSO é sensor sem atuador, com outra roupa.** O
+  diagnóstico de retrabalho (T-053) escolhia certo e mesmo assim 12 dos 21 despachos
+  reforçados do banco-imobiliario pagaram `opus` sem nenhum diagnóstico ter rodado: o portão
+  observado vivia em memória, e o retrabalho acontece quase sempre no job SEGUINTE ao da
+  reprovação — porque a rodada fecha em uma ou duas tarefas (teto de custo, backlog em
+  corrente). O código estava correto em toda linha; o que faltava era o dado atravessar o fim
+  do processo. Ao construir um mecanismo que decide a partir de algo OBSERVADO, pergunte
+  quanto tempo o observador vive comparado ao intervalo entre a observação e a decisão — se o
+  segundo for maior, o mecanismo está desligado na prática e os testes não acusam, porque
+  todo teste roda dentro de uma execução só.
+- **Diretório onde se espera arquivo não falha: mente.** `areas: [public/css, public/js]` na
+  T-059 fez o montador tentar `readFile` numa pasta, receber `null` e anunciar ao agente
+  "ainda não existe (será criado por esta tarefa)" — sobre pastas com dezenas de arquivos. O
+  construtor foi trabalhar acreditando que partia do zero (único despacho recente com "0
+  arquivo(s) embutido(s)"), e a tarefa custou dois ciclos e um `opus`. O caminho de erro
+  existia e estava calibrado no caso legítimo (`areas` nomeia arquivo a criar), que é
+  indistinguível deste por `null`. Ao tratar leitura ausente como caso esperado, **separe
+  "não existe" de "existe e não é o que eu queria"** — `stat` custa nada e a diferença é
+  entre omitir e mentir. Corolário: mentira no contexto é pior que lacuna. Lacuna o agente
+  investiga; mentira ele acredita.
+- **Log que nomeia o ARQUIVO do agente esconde quem de fato rodou.** A linha de execução
+  escrevia `executor` seco, porque é o nome em `.claude/agents/`. No pipeline em código o
+  especialista NUNCA é subagente (o `disponiveis` vazio é deliberado) — ele entra colado num
+  bloco `<especialista>` —, então 64 despachos especializados do banco-imobiliario apareceram
+  na tela como genéricos. O usuário concluiu, corretamente a partir do que via, que o
+  `equipe.json` era decoração; a auditoria de 16/08 já tinha caído na mesma leitura pelo lado
+  do `motivo`. Hoje a linha diz `frontend@executor`. É a mesma família do item sobre motivo de
+  roteamento, do lado da execução: **quando um mecanismo tem um nome interno e um efeito
+  observável, o log mostra o efeito.**

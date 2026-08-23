@@ -101,6 +101,14 @@ const dep: DependenciasMotor = {
   anexarVerificacao: async (t, texto) => {
     escritas.push(`  [painel anexa] ${t.id}: +${texto.split("\n").length} linhas na Verificação`);
   },
+  // Interceptada e ESCRITA EM MEMÓRIA, não no disco. Precisa existir aqui: sem ela a
+  // simulação não exercitaria o sinal que atravessa rodadas, e passaria a mostrar um
+  // pipeline diferente do de produção — que é o único jeito de este simulador mentir.
+  gravarUltimaReprovacao: async (t, portao) => {
+    escritas.push(`  [painel grava] ${t.id}: ultima-reprovacao -> ${portao ?? "(apagada)"}`);
+    const atual = emMemoria.get(t.id);
+    if (atual !== undefined) atual.ultimaReprovacao = portao;
+  },
   temTrabalhoParcial: (t) => temTrabalhoParcial(dirProjeto, t.areas),
   lerCriteriosDe: (t) => secao(t, "criteriosAceite"),
   lerNotasDe: (t) => secao(t, "notasExecucao"),

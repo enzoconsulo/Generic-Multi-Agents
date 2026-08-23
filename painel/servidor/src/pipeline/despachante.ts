@@ -276,11 +276,33 @@ export function criarDespachante(
 
     const modelo = pedido.modelo ?? agente.modelo ?? o.modeloFluxo;
     const tokens = ctx.medida.compartilhadoTok + ctx.medida.especificoTok;
+    // NOME EFETIVO, não o do arquivo de agente (23/08). No painel o especialista NUNCA é
+    // subagente — `runner-pipeline.ts` passa `disponiveis` vazio de propósito, então o
+    // roteamento sempre cai no passo 3 do CLAUDE.md e o prompt do especialista é colado no
+    // despacho. Só que esta linha, que é a que a tela destaca, escrevia `executor` seco: o
+    // usuário lia a fábrica inteira rodando no genérico e concluiu, com razão a partir do que
+    // via, que os especialistas do `equipe.json` eram inúteis. Eram invisíveis.
+    const efetivo =
+      pedido.especialista !== undefined && pedido.especialista !== ""
+        ? `${pedido.especialista}@${pedido.agente}`
+        : pedido.agente;
     emitir(
       "info",
-      `${pedido.tarefa.id} · ${papel} · ${pedido.agente} · ${modelo} · ~${tokens} tok de ` +
+      `${pedido.tarefa.id} · ${papel} · ${efetivo} · ${modelo} · ~${tokens} tok de ` +
         `contexto (${ctx.medida.arquivosIncluidos.length} arquivo(s) embutido(s))`,
     );
+    // `areas` com diretório não embute nada e some no meio dos "omitidos" — que ninguém lê.
+    // Aqui vira ERRO visível: é defeito de planejamento, e só se conserta se alguém o vir.
+    for (const om of ctx.medida.omitidos) {
+      if (om.motivo.startsWith("é um DIRETÓRIO")) {
+        emitir(
+          "erro",
+          `${pedido.tarefa.id}: \`areas\` declara \`${om.caminho}\`, que é um DIRETÓRIO —` +
+            " nada foi embutido e o agente vai trabalhar às cegas nessa parte. `areas` deve" +
+            " listar ARQUIVOS (é também o mutex do paralelismo). Defeito do planejamento.",
+        );
+      }
+    }
 
     const consulta = o.consulta({
       prompt: mensagem,

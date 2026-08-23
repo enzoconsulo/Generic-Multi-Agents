@@ -16,6 +16,7 @@ function tarefa(p: Partial<TarefaResumo> & { id: string }): TarefaResumo {
     areas: [],
     tentativas: 0,
     replanejadaDe: null,
+    ultimaReprovacao: null,
     agente: null,
     criada: "2026-08-01",
     atualizada: "2026-08-01",

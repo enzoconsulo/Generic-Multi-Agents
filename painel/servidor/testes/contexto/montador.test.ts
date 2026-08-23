@@ -173,6 +173,33 @@ describe("montarEspecifico — cada papel recebe o que usa", () => {
     expect(r.texto).toContain("<nao-embutido>");
   });
 
+  /**
+   * DIRETÓRIO NÃO É "ARQUIVO QUE SERÁ CRIADO" (23/08).
+   *
+   * A T-059 do banco-imobiliario declarou `areas: [public/css, public/js]`. As duas leituras
+   * falharam, e o montador anunciou ao agente "ainda não existe (será criado por esta
+   * tarefa)" — sobre pastas cheias de arquivos. O agente foi trabalhar com ZERO arquivo
+   * embutido, acreditando que partia do nada; a tarefa levou dois ciclos e um `opus`, e foi
+   * a única tarefa recente com `0 arquivo(s) embutido(s)` no log.
+   *
+   * Mentir sobre o estado do projeto é pior que omitir: omissão o agente investiga, mentira
+   * ele acredita.
+   */
+  it("diretório em `areas` é denunciado como diretório, não como arquivo a criar", async () => {
+    const dir = projetoFake();
+    const r = await montarEspecifico({
+      dirProjeto: dir,
+      papel: "construtor",
+      areas: ["server"],
+    });
+    expect(r.medida.arquivosIncluidos).toEqual([]);
+    expect(r.medida.omitidos[0]?.motivo).toContain("DIRETÓRIO");
+    expect(r.medida.omitidos[0]?.motivo).not.toContain("será criado");
+    // Não expandimos a pasta: embutir diretório inteiro estoura o teto e desfaz o motivo de
+    // o montador existir. O agente é mandado localizar com Glob/Grep.
+    expect(r.texto).not.toContain("export function somar");
+  });
+
   it("caminho fora do projeto é omitido com motivo", async () => {
     const dir = projetoFake();
     const r = await montarEspecifico({

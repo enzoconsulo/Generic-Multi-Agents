@@ -47,6 +47,16 @@ export interface TarefaResumo {
   replanejadaDe: string | null;
   /** Id do especialista da equipe que deve executar (opcional; null = executor genérico). */
   agente: string | null;
+  /**
+   * Qual portão devolveu a tarefa ao construtor no ciclo anterior: `mecanica`,
+   * `verificador` ou `revisor`. Escrito pelo MOTOR a partir de fato observado (ver
+   * `gravarCampoFrontmatter`), nunca por agente e nunca inferido de prosa.
+   *
+   * Existe para o diagnóstico de retrabalho (`diagnostico.ts`) sobreviver ao fim da rodada:
+   * sem isto, toda reprovação que cruza a fronteira do job cai no caminho caro por falta de
+   * sinal, e não por decisão. `null` = primeira execução, ou ciclo já fechado.
+   */
+  ultimaReprovacao: string | null;
   /** AAAA-MM-DD ou null quando ausente/inválida. */
   criada: string | null;
   atualizada: string | null;

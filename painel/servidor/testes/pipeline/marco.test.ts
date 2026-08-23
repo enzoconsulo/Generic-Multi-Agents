@@ -22,6 +22,7 @@ function tarefa(id: string, status: string): TarefaResumo {
     areas: [],
     tentativas: 0,
     replanejadaDe: null,
+    ultimaReprovacao: null,
     agente: null,
     criada: null,
     atualizada: null,

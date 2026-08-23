@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join, normalize, sep, isAbsolute } from "node:path";
@@ -323,8 +323,29 @@ export async function montarEspecifico(pedido: PedidoContexto): Promise<{
       }
       const conteudo = await lerOpcional(caminho);
       if (conteudo === null) {
-        // Normalíssimo: `areas` também nomeia arquivo que a tarefa vai CRIAR.
-        omitidos.push({ caminho: area, motivo: "ainda não existe (será criado por esta tarefa)" });
+        // DIRETÓRIO NÃO É ARQUIVO, e confundir os dois mentia para o agente (23/08). A T-059
+        // do banco-imobiliario declarou `areas: [public/css, public/js]`; `lerOpcional`
+        // devolveu `null` para os dois e o montador anunciou "ainda não existe (será criado
+        // por esta tarefa)" — sobre pastas com dezenas de arquivos. O agente foi ao trabalho
+        // com ZERO arquivo embutido, achando que partia do nada, e a tarefa custou dois
+        // ciclos e um `opus`.
+        //
+        // Não expandimos a pasta: embutir um diretório inteiro estoura o teto do bloco e
+        // desfaz o motivo de o montador existir. O conserto é dizer a VERDADE — e nomear o
+        // defeito onde ele mora, que é o `areas` da tarefa (campo do planejador).
+        let ehPasta = false;
+        try {
+          ehPasta = (await stat(caminho)).isDirectory();
+        } catch {
+          ehPasta = false;
+        }
+        omitidos.push({
+          caminho: area,
+          motivo: ehPasta
+            ? "é um DIRETÓRIO, não um arquivo — `areas` deve declarar arquivos, um por linha;" +
+              " nada foi embutido, localize com Glob/Grep antes de editar"
+            : "ainda não existe (será criado por esta tarefa)",
+        });
         continue;
       }
       const tamanho = Buffer.byteLength(conteudo, "utf8");

@@ -152,3 +152,77 @@ export async function anexarNaSecao(
   }
   return { ok: true, de: titulo, para: `+${bloco.length} linha(s)` };
 }
+
+/**
+ * Escreve (ou remove) UM campo escalar do frontmatter de uma tarefa.
+ *
+ * POR QUE ISTO EXISTE (23/08). O diagnóstico de reprovação (`diagnostico.ts`) sabe escolher
+ * o retrabalho barato quando a falha foi mecânica — mas o sinal que ele consome, o portão
+ * que reprovou, vivia só na MEMÓRIA da rodada (`retornos`, em `motor.ts`). E as rodadas do
+ * painel terminam depois de uma ou duas tarefas, por teto de custo ou por backlog em
+ * corrente: na prática a reprovação acontece num job e o retrabalho no seguinte. Aí `portao`
+ * era `null`, o diagnóstico não rodava, e caía na regra antiga — `opus`, escopo completo,
+ * voltas cheias. Medido no banco-imobiliario: 21 despachos reforçados, só 9 com diagnóstico.
+ *
+ * É o defeito recorrente da fábrica descrito no CLAUDE.md — **sensor sem atuador** —, aqui
+ * na variante "o sensor existe e morre na fronteira do processo". O conserto é dar disco ao
+ * sinal, e não recalcular nada: quem escreve continua sendo o motor, a partir de um fato que
+ * ELE observou (o status voltou para `em-execucao` logo depois do portão que ele despachou),
+ * nunca de prosa interpretada — que é justamente o que `diagnostico.ts` proíbe.
+ *
+ * Mesma disciplina de `gravarStatusTarefa`: substituição por LINHA, arquivo idêntico exceto
+ * pela linha que mudou, e nunca lança.
+ */
+export async function gravarCampoFrontmatter(
+  arquivo: string,
+  campo: string,
+  valor: string | null,
+): Promise<ResultadoEscrita> {
+  let texto: string;
+  try {
+    texto = await readFile(arquivo, "utf8");
+  } catch (e) {
+    return { ok: false, motivo: `não foi possível ler: ${(e as Error).message}` };
+  }
+
+  const nl = quebra(texto);
+  const linhas = texto.split(/\r?\n/);
+  const limites = limitesFrontmatter(linhas);
+  if (limites === null) return { ok: false, motivo: "arquivo sem frontmatter delimitado por ---" };
+
+  const re = new RegExp(`^(\s*${campo}\s*:\s*)(.*)$`);
+  let anterior: string | null = null;
+  let indice = -1;
+  for (let i = limites.inicio; i < limites.fim; i++) {
+    const m = re.exec(linhas[i] ?? "");
+    if (m !== null) {
+      anterior = (m[2] ?? "").trim();
+      indice = i;
+      break;
+    }
+  }
+
+  const alvo = valor ?? "";
+  // Nada a fazer: já está como se quer, ou pediram para remover um campo que não existe.
+  if ((anterior ?? "") === alvo && (valor !== null || indice === -1)) {
+    return { ok: true, de: anterior ?? "(ausente)", para: valor ?? "(ausente)" };
+  }
+
+  if (valor === null) {
+    if (indice === -1) return { ok: true, de: "(ausente)", para: "(ausente)" };
+    linhas.splice(indice, 1);
+  } else if (indice === -1) {
+    // Campo novo entra no FIM do frontmatter: mexer na ordem dos campos existentes viraria
+    // ruído no diff, e o leitor não depende de ordem.
+    linhas.splice(limites.fim, 0, `${campo}: ${valor}`);
+  } else {
+    linhas[indice] = `${campo}: ${valor}`;
+  }
+
+  try {
+    await writeFile(arquivo, linhas.join(nl), "utf8");
+  } catch (e) {
+    return { ok: false, motivo: `não foi possível gravar: ${(e as Error).message}` };
+  }
+  return { ok: true, de: anterior ?? "(ausente)", para: valor ?? "(ausente)" };
+}

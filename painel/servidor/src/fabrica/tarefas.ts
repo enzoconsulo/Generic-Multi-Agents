@@ -122,6 +122,18 @@ export function parsearTarefa(
     if (agente === null) erros.push("campo agente inválido");
   }
 
+  // Campo do MOTOR, não do agente: só os três portões são valores legítimos. Valor
+  // desconhecido não é erro de tarefa (o planejador não escreve este campo) — é ruído, e
+  // vira `null` para o diagnóstico cair no caminho conservador, que é a regra de ouro de
+  // `diagnostico.ts`: na dúvida, o caminho caro.
+  let ultimaReprovacao: string | null = null;
+  if (dados["ultima-reprovacao"] !== undefined) {
+    const bruto = campoTexto(dados["ultima-reprovacao"]);
+    if (bruto !== null && ["mecanica", "verificador", "revisor"].includes(bruto)) {
+      ultimaReprovacao = bruto;
+    }
+  }
+
   const resumo: TarefaResumo = {
     arquivo,
     id,
@@ -133,6 +145,7 @@ export function parsearTarefa(
     tentativas,
     replanejadaDe,
     agente,
+    ultimaReprovacao,
     criada,
     atualizada,
     erros,

@@ -43,7 +43,7 @@ O padrão que isto instancia vale para todo projeto da fábrica:
 | `agregador-rotas.ts` | carrega automaticamente todo arquivo de `rotas/` que exporte `{ prefixo, router }` | nunca — é o que permite rota nova sem editar arquivo compartilhado |
 | `rotas/` | um arquivo por recurso HTTP; só traduz HTTP ↔ operação | endpoint novo |
 | `fabrica/` | **leitor** dos arquivos da fábrica (tarefas, plano, equipe, ideias, logs, git) | ler algo novo do disco |
-| `fabrica/escrita-tarefas.ts` | as ÚNICAS escritas de status que o painel faz (promoção e bloqueio) | quase nunca — e leia o cabeçalho antes |
+| `fabrica/escrita-tarefas.ts` | as ÚNICAS escritas que o painel faz no arquivo da tarefa (promoção, bloqueio e `ultima-reprovacao:`) | quase nunca — e leia o cabeçalho antes |
 | `jobs/` | fila: locks por escopo, persistência em `dados/`, cancelamento, inputs pendentes | mexer em execução, estado de job |
 | `jobs/retomada.ts` | monta o job que CONTINUA um interrompido (sessão do SDK ou disco) e resolve o teto dele | botão Retomar, teto de quem retoma |
 | `jobs/claude/` | runner do Agent SDK (`runner-claude.ts`) e tabela de preços (`precos.ts`) | contabilidade, tokens, desfecho de fluxo |
@@ -140,6 +140,7 @@ ele pertence a `lib/`.
 | commitar de um projeto | `commitarCaminhos` (escopado) / `commitar` (`add -A`, só no botão da aba Git) | `servidor/src/fabrica/git.ts` |
 | saber se sobrou coisa fora de um escopo | `alteracoesForaDe`, `lerHead` | `servidor/src/fabrica/git.ts` |
 | mudar status de tarefa | `gravarStatusTarefa`, `anexarNaSecao` | `servidor/src/fabrica/escrita-tarefas.ts` |
+| escrever um campo do frontmatter | `gravarCampoFrontmatter` (upsert/remoção por LINHA) | `servidor/src/fabrica/escrita-tarefas.ts` |
 | rodar comando externo com teto de tempo | `executarComando` | `servidor/src/ci/processo.ts` |
 | matar processo (é ÁRVORE, não processo) | `encerrarArvore` | `servidor/src/ci/processo.ts` |
 | descobrir a stack de um projeto | `detectarEcossistema` | `servidor/src/ci/ecossistemas.ts` |

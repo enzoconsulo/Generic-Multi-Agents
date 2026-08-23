@@ -30,6 +30,7 @@ function tarefa(p: Partial<TarefaResumo> & { id: string }): TarefaResumo {
     areas: ["src/a.js"],
     tentativas: 0,
     replanejadaDe: null,
+    ultimaReprovacao: null,
     agente: null,
     criada: "2026-08-01",
     atualizada: "2026-08-01",
@@ -846,5 +847,104 @@ describe("extrapolação de `areas`, detectada por etapa (16/08)", () => {
     const rel = await rodarPipeline(ctxBase, dep);
 
     expect(rel.foraDeAreas).toEqual([]);
+  });
+});
+
+/**
+ * O SINAL TEM DE ATRAVESSAR A FRONTEIRA DA RODADA (23/08).
+ *
+ * O diagnóstico de retrabalho já existia e escolhia certo — mas só quando a reprovação e o
+ * retrabalho caíam no MESMO job. As rodadas do painel fecham em uma ou duas tarefas (teto de
+ * custo, backlog em corrente), então o caso comum é o contrário: reprova num job, refaz no
+ * seguinte. Ali `portao` vinha `null`, o diagnóstico não rodava, e o escalonamento caía na
+ * regra antiga — modelo caro, escopo completo, voltas cheias.
+ *
+ * Medido no banco-imobiliario antes do conserto: 21 despachos reforçados, apenas 9 com linha
+ * de diagnóstico. Os outros 12 pagaram `opus` por FALTA de sinal, não por decisão.
+ */
+describe("portão que reprovou sobrevive ao fim da rodada", () => {
+  it("grava `ultima-reprovacao` no frontmatter quando o verificador devolve a tarefa", async () => {
+    const gravados: { id: string; portao: string | null }[] = [];
+    const m = mundo([tarefa({ id: "T-300", status: "pronta" })], { reprovarEm: "verificador" });
+    const dep: DependenciasMotor = {
+      ...m.dep,
+      // Escreve de volta na "tarefa em disco", como o runner real faz: sem isso o motor
+      // releria o valor antigo e o teste provaria menos do que anuncia.
+      gravarUltimaReprovacao: async (t, portao) => {
+        gravados.push({ id: t.id, portao });
+        t.ultimaReprovacao = portao;
+      },
+    };
+
+    await rodarPipeline(ctxBase, dep);
+
+    expect(gravados[0]).toEqual({ id: "T-300", portao: "verificador" });
+    // E é APAGADO assim que a tarefa passa do construtor: sinal de ciclo fechado não pode
+    // envenenar o ciclo seguinte, que é a regra do `diagnostico.ts`.
+    expect(gravados.at(-1)?.portao).toBe(null);
+  });
+
+  it("uma rodada NOVA lê o campo do disco e diagnostica — sem ele, cairia no caro", async () => {
+    // Estado exatamente como o job anterior deixou no arquivo: reprovada pela passada
+    // mecânica, uma tentativa gasta, e nenhuma memória de processo.
+    const m = mundo(
+      [
+        tarefa({
+          id: "T-301",
+          status: "em-execucao",
+          tentativas: 1,
+          ultimaReprovacao: "mecanica",
+        }),
+      ],
+      {},
+    );
+
+    await rodarPipeline(ctxBase, { ...m.dep, gravarUltimaReprovacao: async () => {} });
+
+    const c = construtores(m.despachos)[0];
+    expect(c).toBeDefined();
+    // Falha mecânica é objetiva e localizada: NÃO sobe de modelo e limita as voltas.
+    expect(c?.agente).toBe("executor");
+    expect(c?.modelo).toBe(null);
+    expect(c?.maxTurns).toBe(VOLTAS_PONTUAL);
+  });
+
+  it("sem o campo, a mesma tarefa herdada vai para o caro — o comportamento anterior", async () => {
+    const m = mundo(
+      [tarefa({ id: "T-302", status: "em-execucao", tentativas: 1, ultimaReprovacao: null })],
+      {},
+    );
+
+    await rodarPipeline(ctxBase, m.dep);
+
+    const c = construtores(m.despachos)[0];
+    expect(c?.agente).toBe("executor-reforcado");
+    expect(c?.modelo).toBe("opus");
+  });
+
+  it("valor herdado de CONFORMIDADE continua caro — barateamento nunca vale aqui", async () => {
+    const m = mundo(
+      [
+        tarefa({
+          id: "T-303",
+          status: "em-execucao",
+          tentativas: 1,
+          ultimaReprovacao: "revisor",
+        }),
+      ],
+      { conformidade: "Conformidade: nao-cumpre" },
+    );
+
+    await rodarPipeline(ctxBase, { ...m.dep, gravarUltimaReprovacao: async () => {} });
+
+    const c = construtores(m.despachos)[0];
+    expect(c?.agente).toBe("executor-reforcado");
+    expect(c?.modelo).toBe("opus");
+  });
+
+  it("driver sem a dep opcional continua funcionando (só volta a esquecer)", async () => {
+    const m = mundo([tarefa({ id: "T-304", status: "pronta" })], { reprovarEm: "revisor" });
+    const r = await rodarPipeline(ctxBase, m.dep);
+    expect(r.despachos).toBeGreaterThan(0);
   });
 });
