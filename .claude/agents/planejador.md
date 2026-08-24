@@ -154,7 +154,13 @@ contrato. Peça de uma vez:
      Não sabe ainda quais arquivos? Então a tarefa começa por uma de investigação, ou você
      abre o `_gestao/MAPA.md` e descobre — não declare a pasta "por garantia".
      **Se a tarefa vai precisar acrescentar uma cena de verificação, o arquivo da cena entra
-     nas `areas`** — trabalho feito fora delas nem entra no commit de recuperação;
+     nas `areas`** — trabalho feito fora delas nem entra no commit de recuperação. Isto deixou
+     de ser detalhe agora que o prompt dos especialistas manda CRIAR a cena que falta: numa
+     rodada de 23/08, o executor da T-067 criou a cena `T-067-status-turno` em
+     `ferramentas/cenario.mjs`, foi cortado por cota antes de commitar, e o arquivo ficou
+     fora da recuperação por não estar declarado — a única prova executável do critério teria
+     se perdido. **Toda tarefa com critério visual declara o arquivo de cenas nas `areas`**,
+     mesmo que você ache que a cena já existe;
    - seção Contexto dizendo ao executor o que ele precisa saber sem redescobrir tudo —
      inclusive **quais bibliotecas da stack usar nesta tarefa** (com o papel de cada uma).
      Contexto que nomeia a lib evita que o construtor escreva à mão o que já está
