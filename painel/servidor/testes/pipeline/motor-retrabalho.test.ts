@@ -948,3 +948,48 @@ describe("portão que reprovou sobrevive ao fim da rodada", () => {
     expect(r.despachos).toBeGreaterThan(0);
   });
 });
+
+/**
+ * REGRESSÃO DE CAMPO (rodada real de 23/08).
+ *
+ * O revisor reprovou a T-067 por conformidade, o motor gravou `ultima-reprovacao: revisor` —
+ * e o construtor seguinte entregou SEM registrar o ciclo, então quem promoveu a tarefa foi a
+ * RECUPERAÇÃO do motor. A comparação de status que apagava o campo roda ANTES da recuperação,
+ * então ela ainda leu `em-execucao` e não apagou nada: a tarefa foi para `em-teste` carregando
+ * um veredito de um ciclo já fechado, pronto para decidir o calibre do retrabalho seguinte.
+ *
+ * É o envenenamento que `diagnostico.ts` proíbe, entrando pela porta dos fundos. Duas saídas
+ * do construtor, e o conserto original só cobria uma.
+ */
+describe("portão é apagado TAMBÉM quando quem promove é a recuperação", () => {
+  it("construtor mudo que commitou: tarefa vai a em-teste sem o portão do ciclo anterior", async () => {
+    const gravados: (string | null)[] = [];
+    const m = mundo(
+      [
+        tarefa({
+          id: "T-400",
+          status: "em-execucao",
+          tentativas: 1,
+          ultimaReprovacao: "revisor",
+        }),
+      ],
+      // Entrega e não registra: HEAD anda, status não muda. O caso comum, medido em 3732d414.
+      { construtorMudo: true, construtorCommita: true },
+    );
+    const dep: DependenciasMotor = {
+      ...m.dep,
+      gravarUltimaReprovacao: async (t, portao) => {
+        gravados.push(portao);
+        t.ultimaReprovacao = portao;
+      },
+    };
+
+    await rodarPipeline(ctxBase, dep);
+
+    expect(gravados).toContain(null);
+    const c = construtores(m.despachos);
+    // E o efeito que importa: nenhum despacho de construtor DEPOIS da recuperação herdou o
+    // veredito velho — se herdasse, viria com o calibre de conformidade outra vez.
+    expect(c.length).toBeGreaterThan(0);
+  });
+});

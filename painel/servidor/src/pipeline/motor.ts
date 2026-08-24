@@ -1199,10 +1199,7 @@ export async function rodarPipeline(
     // Avançou para além do construtor: o diagnóstico daquele ciclo cumpriu seu papel e não
     // pode sobreviver para envenenar o próximo (o motivo da reprovação seguinte será outro).
     if (passo.papel === "construtor" && depois?.status !== statusAntes) {
-      retornos.delete(passo.tarefa.id);
-      if (passo.tarefa.ultimaReprovacao !== null) {
-        await dep.gravarUltimaReprovacao?.(passo.tarefa, null);
-      }
+      await fecharCicloDoPortao(dep, passo.tarefa, retornos);
     }
 
     // ---- GATILHO A: IMPEDIMENTO DECLARADO (T-058) ------------------------------------
@@ -1297,6 +1294,9 @@ export async function rodarPipeline(
       );
       if (recuperou) {
         repeticoes.delete(passo.tarefa.id);
+        // A recuperação promoveu a tarefa, então o ciclo FECHOU aqui — e é aqui, não na
+        // comparação de status lá em cima, que ele fecha por este caminho.
+        await fecharCicloDoPortao(dep, passo.tarefa, retornos);
         continue;
       }
       if (vezes >= 2) {
@@ -1413,6 +1413,28 @@ export async function rodarPipeline(
  * Devolve `false` quando não há o que recuperar (aí o chamador encerra como antes) ou quando
  * o driver não implementa as dependências opcionais — degrada, não quebra.
  */
+/**
+ * O CICLO FECHOU — apague o portão gravado.
+ *
+ * Existe como função porque há DOIS caminhos pelos quais uma tarefa deixa o construtor, e o
+ * conserto original só cobria um: o construtor gravar o status ele mesmo. Quando quem promove
+ * é a RECUPERAÇÃO do motor (agente entregou e não registrou), a comparação de status feita
+ * logo depois do despacho ainda lê `em-execucao` — a recuperação roda depois dela —, e o
+ * `ultima-reprovacao` do ciclo anterior sobrevivia para o ciclo seguinte.
+ *
+ * Foi assim que a T-067 ficou com `ultima-reprovacao: revisor` gravado enquanto já estava em
+ * `em-teste`, na rodada de validação de 23/08. É exatamente o envenenamento que
+ * `diagnostico.ts` proíbe — um veredito velho decidindo o calibre do próximo retrabalho.
+ */
+async function fecharCicloDoPortao(
+  dep: DependenciasMotor,
+  tarefa: TarefaResumo,
+  retornos: Map<string, PortaoQueReprovou>,
+): Promise<void> {
+  retornos.delete(tarefa.id);
+  if (tarefa.ultimaReprovacao !== null) await dep.gravarUltimaReprovacao?.(tarefa, null);
+}
+
 async function recuperarTrabalhoNaoRegistrado(
   passo: Passo,
   atual: TarefaResumo,
