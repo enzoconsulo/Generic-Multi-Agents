@@ -20,6 +20,7 @@ import {
 import { jobsDoProjeto } from "../../lib/gestao";
 import { estimarRodada, textoEstimativa, type EstimativaRodada } from "../../lib/estimativa-rodada";
 import { proximoPasso, type AcaoSugerida } from "./proximo-passo";
+import { PilotoAutomatico } from "./PilotoAutomatico";
 
 /**
  * Ações por projeto (T-016) + "próximo passo sugerido" (T-022).
@@ -82,6 +83,7 @@ export function AcoesProjeto({
   }
 
   return (
+    <>
     <section className="secao">
       <h3 className="secao-titulo">O que fazer agora</h3>
 
@@ -164,6 +166,19 @@ export function AcoesProjeto({
         )}
       </div>
     </section>
+
+    {/* O piloto mora aqui, e nao numa secao propria da pagina, porque reaproveita o que
+        este componente ja buscou: as estrategias de `/api/fabrica` e a estimativa MEDIDA
+        deste projeto. Uma segunda tela pedindo os mesmos dados seria uma segunda
+        requisicao para dizer a mesma coisa. */}
+    <PilotoAutomatico
+      projeto={projeto.nome}
+      estrategias={fabrica.dados.estrategias}
+      estrategiaPadrao={fabrica.dados.estrategiaPadrao}
+      estimativaPorRodadaUsd={estimativa?.totalUsd ?? null}
+      jobs={jobs}
+    />
+    </>
   );
 }
 

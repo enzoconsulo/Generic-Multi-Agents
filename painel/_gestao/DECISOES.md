@@ -671,3 +671,47 @@ rota por teste HTTP contra o app real — mas a retomada de uma conversa de verd
 prova gastando. Ainda não foi exercida com a assinatura.
 
 **Quem:** usuário (relatou e pediu o botão) + orquestrador
+
+## 2026-08-24 — Piloto automático: supervisor no SERVIDOR, uma rodada por job
+
+**Decisão:** o encadeamento automático de `/trabalhar` é um supervisor no servidor
+(`jobs/piloto/`) que escuta o emissor da fila e, quando a rodada que ELE criou assenta,
+decide entre continuar (cria a rodada seguinte), dormir (cota) ou parar. Estado em
+`dados/piloto.json`; controle por `GET/POST/DELETE /api/piloto`; toggle na página do
+projeto. Um projeto fixo por vez, escolhido no toggle.
+
+**Motivo:** três alternativas foram descartadas.
+1. **Laço no front** (aba re-POSTando): morreria ao fechar o navegador e faria do
+   navegador a autoridade de execução de um fluxo que gasta a assinatura sozinho.
+2. **Motor que nunca para** (subir `MAX_VOLTAS`, varrer projetos dentro de um job só):
+   quebra a fronteira job = rodada, da qual dependem o teto de custo, o watchdog, o teto do
+   log por job e os ritos de fecho (commit da gestão, documentador). E some justamente o
+   reset barato — ver abaixo.
+3. **Cron/`/loop` externo**: depende de sessão de chat viva e não lê `encerrouPor`.
+
+**Sobre "começar do zero para não acumular token"** (a pergunta que originou o pedido): no
+job `pipeline` o contexto JÁ nasce do zero em cada etapa — não há `resume` no
+`despachante.ts`. O que a rodada nova zera é outra coisa, e é ela que justifica encadear
+jobs em vez de esticar um: o **orçamento** volta inteiro, soltando as tarefas que a rodada
+anterior estacionou na fronteira do teto; as tarefas são relidas do disco; e os ritos de
+fecho rodam. Encadear é o caminho de recuperação que o motor já esperava.
+
+**Critérios de parada** (em `piloto/decisao.ts`, com a ordem valendo como regra): teto de
+custo por rodada NÃO para (é parada limpa por desenho); cota DORME e rearma sozinha na hora
+anunciada, com teto de sonecas; `sem-trabalho` para (desfecho feliz); `paraReplanejar > 0`
+para com motivo próprio, porque replanejar é julgamento; falha/interrupção param na hora;
+duas rodadas seguidas sem concluir tarefa nenhuma param (é o anteparo contra o vaivém que
+já mediu 41 despachos e US$ 22,55); e os dois freios do usuário — teto de gasto acumulado e
+máximo de rodadas — são obrigatórios no formulário.
+
+**Desligar NÃO cancela a rodada em voo.** Mesma doutrina do teto de orçamento: nunca cortar
+no meio, só não COMEÇAR o que não cabe (despacho interrompido custa igual sem entregar
+nada — US$ 4,11 medidos num corte por cota).
+
+**Armadilha resolvida no desenho:** o gerenciador sanea jobs pendurados no boot e publica
+`→ interrompido` depois que tudo já está de pé. Sem tratamento, o piloto leria o próprio job
+da rodada anterior como falha de infraestrutura e se desligaria exatamente no reinício que
+deveria atravessar. Hoje o job herdado entra numa lista de ignorados e o boot cria uma rodada
+nova — que CONTA no `maxRodadas`, para que um painel que morre no boot não vire laço infinito.
+
+**Quem:** usuário (pediu) + orquestrador

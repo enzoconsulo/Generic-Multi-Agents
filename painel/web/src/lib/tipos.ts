@@ -575,3 +575,45 @@ export interface ResultadoContabil {
   /** Agentes sem `tool_result` quando a sessão fechou — dano consumado, não risco. */
   despachosEmVoo?: number;
 }
+
+/* ------------------------------ Piloto automático ------------------------------ */
+
+/** Por que o piloto parou. Espelha `MotivoParada` do servidor. */
+export type MotivoParadaPiloto =
+  | "desligado"
+  | "sem-tarefa"
+  | "sem-credito"
+  | "sem-progresso"
+  | "precisa-replanejar"
+  | "falha"
+  | "teto-gasto"
+  | "teto-rodadas";
+
+/**
+ * Estado do piloto automático (GET/POST/DELETE /api/piloto). Espelha `EstadoPiloto` do
+ * servidor — `null` na resposta quando o piloto nunca foi ligado nesta instalação.
+ */
+export interface EstadoPiloto {
+  ligado: boolean;
+  projeto: string;
+  estrategia: string;
+  tetoUsdPorRodada: number | null;
+  limites: { tetoTotalUsd: number; maxRodadas: number };
+  rodadas: number;
+  gastoUsd: number;
+  tarefasConcluidas: number;
+  rodadasSemProgresso: number;
+  sonecas: number;
+  ligadoEm: string;
+  ultimoJobId: string | null;
+  /** Instante do rearme automático após cota (ISO); `null` = não está dormindo. */
+  rearmaEm: string | null;
+  parouPor: MotivoParadaPiloto | null;
+  parouEm: string | null;
+  detalheParada: string | null;
+}
+
+/** GET/POST/DELETE /api/piloto */
+export interface RespostaPiloto {
+  piloto: EstadoPiloto | null;
+}

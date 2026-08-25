@@ -9,6 +9,7 @@ import { GUARDRAILS_PADRAO } from "./jobs/robustez/guardrails.js";
 import { Watchdog } from "./jobs/robustez/watchdog.js";
 import { RunnerImportar } from "./projetos/runner-importar.js";
 import { GerenteResumos } from "./jobs/resumo/gerente-resumos.js";
+import { obterPiloto, reiniciarPiloto } from "./jobs/piloto/instancia.js";
 
 /** Watchdog ativo (T-019) — exposto para o encerramento limpo do processo. */
 let watchdog: Watchdog | undefined;
@@ -47,6 +48,11 @@ export function inicializarPainel(): void {
   // o console volta a mostrar o texto cru — nada do fluxo depende disso.
   gerenteResumos = new GerenteResumos(gerenciador);
   gerenteResumos.iniciar();
+
+  // Piloto automático: encadeia rodadas de `/trabalhar` até um critério de parada. Vem
+  // DEPOIS do saneamento de boot de propósito — ele precisa que o job da rodada anterior
+  // já esteja marcado como interrompido para não o ler como desfecho de rodada.
+  obterPiloto().iniciar();
 }
 
 /** Encerra o que a inicialização subiu (usado em testes e no shutdown). */
@@ -55,4 +61,5 @@ export function encerrarPainel(): void {
   watchdog = undefined;
   gerenteResumos?.parar();
   gerenteResumos = undefined;
+  reiniciarPiloto();
 }

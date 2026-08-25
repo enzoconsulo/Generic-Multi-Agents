@@ -45,6 +45,7 @@ O padrão que isto instancia vale para todo projeto da fábrica:
 | `fabrica/` | **leitor** dos arquivos da fábrica (tarefas, plano, equipe, ideias, logs, git) | ler algo novo do disco |
 | `fabrica/escrita-tarefas.ts` | as ÚNICAS escritas que o painel faz no arquivo da tarefa (promoção, bloqueio e `ultima-reprovacao:`) | quase nunca — e leia o cabeçalho antes |
 | `jobs/` | fila: locks por escopo, persistência em `dados/`, cancelamento, inputs pendentes | mexer em execução, estado de job |
+| `jobs/piloto/` | **piloto automático**: encadeia rodadas de `/trabalhar` sozinho até um critério de parada | mexer em quando o laço para, ou no rearme por cota |
 | `jobs/retomada.ts` | monta o job que CONTINUA um interrompido (sessão do SDK ou disco) e resolve o teto dele | botão Retomar, teto de quem retoma |
 | `jobs/claude/` | runner do Agent SDK (`runner-claude.ts`) e tabela de preços (`precos.ts`) | contabilidade, tokens, desfecho de fluxo |
 | `jobs/robustez/` | watchdog de inatividade e guardrails por ação (tetos) | teto de turnos/custo/silêncio |
@@ -108,6 +109,16 @@ ele pertence a `lib/`.
 4. Estilos no fim de `estilos.css`, com um comentário dizendo por que a decisão visual existe.
 5. **Capture a tela e olhe** antes de dar por pronto.
 
+### Mexer no piloto automático (o laço que dispara sozinho)
+1. **Critério de parada novo** → `jobs/piloto/decisao.ts` (função pura) + caso em
+   `testes/piloto/decisao.test.ts`. A ORDEM da tabela de decisão é a regra; leia o
+   cabeçalho antes de inserir um ramo no meio.
+2. **Mecânica** (escutar a fila, persistir, agendar rearme) → `jobs/piloto/piloto.ts`.
+   Ele não importa `config.ts` de propósito — quem faz a ponte é `piloto/instancia.ts`.
+3. **A rodada em si NÃO se monta aqui**: `montarRodada` chama `montarJobAcao`, o mesmo do
+   botão. Um segundo caminho seria uma segunda fonte de verdade sobre teto e lock.
+4. Rótulo/tom na tela → `web/src/lib/piloto.ts` (com teste), nunca dentro do JSX.
+
 ### Acrescentar uma ação da fábrica (botão que dispara fluxo)
 1. `servidor/src/fabrica/catalogo-acoes.ts` (ação global) ou
    `servidor/src/acoes/acoes-projeto.ts` (ação por projeto) — as duas são data-driven.
@@ -148,6 +159,10 @@ ele pertence a `lib/`.
 | reconhecer cota estourada | `ehLimiteDeUso`, `horaDeReabertura` | `servidor/src/jobs/claude/runner-claude.ts` |
 | decidir o teto de um fluxo de agente único | `decidirFluxo` (NÃO use `pipeline/orcamento.ts` aqui) | `servidor/src/jobs/claude/orcamento-fluxo.ts` |
 | continuar um job interrompido | `planejarRetomada`, `tetoDaRetomada`, `ehRetomavel` | `servidor/src/jobs/retomada.ts` |
+| decidir se o piloto continua, dorme ou para | `avancar`, `podeIniciarRodada` | `servidor/src/jobs/piloto/decisao.ts` |
+| quando rearmar depois de cota batida | `esperaDeRearme`, `interpretarReabertura` | `servidor/src/jobs/piloto/reabertura.ts` |
+| montar a rodada do piloto (é a MESMA do botão Trabalhar) | `montarRodada` | `servidor/src/jobs/piloto/instancia.ts` |
+| o que a tela do piloto mostra | `situacaoDoPiloto`, `validarConfig`, `avisoDeCusto` | `web/src/lib/piloto.ts` |
 | varrer segredos antes de publicar | `varrerRepo` | `servidor/src/fabrica/seguranca.ts` |
 | chamar a API do painel na web | `api()`, `ErroApi` | `web/src/lib/api.ts` |
 | dados de um GET com carregando/erro | `useDados` | `web/src/lib/useDados.ts` |

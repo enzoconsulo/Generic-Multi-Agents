@@ -179,6 +179,16 @@ bloquear quem esgotou os ciclos · commitar a gestão no fim.
 - decidir que uma tarefa é trivial o bastante para pular o teste;
 - redigir o log do dia e o `PROGRESSO.md`.
 
+**E desde 24/08 existe o PILOTO AUTOMÁTICO**, um toggle na página do projeto: ligado, ele
+encadeia rodadas de `/trabalhar <projeto>` sozinho — quando uma termina, a seguinte nasce —
+até um critério de parada. Ele NÃO é um motor novo: cada rodada é o mesmo job `pipeline`,
+montado pelo mesmo `montarJobAcao`. O que ele acrescenta é o dedo que aperta o botão de
+novo, e os freios: teto de gasto acumulado e máximo de rodadas (ambos obrigatórios), mais
+as paradas automáticas — acabou tarefa pronta, tarefa pedindo replanejamento, duas rodadas
+seguidas sem concluir nada, ou falha. Cota não para: ele dorme e rearma na hora anunciada.
+Desligar não corta a rodada em voo. Estado em `painel/dados/piloto.json`, decisão em
+`painel/servidor/src/jobs/piloto/decisao.ts`.
+
 **A fronteira é: cabe num teste? então é código.** E há um limite que o motor impõe sozinho,
 sem confiar em ninguém: teto de despachos por tarefa numa rodada. O limite de 3 ciclos do
 protocolo depende de o AGENTE incrementar `tentativas`; quando ele não incrementa, a tarefa

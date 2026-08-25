@@ -3613,3 +3613,69 @@ ul.md-lista ul.md-lista {
   line-height: 1.55;
   color: var(--cor-alerta);
 }
+
+/* ---------- Piloto automático (24/08) ----------
+   Reaproveita a forma do "próximo passo" de propósito: os dois respondem à mesma pergunta
+   ("o que está acontecendo neste projeto agora"), e inventar uma segunda linguagem visual
+   para isso faria o usuário aprender duas. O que muda é a barra de gasto — o piloto e a
+   unica coisa do painel que gasta sem clique, entao quanto ja foi gasto e informacao de
+   primeira linha, nao de detalhe. */
+.piloto {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  border: 1px solid var(--cor-borda-forte);
+  border-left-width: 4px;
+  border-radius: var(--raio);
+  padding: 0.9rem 1.1rem;
+  background-color: var(--cor-superficie);
+}
+.piloto-ok {
+  border-left-color: var(--cor-sucesso);
+}
+.piloto-info {
+  border-left-color: var(--cor-borda-forte);
+}
+.piloto-atencao {
+  border-left-color: var(--cor-alerta);
+}
+.piloto-erro {
+  border-left-color: var(--cor-erro);
+}
+.piloto-texto {
+  flex: 1 1 24rem;
+  min-width: 0;
+}
+.piloto-titulo {
+  display: block;
+  font-size: 1rem;
+}
+.piloto-detalhe {
+  margin: 0.3rem 0 0;
+  color: var(--cor-texto-suave);
+  line-height: 1.5;
+}
+.piloto-acoes {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.piloto-barra {
+  margin-top: 0.6rem;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--cor-borda);
+  overflow: hidden;
+}
+.piloto-barra > span {
+  display: block;
+  height: 100%;
+  background-color: var(--cor-acento);
+}
+.piloto-freios {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+}
