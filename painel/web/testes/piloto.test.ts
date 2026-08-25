@@ -4,12 +4,13 @@ import {
   avisoDeCusto,
   fracaoDoTeto,
   horaCurta,
+  projetoSugerido,
   resumoDaSessao,
   situacaoDoPiloto,
   tomDoMotivo,
   validarConfig,
 } from "../src/lib/piloto";
-import type { EstadoPiloto } from "../src/lib/tipos";
+import type { EstadoPiloto, Job } from "../src/lib/tipos";
 
 function piloto(over: Partial<EstadoPiloto> = {}): EstadoPiloto {
   return {
@@ -146,5 +147,25 @@ describe("horaCurta", () => {
 
   it("data ilegível não quebra a tela", () => {
     expect(horaCurta("nao-e-data")).toBe("em breve");
+  });
+});
+
+describe("projetoSugerido", () => {
+  const job = (id: string, escopo: string): Job =>
+    ({ id, escopo, estado: "concluido", tipo: "pipeline", titulo: id, usaClaude: true, params: {}, criadoEm: "" }) as Job;
+
+  it("propõe o projeto do job mais recente — é o que a tela toda já está mostrando", () => {
+    const jobs = [job("a", "projeto:shopee-rodizio"), job("b", "projeto:banco-imobiliario")];
+    expect(projetoSugerido(jobs, ["banco-imobiliario", "shopee-rodizio"])).toBe("shopee-rodizio");
+  });
+
+  it("pula job global e projeto que não existe mais", () => {
+    const jobs = [job("a", "global"), job("b", "projeto:apagado"), job("c", "projeto:alfa")];
+    expect(projetoSugerido(jobs, ["alfa", "beta"])).toBe("alfa");
+  });
+
+  it("sem histórico usa o primeiro projeto; sem projeto nenhum devolve vazio", () => {
+    expect(projetoSugerido([], ["alfa", "beta"])).toBe("alfa");
+    expect(projetoSugerido([], [])).toBe("");
   });
 });

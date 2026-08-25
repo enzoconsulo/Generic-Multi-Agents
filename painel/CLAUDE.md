@@ -413,6 +413,12 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
 - **Entregue onde o usuário OLHA.** A T-023 pôs a visualização de agentes na página do
   projeto; o usuário acompanha execução na página de **Jobs**, que ficou como estava. Ao
   receber um pedido de UI, confirme em QUAL tela ele acontece.
+  **Reincidiu em 24/08 com o piloto automático**, e a segunda vez ensina mais que a primeira:
+  ele nasceu só na página do projeto, que é onde se DECIDE ligar — e o usuário foi procurá-lo
+  em Jobs, que é onde se ACOMPANHA o que ele faz. As duas telas estavam certas; supor que
+  uma bastava é que não. Mecanismo que roda sozinho tem duas perguntas ("ligo?" e "está
+  rodando?") e elas se fazem em lugares diferentes: quando as duas existirem, entregue nas
+  duas. Custo de fazer isso: um componente em `componentes/` em vez de `paginas/<uma>/`.
 - **Sensor que lê o formato do OUTRO motor não está quebrado — está cego.** A trilha
   construir → verificar → revisar da aba Jobs ficou apagada em TODO `/trabalhar <projeto>`,
   e o log inteiro caía num bloco só de "orquestrador". Causa: `lib/atividade.ts` descobria o

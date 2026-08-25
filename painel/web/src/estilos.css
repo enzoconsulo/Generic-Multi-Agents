@@ -3679,3 +3679,9 @@ ul.md-lista ul.md-lista {
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: 1rem;
 }
+
+/* A faixa do piloto na tela de Jobs: sem titulo de secao (a pagina ja tem o proprio
+   cabecalho) e colada no topo do layout, acima da lista de execucoes. */
+.piloto-faixa {
+  margin-bottom: 1rem;
+}

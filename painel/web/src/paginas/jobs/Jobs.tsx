@@ -30,6 +30,9 @@ import { useAgora } from "../../lib/useAgora";
 import { avisoAntesDeRetomar, confirmacaoDeRetomada, ofertaDeRetomada } from "../../lib/retomada";
 import { paredeDeCota } from "../../lib/cota";
 import { Carregando, MensagemErro } from "../../componentes/Estados";
+import { PilotoAutomatico } from "../../componentes/PilotoAutomatico";
+import { useDados } from "../../lib/useDados";
+import type { RespostaFabrica, RespostaProjetos } from "../../lib/tipos";
 
 /**
  * Página de Jobs: acompanhar a execução VENDO, não lendo.
@@ -83,6 +86,8 @@ export function Jobs() {
 
       <PainelInputs pendencias={pendencias} />
 
+      <FaixaPiloto jobs={jobs} />
+
       <div className="jobs-layout">
         <aside className="jobs-lista" aria-label="Histórico de execuções">
           {carregando ? (
@@ -118,6 +123,33 @@ export function Jobs() {
         </section>
       </div>
     </div>
+  );
+}
+
+/**
+ * O piloto automático NA TELA DE JOBS — e não só na página do projeto, onde ele nasceu.
+ *
+ * Motivo: acompanhar rodada encadeando é o que se faz aqui. Um laço que dispara sozinho
+ * precisa estar visível de onde se olha a execução, senão a única forma de saber que ele
+ * está ligado é lembrar que ele existe. É a armadilha "entregue onde o usuário OLHA" do
+ * CLAUDE.md — a mesma da T-023, agora pela segunda vez.
+ *
+ * As duas buscas são deduplicadas por `useDados` enquanto estão no ar, então a faixa não
+ * cobra requisição a mais quando outro componente da página já pediu o mesmo.
+ */
+function FaixaPiloto({ jobs }: { jobs: Job[] }) {
+  const fabrica = useDados<RespostaFabrica>("/api/fabrica");
+  const projetos = useDados<RespostaProjetos>("/api/projetos");
+  if (fabrica.dados === null) return null;
+  return (
+    <PilotoAutomatico
+      projeto={null}
+      projetos={(projetos.dados?.projetos ?? []).map((p) => p.nome)}
+      estrategias={fabrica.dados.estrategias}
+      estrategiaPadrao={fabrica.dados.estrategiaPadrao}
+      jobs={jobs}
+      compacto
+    />
   );
 }
 

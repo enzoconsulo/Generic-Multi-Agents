@@ -20,7 +20,7 @@ import {
 import { jobsDoProjeto } from "../../lib/gestao";
 import { estimarRodada, textoEstimativa, type EstimativaRodada } from "../../lib/estimativa-rodada";
 import { proximoPasso, type AcaoSugerida } from "./proximo-passo";
-import { PilotoAutomatico } from "./PilotoAutomatico";
+import { PilotoAutomatico } from "../../componentes/PilotoAutomatico";
 
 /**
  * Ações por projeto (T-016) + "próximo passo sugerido" (T-022).

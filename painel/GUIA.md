@@ -118,6 +118,9 @@ ele pertence a `lib/`.
 3. **A rodada em si NÃO se monta aqui**: `montarRodada` chama `montarJobAcao`, o mesmo do
    botão. Um segundo caminho seria uma segunda fonte de verdade sobre teto e lock.
 4. Rótulo/tom na tela → `web/src/lib/piloto.ts` (com teste), nunca dentro do JSX.
+5. **O componente aparece em DUAS telas** (`componentes/PilotoAutomatico.tsx`): na página do
+   projeto, onde se decide ligar, e na de Jobs, onde se acompanha. Mexeu nele, capture as
+   duas — `projeto` fixo num caso e seletor de projeto no outro.
 
 ### Acrescentar uma ação da fábrica (botão que dispara fluxo)
 1. `servidor/src/fabrica/catalogo-acoes.ts` (ação global) ou
@@ -162,7 +165,8 @@ ele pertence a `lib/`.
 | decidir se o piloto continua, dorme ou para | `avancar`, `podeIniciarRodada` | `servidor/src/jobs/piloto/decisao.ts` |
 | quando rearmar depois de cota batida | `esperaDeRearme`, `interpretarReabertura` | `servidor/src/jobs/piloto/reabertura.ts` |
 | montar a rodada do piloto (é a MESMA do botão Trabalhar) | `montarRodada` | `servidor/src/jobs/piloto/instancia.ts` |
-| o que a tela do piloto mostra | `situacaoDoPiloto`, `validarConfig`, `avisoDeCusto` | `web/src/lib/piloto.ts` |
+| o que a tela do piloto mostra | `situacaoDoPiloto`, `validarConfig`, `avisoDeCusto`, `projetoSugerido` | `web/src/lib/piloto.ts` |
+| o toggle do piloto (as duas telas) | `<PilotoAutomatico>` | `web/src/componentes/PilotoAutomatico.tsx` |
 | varrer segredos antes de publicar | `varrerRepo` | `servidor/src/fabrica/seguranca.ts` |
 | chamar a API do painel na web | `api()`, `ErroApi` | `web/src/lib/api.ts` |
 | dados de um GET com carregando/erro | `useDados` | `web/src/lib/useDados.ts` |

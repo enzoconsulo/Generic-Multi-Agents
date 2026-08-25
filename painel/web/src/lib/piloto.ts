@@ -1,4 +1,5 @@
-import type { EstadoPiloto, MotivoParadaPiloto } from "./tipos";
+import { projetoDoEscopo } from "./formato";
+import type { EstadoPiloto, Job, MotivoParadaPiloto } from "./tipos";
 
 /**
  * O que a tela do piloto automático DECIDE — separado do componente porque os testes da
@@ -147,4 +148,20 @@ export function horaCurta(iso: string, agora: Date = new Date()): string {
   const hora = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   const mesmoDia = d.toDateString() === agora.toDateString();
   return mesmoDia ? `hoje às ${hora}` : `amanhã às ${hora}`;
+}
+
+/**
+ * Qual projeto o seletor propõe quando o piloto é ligado de uma tela sem projeto (Jobs).
+ *
+ * O do job mais RECENTE que ainda existe na lista de projetos — quem abre Jobs quase sempre
+ * quer continuar o que acabou de rodar. Sem isso o seletor nasce vazio e obriga a escolher
+ * de novo algo que a tela inteira já está mostrando. `jobs` vem ordenado do mais novo para
+ * o mais velho (`useJobsAoVivo`); vazio devolve o primeiro projeto, ou `""` se não há nenhum.
+ */
+export function projetoSugerido(jobs: Job[], projetos: string[]): string {
+  for (const job of jobs) {
+    const nome = projetoDoEscopo(job.escopo);
+    if (nome !== null && projetos.includes(nome)) return nome;
+  }
+  return projetos[0] ?? "";
 }
