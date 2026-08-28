@@ -1,0 +1,89 @@
+{
+  "id": "f4445421",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-02T20:58:13.248Z",
+  "iniciadoEm": "2026-08-02T20:58:13.251Z",
+  "terminadoEm": "2026-08-02T21:35:27.906Z",
+  "resultado": {
+    "despachos": 4,
+    "tarefasConcluidas": [
+      "T-018"
+    ],
+    "promovidas": [
+      "T-019",
+      "T-020",
+      "T-021"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 10,
+    "marcos": [],
+    "saneadas": [
+      "T-018"
+    ],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-019",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 8.9909338,
+      "custosObservados": [
+        1.5735028999999996
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 8.9909338,
+    "texto": "Pipeline de banco-imobiliario: 4 despacho(s), 1 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\nConcluídas: T-018.\nPromovidas: T-019, T-020, T-021.\nSaneadas na abertura (sobras sem Notas): T-018.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-019 no executor.\n10 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 8.99."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-018 concluída (executor → testador → revisor). T-019/020/021 promovidas ao backlog. Pipeline parou no teto de custo (US$ 8.99): T-019 falhou na etapa executor (60 turns), outras seguem."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-018 concluída (trilha completa)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-019, T-020, T-021 promovidas"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-019 falhou: executor (60 turns)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Teto de custo atingido (US$ 8.99)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commit 89a36e9 (trabalho preservado)"
+        }
+      ],
+      "custoUsd": 0.004005,
+      "naoDeu": false
+    }
+  ]
+}

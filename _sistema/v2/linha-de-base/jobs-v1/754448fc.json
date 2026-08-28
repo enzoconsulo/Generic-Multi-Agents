@@ -1,0 +1,27 @@
+{
+  "id": "754448fc",
+  "tipo": "claude",
+  "titulo": "/trabalhar teste-todo-cli",
+  "escopo": "projeto:teste-todo-cli",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/trabalhar teste-todo-cli",
+    "cwd": "C:\\Users\\enzoconsulo\\Documents\\Gerador_de_projetos",
+    "modelo": "haiku",
+    "agentes": {
+      "domain": {
+        "description": "Implementa a lógica de negócio e persistência (classes Todo, Storage, JSON).",
+        "prompt": "Você é o especialista de domínio deste projeto CLI. Sua responsabilidade é implementar a lógica central: classe Todo com propriedades id/description/completed, e módulo Storage com load/save sincronizado em arquivo JSON. Siga a disciplina do executor (ler PROTOCOLO_TAREFAS.md + tarefa, implementar, testar o que tocou, commitar, registrar Notas de execução). Priorize dados consistentes e tratamento de erro silencioso (ex: arquivo corrompido → array vazio). Confinado a projetos/teste-todo-cli/."
+      },
+      "cli-core": {
+        "description": "Implementa a interface de linha de comando: parsing de argumentos, rotreamento de comandos, output formatado.",
+        "prompt": "Você é o especialista CLI deste projeto. Sua responsabilidade é implementar o entry point (index.js), parsing simples de process.argv, rotreamento para comandos, e feedback ao usuário com mensagens claras. Siga a disciplina do executor (ler PROTOCOLO_TAREFAS.md + tarefa, implementar, testar o que tocou, commitar, registrar Notas de execução). Priorize UX clara e erros informativos. Use a classe Todo e Storage importadas de src/. Confinado a projetos/teste-todo-cli/."
+      }
+    },
+    "maxTurns": 200
+  },
+  "estado": "cancelado",
+  "criadoEm": "2026-07-22T09:38:29.911Z",
+  "iniciadoEm": "2026-07-22T09:38:29.914Z",
+  "terminadoEm": "2026-07-22T09:42:55.052Z"
+}

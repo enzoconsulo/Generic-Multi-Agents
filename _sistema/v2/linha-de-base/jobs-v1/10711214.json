@@ -1,0 +1,17 @@
+{
+  "id": "10711214",
+  "tipo": "claude",
+  "titulo": "/status teste-todo-cli",
+  "escopo": "projeto:teste-todo-cli",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/status teste-todo-cli",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "haiku",
+    "maxTurns": 40
+  },
+  "estado": "cancelado",
+  "criadoEm": "2026-07-27T17:05:02.001Z",
+  "iniciadoEm": "2026-07-27T17:05:02.012Z",
+  "terminadoEm": "2026-07-27T17:05:18.546Z"
+}

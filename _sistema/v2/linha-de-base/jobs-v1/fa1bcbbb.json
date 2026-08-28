@@ -1,0 +1,67 @@
+{
+  "id": "fa1bcbbb",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar shopee-rodizio · retomada",
+  "escopo": "projeto:shopee-rodizio",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "shopee-rodizio",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-24T22:57:04.885Z",
+  "iniciadoEm": "2026-08-24T22:57:04.894Z",
+  "terminadoEm": "2026-08-24T22:59:11.755Z",
+  "resultado": {
+    "despachos": 1,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-004",
+        "custoUsd": 0.592884,
+        "despachos": 1,
+        "retrabalhoUsd": 0.592884,
+        "retrabalhoDespachos": 1,
+        "naturezas": [],
+        "concluiu": false
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "foraDeAreas": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-004",
+        "agente": "executor-reforcado"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "cota",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 0.592884,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "limiteDeUso": "11pm (America/Sao_Paulo)",
+    "projeto": "shopee-rodizio",
+    "custoEstimadoUsd": 0.592884,
+    "texto": "Pipeline de shopee-rodizio: 1 despacho(s), 0 tarefa(s) concluída(s).\nLIMITE DA ASSINATURA batido — a rodada parou na hora, sem gastar despacho contra a parede. A cota reabre: 11pm (America/Sao_Paulo).\nNADA DO QUE FOI FEITO SE PERDE: o estado vive nos arquivos das tarefas, não no job. Quando a cota voltar, redispare — a rodada relê o disco, mantém o que está concluído e retoma a tarefa que estava em voo de onde ela parou.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-004 no executor-reforcado.\nGasto estimado: US$ 0.59.",
+    "motivo": "limite-uso",
+    "reabreEm": "11pm (America/Sao_Paulo)"
+  }
+}

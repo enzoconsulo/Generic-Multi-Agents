@@ -1,0 +1,15 @@
+{
+  "id": "4a755a1e",
+  "tipo": "fake",
+  "titulo": "Análise do projeto alfa",
+  "escopo": "projeto:alfa",
+  "usaClaude": true,
+  "params": {},
+  "estado": "concluido",
+  "criadoEm": "2026-07-21T22:38:52.506Z",
+  "iniciadoEm": "2026-07-21T22:38:52.511Z",
+  "terminadoEm": "2026-07-21T22:38:52.698Z",
+  "resultado": {
+    "passos": 3
+  }
+}

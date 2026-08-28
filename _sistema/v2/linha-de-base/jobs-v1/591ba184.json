@@ -1,0 +1,26 @@
+{
+  "id": "591ba184",
+  "tipo": "claude",
+  "titulo": "/status ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/status ia-hibrida-limpa",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 40
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-27T20:13:23.737Z",
+  "iniciadoEm": "2026-07-27T20:13:23.740Z",
+  "sessionId": "1e6251e2-53b6-41ae-b392-6443017cd6e4",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-27T20:14:20.668Z",
+  "resultado": {
+    "sessionId": "1e6251e2-53b6-41ae-b392-6443017cd6e4",
+    "custoUsd": 0.3642655,
+    "numTurnos": 14,
+    "erro": false,
+    "texto": "## Painel de Status — `ia-hibrida-limpa`\n\n### Tabela do projeto\n\n| Projeto | backlog | pronta | em andamento | bloqueada | concluída | Fase atual (PLANO.md) |\n|---|---|---|---|---|---|---|\n| ia-hibrida-limpa | 0 | 0 | 0 | 0 | 0 | **não existe PLANO.md** |\n\nO projeto **ainda não foi planejado**: não há `ESPECIFICACAO.md` nem `PLANO.md` em `_gestao/`, e `_gestao/tarefas/` está vazio. O que existe hoje:\n\n- `_gestao/ANALISE.md` — análise de código gerada automaticamente (importação pelo painel-fábrica, commit `d0b1cba`), mapeando um sistema Python/Streamlit já maduro (DW + \"conselho IA\" para uma loja Shopee).\n- `_gestao/DECISOES.md` — só o template, nenhuma decisão registrada ainda.\n- `_gestao/PROGRESSO.md` — uma única entrada (2026-07-27): \"Projeto importado pelo painel-fábrica a partir de uma pasta existente. Análise de código enfileirada automaticamente.\"\n- `_gestao/pesquisas/` — vazio.\n\n### Bloqueios\nNenhuma tarefa `bloqueada` (porque não há tarefas).\n\n### Prontas para rodar\nNenhuma — não há tarefas `pronta` (nem backlog) porque o projeto nunca passou pelo `planejador`.\n\n### Inconsistências\n1. **Projeto sem especificação/plano/tarefas** — está fora do pipeline padrão da fábrica; precisa do `planejador` para gerar `ESPECIFICACAO.md` + `PLANO.md` + backlog inicial (a `ANALISE.md` já dá boa parte do material de entrada).\n2. **Repositório git aninhado** — `Local_AI/` (onde vive o código real) é um repo git próprio dentro de `projetos/ia-hibrida-limpa/`, que o rastreia como gitlink. O pipeline padrão (executor commita em `T-XXX` no repo do projeto) espera um único repositório — isso precisa de uma decisão explícita antes de qualquer execução (ex.: registrar em `DECISOES.md` como o commit vai funcionar nesse caso).\n3. **Segredos em disco** (`CHAVES_DADOS.env`) — não é um problema de protocolo, mas vale nota de atenção operacional já registrada na própria `ANALISE.md`.\n\n### Última atividade\nO log mais recente (2026-07-27) é inteiramente sobre o **painel-fabrica** (20/20 tarefas, 3 fases aprovadas) — nenhuma menção a `ia-hibrida-limpa` em nenhum log da fábrica até agora. Nenhuma ideia `status: nova` pendente em `_sistema/ideias/` (pasta só tem o README).\n\n---\n\n**Sugestão de próximo comando:** `/ideia` ou acionar o `planejador` diretamente para `ia-hibrida-limpa` — usando a `ANALISE.md` já existente como insumo — para gerar `ESPECIFICACAO.md`, `PLANO.md` e o backlog inicial de tarefas. Antes disso, vale decidir (e registrar em `DECISOES.md`) como tratar o gitlink `Local_AI/` no fluxo de commits do executor."
+  }
+}

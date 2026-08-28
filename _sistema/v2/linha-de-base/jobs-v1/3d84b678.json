@@ -1,0 +1,26 @@
+{
+  "id": "3d84b678",
+  "tipo": "claude",
+  "titulo": "Revisar código — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz). O usuário pediu, pelo\npainel, uma revisão de código do projeto `ia-hibrida-limpa`.\n\nPrimeiro descubra O QUE revisar: o diff mais recente do projeto (`git log --oneline -10`\ne `git show` no que interessar, dentro de `C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa`). Se houver trabalho não\ncommitado, ele entra na revisão também — é justamente onde bug fresco mora.\n\nDepois despache o agente `revisor` com este despacho:\n\n```\nProjeto: C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa\nObjeto do trabalho: revisar o diff identificado acima caçando BUGS REAIS — correção,\nsegurança, casos de borda, concorrência.\nConfinamento: não toque em NADA fora do caminho do projeto acima.\nContexto extra: revisão avulsa pedida pelo painel, fora do pipeline de uma tarefa — não\nhá arquivo de tarefa para anexar o relatório; devolva os achados na resposta.\nCada achado precisa vir em `arquivo:linha` com o cenário concreto de falha (entrada ou\nestado que produz o comportamento errado). NÃO corrija o código.\n```\n\nAo final, responda ao usuário em português (BR): os achados em ordem de gravidade, cada um\nem uma linha com `arquivo:linha` e o que quebra na prática.\n\nDuas regras que valem mais que o volume do relatório:\n- **Não invente achado para parecer útil.** \"Não encontrei bug real neste diff\" é uma\n  resposta boa, e é a resposta certa na maioria das revisões de código já testado.\n- Estilo, gosto pessoal e preferência de nomenclatura NÃO são achados. Bug é o que faz o\n  software se comportar errado.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 80
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-28T18:58:37.377Z",
+  "iniciadoEm": "2026-07-28T18:58:37.380Z",
+  "sessionId": "8a5f3583-bada-46de-a2fb-b0945b43a70d",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-28T19:04:04.333Z",
+  "resultado": {
+    "sessionId": "8a5f3583-bada-46de-a2fb-b0945b43a70d",
+    "custoUsd": 1.1426017499999996,
+    "numTurnos": 14,
+    "erro": false,
+    "texto": "Revisão concluída. Resumo para você:\n\n## O que foi revisado\nO código de T-001 (cliente OpenAI multimodal) e T-002 (geração do anúncio Shopee) — que vive fisicamente no submódulo `Local_AI/estudio_shopee/`, commits `ac883d7`, `75515c0`, `9d0d08c` — foi lido linha a linha por um revisor: `gerar_anuncio_shopee`, `_validar_resposta_anuncio`, `_montar_texto_contexto_produto`, e a movimentação de `construir_data_uri` de `app.py` para `gerador_anuncio.py`.\n\n## Achados\n**Nenhum bug real encontrado.** Não encontrei achado que eu invente para parecer útil — a validação de schema (título/descrição/palavras-chave), o tratamento de `content` nulo/recusa da API e a montagem do payload multimodal estão corretos, sem inversão de condição, sem `TypeError` cru, sem duplicação de função.\n\nDuas observações **menores** (não são bugs hoje, viram nota para quem pegar T-003 — integração da UI):\n- `Local_AI/estudio_shopee/gerador_anuncio.py` — `contexto_produto`/`historico_estilo` não são validados em runtime; se T-003 passar um tipo errado, o módulo deixa escapar `AttributeError` cru em vez de `ErroGeracaoAnuncio`. Inofensivo agora porque a função ainda não é chamada de lugar nenhum.\n- `Local_AI/estudio_shopee/gerador_anuncio.py` — `construir_data_uri` fixa `mime_type=\"image/jpeg\"` independente do formato real dos bytes (comportamento herdado, não é regressão desta tarefa); se a imagem final virar PNG (canal alfa do `rembg`), a data URI fica com mime type errado. T-003 deve conferir.\n\n## Ação tomada\nComo a revisão veio limpa, segui o protocolo: marquei **T-002 como `concluida`**, registrei o veredito na seção Revisão do arquivo da tarefa e commitei (`e6f2d70`). As duas notas menores ficaram documentadas ali para o executor de T-003 ler antes de integrar a UI."
+  }
+}

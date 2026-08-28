@@ -1,0 +1,46 @@
+{
+  "id": "5ec53988",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar shopee-rodizio",
+  "escopo": "projeto:shopee-rodizio",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "shopee-rodizio",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "cancelado",
+  "criadoEm": "2026-08-25T02:30:59.068Z",
+  "iniciadoEm": "2026-08-25T02:30:59.072Z",
+  "terminadoEm": "2026-08-25T02:31:53.616Z",
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-004 abortou na etapa executor-reforcado; T-006 segue com config-estado.",
+        "Construtor mantém contexto de T-004 para retomar, outras tarefas prosseguem."
+      ],
+      "itens": [
+        {
+          "tipo": "atencao",
+          "texto": "T-004 integracao-shopee abortou"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Contexto de T-004 preservado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-006 config-estado em execução"
+        }
+      ],
+      "custoUsd": 0.00307,
+      "naoDeu": false
+    }
+  ]
+}

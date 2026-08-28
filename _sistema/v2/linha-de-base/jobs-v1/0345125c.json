@@ -1,0 +1,128 @@
+{
+  "id": "0345125c",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-11T22:58:23.802Z",
+  "iniciadoEm": "2026-08-11T22:58:23.807Z",
+  "terminadoEm": "2026-08-11T23:28:09.952Z",
+  "resultado": {
+    "despachos": 5,
+    "tarefasConcluidas": [
+      "T-034"
+    ],
+    "promovidas": [
+      "T-035",
+      "T-036",
+      "T-037",
+      "T-040",
+      "T-041"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 2,
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-035",
+        "custoUsd": 4.3413054,
+        "despachos": 3,
+        "retrabalhoUsd": 2.2125270000000006,
+        "retrabalhoDespachos": 1,
+        "naturezas": [],
+        "concluiu": false
+      },
+      {
+        "tarefa": "T-034",
+        "custoUsd": 2.2416966,
+        "despachos": 2,
+        "retrabalhoUsd": 2.2416966,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [
+      {
+        "tarefa": "T-034",
+        "agente": "testador",
+        "chamadas": 30,
+        "orcado": 25
+      },
+      {
+        "tarefa": "T-034",
+        "agente": "revisor",
+        "chamadas": 28,
+        "orcado": 20
+      },
+      {
+        "tarefa": "T-035",
+        "agente": "executor-reforcado",
+        "chamadas": 31,
+        "orcado": 30
+      }
+    ],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 6.5830020000000005,
+      "custosObservados": [
+        2.2416966
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 6.5830020000000005,
+    "texto": "Pipeline de banco-imobiliario: 5 despacho(s), 1 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\nConcluídas: T-034.\nPromovidas: T-035, T-036, T-037, T-040, T-041.\n2 critério(s) resolvidos por comando, sem gastar modelo.\nOrçamento de ferramentas estourado (idas ao modelo custam ao quadrado): T-034/testador 30 de 25; T-034/revisor 28 de 20; T-035/executor-reforcado 31 de 30.\nGasto estimado: US$ 6.58."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Pipeline encerrado pelo teto de custo. T-034 concluída; T-035 a T-041 promovidas para próxima fase. Orçamento de ferramentas estourado em 3 agentes (testador, revisor, executor-reforcado).",
+        "Arquivo server-error.log alterado mas não commitado — código não passou por revisor. Guard recusou 3 tentativas de kill de processos node."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-034 concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-035 a T-041 promovidas"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "server-error.log não commitado"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Testador: 30/25 chamadas"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Revisor: 28/20 chamadas"
+        }
+      ],
+      "custoUsd": 0.0057079999999999995,
+      "naoDeu": false
+    }
+  ]
+}

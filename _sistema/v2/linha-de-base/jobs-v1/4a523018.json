@@ -1,0 +1,27 @@
+{
+  "id": "4a523018",
+  "tipo": "claude",
+  "titulo": "Verificar marco de fase — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz; transições em\n`_sistema/PROTOCOLO_TAREFAS.md`). O usuário pediu, pelo painel, a verificação de MARCO DE\nFASE do projeto `ia-hibrida-limpa`.\n\nFASE PEDIDA PELO USUÁRIO (pode estar vazia — nesse caso, descubra):\n\n\n## 1. Descobrir a fase\n\nLeia `C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/PLANO.md` e os frontmatters de\n`C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/tarefas/*.md` (escaneie por busca, não abra tudo). A fase a verificar\né aquela cujas tarefas estão **todas `concluida`** e cuja linha `Marco:` ainda está\n`pendente`.\n\nSe NENHUMA fase se qualifica, pare e diga isso — com qual fase está mais perto e o que\nfalta. Rodar marco de fase incompleta não mede nada e gasta a assinatura à toa. Se mais de\numa se qualifica, faça a mais antiga.\n\n## 2. Despachar o testador em modo marco\n\n```\nProjeto: C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa\nObjeto do trabalho: VERIFICAÇÃO DE MARCO da fase <N> — não é a verificação de uma tarefa.\nMeta da fase, copiada do PLANO.md: <cole a meta aqui, literal>\nConfinamento: não toque em NADA fora do caminho do projeto acima.\nNão corrija código, não altere status de tarefa e NÃO edite a linha `Marco:` do PLANO.md —\nquem escreve nela sou eu.\nEntregue veredito explícito: APROVADO ou REPROVADO. Se reprovado, cada causa raiz separada\ncom o comando que a reproduz — cada causa raiz vira uma tarefa corretiva.\n```\n\nDuas regras que definem o valor deste fluxo, e que você precisa passar ao testador:\n\n1. **Marco não é re-rodar os critérios de aceite tarefa a tarefa.** Isso já foi feito e\n   aprovado. A pergunta aqui é se a META DA FASE está de pé como um todo, rodando o\n   software de verdade — uma fase pode ter todas as tarefas verdes e ainda assim não\n   entregar a meta, por integração entre as partes ou por caminho de erro que nenhuma\n   tarefa cobria sozinha.\n2. **Não mova a trave.** Julgue contra a meta ESCRITA no PLANO.md, não contra o que seria\n   bom ter. Achado legítimo que está fora da meta (uma pesquisa recente, uma melhoria\n   óbvia) se registra e NÃO reprova o marco. Reprovar por algo fora do escopo é o pior uso\n   possível deste fluxo: transforma o portão da fase em opinião.\n\n## 3. Registrar o resultado (isto é seu, não do testador)\n\nEscreva na linha `Marco:` da fase, em `C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/PLANO.md`:\n- aprovado: `Marco: aprovado AAAA-MM-DD (<uma linha do que foi exercitado>)`\n- reprovado: `Marco: reprovado AAAA-MM-DD (correções: T-NNN, ...)`\n\nÉ essa linha que diz às próximas sessões que o marco já rodou — sem ela, alguém repete a\nverificação inteira.\n\n**Aprovado:** promova a `pronta` as tarefas em `backlog` cujas dependências estejam todas\n`concluida` (a promoção é ato do orquestrador). Diga quais promoveu.\n\n**Reprovado:** causa raiz única e escopo óbvio → crie você a tarefa corretiva pelo template\nde `_sistema/templates/tarefa.md`. Múltiplas causas raiz → despache o `planejador`, uma\ntarefa por causa. Em qualquer caso, a linha `Marco:` referencia as tarefas criadas.\n\nCommite as mudanças de `_gestao/` ao final (`chore: marco da fase <N> ...`).\n\nAo final, responda ao usuário em português (BR), em no máximo 10 linhas: veredito, o que\nfoi exercitado, o que promoveu (ou quais tarefas corretivas nasceram) e o que ficou\nregistrado fora do escopo da meta.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 100,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-29T02:25:39.499Z",
+  "iniciadoEm": "2026-07-29T02:25:39.506Z",
+  "sessionId": "762e1f5b-08ea-49ff-935f-eacb98a95c7a",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-29T02:26:02.950Z",
+  "resultado": {
+    "sessionId": "762e1f5b-08ea-49ff-935f-eacb98a95c7a",
+    "custoUsd": 0.23384169999999999,
+    "numTurnos": 3,
+    "erro": false,
+    "texto": "Verifiquei o PLANO.md e os frontmatters das tarefas antes de despachar qualquer coisa — **nenhuma fase se qualifica** para verificação de marco agora:\n\n- **Fase 1** já tem marco registrado: `aprovado 2026-07-28`.\n- **Fase 2** (T-003, T-004): T-003 está `pronta` (ainda não executada) e T-004 está `backlog` (depende de T-003). Faltam ambas concluídas.\n- **Fase 3** (T-005, T-006): T-005 está `pronta` e T-006 está `backlog` (depende de T-004 e T-005). Faltam ambas concluídas.\n\nA fase mais próxima é a **2**: falta rodar o pipeline (executor→testador→revisor) em T-003 e depois em T-004 para poder chamar o marco.\n\nNão despachei o testador em modo marco — rodar contra uma fase incompleta não mede nada e desperdiça a verificação. Recomendo seguir com `/trabalhar` para avançar T-003 (e depois T-004) antes de pedir o marco da Fase 2 de novo."
+  }
+}

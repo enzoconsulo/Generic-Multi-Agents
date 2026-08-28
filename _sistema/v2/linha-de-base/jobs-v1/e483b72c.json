@@ -1,0 +1,21 @@
+{
+  "id": "e483b72c",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar shopee-rodizio",
+  "escopo": "projeto:shopee-rodizio",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "shopee-rodizio",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "interrompido",
+  "criadoEm": "2026-08-25T03:04:58.549Z",
+  "iniciadoEm": "2026-08-25T03:04:58.556Z",
+  "terminadoEm": "2026-08-25T09:22:39.913Z",
+  "erro": "Processo do painel reiniciou antes de o job terminar"
+}

@@ -1,0 +1,78 @@
+{
+  "id": "466aa672",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-09T12:07:37.799Z",
+  "iniciadoEm": "2026-08-09T12:07:37.802Z",
+  "terminadoEm": "2026-08-09T12:16:46.064Z",
+  "resultado": {
+    "despachos": 3,
+    "tarefasConcluidas": [
+      "T-030"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 7,
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 1.8780432,
+      "custosObservados": [
+        0.8772258999999999
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 1.8780432,
+    "texto": "Pipeline de banco-imobiliario: 3 despacho(s), 1 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nConcluídas: T-030.\n7 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 1.88."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-030 concluída com pipeline banco-imobiliario processado (3 despachos). Commit 8c41774 gestão, 7 critérios resolvidos sem modelo."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-030 concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "3 despachos processados"
+        },
+        {
+          "tipo": "feito",
+          "texto": "7 critérios resolvidos"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commit 8c41774"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Custo US$ 1.88"
+        }
+      ],
+      "custoUsd": 0.003105,
+      "naoDeu": false
+    }
+  ]
+}

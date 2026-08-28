@@ -1,0 +1,53 @@
+{
+  "id": "9948715e",
+  "tipo": "claude",
+  "titulo": "Verificar marco de fase — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz; transições em\n`_sistema/PROTOCOLO_TAREFAS.md`). O usuário pediu, pelo painel, a verificação de MARCO DE\nFASE do projeto `ia-hibrida-limpa`.\n\nFASE PEDIDA PELO USUÁRIO (pode estar vazia — nesse caso, descubra):\n\n\n## 1. Descobrir a fase\n\nLeia `C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/PLANO.md` e os frontmatters de\n`C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/tarefas/*.md` (escaneie por busca, não abra tudo). A fase a verificar\né aquela cujas tarefas estão **todas `concluida`** e cuja linha `Marco:` ainda está\n`pendente`.\n\nSe NENHUMA fase se qualifica, pare e diga isso — com qual fase está mais perto e o que\nfalta. Rodar marco de fase incompleta não mede nada e gasta a assinatura à toa. Se mais de\numa se qualifica, faça a mais antiga.\n\n## 2. Despachar o testador em modo marco\n\n```\nProjeto: C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa\nObjeto do trabalho: VERIFICAÇÃO DE MARCO da fase <N> — não é a verificação de uma tarefa.\nMeta da fase, copiada do PLANO.md: <cole a meta aqui, literal>\nConfinamento: não toque em NADA fora do caminho do projeto acima.\nNão corrija código, não altere status de tarefa e NÃO edite a linha `Marco:` do PLANO.md —\nquem escreve nela sou eu.\nEntregue veredito explícito: APROVADO ou REPROVADO. Se reprovado, cada causa raiz separada\ncom o comando que a reproduz — cada causa raiz vira uma tarefa corretiva.\n```\n\nDuas regras que definem o valor deste fluxo, e que você precisa passar ao testador:\n\n1. **Marco não é re-rodar os critérios de aceite tarefa a tarefa.** Isso já foi feito e\n   aprovado. A pergunta aqui é se a META DA FASE está de pé como um todo, rodando o\n   software de verdade — uma fase pode ter todas as tarefas verdes e ainda assim não\n   entregar a meta, por integração entre as partes ou por caminho de erro que nenhuma\n   tarefa cobria sozinha.\n2. **Não mova a trave.** Julgue contra a meta ESCRITA no PLANO.md, não contra o que seria\n   bom ter. Achado legítimo que está fora da meta (uma pesquisa recente, uma melhoria\n   óbvia) se registra e NÃO reprova o marco. Reprovar por algo fora do escopo é o pior uso\n   possível deste fluxo: transforma o portão da fase em opinião.\n\n## 3. Registrar o resultado (isto é seu, não do testador)\n\nEscreva na linha `Marco:` da fase, em `C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/PLANO.md`:\n- aprovado: `Marco: aprovado AAAA-MM-DD (<uma linha do que foi exercitado>)`\n- reprovado: `Marco: reprovado AAAA-MM-DD (correções: T-NNN, ...)`\n\nÉ essa linha que diz às próximas sessões que o marco já rodou — sem ela, alguém repete a\nverificação inteira.\n\n**Aprovado:** promova a `pronta` as tarefas em `backlog` cujas dependências estejam todas\n`concluida` (a promoção é ato do orquestrador). Diga quais promoveu.\n\n**Reprovado:** causa raiz única e escopo óbvio → crie você a tarefa corretiva pelo template\nde `_sistema/templates/tarefa.md`. Múltiplas causas raiz → despache o `planejador`, uma\ntarefa por causa. Em qualquer caso, a linha `Marco:` referencia as tarefas criadas.\n\nCommite as mudanças de `_gestao/` ao final (`chore: marco da fase <N> ...`).\n\nAo final, responda ao usuário em português (BR), em no máximo 10 linhas: veredito, o que\nfoi exercitado, o que promoveu (ou quais tarefas corretivas nasceram) e o que ficou\nregistrado fora do escopo da meta.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "haiku",
+    "maxTurns": 100,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-28T23:16:56.947Z",
+  "iniciadoEm": "2026-07-28T23:16:56.963Z",
+  "sessionId": "4239a37e-bdfe-4f8c-9c7e-ae73f06cd998",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-28T23:17:34.538Z",
+  "resultado": {
+    "sessionId": "4239a37e-bdfe-4f8c-9c7e-ae73f06cd998",
+    "custoUsd": 0.0397326,
+    "numTurnos": 3,
+    "erro": false,
+    "texto": "## Resultado da verificação\n\n**Nenhuma fase se qualifica para marco de fase agora.** Aqui está o status:\n\n| Fase | Marco | T-001 | T-002 | T-003 | T-004 | T-005 | T-006 | Status |\n|---|---|---|---|---|---|---|---|---|\n| **1 — Fundação** | ✅ aprovado | ✓ | ✓ | — | — | — | — | Completa |\n| **2 — Núcleo** | ⏳ pendente | — | — | pronta | backlog | — | — | **Incompleta** |\n| **3 — Refinamento** | ⏳ pendente | — | — | — | — | pronta | backlog | Incompleta |\n\n**Fase 2 está mais perto:** T-003 já está pronta (aguarda execução), mas T-004 ainda está em backlog e não pode rodar até T-003 sair de pronta. Quando ambas tiverem `concluida`, eu voltarei a despachá-la o testador em modo marco contra a meta: *\"dentro do Estúdio, o usuário consegue gerar o anúncio a partir da imagem final, editar título/descrição na tela, e ter tudo salvo junto do render ao aprovar o catálogo.\"*\n\nPróximo passo: execute o `/trabalhar` para levar T-003 à conclusão."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Nenhuma fase qualifica para marco agora.",
+        "Fase 1 completa com marco aprovado; Fase 2 próxima mas aguarda T-003 e T-004."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "Fase 1 — marco aprovado ✅"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Fase 2 — T-003 pronta, T-004 em backlog"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Fase 3 — T-005 e T-006 não prontas"
+        }
+      ],
+      "custoUsd": 0.042175000000000004,
+      "naoDeu": false
+    }
+  ]
+}

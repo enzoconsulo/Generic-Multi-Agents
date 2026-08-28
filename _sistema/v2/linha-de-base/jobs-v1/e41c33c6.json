@@ -1,0 +1,52 @@
+{
+  "id": "e41c33c6",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "cancelado",
+  "criadoEm": "2026-08-09T02:05:21.932Z",
+  "iniciadoEm": "2026-08-09T02:05:21.934Z",
+  "terminadoEm": "2026-08-09T02:32:34.976Z",
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-030 falhou no executor com aborto de operação; tarefa deixada para próxima rodada. Pipeline parou por dependência de backlog."
+      ],
+      "itens": [
+        {
+          "tipo": "atencao",
+          "texto": "T-030 falhou no executor"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "bash.exe (pid 21480) encerrado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "7 critérios resolvidos por comando"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commit d20f18b registrado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Gasto: US$ 3.38"
+        }
+      ],
+      "custoUsd": 0.003411,
+      "naoDeu": false
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "id": "a0c785f8",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-16T03:24:57.804Z",
+  "iniciadoEm": "2026-08-16T03:24:57.807Z",
+  "terminadoEm": "2026-08-16T03:33:49.002Z",
+  "resultado": {
+    "despachos": 3,
+    "tarefasConcluidas": [
+      "T-046"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 3,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-046",
+        "custoUsd": 1.9182544999999998,
+        "despachos": 3,
+        "retrabalhoUsd": 0.9513466,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 1.9182544999999998,
+      "custosObservados": [
+        1.9182544999999998
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 1.9182544999999998,
+    "texto": "Pipeline de banco-imobiliario: 3 despacho(s), 1 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nConcluídas: T-046.\n3 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 1.92."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Tarefa T-046 concluída com pipeline de 3 despachos. Executor, testador e revisor operacionais; 3 critérios resolvidos sem custo de modelo."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-046 concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "3 critérios resolvidos (sem modelo)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Gestão commitada (70ed3da)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Custo: US$ 1.92"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "engine não injetado em executor"
+        }
+      ],
+      "custoUsd": 0.003157,
+      "naoDeu": false
+    }
+  ]
+}

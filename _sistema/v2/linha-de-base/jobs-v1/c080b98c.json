@@ -1,0 +1,84 @@
+{
+  "id": "c080b98c",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-09T23:02:41.510Z",
+  "iniciadoEm": "2026-08-09T23:02:41.512Z",
+  "terminadoEm": "2026-08-09T23:19:47.571Z",
+  "resultado": {
+    "despachos": 2,
+    "tarefasConcluidas": [
+      "T-032"
+    ],
+    "promovidas": [
+      "T-033"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-033",
+        "custoUsd": 4.111357099999999,
+        "despachos": 1,
+        "retrabalhoUsd": 0,
+        "retrabalhoDespachos": 0,
+        "naturezas": [],
+        "concluiu": false
+      },
+      {
+        "tarefa": "T-032",
+        "custoUsd": 0.8976419000000001,
+        "despachos": 1,
+        "retrabalhoUsd": 0.8976419000000001,
+        "retrabalhoDespachos": 1,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-033",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 5.008998999999999,
+      "custosObservados": [
+        0.8976419000000001
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 5.008998999999999,
+    "texto": "Pipeline de banco-imobiliario: 2 despacho(s), 1 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nConcluídas: T-032.\nPromovidas: T-033.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-033 no executor.\nGasto estimado: US$ 5.01."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [],
+      "itens": [],
+      "custoUsd": null,
+      "naoDeu": true
+    }
+  ]
+}

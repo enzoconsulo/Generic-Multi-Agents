@@ -1,0 +1,80 @@
+{
+  "id": "d466af0f",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-02T20:41:20.346Z",
+  "iniciadoEm": "2026-08-02T20:41:20.349Z",
+  "terminadoEm": "2026-08-02T20:56:20.353Z",
+  "resultado": {
+    "despachos": 1,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-018",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 4.664858300000001,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 4.664858300000001,
+    "texto": "Pipeline de banco-imobiliario: 1 despacho(s), 0 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-018 no executor.\nGasto estimado: US$ 4.66."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-018 falhou no executor após 60 tentativas; tarefa adiada para próxima rodada.",
+        "Outras tarefas prosseguem normalmente. Pipeline parado aguardando dependências."
+      ],
+      "itens": [
+        {
+          "tipo": "atencao",
+          "texto": "T-018 executor atingiu limite (60 turnos)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Gestão commitada: 1128517"
+        },
+        {
+          "tipo": "feito",
+          "texto": "1 despacho realizado no pipeline"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Backlog restante bloqueado por dependências"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Custo estimado: US$ 4,66"
+        }
+      ],
+      "custoUsd": 0.0030800000000000003,
+      "naoDeu": false
+    }
+  ]
+}

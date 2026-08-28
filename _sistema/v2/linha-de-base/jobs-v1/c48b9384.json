@@ -1,0 +1,106 @@
+{
+  "id": "c48b9384",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-15T22:29:23.981Z",
+  "iniciadoEm": "2026-08-15T22:29:23.986Z",
+  "terminadoEm": "2026-08-15T23:05:57.152Z",
+  "resultado": {
+    "despachos": 4,
+    "tarefasConcluidas": [
+      "T-047"
+    ],
+    "promovidas": [
+      "T-046",
+      "T-044"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 7,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-047",
+        "custoUsd": 2.706906,
+        "despachos": 3,
+        "retrabalhoUsd": 0.9696421,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      },
+      {
+        "tarefa": "T-044",
+        "custoUsd": 2.690229,
+        "despachos": 1,
+        "retrabalhoUsd": 2.690229,
+        "retrabalhoDespachos": 1,
+        "naturezas": [],
+        "concluiu": false
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 5.3971350000000005,
+      "custosObservados": [
+        2.706906
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 5.3971350000000005,
+    "texto": "Pipeline de banco-imobiliario: 4 despacho(s), 1 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\nConcluídas: T-047.\nPromovidas: T-046, T-044.\n7 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 5.40."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-046 e T-044 promovidas ao backlog pronto. T-047 completada com executor, testador e revisor; job encerrado por teto de custo (US$ 5.40 de US$ 8.00)."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-047 completada (executor, testador, revisor)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-046 promovida para pronta"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-044 promovida para pronta"
+        },
+        {
+          "tipo": "feito",
+          "texto": "7 critérios resolvidos sem modelo"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-047: servidor não injetado no executor"
+        }
+      ],
+      "custoUsd": 0.004638,
+      "naoDeu": false
+    }
+  ]
+}

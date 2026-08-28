@@ -1,0 +1,27 @@
+{
+  "id": "aa9bead2",
+  "tipo": "claude",
+  "titulo": "Replanejar — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz; transições em\n`_sistema/PROTOCOLO_TAREFAS.md`). O usuário pediu, pelo painel, um replanejamento do\nprojeto `ia-hibrida-limpa`.\n\nRECORTE PEDIDO PELO USUÁRIO (pode estar vazio — nesse caso, decida pelo estado atual):\n\n\nAntes de despachar, levante o estado real: escaneie os frontmatters de\n`C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/tarefas/*.md` e leia o `PLANO.md`. O que costuma justificar\nreplanejamento é tarefa `bloqueada`, tarefa que já esgotou tentativas, ou fase cuja meta\ndeixou de fazer sentido.\n\nDespache o agente `planejador` em modo replanejamento:\n\n```\nProjeto: C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa\nObjeto do trabalho: replanejar o recorte identificado acima — quebrar ou reescrever a\nabordagem do que não está saindo.\nConfinamento: não toque em NADA fora do caminho do projeto acima.\nSiga _sistema/PROTOCOLO_TAREFAS.md: a tarefa original vira `cancelada` com referência, e\nas substitutas nascem com `replanejada-de` apontando para ela.\nContexto extra: replanejamento avulso pedido pelo painel — NÃO é o replanejamento\nautomático por esgotamento de ciclos.\n```\n\nRegra que não pode ser violada: replanejar é reescrever a ABORDAGEM, não apagar o\nproblema. Tarefa que continua necessária não pode simplesmente sumir do backlog — se ela\ndeixou de fazer sentido, isso vira uma linha de justificativa em `DECISOES.md`.\n\nAo final, responda ao usuário em português (BR), em no máximo 10 linhas: o que foi\ncancelado, o que nasceu no lugar, e o que mudou na abordagem — sem recitar as tarefas\ninteiras.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 120,
+    "watchdogMs": 900000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-28T21:49:18.489Z",
+  "iniciadoEm": "2026-07-28T21:49:18.498Z",
+  "sessionId": "b701c68d-3269-408b-b0f1-ad2116466c0f",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-28T21:56:59.263Z",
+  "resultado": {
+    "sessionId": "b701c68d-3269-408b-b0f1-ad2116466c0f",
+    "custoUsd": 1.80712305,
+    "numTurnos": 14,
+    "erro": false,
+    "texto": "Confirmado: as edições estão na árvore (não commitadas — ficam pendentes para o fechamento do dia, conforme o protocolo). Há também uma pasta nova `_gestao/pesquisas/` não rastreada, provavelmente resquício de sessão anterior — deixei como está, sem mexer.\n\nResumo para você:\n\n- **Estado real checado antes de agir:** nenhuma tarefa `bloqueada`, nenhuma com tentativas esgotadas, nenhuma fase com meta inválida. Não havia gatilho legítimo de replanejamento.\n- **Nada foi cancelado.** O planejador não fabricou um cancelamento só para justificar a chamada — plano segue válido.\n- **2 tarefas em `backlog` (0 tentativas) foram ajustadas, não recriadas:** T-003 ganhou reforço de contexto + 1 critério novo (tratar `contexto_produto`/`historico_estilo` nulos e capturar erro genérico no botão); a suspeita de mime type incorreto (PNG vs JPEG) foi investigada e descartada — a imagem final já sai sempre em JPEG do fal.ai. T-006 teve a premissa corrigida: o `CLAUDE.md` do projeto já foi preenchido (não está mais nos placeholders), então a tarefa virou \"revisar/atualizar\" em vez de \"preencher do zero\".\n- **Confirmado sem mudança:** decisão de deixar o \"Modo Gratuito\" fora de escopo; dependências T-003→T-004, T-005→T-006.\n- Registrado em `DECISOES.md`. Pendência separada (não é replanejamento): o marco da Fase 1 no `PLANO.md` ainda está `pendente` — falta eu despachar o testador em modo marco antes de promover T-003."
+  }
+}

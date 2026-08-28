@@ -1,0 +1,98 @@
+{
+  "id": "bc2908a1",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-10T10:31:38.177Z",
+  "iniciadoEm": "2026-08-10T10:31:38.180Z",
+  "terminadoEm": "2026-08-10T11:00:43.096Z",
+  "resultado": {
+    "despachos": 4,
+    "tarefasConcluidas": [
+      "T-033"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 2,
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-033",
+        "custoUsd": 4.4157752000000015,
+        "despachos": 3,
+        "retrabalhoUsd": 1.6003072,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "marcos": [
+      {
+        "fase": "Fase 5 — Animações de jogabilidade (dados e peão)",
+        "veredicto": "aprovado"
+      }
+    ],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 4.905348300000002,
+      "custosObservados": [
+        1.3007882000000002
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 4.905348300000002,
+    "texto": "Pipeline de banco-imobiliario: 4 despacho(s), 1 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nConcluídas: T-033.\nMarco da fase \"Fase 5 — Animações de jogabilidade (dados e peão)\": APROVADO.\n2 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 4.91."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Fase 5 (Animações de jogabilidade) aprovada. T-033 concluída com 3 agentes executados; T-031 ultrapassou limite de chamadas (36 vs 25)."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "Marco Fase 5 aprovado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-033 concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commit 6d8de6a depositado"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-031: 36 chamadas (limite 25)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "frontend não injetado em T-033"
+        }
+      ],
+      "custoUsd": 0.004005,
+      "naoDeu": false
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "id": "8e4e95c6",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-17T00:05:20.658Z",
+  "iniciadoEm": "2026-08-17T00:05:20.660Z",
+  "terminadoEm": "2026-08-17T00:30:05.545Z",
+  "resultado": {
+    "despachos": 3,
+    "tarefasConcluidas": [
+      "T-054"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 5,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-054",
+        "custoUsd": 3.9517886000000004,
+        "despachos": 3,
+        "retrabalhoUsd": 1.6108827999999997,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [
+      {
+        "tarefa": "T-054",
+        "agente": "revisor",
+        "chamadas": 34,
+        "orcado": 28
+      }
+    ],
+    "foraDeAreas": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 3.9517886000000004,
+      "custosObservados": [
+        3.9517886000000004
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 3.9517886000000004,
+    "texto": "Pipeline de banco-imobiliario: 3 despacho(s), 1 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nNada a retomar: a rodada esvaziou a fila do que era despachável.\nConcluídas: T-054.\n5 critério(s) resolvidos por comando, sem gastar modelo.\nAgente(s) se DEBATENDO — chamadas de ferramenta no decil superior medido (o próximo despacho da tarefa não usa caminho barato): T-054/revisor 34 de 28.\nGasto estimado: US$ 3.95."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-054 completada com 3 despachos (executor, testador, revisor). Revisor consumiu 34 chamadas de ferramenta, 21% acima do p90, impactando custo."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-054 concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "5 critérios resolvidos sem modelo"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Revisor: 34 calls vs 28 (p90)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Próximo despacho sem caminho barato"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Custo: US$ 3.95"
+        }
+      ],
+      "custoUsd": 0.003691,
+      "naoDeu": false
+    }
+  ]
+}

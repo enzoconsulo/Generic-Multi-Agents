@@ -1,0 +1,26 @@
+{
+  "id": "33a01a83",
+  "tipo": "claude",
+  "titulo": "/ideia no ia-hibrida-limpa, na aba de criar imagens na pasta do estudio, eu gostaria de adicionar a geração completa de um anuncio, com titulo , descrição e tudo para que o anuncio maximize as vendas, deve ser bem elaborado e deixar tudo no contexto da foto para ficar impecavel.",
+  "escopo": "global",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/ideia no ia-hibrida-limpa, na aba de criar imagens na pasta do estudio, eu gostaria de adicionar a geração completa de um anuncio, com titulo , descrição e tudo para que o anuncio maximize as vendas, deve ser bem elaborado e deixar tudo no contexto da foto para ficar impecavel.",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 100
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-27T21:11:37.271Z",
+  "iniciadoEm": "2026-07-27T21:11:37.277Z",
+  "sessionId": "c3d222ef-0674-4b5d-ac3b-750669d07ff6",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-27T21:22:20.421Z",
+  "resultado": {
+    "sessionId": "c3d222ef-0674-4b5d-ac3b-750669d07ff6",
+    "custoUsd": 2.2700837999999997,
+    "numTurnos": 9,
+    "erro": false,
+    "texto": "Ideia roteada e tudo commitado. Resumo final:\n\n**Onde parou:** `_sistema/ideias/2026-07-27-anuncio-completo-estudio-shopee.md` (`status: roteada`).\n\n**Projeto:** `ia-hibrida-limpa` — como era um projeto recém-importado (sem `ESPECIFICACAO.md`/`PLANO.md`), o planejador criou os dois do zero, focados nesta feature, com base na arquitetura real (`ANALISE.md`).\n\n**Tarefas criadas** (`_gestao/tarefas/`):\n| ID | Título | Depende de | Status |\n|---|---|---|---|\n| T-001 | Cliente OpenAI REST multimodal | — | **pronta** |\n| T-002 | Prompt de copywriting + schema do anúncio Shopee | T-001 | backlog |\n| T-003 | UI \"Anúncio Shopee\" na aba de criar imagens | T-002 | backlog |\n| T-004 | Salvar anúncio junto do render aprovado | T-003 | backlog |\n| T-005 | Testes do gerador de anúncio | T-002 | backlog |\n| T-006 | Documentação | T-004, T-005 | backlog |\n\n**Decisão-chave registrada em DECISOES.md:** o LLM que o estúdio já usa (Groq via LiteLLM local) só recebe texto, nunca a imagem — por isso a feature vai usar OpenAI REST direto com visão (mesmo padrão já usado no app principal do projeto), para o anúncio ficar realmente ancorado no conteúdo da foto.\n\n**Commits:** um no repo do projeto (`_gestao` com especificação/plano/tarefas) e um na raiz da fábrica (ideia + log do dia).\n\nPronto para rodar `/trabalhar` quando quiser — T-001 já está `pronta` para o executor."
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "id": "e6d810ca",
+  "tipo": "claude",
+  "titulo": "/novo-projeto banco imobiliario- o unico e principal motivo desse projeto é simplesmente criar um banco imobiliario virtual, web onde eu possa jogar com minha namorada, deve ser exatamente no mesmo estilo de \"business tour\" com as exatas mesmas regras e jogabilidade",
+  "escopo": "global",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/novo-projeto banco imobiliario- o unico e principal motivo desse projeto é simplesmente criar um banco imobiliario virtual, web onde eu possa jogar com minha namorada, deve ser exatamente no mesmo estilo de \"business tour\" com as exatas mesmas regras e jogabilidade",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 150,
+    "watchdogMs": 900000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-30T22:56:52.292Z",
+  "iniciadoEm": "2026-07-30T22:56:52.305Z",
+  "sessionId": "6e50a4e2-7aba-4fe5-b25f-1535a2932d20",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Estrutura do projeto criada com arquivos de documentação. Git inicializado com commit inaugural."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "CLAUDE.md criado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "README.md criado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "DECISOES.md criado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "PROGRESSO.md criado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Git inicializado e commit inicial"
+        }
+      ],
+      "custoUsd": 0.0024980000000000002,
+      "naoDeu": false
+    },
+    {
+      "indice": 1,
+      "agente": "planejador",
+      "linhas": [
+        "Agente concluiu especificação, plano e backlog do projeto banco-imobiliario. Criou 22 tarefas distribuídas em Fase 1 (T-001 a T-006) e Fase 2 (T-007 a T-017)."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "ESPECIFICACAO.md criada"
+        },
+        {
+          "tipo": "feito",
+          "texto": "PLANO.md criada"
+        },
+        {
+          "tipo": "feito",
+          "texto": "DECISOES.md, equipe.json, CLAUDE.md"
+        },
+        {
+          "tipo": "feito",
+          "texto": "22 tarefas geradas (Fase 1 e 2)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Custo: $0.57, 18 turnos"
+        }
+      ],
+      "custoUsd": 0.003337,
+      "naoDeu": false
+    }
+  ],
+  "terminadoEm": "2026-07-30T23:08:11.981Z",
+  "resultado": {
+    "sessionId": "6e50a4e2-7aba-4fe5-b25f-1535a2932d20",
+    "custoUsd": 0.5731563499999999,
+    "numTurnos": 18,
+    "erro": false,
+    "texto": "Não é necessário agendar um wakeup manual — serei notificado automaticamente quando o `planejador` terminar. Vou aguardar essa notificação para validar os artefatos, promover tarefas e commitar.",
+    "tokens": {
+      "entrada": 618,
+      "saida": 5471,
+      "cacheLeitura": 484012,
+      "cacheEscrita": 64170,
+      "porModelo": {
+        "claude-haiku-4-5-20251001": {
+          "entrada": 589,
+          "saida": 17,
+          "cacheLeitura": 0,
+          "custoUsd": 0.000674
+        },
+        "claude-sonnet-5": {
+          "entrada": 29,
+          "saida": 5454,
+          "cacheLeitura": 484012,
+          "custoUsd": 0.5724823499999999
+        }
+      }
+    },
+    "sessoes": 1
+  }
+}

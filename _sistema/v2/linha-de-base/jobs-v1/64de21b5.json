@@ -1,0 +1,15 @@
+{
+  "id": "64de21b5",
+  "tipo": "fake",
+  "titulo": "Trabalhar no beta",
+  "escopo": "projeto:beta",
+  "usaClaude": true,
+  "params": {},
+  "estado": "concluido",
+  "criadoEm": "2026-07-21T22:38:52.513Z",
+  "iniciadoEm": "2026-07-21T22:38:52.514Z",
+  "terminadoEm": "2026-07-21T22:38:52.700Z",
+  "resultado": {
+    "passos": 3
+  }
+}

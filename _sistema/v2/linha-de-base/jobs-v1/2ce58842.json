@@ -1,0 +1,72 @@
+{
+  "id": "2ce58842",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-16T02:47:03.903Z",
+  "iniciadoEm": "2026-08-16T02:47:03.905Z",
+  "terminadoEm": "2026-08-16T02:47:20.679Z",
+  "resultado": {
+    "despachos": 1,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-046",
+        "custoUsd": 0,
+        "despachos": 1,
+        "retrabalhoUsd": 0,
+        "retrabalhoDespachos": 0,
+        "naturezas": [],
+        "concluiu": false
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-046",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "cota",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 0,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 0,
+    "texto": "Pipeline de banco-imobiliario: 1 despacho(s), 0 tarefa(s) concluída(s).\nLIMITE DA ASSINATURA batido — a rodada parou na hora, sem gastar despacho contra a parede. Redispare quando a cota voltar.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-046 no executor.\nGasto estimado: US$ 0.00."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [],
+      "itens": [],
+      "custoUsd": null,
+      "naoDeu": true
+    }
+  ]
+}

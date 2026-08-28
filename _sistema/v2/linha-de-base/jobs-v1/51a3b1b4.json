@@ -1,0 +1,26 @@
+{
+  "id": "51a3b1b4",
+  "tipo": "claude",
+  "titulo": "Atualizar progresso — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz). O usuário pediu, pelo\npainel, que o registro de progresso do projeto `ia-hibrida-limpa` seja posto em dia — o\nequivalente ao fechamento de expediente, mas fechado NESTE projeto.\n\nConfinamento: só altere arquivos dentro de `C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa`. Em especial, NÃO escreva no log\ndiário da fábrica (`_sistema/logs/`): esta ação é do projeto, e o log do dia é do\n`/encerrar-dia`, que continua sendo a ação global.\n\n1. **Levante o que realmente aconteceu**, sem confiar em memória: tarefas com `atualizada`\n   recente, `git log` do projeto, e o que mudou de status desde a última entrada do\n   `PROGRESSO.md`.\n2. **Atualize `C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/PROGRESSO.md`** com uma entrada nova: o que foi\n   concluído, o que ficou pela metade e por quê, e o que está pronto para a próxima\n   sessão. Escreva para quem vai ler daqui a duas semanas sem lembrar de nada.\n3. **Deixe o próximo passo explícito** — qual tarefa está pronta para ser despachada, ou o\n   que está travando.\n\nRegra: **progresso é registro do que ocorreu, não relatório de vitória.** Tarefa que\nfalhou, ciclo que reprovou e decisão que deu errado entram no texto — é justamente isso\nque evita repetir o erro na sessão seguinte. Não maquie, e não invente avanço que o git e\nas tarefas não sustentam.\n\nAo final, responda ao usuário em português (BR), em no máximo 6 linhas: o que entrou no\nPROGRESSO.md e qual é o próximo passo recomendado.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 60
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-28T21:24:55.264Z",
+  "iniciadoEm": "2026-07-28T21:24:55.267Z",
+  "sessionId": "094e0328-d52c-4792-967c-219e3fc7d5b0",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-28T21:26:45.345Z",
+  "resultado": {
+    "sessionId": "094e0328-d52c-4792-967c-219e3fc7d5b0",
+    "custoUsd": 0.5044639,
+    "numTurnos": 11,
+    "erro": false,
+    "texto": "**PROGRESSO.md atualizado e commitado** (`54a609e`). A entrada de 2026-07-28 já existia (documentador tinha rodado antes); acrescentei o \"Fechamento\" com o que a conferência real (git log/status + PLANO.md) mostrou:\n\n- Confirmado: nada mudou desde `2ad2465` — T-001 e T-002 seguem `concluida`, T-003–T-006 seguem `backlog`, árvore limpa.\n- **Achado importante:** T-002 foi a última tarefa da Fase 1, mas o `PLANO.md` ainda tem `Marco: pendente` — o testador em \"modo marco\" (verificação ponta a ponta da meta da fase) nunca rodou. A frase \"Fase 1 concluída\" registrada antes descreve só as tarefas, não esse marco formal.\n\n**Próximo passo real:** despachar o `testador` em modo marco para a Fase 1 (motor de anúncio ponta a ponta) e gravar o resultado na linha `Marco:` do `PLANO.md` — só depois disso promover T-003 (`backlog → pronta`), que já tem a dependência (T-002) satisfeita."
+  }
+}

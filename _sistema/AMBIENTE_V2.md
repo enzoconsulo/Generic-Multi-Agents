@@ -40,10 +40,15 @@ O PATH **de usuário** (não o de máquina) tinha duas entradas de Elixir, e uma
 (`C:\Program Files\Elixir\bin`) apontava para um diretório que **não existe** — sobra de
 instalação antiga. As duas foram substituídas por uma só.
 
-**Backups, se precisar reverter:** no scratchpad da sessão que fez a mudança há
-`PATH-usuario-backup.txt` e `PATH-maquina-backup.txt`. O pacote do chocolatey **continua
-instalado** em `C:\ProgramData\chocolatey\lib\Elixir` — só saiu do PATH. Para removê-lo de
-vez: `choco uninstall elixir`.
+**Se precisar reverter:** o PATH de usuário anterior tinha duas entradas de Elixir —
+`C:\Program Files\Elixir\bin` (que **não existia**, sobra de instalação antiga) e
+`C:\ProgramData\chocolatey\lib\Elixir\tools\bin`. Basta reinserir a segunda à frente.
+O pacote do chocolatey **continua instalado** e só saiu do PATH; para removê-lo de vez:
+`choco uninstall elixir`.
+
+> Os arquivos de backup do PATH ficaram no diretório temporário da sessão que fez a
+> mudança e **não sobrevivem** a ela — por isso o conteúdo relevante está escrito aqui,
+> que é o lugar que dura.
 
 **Provado por:** `mix new` + `mix compile` + `mix test` (2 passed), e
 `System.otp_release() == "29"`.

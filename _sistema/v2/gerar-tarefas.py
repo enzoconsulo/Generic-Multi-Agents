@@ -399,8 +399,18 @@ Isso so vira resultado se existir numero comparavel — e a licao metodologica d
 exatamente essa: o documento de custo mediu com precisao o que sabia medir e ficou cego
 para 78% da conta. Ver `_sistema/CUSTO_DE_CONTEXTO.md`, secao 8.
 
-A evidencia ja esta em disco e ler nao custa nada:
-`<fabrica-v1>/painel/dados/jobs/*.json` e `*.log.jsonl`. Quatro numeros:
+A evidencia ja esta NESTE repositorio e ler nao custa nada:
+**`_sistema/v2/linha-de-base/jobs-v1/`** — 139 arquivos, congelados em 28/08, com a
+contabilidade completa de cada job da v1. Leia o `LEIA-ME.md` ao lado antes: ele explica
+por que a copia existe (o diretorio original e gitignored, entao um clone nao teria os
+dados) e por que os `*.log.jsonl` ficaram de fora (transcricao completa = codigo dos
+projetos, e este repositorio e publico).
+
+Se voce estiver na maquina onde a v1 roda, `painel/dados/jobs/` tem tambem os
+`*.log.jsonl`, com o detalhe por ETAPA. Use-os para os numeros 1 e 3 se estiverem
+disponiveis, e declare no relatorio qual fonte foi usada para cada numero.
+
+Quatro numeros:
 
 1. **Proporcao de despacho desperdicado** — despachos cujo desfecho foi `agente-cortado`,
    reprovacao por interferencia, ou tarefa que girou sem incrementar `tentativas`. E a

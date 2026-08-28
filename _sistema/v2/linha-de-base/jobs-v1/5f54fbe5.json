@@ -1,0 +1,39 @@
+{
+  "id": "5f54fbe5",
+  "tipo": "claude",
+  "titulo": "/trabalhar",
+  "escopo": "global",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/trabalhar",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 200,
+    "watchdogMs": 1200000
+  },
+  "estado": "falhou",
+  "criadoEm": "2026-07-29T15:08:22.979Z",
+  "iniciadoEm": "2026-07-29T15:08:22.983Z",
+  "sessionId": "fbabbd92-7359-4ec9-b493-f45952de9eff",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [],
+      "itens": [],
+      "custoUsd": null,
+      "naoDeu": true
+    },
+    {
+      "indice": 2,
+      "agente": "executor",
+      "linhas": [],
+      "itens": [],
+      "custoUsd": null,
+      "naoDeu": true
+    }
+  ],
+  "terminadoEm": "2026-07-29T15:09:47.704Z",
+  "erro": "Claude Code returned an error result: You've hit your session limit · resets 2:40pm (America/Sao_Paulo)"
+}

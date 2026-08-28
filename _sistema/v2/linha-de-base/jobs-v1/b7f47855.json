@@ -1,0 +1,121 @@
+{
+  "id": "b7f47855",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-16T17:53:54.102Z",
+  "iniciadoEm": "2026-08-16T17:53:54.105Z",
+  "terminadoEm": "2026-08-16T18:20:36.689Z",
+  "resultado": {
+    "despachos": 6,
+    "tarefasConcluidas": [
+      "T-049",
+      "T-050"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 1,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-053",
+        "custoUsd": 2.1661055000000005,
+        "despachos": 1,
+        "retrabalhoUsd": 0,
+        "retrabalhoDespachos": 0,
+        "naturezas": [],
+        "concluiu": false
+      },
+      {
+        "tarefa": "T-049",
+        "custoUsd": 1.7401676,
+        "despachos": 3,
+        "retrabalhoUsd": 0.6772577000000001,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      },
+      {
+        "tarefa": "T-050",
+        "custoUsd": 1.3343501,
+        "despachos": 2,
+        "retrabalhoUsd": 0.5993725,
+        "retrabalhoDespachos": 1,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "foraDeAreas": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-053",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 5.240623200000001,
+      "custosObservados": [
+        1.7401676,
+        1.3343501
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 5.240623200000001,
+    "texto": "Pipeline de banco-imobiliario: 6 despacho(s), 2 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nNada a retomar: a rodada esvaziou a fila do que era despachável.\nConcluídas: T-049, T-050.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-053 no executor.\n1 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 5.24."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-049 e T-050 concluídas com sucesso. T-053 falhou na execução (Claude Code exit code 1).",
+        "Arquivo tests/turno.test.js alterado mas não commitado — código não passou por revisão."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-049 completou executor, testador e revisor"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-050 completou executor e revisor (só CLAUDE.md)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-053 falhou no executor — fora desta rodada"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "tests/turno.test.js não commitado — sem revisão"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commit 200e3e0 — 6 despachos, 2 tarefas prontas"
+        }
+      ],
+      "custoUsd": 0.004183,
+      "naoDeu": false
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "a2ceeeef",
+  "tipo": "importar",
+  "titulo": "Importar importado-teste",
+  "escopo": "projeto:importado-teste",
+  "usaClaude": false,
+  "params": {
+    "origem": "C:\\Users\\ENZOCO~1\\AppData\\Local\\Temp\\claude\\C--Users-enzoconsulo-Documents-Gerador-de-projetos\\f81cc3db-f0f2-4ef3-9344-60970e4fe92f\\scratchpad\\fonte-import",
+    "nome": "importado-teste",
+    "fabricaRaiz": "C:\\Users\\enzoconsulo\\Documents\\Gerador_de_projetos",
+    "modeloAnalise": "haiku"
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-22T19:08:08.974Z",
+  "iniciadoEm": "2026-07-22T19:08:08.977Z",
+  "terminadoEm": "2026-07-22T19:08:09.348Z",
+  "resultado": {
+    "nome": "importado-teste",
+    "destino": "C:\\Users\\enzoconsulo\\Documents\\Gerador_de_projetos\\projetos\\importado-teste"
+  }
+}

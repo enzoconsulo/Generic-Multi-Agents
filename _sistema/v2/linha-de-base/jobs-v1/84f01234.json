@@ -1,0 +1,58 @@
+{
+  "id": "84f01234",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-09T02:33:00.799Z",
+  "iniciadoEm": "2026-08-09T02:33:00.803Z",
+  "terminadoEm": "2026-08-09T02:46:43.977Z",
+  "resultado": {
+    "despachos": 2,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "marcos": [],
+    "saneadas": [
+      "T-030"
+    ],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-030",
+        "agente": "executor-reforcado"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 3.2164260000000002,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 3.2164260000000002,
+    "texto": "Pipeline de banco-imobiliario: 2 despacho(s), 0 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nSaneadas na abertura (sobras sem Notas): T-030.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-030 no executor-reforcado.\nGasto estimado: US$ 3.22."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [],
+      "itens": [],
+      "custoUsd": null,
+      "naoDeu": true
+    }
+  ]
+}

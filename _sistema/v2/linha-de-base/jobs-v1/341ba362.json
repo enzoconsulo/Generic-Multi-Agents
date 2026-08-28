@@ -1,0 +1,106 @@
+{
+  "id": "341ba362",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-10T20:36:25.002Z",
+  "iniciadoEm": "2026-08-10T20:36:25.005Z",
+  "terminadoEm": "2026-08-10T21:06:18.735Z",
+  "resultado": {
+    "despachos": 2,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 1,
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-034",
+        "custoUsd": 7.057844200000001,
+        "despachos": 2,
+        "retrabalhoUsd": 7.057844200000001,
+        "retrabalhoDespachos": 2,
+        "naturezas": [
+          "conformidade"
+        ],
+        "concluiu": false
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [
+      {
+        "tarefa": "T-034",
+        "agente": "revisor",
+        "chamadas": 26,
+        "orcado": 20
+      },
+      {
+        "tarefa": "T-034",
+        "agente": "executor-reforcado",
+        "chamadas": 34,
+        "orcado": 30
+      }
+    ],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 7.057844200000001,
+      "custosObservados": [
+        1.6847147000000005
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 7.057844200000001,
+    "texto": "Pipeline de banco-imobiliario: 2 despacho(s), 0 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\n1 critério(s) resolvidos por comando, sem gastar modelo.\nOrçamento de ferramentas estourado (idas ao modelo custam ao quadrado): T-034/revisor 26 de 20; T-034/executor-reforcado 34 de 30.\nGasto estimado: US$ 7.06."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Execução parada por limite de orçamento (US$ 7.06 de US$ 8.00). T-034 reprovou em conformidade com erro de entendimento; revisor e executor excederam tetos de chamadas de ferramenta."
+      ],
+      "itens": [
+        {
+          "tipo": "atencao",
+          "texto": "T-034 reprovado por CONFORMIDADE"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "revisor: 26/20 chamadas (teto)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "executor-reforcado: 34/30 chamadas"
+        },
+        {
+          "tipo": "feito",
+          "texto": "2 despachos processados"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Orçamento: US$ 0.94 restantes"
+        }
+      ],
+      "custoUsd": 0.0037279999999999995,
+      "naoDeu": false
+    }
+  ]
+}

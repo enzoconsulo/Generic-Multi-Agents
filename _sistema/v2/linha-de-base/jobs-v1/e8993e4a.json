@@ -1,0 +1,97 @@
+{
+  "id": "e8993e4a",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-22T18:47:29.825Z",
+  "iniciadoEm": "2026-08-22T18:47:29.829Z",
+  "terminadoEm": "2026-08-22T19:11:58.378Z",
+  "resultado": {
+    "despachos": 3,
+    "tarefasConcluidas": [
+      "T-055"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 5,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-055",
+        "custoUsd": 3.9843922999999988,
+        "despachos": 3,
+        "retrabalhoUsd": 1.6779968999999997,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "foraDeAreas": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 3.9843922999999988,
+      "custosObservados": [
+        3.9843922999999988
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 3.9843922999999988,
+    "texto": "Pipeline de banco-imobiliario: 3 despacho(s), 1 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nNada a retomar: a rodada esvaziou a fila do que era despachável.\nConcluídas: T-055.\n5 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 3.98."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-055 concluída com revisor usando 23 chamadas (acima do alvo de 20). Pipeline esvaziou: nenhuma tarefa despachável restante.",
+        "Orçamento quase zerado (US$ 4,02 de US$ 8,00): documentação adiada, rodada encerrada."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-055 concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "3 despachos, 1 tarefa finalizada"
+        },
+        {
+          "tipo": "feito",
+          "texto": "5 critérios resolvidos sem modelo"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Revisor: 23 chamadas vs alvo 20"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Orçamento: US$ 4,02 restante"
+        }
+      ],
+      "custoUsd": 0.0039059999999999997,
+      "naoDeu": false
+    }
+  ]
+}

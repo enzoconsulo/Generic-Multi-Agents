@@ -1,0 +1,83 @@
+{
+  "id": "595bfd7f",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-02T17:15:15.634Z",
+  "iniciadoEm": "2026-08-02T17:15:15.638Z",
+  "terminadoEm": "2026-08-02T17:52:32.482Z",
+  "resultado": {
+    "despachos": 6,
+    "tarefasConcluidas": [
+      "T-017a",
+      "T-017b"
+    ],
+    "promovidas": [
+      "T-017b",
+      "T-017c"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 30,
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 10.551145500000004,
+      "custosObservados": [
+        1.8192582999999996,
+        0.902974
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 10.551145500000004,
+    "texto": "Pipeline de banco-imobiliario: 6 despacho(s), 2 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\nConcluídas: T-017a, T-017b.\nPromovidas: T-017b, T-017c.\n30 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 10.55."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Processadas tarefas T-017a e T-017b com sucesso; T-017c promovida para pronta. Orçamento de US$8.00 extrapolado em US$10.55, encerrando com trabalho preservado."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-017a concluída (teste + review)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-017b concluída (executor + teste)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-017c promovida para backlog pronta"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Orçamento extrapolado: US$10.55/US$8.00"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commit fe5be4c com trabalho preservado"
+        }
+      ],
+      "custoUsd": 0.0038799999999999998,
+      "naoDeu": false
+    }
+  ]
+}

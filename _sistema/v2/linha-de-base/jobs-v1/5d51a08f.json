@@ -1,0 +1,23 @@
+{
+  "id": "5d51a08f",
+  "tipo": "claude",
+  "titulo": "/status painel-fabrica",
+  "escopo": "projeto:painel-fabrica",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/status painel-fabrica",
+    "cwd": "C:\\Users\\enzoconsulo\\Documents\\Gerador_de_projetos",
+    "modelo": "haiku"
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-22T01:35:18.215Z",
+  "iniciadoEm": "2026-07-22T01:35:18.218Z",
+  "terminadoEm": "2026-07-22T01:36:25.684Z",
+  "resultado": {
+    "sessionId": "36943cb1-8a9b-4de7-bf71-a2088a320cd5",
+    "custoUsd": 0.13678910000000002,
+    "numTurnos": 30,
+    "erro": false,
+    "texto": "## 📊 PAINEL DE STATUS — Fábrica de Software\n\n---\n\n### **Projeto: `painel-fabrica`**\n\nInterface web local (cockpit) para orquestrar a fábrica. Primeira execução real do sistema completada em um dia com Fase 1 quase fechada.\n\n| Status | Contagem | Tarefas |\n|--------|----------|---------|\n| **Backlog** | 13 | T-008 a T-020 |\n| **Pronta** | 0 | — |\n| **Em andamento** | 2 | T-004, T-007 (ambas em-teste) |\n| **Bloqueada** | 0 | — |\n| **Concluída** | 5 | T-001, T-002, T-003, T-005, T-006 |\n\n---\n\n### **Fases do projeto**\n\n| Fase | Tarefas | Marco | Progresso |\n|------|---------|-------|-----------|\n| **Fase 1** — Fundação (painel somente-leitura) | T-001–T-006 | pendente | ✅ 4/6 concluidas + 2 em-teste (gate de Fase 2) |\n| **Fase 2** — Execução (jobs, SSE, Agent SDK) | T-007–T-016 | pendente | ⏳ Aguardando T-007 sair de em-teste |\n| **Fase 3** — CI, robustez e polimento | T-017–T-020 | pendente | ⏳ Aguardando Fase 2 |\n\n**Bloqueios:** Nenhum. Sistema funcional em modo leitura.\n\n---\n\n### **Situação das tarefas em andamento**\n\n#### **T-004** — API REST de leitura (em-teste, tentativa 2)\n- ✅ Suíte de testes verde\n- ⏳ Aguardando verificação formal (testador/revisor)\n- **Destravadera:** Rodada do testador + revisor para carimbo\n\n#### **T-007** — Núcleo de jobs (em-teste, tentativa 2)\n- ✅ Suíte verde; fila com locks de concorrência, persistência e cancelamento comprovados\n- ⏳ Aguardando verificação formal (testador/revisor)\n- **Destravadora:** Rodada do testador + revisor para carimbo\n- **Bloqueio em cascata:** T-008, T-009, T-010 dependem dessa saída de em-teste\n\n---\n\n### **Tarefas prontas para seguir**\n\n**Ao fechar T-004 e T-007:**\n1. **T-008** (Runner Claude — Agent SDK) — depende de T-001 ✓ + T-007 ⏳\n2. **T-009** (Canal SSE) — depende de T-007 ⏳\n3. **T-010** (Inputs pendentes) — depende de T-008, T-009\n\nSem T-007 formalmente concluida, nenhuma delas pode ser promovida a `pronta`.\n\n---\n\n### **Última atividade**\n\n**Log 2026-07-21:**\n- ✅ **Spike do Agent SDK** (T-001) validou autenticação por assinatura, streaming e cancelamento com SDK 0.3.217\n- ✅ **Monorepo + leitor** (T-002, T-003) prontos e testados\n- ✅ **Interface de leitura** (T-005, T-006) construida direto para conter custo — **painel já abre e funciona em modo leitura** (`npm run build && npm start` → http://127.0.0.1:8765)\n- ⏳ **Custos:** Sessão rodou em Fable/xhigh (config cara); recomendado usar Sonnet/Opus nos agentes daqui para frente\n\n**Ideias na caixa:** Nenhuma nova (apenas template README).\n\n---\n\n### **Próximo comando recomendado**\n\n```\n/trabalhar\n```\n\nIsso vai:\n1. Passar o testador sobre T-004 e T-007 (suites já verdes)\n2. Passar o revisor (selos finais)\n3. Promover T-008 para `pronta` (dependências resolvidas)\n4. Disparar o executor na primeira tarefa pronta (T-008 ou outro conforme critérios de prioridade/área)\n\n**Alternativa se quiser economizar:** Feche T-004 e T-007 manualmente (eu promovo o status direto) e comece o `/trabalhar` só a partir de T-008. Assim você pula 2 verificações completas."
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "900bf366",
+  "tipo": "claude",
+  "titulo": "Recriar equipe — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz). O usuário pediu, pelo\npainel, que a EQUIPE DE ESPECIALISTAS do projeto `ia-hibrida-limpa` seja redesenhada.\n\nORIENTAÇÃO DO USUÁRIO (pode estar vazia — nesse caso, decida pelo estado do projeto):\n\n\nA equipe vive em `C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/equipe.json` e é o que faz este projeto se\nauto-estruturar: o `/trabalhar` injeta esses agentes como especialistas, e as tarefas\napontam para eles pelo campo `agente:` do frontmatter.\n\nDespache o agente `planejador`:\n\n```\nProjeto: C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa\nObjeto do trabalho: redesenhar `_gestao/equipe.json` a partir do que o projeto É HOJE —\nleia ESPECIFICACAO.md, PLANO.md, CLAUDE.md e o código que já existe antes de decidir.\nConfinamento: não toque em NADA fora do caminho do projeto acima.\nFormato exato do arquivo:\n  { \"agentes\": [ { \"id\", \"nome\", \"descricao\", \"prompt\", \"ferramentas\": string[] (opcional) } ] }\n`id` em minúsculas, números e hífen; `prompt` NUNCA vazio (agente sem prompt é carregado\ne silenciosamente ignorado na injeção).\n```\n\nTrês regras que decidem se a equipe presta:\n\n1. **Especialista é recorte de DOMÍNIO, não de etapa.** Executor, testador e revisor já\n   existem como papéis fixos da fábrica — recriá-los aqui só duplica o que já funciona.\n   O que vale é o que o projeto tem de específico.\n2. **Menos e mais afiados.** Três especialistas com prompt denso valem mais que oito\n   genéricos; equipe inchada divide a mesma tarefa em mais despachos e sai mais cara sem\n   ficar melhor.\n3. **Não invente perfil para preencher lista.** Se o projeto é pequeno e o executor\n   genérico dá conta, uma equipe curta (ou vazia) é a resposta certa.\n\nSe já houver equipe, PRESERVE quem continua fazendo sentido — id estável importa, porque\ntarefas existentes apontam para ele. Trocar o id de um especialista órfã as tarefas que o\ncitam; se precisar mesmo trocar, atualize o campo `agente:` das tarefas afetadas.\n\nAo final, responda ao usuário em português (BR), em no máximo 8 linhas: quem entrou, quem\nsaiu, quem ficou, e por quê.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 80,
+    "watchdogMs": 900000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-28T21:57:15.862Z",
+  "iniciadoEm": "2026-07-28T21:57:15.873Z",
+  "sessionId": "d3ae8343-78f1-44fc-ab66-c37cbbe4cf89",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-28T22:00:24.710Z",
+  "resultado": {
+    "sessionId": "d3ae8343-78f1-44fc-ab66-c37cbbe4cf89",
+    "custoUsd": 0.6909527499999999,
+    "numTurnos": 2,
+    "erro": false,
+    "texto": "Equipe revisada e gravada em `_gestao/equipe.json` (decisão registrada em `DECISOES.md`).\n\n**Composição final (2 especialistas, ids preservados):**\n- `ia-integracao` — integração HTTP com OpenAI (visão + JSON mode) em `gerador_anuncio.py`; cobre T-001, T-002, T-005.\n- `streamlit-ui` — UI Streamlit do Estúdio (session_state, abas, fluxo de geração/edição/aprovação); cobre T-003, T-004.\n\n**Quem entrou/saiu:** ninguém — a composição já estava certa. O planejador só afiou os `prompt`s, trocando descrição genérica por referências nominais a funções, variáveis de `session_state` e exceções que já existem no código.\n\n**Descartado deliberadamente:** um terceiro perfil para o sistema maior (Data Warehouse/Cérebro IA/Shopee API) — nenhuma tarefa ativa toca isso, então seria inventar perfil pra preencher lista.\n\n**Tarefas:** nenhuma tocada — todos os `agente:` continuam válidos."
+  }
+}

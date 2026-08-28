@@ -1,0 +1,83 @@
+{
+  "id": "04457d51",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-09T01:45:25.030Z",
+  "iniciadoEm": "2026-08-09T01:45:25.033Z",
+  "terminadoEm": "2026-08-09T01:56:37.255Z",
+  "resultado": {
+    "despachos": 3,
+    "tarefasConcluidas": [
+      "T-029"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 5,
+    "marcos": [
+      {
+        "fase": "Fase 4 — Polimento visual premium do frontend (referência: Business Tour)",
+        "veredicto": "aprovado"
+      }
+    ],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 1.2279732,
+      "custosObservados": [
+        0.5978185
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 1.2279732,
+    "texto": "Pipeline de banco-imobiliario: 3 despacho(s), 1 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nConcluídas: T-029.\nMarco da fase \"Fase 4 — Polimento visual premium do frontend (referência: Business Tour)\": APROVADO.\n5 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 1.23."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Fase 4 de polimento visual do frontend foi aprovada. T-029 concluída com 3 despachos e marco validado."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "Marco Fase 4 aprovado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-029 concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "3 despachos executados"
+        },
+        {
+          "tipo": "feito",
+          "texto": "5 critérios resolvidos"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commit f9372a6"
+        }
+      ],
+      "custoUsd": 0.003252,
+      "naoDeu": false
+    }
+  ]
+}

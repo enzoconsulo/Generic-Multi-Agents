@@ -1,0 +1,77 @@
+{
+  "id": "785a23d6",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-16T21:28:52.343Z",
+  "iniciadoEm": "2026-08-16T21:28:52.348Z",
+  "terminadoEm": "2026-08-16T21:28:57.958Z",
+  "resultado": {
+    "despachos": 0,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "foraDeAreas": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 0,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 0,
+    "texto": "Pipeline de banco-imobiliario: 0 despacho(s), 0 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nNada a retomar: a rodada esvaziou a fila do que era despachável.\nGasto estimado: US$ 0.00."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Pipeline do banco-imobiliário sem tarefas despachháveis. Backlog restante depende de dependências externas."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "0 despachos concluídos"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Fila de tarefas despachháveis vazia"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Nada pendente para commitar"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Backlog bloqueado por dependências"
+        }
+      ],
+      "custoUsd": 0.0026060000000000002,
+      "naoDeu": false
+    }
+  ]
+}

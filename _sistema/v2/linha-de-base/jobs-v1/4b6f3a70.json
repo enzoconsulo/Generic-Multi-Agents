@@ -1,0 +1,19 @@
+{
+  "id": "4b6f3a70",
+  "tipo": "claude",
+  "titulo": "Analisar ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é um analista de software. Sua tarefa é ler ESTE projeto de ponta a ponta e produzir\num documento `_gestao/ANALISE.md` que explique a arquitetura e o funcionamento do projeto —\ntudo DEDUZIDO apenas da leitura do código e dos arquivos, sem executar nada.\n\nO diretório de trabalho (cwd) já é a raiz do projeto. Trabalhe em português (BR).\n\n## Passos\n\n1. **Leia o projeto de ponta a ponta.** Comece pelo `README.md` e pelo `CLAUDE.md` (se\n   existirem), depois o manifesto de dependências (`package.json`, `pyproject.toml`,\n   `Cargo.toml`, `go.mod`… o que houver) e então percorra o código-fonte. **IGNORE**\n   `node_modules/`, `dist/`, `build/`, `.git/`, `coverage/` e artefatos gerados. Não é\n   preciso ler tudo linha a linha: entenda os pontos de entrada, os módulos principais e\n   como eles se conectam.\n\n2. **Escreva `_gestao/ANALISE.md`** (crie a pasta `_gestao/` se não existir) com EXATAMENTE\n   estas seções, nesta ordem e com estes títulos:\n\n   - `## Visão geral` — o que o projeto faz e para quem, em 2–4 frases.\n   - `## Arquitetura` — as pastas/módulos principais e o PAPEL de cada um (uma linha ou\n     bullet por módulo relevante). Mostre a organização real do código.\n   - `## Fluxo de execução` — o que acontece quando o projeto roda / atende um pedido: do\n     ponto de entrada até o resultado, passando pelos módulos citados na Arquitetura.\n   - `## Stack e dependências` — linguagem, runtime/versão, frameworks e as dependências\n     externas relevantes (com o porquê de cada uma, quando dá para deduzir).\n   - `## Pontos de atenção` — riscos, dívidas técnicas, acoplamentos frágeis, TODOs,\n     lacunas de teste ou qualquer coisa que um mantenedor deva saber. Se não achar nada\n     digno de nota, diga isso explicitamente.\n\n   Termine o arquivo com um rodapé EXATAMENTE neste formato (uma linha):\n\n   `_Análise gerada em AAAA-MM-DD · commit <hash-curto>_`\n\n   Para o `<hash-curto>`, rode `git rev-parse --short HEAD` no cwd. Se o projeto não\n   estiver sob git (o comando falha), use a palavra `sem-git` no lugar do hash. Para a\n   data, use a data de hoje no formato AAAA-MM-DD.\n\n3. **Atualização incremental.** Se `_gestao/ANALISE.md` JÁ existir, NÃO reescreva do zero:\n   leia o que está lá, mantenha o que continua verdadeiro e ajuste apenas o que mudou no\n   código. As cinco seções e o rodapé devem continuar presentes e coerentes com o estado\n   atual do projeto (atualize a data e o commit do rodapé sempre).\n\n## Regras\n\n- Escreva SOMENTE `_gestao/ANALISE.md`. Não crie, edite ou apague NENHUM outro arquivo do\n  projeto, não rode testes, não instale nada, não commite.\n- Baseie-se apenas no que o código mostra. Se algo for incerto, diga que é uma dedução —\n  não invente comportamento.\n- Seja concreto e conciso: cite nomes reais de arquivos/módulos/funções em vez de\n  generalidades. O documento é para um humano entender o projeto rápido.\n- Sua última mensagem deve ser um resumo curto (2–4 linhas) do que a análise concluiu.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa",
+    "modelo": "sonnet"
+  },
+  "estado": "falhou",
+  "criadoEm": "2026-07-27T18:11:40.266Z",
+  "iniciadoEm": "2026-07-27T18:11:40.312Z",
+  "sessionId": "ee299e0d-8450-4b88-8ef8-b7878fb5dee2",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa",
+  "terminadoEm": "2026-07-27T18:12:16.768Z",
+  "erro": "Claude Code returned an error result: You've hit your session limit · resets 4:50pm (America/Sao_Paulo)"
+}

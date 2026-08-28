@@ -1,0 +1,112 @@
+{
+  "id": "85f6c51e",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario · retomada · retomada",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-24T11:08:25.396Z",
+  "iniciadoEm": "2026-08-24T11:08:25.400Z",
+  "terminadoEm": "2026-08-24T11:42:55.478Z",
+  "resultado": {
+    "despachos": 2,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-063",
+        "custoUsd": 3.1749331999999995,
+        "despachos": 1,
+        "retrabalhoUsd": 0,
+        "retrabalhoDespachos": 0,
+        "naturezas": [],
+        "concluiu": false
+      },
+      {
+        "tarefa": "T-066",
+        "custoUsd": 2.915169100000001,
+        "despachos": 1,
+        "retrabalhoUsd": 0,
+        "retrabalhoDespachos": 0,
+        "naturezas": [],
+        "concluiu": false
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "foraDeAreas": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-063",
+        "agente": "executor"
+      },
+      {
+        "tarefa": "T-066",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 6.0901023,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 6.0901023,
+    "texto": "Pipeline de banco-imobiliario: 2 despacho(s), 0 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\nAo redisparar COM TETO MAIOR, a rodada retoma daqui: tarefa concluída fica concluída, e a que estava em andamento continua do ponto em que parou.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-063 no executor; T-066 no executor.\nGasto estimado: US$ 6.09.",
+    "motivo": "teto-custo"
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Duas tarefas (T-063 e T-066) atingiram limite de turnos no executor e não retornaram resultado. Pipeline parou por teto de custo (US$ 6.09 de US$ 8.00), com 2 arquivos não commitados.",
+        "Parada planejada — ao redisparar com orçamento maior, retoma do ponto onde parou."
+      ],
+      "itens": [
+        {
+          "tipo": "atencao",
+          "texto": "T-063 executor: 60 turnos atingido"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-066 executor: 60 turnos atingido"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "modais.css e modais.js sem commit"
+        },
+        {
+          "tipo": "feito",
+          "texto": "68ae820 commitado em gestao/"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Parada por teto — retomável"
+        }
+      ],
+      "custoUsd": 0.004199,
+      "naoDeu": false
+    }
+  ]
+}

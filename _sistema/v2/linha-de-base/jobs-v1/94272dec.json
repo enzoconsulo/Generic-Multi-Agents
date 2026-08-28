@@ -1,0 +1,34 @@
+{
+  "id": "94272dec",
+  "tipo": "claude",
+  "titulo": "/trabalhar cockpit",
+  "escopo": "projeto:cockpit",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/trabalhar cockpit",
+    "cwd": "C:\\Users\\enzoconsulo\\Documents\\Gerador_de_projetos",
+    "modelo": "haiku",
+    "agentes": {
+      "frontend": {
+        "description": "Tarefas de UI, componentes e estilos (React/CSS).",
+        "prompt": "Você é o especialista de frontend deste projeto. Siga a disciplina do executor (protocolo + tarefa, implementar, testar o que tocou, commitar, registrar Notas). Priorize acessibilidade e consistência visual. Confinado a projetos/cockpit/.",
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Edit",
+          "Write",
+          "Bash"
+        ]
+      },
+      "api": {
+        "description": "Tarefas de backend, rotas e integração.",
+        "prompt": "Você é o especialista de API deste projeto. Siga a disciplina do executor. Priorize contratos claros e tratamento de erro. Confinado a projetos/cockpit/."
+      }
+    }
+  },
+  "estado": "cancelado",
+  "criadoEm": "2026-07-22T02:37:20.258Z",
+  "iniciadoEm": "2026-07-22T02:37:20.262Z",
+  "terminadoEm": "2026-07-22T02:37:29.152Z"
+}

@@ -1,0 +1,97 @@
+{
+  "id": "af43d53c",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-16T00:09:21.756Z",
+  "iniciadoEm": "2026-08-16T00:09:21.760Z",
+  "terminadoEm": "2026-08-16T00:33:53.780Z",
+  "resultado": {
+    "despachos": 4,
+    "tarefasConcluidas": [
+      "T-038"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 1,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-038",
+        "custoUsd": 1.3510716,
+        "despachos": 2,
+        "retrabalhoUsd": 1.3510716,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      },
+      {
+        "tarefa": "T-046",
+        "custoUsd": 0.9057668999999999,
+        "despachos": 1,
+        "retrabalhoUsd": 0,
+        "retrabalhoDespachos": 0,
+        "naturezas": [],
+        "concluiu": false
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [
+      {
+        "tarefa": "T-038",
+        "agente": "testador",
+        "chamadas": 27,
+        "orcado": 25
+      }
+    ],
+    "marcos": [
+      {
+        "fase": "Fase 6 — Retrabalho UX/mobile: tabuleiro sempre visível, mobile-first real, app quase-nativo",
+        "veredicto": "aprovado"
+      }
+    ],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-046",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "cota",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 2.5841706,
+      "custosObservados": [
+        1.3510716
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 2.5841706,
+    "texto": "Pipeline de banco-imobiliario: 4 despacho(s), 1 tarefa(s) concluída(s).\nLIMITE DA ASSINATURA batido — a rodada parou na hora, sem gastar despacho contra a parede. Redispare quando a cota voltar.\nConcluídas: T-038.\nMarco da fase \"Fase 6 — Retrabalho UX/mobile: tabuleiro sempre visível, mobile-first real, app quase-nativo\": APROVADO.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-046 no executor.\n1 critério(s) resolvidos por comando, sem gastar modelo.\nOrçamento de ferramentas estourado (idas ao modelo custam ao quadrado): T-038/testador 27 de 25.\nGasto estimado: US$ 2.58."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [],
+      "itens": [],
+      "custoUsd": null,
+      "naoDeu": true
+    }
+  ]
+}

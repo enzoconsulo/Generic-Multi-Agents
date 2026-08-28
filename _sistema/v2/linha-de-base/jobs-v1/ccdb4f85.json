@@ -1,0 +1,26 @@
+{
+  "id": "ccdb4f85",
+  "tipo": "claude",
+  "titulo": "Documentar — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz). O usuário pediu, pelo\npainel, que a documentação do projeto `ia-hibrida-limpa` seja posta em dia.\n\nDespache o agente `documentador` com este despacho:\n\n```\nProjeto: C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa\nObjeto do trabalho: atualizar a documentação para refletir o estado REAL do código hoje.\nConfinamento: não toque em NADA fora do caminho do projeto acima.\nContexto extra: pedido avulso vindo do painel — não é o fechamento de um lote de tarefas.\nComece descobrindo o que mudou desde a última atualização da documentação (git log e as\ntarefas concluídas recentemente são o melhor atalho) em vez de reescrever tudo do zero.\n```\n\nEnquanto ele trabalha, não faça o trabalho por ele: seu papel aqui é despachar, esperar e\nconferir o resultado.\n\nAo final, responda ao usuário em português (BR), em no máximo 8 linhas:\n- quais arquivos foram atualizados;\n- o que estava desatualizado (o que a documentação dizia e o código já não fazia);\n- o que você DEIXOU de fora e por quê, se for o caso.\n\nSe a documentação já estiver fiel ao código, diga isso claramente e não invente mudança\npara parecer produtivo — \"nada a fazer\" é um resultado legítimo e útil.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 80
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-28T19:04:21.546Z",
+  "iniciadoEm": "2026-07-28T19:04:21.549Z",
+  "sessionId": "c78b1266-f57d-4244-be49-ffd0134f554b",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-28T19:08:01.121Z",
+  "resultado": {
+    "sessionId": "c78b1266-f57d-4244-be49-ffd0134f554b",
+    "custoUsd": 1.1140660000000002,
+    "numTurnos": 2,
+    "erro": false,
+    "texto": "Confirmado: commit `2ad2465` no repositório do projeto, tocando só `README.md`, `CLAUDE.md` e `_gestao/PROGRESSO.md`, nada fora do projeto.\n\n**Resultado (documentador):**\n- **`README.md`** — criado do zero (não existia): explica os dois apps Streamlit, como rodar e testar.\n- **`CLAUDE.md`** do projeto — só tinha placeholders do template, nunca preenchido; agora tem stack, arquitetura, convenções e armadilhas.\n- **`_gestao/PROGRESSO.md`** — nova entrada 2026-07-28 registrando T-001/T-002 concluídas.\n\n**Divergência mais relevante corrigida:** o motor de geração de anúncio (`gerador_anuncio.py`) está pronto e validado (T-001/T-002), mas **não há botão na UI** que o chame — isso não estava registrado em lugar nenhum e agora está explícito nos três documentos, para não parecer que a feature já é usável ponta a ponta (T-003/T-004/T-005 seguem em backlog).\n\n**Deixado de fora, por escopo:** `Local_AI/*/README.md` e `how_to_use.md` do estúdio — já coerentes com o código, e a atualização do `how_to_use.md` é escopo explícito de T-003 (ainda em backlog)."
+  }
+}

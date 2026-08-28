@@ -1,0 +1,112 @@
+{
+  "id": "d10f330b",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-12T00:22:01.839Z",
+  "iniciadoEm": "2026-08-12T00:22:01.854Z",
+  "terminadoEm": "2026-08-12T00:55:14.450Z",
+  "resultado": {
+    "despachos": 4,
+    "tarefasConcluidas": [
+      "T-035"
+    ],
+    "promovidas": [
+      "T-042"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 1,
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-036",
+        "custoUsd": 3.2091811000000003,
+        "despachos": 2,
+        "retrabalhoUsd": 0,
+        "retrabalhoDespachos": 0,
+        "naturezas": [],
+        "concluiu": false
+      },
+      {
+        "tarefa": "T-035",
+        "custoUsd": 1.3175735,
+        "despachos": 2,
+        "retrabalhoUsd": 1.3175735,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [
+      {
+        "tarefa": "T-035",
+        "agente": "testador",
+        "chamadas": 35,
+        "orcado": 25
+      }
+    ],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-progresso",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 4.5267546,
+      "custosObservados": [
+        1.3175735
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 4.5267546,
+    "texto": "Pipeline de banco-imobiliario: 4 despacho(s), 1 tarefa(s) concluída(s).\nUm agente terminou sem gravar o próprio status; o laço parou para não repetir o despacho.\nConcluídas: T-035.\nPromovidas: T-042.\n1 critério(s) resolvidos por comando, sem gastar modelo.\nOrçamento de ferramentas estourado (idas ao modelo custam ao quadrado): T-035/testador 35 de 25.\nGasto estimado: US$ 4.53."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-035 passou no testador e revisor, mas T-036 não gravou estado e parou em loop. Dois arquivos (_tmp-seed-t036.mjs, server-error.log) não foram commitados.",
+        "Orçamento de ferramentas estourado: testador usou 35 chamadas de 25 permitidas."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-035 testador e revisor concluídos"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-042 promovida para pronta"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-036 não gravou estado, parou em loop"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "2 arquivos não commitados: _tmp-seed-t036.mjs, server-error.log"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-035/testador: 35 chamadas de 25 (orçamento estourado)"
+        }
+      ],
+      "custoUsd": 0.0041270000000000005,
+      "naoDeu": false
+    }
+  ]
+}

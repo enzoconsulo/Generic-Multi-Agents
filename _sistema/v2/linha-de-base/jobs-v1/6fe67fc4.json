@@ -1,0 +1,86 @@
+{
+  "id": "6fe67fc4",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-07T23:39:16.098Z",
+  "iniciadoEm": "2026-08-07T23:39:16.113Z",
+  "terminadoEm": "2026-08-08T00:25:32.220Z",
+  "resultado": {
+    "despachos": 4,
+    "tarefasConcluidas": [
+      "T-023"
+    ],
+    "promovidas": [
+      "T-022",
+      "T-024",
+      "T-025",
+      "T-027",
+      "T-028",
+      "T-029"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 6,
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-024",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 7.110970100000001,
+      "custosObservados": [
+        0.9924338999999999
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 7.110970100000001,
+    "texto": "Pipeline de banco-imobiliario: 4 despacho(s), 1 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\nConcluídas: T-023.\nPromovidas: T-022, T-024, T-025, T-027, T-028, T-029.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-024 no executor.\n6 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 7.11."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-023 completada (executor→testador→revisor). T-024 falhou no executor (60 turnos), demais tarefas promovidas. Parada por teto de custo (US$ 7.11/8.00)."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-023 finalizada com revisor"
+        },
+        {
+          "tipo": "feito",
+          "texto": "6 tarefas promovidas (T-022,024-025,027-029)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-024 falhou: máximo de turnos (60)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Orçamento: US$ 0.89 restante"
+        }
+      ],
+      "custoUsd": 0.003811,
+      "naoDeu": false
+    }
+  ]
+}

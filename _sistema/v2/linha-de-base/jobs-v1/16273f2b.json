@@ -1,0 +1,19 @@
+{
+  "id": "16273f2b",
+  "tipo": "claude",
+  "titulo": "/trabalhar ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/trabalhar ia-hibrida-limpa",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 200
+  },
+  "estado": "cancelado",
+  "criadoEm": "2026-07-27T20:15:15.943Z",
+  "iniciadoEm": "2026-07-27T20:15:15.947Z",
+  "sessionId": "0c9182ff-8ef4-4ea6-92ab-fd25969c8fd3",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-27T20:22:40.891Z"
+}

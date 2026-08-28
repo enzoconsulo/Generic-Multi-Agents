@@ -1,0 +1,103 @@
+{
+  "id": "c19dcfe4",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-14T11:28:28.107Z",
+  "iniciadoEm": "2026-08-14T11:28:28.112Z",
+  "terminadoEm": "2026-08-14T12:04:03.483Z",
+  "resultado": {
+    "despachos": 2,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 1,
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-036",
+        "custoUsd": 5.7521348,
+        "despachos": 2,
+        "retrabalhoUsd": 5.7521348,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": false
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [
+      {
+        "tarefa": "T-036",
+        "agente": "executor-reforcado",
+        "chamadas": 57,
+        "orcado": 30
+      }
+    ],
+    "marcos": [],
+    "saneadas": [
+      "T-036"
+    ],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-036",
+        "agente": "testador"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 5.7521348,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 5.7521348,
+    "texto": "Pipeline de banco-imobiliario: 2 despacho(s), 0 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\nSaneadas na abertura (sobras sem Notas): T-036.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-036 no testador.\n1 critério(s) resolvidos por comando, sem gastar modelo.\nOrçamento de ferramentas estourado (idas ao modelo custam ao quadrado): T-036/executor-reforcado 57 de 30.\nGasto estimado: US$ 5.75."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-036 movida de execução para pronta, mas testador falhou (Claude Code exit 1). Seis arquivos alterados não foram commitados: package.json, package-lock.json, tabuleiro.css, animacoes.js, tabuleiro.js, test.png."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-036 devolvida a pronta"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Testador falhou — T-036 fora desta rodada"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "6 arquivos alterados sem commit"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Executor-reforcado: 57/30 chamadas"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Orçamento encerrado (US$ 5.75/8.00)"
+        }
+      ],
+      "custoUsd": 0.0051730000000000005,
+      "naoDeu": false
+    }
+  ]
+}

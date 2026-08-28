@@ -1,0 +1,65 @@
+{
+  "id": "8453e797",
+  "tipo": "ci",
+  "titulo": "CI: teste-todo-cli",
+  "escopo": "projeto:teste-todo-cli",
+  "usaClaude": false,
+  "params": {
+    "projeto": "teste-todo-cli",
+    "fabricaRaiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "dirDados": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\painel\\dados"
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-27T17:34:19.350Z",
+  "iniciadoEm": "2026-07-27T17:34:19.354Z",
+  "terminadoEm": "2026-07-27T17:34:27.831Z",
+  "resultado": {
+    "jobId": "8453e797",
+    "projeto": "teste-todo-cli",
+    "estado": "sucesso",
+    "iniciadoEm": "2026-07-27T17:34:19.360Z",
+    "terminadoEm": "2026-07-27T17:34:27.808Z",
+    "estagios": [
+      {
+        "estagio": "instalar",
+        "estado": "sucesso",
+        "comando": "npm install",
+        "iniciadoEm": "2026-07-27T17:34:19.366Z",
+        "terminadoEm": "2026-07-27T17:34:23.354Z",
+        "duracaoMs": 3988,
+        "codigoSaida": 0,
+        "aviso": null
+      },
+      {
+        "estagio": "lint",
+        "estado": "pulado",
+        "comando": null,
+        "iniciadoEm": null,
+        "terminadoEm": null,
+        "duracaoMs": null,
+        "codigoSaida": null,
+        "aviso": "Estágio desabilitado na configuração."
+      },
+      {
+        "estagio": "testes",
+        "estado": "sucesso",
+        "comando": "npm test",
+        "iniciadoEm": "2026-07-27T17:34:23.390Z",
+        "terminadoEm": "2026-07-27T17:34:27.781Z",
+        "duracaoMs": 4391,
+        "codigoSaida": 0,
+        "aviso": null
+      },
+      {
+        "estagio": "build",
+        "estado": "pulado",
+        "comando": null,
+        "iniciadoEm": null,
+        "terminadoEm": null,
+        "duracaoMs": null,
+        "codigoSaida": null,
+        "aviso": "Estágio desabilitado na configuração."
+      }
+    ]
+  }
+}

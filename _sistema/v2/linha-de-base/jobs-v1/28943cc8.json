@@ -1,0 +1,26 @@
+{
+  "id": "28943cc8",
+  "tipo": "claude",
+  "titulo": "/status teste-todo-cli",
+  "escopo": "projeto:teste-todo-cli",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/status teste-todo-cli",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 40
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-27T17:35:03.971Z",
+  "iniciadoEm": "2026-07-27T17:35:03.983Z",
+  "sessionId": "f78f8865-6b52-4dbb-9162-d5300b03667b",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-27T17:35:57.325Z",
+  "resultado": {
+    "sessionId": "f78f8865-6b52-4dbb-9162-d5300b03667b",
+    "custoUsd": 0.2899434,
+    "numTurnos": 8,
+    "erro": false,
+    "texto": "## 📊 Painel de status — `teste-todo-cli`\n\n*(escopo único conforme args; leitura direta dos frontmatters + PLANO.md)*\n\n### Tabela do projeto\n\n| Projeto | Backlog | Pronta | Em andamento | Bloqueada | Concluída | Fase atual |\n|---|---|---|---|---|---|---|\n| teste-todo-cli | 2 | 0 | 0 | 0 | 3 | Fase 1 concluída (Marco: **pendente** — não rodou) / Fase 2 não iniciada |\n\nDetalhe das tarefas:\n- ✅ `concluida`: T-001 (setup-scaffolding), T-002 (classe-todo-persistencia), T-003 (cli-core-comando-add)\n- 📥 `backlog`: T-004 (comandos-list-complete-remove, alta, dep T-003), T-005 (testes-automatizados, media, dep T-004)\n\n### Bloqueios\nNenhuma tarefa `bloqueada` neste projeto.\n\n### Prontas para rodar\nNenhuma tarefa está formalmente em `pronta` no momento.\n\n### Inconsistências encontradas\n1. **T-004 tem dependência satisfeita mas segue em `backlog`.** Depende só de T-003, que está `concluida` — pelo protocolo já deveria ter sido promovida a `pronta`. Quem promove é o orquestrador; ninguém rodou essa promoção ainda.\n2. **Fase 1 tem as 3 tarefas concluídas, mas `Marco: pendente` no PLANO.md.** A verificação de marco (testador em modo marco) nunca foi despachada para esta fase — falta rodar antes de considerar a Fase 1 fechada de fato.\n\n### Última atividade\nLog mais recente é de hoje (2026-07-27), mas trata inteiramente do **painel-fabrica** (fechamento das 3 fases, publicação do repo, validação do `canUseTool`). Não há nenhuma menção a `teste-todo-cli` no log — nota explícita no final: *\"Projetos descartáveis no disco: `teste-todo-cli`, `importado-teste`, `cockpit`\"*, sinalizando que este projeto é de teste/descartável, não prioritário.\n\n**Ideias não roteadas:** 0 (nenhum arquivo com `status: nova` em `_sistema/ideias/`).\n\n---\n**Sugestão de próximo passo:** antes de rodar `/trabalhar` neste projeto, vale decidir se ele ainda importa (o próprio CLAUDE.md do projeto o marca como \"descartável, pode ser apagado após o teste\"). Se for continuar: promover T-004 para `pronta` e rodar o marco pendente da Fase 1 fariam parte do próximo `/trabalhar teste-todo-cli`. Se não for continuar, pode simplesmente ser removido do disco."
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "id": "3fbd4933",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar shopee-rodizio",
+  "escopo": "projeto:shopee-rodizio",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "shopee-rodizio",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-25T22:33:12.528Z",
+  "iniciadoEm": "2026-08-25T22:33:12.530Z",
+  "terminadoEm": "2026-08-25T22:46:59.527Z",
+  "resultado": {
+    "despachos": 5,
+    "tarefasConcluidas": [
+      "T-009"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 2,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-009",
+        "custoUsd": 1.3697382,
+        "despachos": 3,
+        "retrabalhoUsd": 0.6001196999999999,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "foraDeAreas": [
+      {
+        "tarefa": "T-009",
+        "agente": "executor",
+        "arquivos": [
+          "test-fase2.log"
+        ]
+      }
+    ],
+    "marcos": [
+      {
+        "fase": "Fase 3 — Refinamento",
+        "veredicto": "aprovado"
+      }
+    ],
+    "saneadas": [
+      "T-009"
+    ],
+    "etapasFalhas": [],
+    "documentou": true,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 2.3786603,
+      "custosObservados": [
+        1.3697382
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "shopee-rodizio",
+    "custoEstimadoUsd": 2.3786603,
+    "texto": "Pipeline de shopee-rodizio: 5 despacho(s), 1 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nNada a retomar: a rodada esvaziou a fila do que era despachável.\nConcluídas: T-009.\nSaneadas na abertura (sobras sem Notas): T-009.\nMarco da fase \"Fase 3 — Refinamento\": APROVADO.\nDocumentação atualizada.\n2 critério(s) resolvidos por comando, sem gastar modelo.\nMUTEX FURADO — executor alterou, em T-009, arquivo fora das `areas` declaradas: test-fase2.log. Não entra no commit da tarefa nem no diff do revisor; está anotado nas Notas. Se a alteração era legítima, a `area` da tarefa é que está incompleta.\nGasto estimado: US$ 2.38."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-009 completou Fase 3 (Refinamento) com marco aprovado, mas executor alterou arquivo fora do escopo (test-fase2.log).",
+        "Testador usou 26 chamadas (acima do alvo de 25); 2 arquivos log alterados ficaram sem commit do revisor."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "Marco Fase 3 — Refinamento aprovado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-009 pronta; documentação atualizada"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "test-fase2.log alterado fora das áreas"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "2 logs sem commit do revisor"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Testador: 26 chamadas (alvo: 25)"
+        }
+      ],
+      "custoUsd": 0.004764,
+      "naoDeu": false
+    }
+  ]
+}

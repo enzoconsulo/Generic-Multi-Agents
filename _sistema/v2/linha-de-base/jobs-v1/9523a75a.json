@@ -1,0 +1,86 @@
+{
+  "id": "9523a75a",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-08T17:09:19.177Z",
+  "iniciadoEm": "2026-08-08T17:09:19.182Z",
+  "terminadoEm": "2026-08-08T18:01:16.217Z",
+  "resultado": {
+    "despachos": 5,
+    "tarefasConcluidas": [
+      "T-025"
+    ],
+    "promovidas": [
+      "T-026"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 26,
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-026",
+        "agente": "testador"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 7.619597299999999,
+      "custosObservados": [
+        1.1916452999999998
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 7.619597299999999,
+    "texto": "Pipeline de banco-imobiliario: 5 despacho(s), 1 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\nConcluídas: T-025.\nPromovidas: T-026.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-026 no testador.\n26 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 7.62."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Pipeline encerrado pelo teto de custo (US$ 7.62 de US$ 8.00). T-025 concluída, T-026 promovida mas testador falhou (erro de processo), T-027 volta ao construtor.",
+        "3 arquivos alterados sem commit (server.log, teste-painel-simples.js, teste-painel.js) — código não passou pelo revisor."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-025 concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-026 promovida (backlog → pronta)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-026 testador falhou (exit code 3221226505)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "3 arquivos sem commit — revisor não passou"
+        },
+        {
+          "tipo": "feito",
+          "texto": "26 critérios resolvidos sem custo"
+        }
+      ],
+      "custoUsd": 0.005019,
+      "naoDeu": false
+    }
+  ]
+}

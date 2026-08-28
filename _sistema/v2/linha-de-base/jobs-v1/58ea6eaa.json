@@ -1,0 +1,27 @@
+{
+  "id": "58ea6eaa",
+  "tipo": "claude",
+  "titulo": "Pesquisar — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz). O usuário pediu, pelo\npainel, uma pesquisa técnica para o projeto `ia-hibrida-limpa` antes de tomar uma decisão.\n\nPERGUNTA DO USUÁRIO:\nQuais sao os limites reais de titulo, descricao e palavras-chave de anuncio na Shopee Brasil, e como isso deveria restringir o schema que o gerador de anuncio produz hoje?\n\nDespache o agente `pesquisador` com este despacho:\n\n```\nProjeto: C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa\nObjeto do trabalho: responder à pergunta acima com pesquisa na web, e gravar o relatório\nem `_gestao/pesquisas/AAAA-MM-DD-slug.md`.\nConfinamento: não toque em NADA fora do caminho do projeto acima. Não altere código nem\ntarefas — este fluxo é somente pesquisa.\nContexto extra: leia antes o CLAUDE.md e a ESPECIFICACAO.md do projeto, para a\nrecomendação levar em conta a stack e as restrições que já existem. Uma recomendação que\nignora o que o projeto já usa é inútil, por mais correta que seja no vácuo.\n```\n\nO relatório precisa terminar em uma RECOMENDAÇÃO com trade-offs explícitos, não em uma\nlista neutra de opções — quem pede pesquisa quer decidir.\n\nAo final, responda ao usuário em português (BR), em no máximo 8 linhas: a recomendação, o\nmotivo em uma frase, e o caminho do relatório gravado. Se as fontes forem fracas ou\nconflitantes, diga isso — confiança falsa é pior que dúvida declarada.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 60,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-28T21:41:29.395Z",
+  "iniciadoEm": "2026-07-28T21:41:29.630Z",
+  "sessionId": "370f0785-3de8-4355-bc2d-2f671afed081",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-28T21:49:02.897Z",
+  "resultado": {
+    "sessionId": "370f0785-3de8-4355-bc2d-2f671afed081",
+    "custoUsd": 1.8394858499999998,
+    "numTurnos": 4,
+    "erro": false,
+    "texto": "Relatório confirmado e gravado. Resumo:\n\n**Recomendação:** validação não-fatal (aviso, não exceção) em `_validar_resposta_anuncio`/`gerar_anuncio_shopee` — teto de 255 caracteres no título, 5.000 na descrição (o menor dos dois valores conflitantes achados) e ~20 itens em palavras-chave. Hoje o código não valida tamanho nenhum, só o prompt \"pede por favor\" — a IA pode estourar.\n\n**Por quê:** não-fatal porque os campos são editáveis pelo usuário (RF-04), e os limites reais da Shopee BR não têm fonte primária confiável — o Help Center oficial é SPA em JS (não renderiza em fetch) e o e-book oficial em PDF é vetorial/imagem, então não deu pra confirmar com certeza absoluta.\n\n**Confiança:** alta para título (255-256, 4 fontes BR convergentes); média para descrição (Mainô diz 10.000, Anymarket diz 5.000 — conflito real, ficamos com o menor por segurança); \"palavras-chave\" nem é campo de cadastro Shopee (é conceito de Shopee Ads) — o teto de 20 é só usabilidade, não conformidade.\n\n**Achado colateral:** o prompt atual libera 1 emoji no título, mas fonte secundária lista emoticons como violação — pode virar tarefa separada.\n\nRelatório: `projetos/ia-hibrida-limpa/_gestao/pesquisas/2026-07-28-limites-anuncio-shopee.md`"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "id": "7cd4a453",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-09T22:50:05.876Z",
+  "iniciadoEm": "2026-08-09T22:50:05.887Z",
+  "terminadoEm": "2026-08-09T22:59:34.677Z",
+  "resultado": {
+    "despachos": 2,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [
+      "T-032"
+    ],
+    "bloqueadas": [],
+    "criteriosExecutados": 2,
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-032",
+        "custoUsd": 0.4631353000000001,
+        "despachos": 1,
+        "retrabalhoUsd": 0.4631353000000001,
+        "retrabalhoDespachos": 1,
+        "naturezas": [],
+        "concluiu": false
+      }
+    ],
+    "impedimentos": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 1.454445,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 1.454445,
+    "texto": "Pipeline de banco-imobiliario: 2 despacho(s), 0 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\n2 critério(s) resolvidos por comando, sem gastar modelo.\nReplanejadas automaticamente (esgotaram os ciclos): T-032. O planejador quebrou ou reescreveu a abordagem; as substitutas entram na próxima rodada.\nGasto estimado: US$ 1.45."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Testador (T-032) esgotou ciclos e foi replanejado. Pipeline travado: 2 despachos sem conclusão, arquivo server.log não commitado."
+      ],
+      "itens": [
+        {
+          "tipo": "atencao",
+          "texto": "server.log alterado, não commitado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Gestão commitada: 87949fd"
+        },
+        {
+          "tipo": "feito",
+          "texto": "2 critérios resolvidos sem modelo"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-032 replanejado (esgotou ciclos)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Custo: US$ 1.45"
+        }
+      ],
+      "custoUsd": 0.003242,
+      "naoDeu": false
+    }
+  ]
+}

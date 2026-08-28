@@ -1,0 +1,29 @@
+{
+  "id": "7da5ff42",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "cancelado",
+  "criadoEm": "2026-08-16T15:25:32.829Z",
+  "iniciadoEm": "2026-08-16T15:25:32.836Z",
+  "terminadoEm": "2026-08-16T15:35:20.206Z",
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [],
+      "itens": [],
+      "custoUsd": 0.0008269999999999999,
+      "naoDeu": true
+    }
+  ]
+}

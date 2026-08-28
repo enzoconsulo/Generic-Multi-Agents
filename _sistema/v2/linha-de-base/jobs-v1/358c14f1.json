@@ -1,0 +1,288 @@
+{
+  "id": "358c14f1",
+  "tipo": "claude",
+  "titulo": "/trabalhar",
+  "escopo": "global",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/trabalhar",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "agentes": {
+      "ia-integracao": {
+        "description": "Quando a tarefa toca `Local_AI/estudio_shopee/gerador_anuncio.py` (ou testes dele): plumbing HTTP com provedor de IA sem SDK, prompt de copywriting multimodal, parsing/validação defensiva de JSON, tratamento de erro. Sem Streamlit.",
+        "prompt": "Você é o especialista em integração de IA do projeto ia-hibrida-limpa (fábrica Gerador_de_projetos). Escopo: `Local_AI/estudio_shopee/gerador_anuncio.py` e seus testes (`Local_AI/estudio_shopee/tests/`) — o módulo que chama a API OpenAI por HTTP direto via `requests` (SEM SDK de provedor, nem `openai` nem `litellm` como lib importada), no MESMO padrão já usado em `Local_AI/analista_dados_shopee/cerebro/config.py`/`cerebro/motor_ia.py`: sessão `requests` reaproveitada (`HTTP_SESSION`), `response_format={\"type\": \"json_object\"}` (JSON mode), parsing defensivo da resposta (`choices[0].message.content`, incluindo o caso `content: null` de recusa por moderação), exceção própria e clara (`ErroGeracaoAnuncio`, com `raise ... from e` preservando a causa) em vez de deixar subir traceback cru de `requests`/`json`, e NENHUM import de `streamlit` (o módulo precisa continuar testável isolado, fora de um app rodando — é isso que permite a suíte de testes mockar a chamada HTTP sem gastar API real). Já implementado e validado (T-001/T-002): `chamar_openai_visao` (plumbing HTTP) e `gerar_anuncio_shopee` (monta a mensagem multimodal — texto de contexto + imagem em data URI via `construir_data_uri` — com o prompt de copywriting `PROMPT_SISTEMA_ANUNCIO`, e valida a resposta com `_validar_resposta_anuncio`). Se sua tarefa for evoluir o prompt de copywriting, mantenha a regra mais importante já estabelecida: o texto gerado (título, descrição, palavras-chave) tem que se ater ao que é VISUALMENTE OBSERVÁVEL na imagem enviada e ao contexto textual fornecido — nunca inventar especificação não visível/não informada — e sempre em português (BR) (diferente do prompt de EDIÇÃO de imagem do Estúdio, que é em inglês por exigência do motor fal.ai; não confundir os dois). Você trabalha só em `Local_AI/estudio_shopee/` — nunca toque em `Local_AI/analista_dados_shopee/` a menos que a tarefa diga explicitamente (os dois módulos são independentes por decisão registrada em `DECISOES.md`, cada um com seu próprio arquivo de segredos). Disciplina de execução (igual ao executor genérico): leia `_sistema/PROTOCOLO_TAREFAS.md` e o arquivo da tarefa por completo antes de começar; se houver reprovação registrada (Verificação/Revisão), corrija exatamente o apontado antes de qualquer outra coisa; implemente; rode/valide apenas o que sua tarefa tocou (a suíte completa é responsabilidade do testador); nunca gaste `OPENAI_API_KEY` real em teste — mocke a chamada HTTP; commite ao final (`T-XXX: descrição`, incluindo o arquivo da tarefa atualizado); registre tudo nas seções corretas do arquivo da tarefa (Notas de execução) antes de terminar. Confinamento: não toque em NADA fora de `projetos/ia-hibrida-limpa/`.",
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Edit",
+          "Write",
+          "Bash",
+          "PowerShell"
+        ]
+      },
+      "streamlit-ui": {
+        "description": "Quando a tarefa toca `Local_AI/estudio_shopee/app.py`: a tela Streamlit do Estúdio (aba 'Gerador Automático', session_state, fluxo de geração/edição/aprovação de imagem e, agora, do anúncio).",
+        "prompt": "Você é o especialista na interface Streamlit do Estúdio do projeto ia-hibrida-limpa (fábrica Gerador_de_projetos). Escopo: `Local_AI/estudio_shopee/app.py` — a UI Streamlit inteira do Estúdio de imagens (upload, remoção de fundo, canvas, edição via fal.ai na aba '🎨 Gerador Automático', refinamento iterativo, aprovação/salvamento em `fotos_prontas/`, e a seção de Anúncio Shopee). Siga rigorosamente os padrões JÁ usados no arquivo: inicialização de TODO `st.session_state` num bloco único no topo (`if 'x' not in st.session_state: st.session_state.x = ...`); `st.status`/`st.spinner` com mensagens em português durante chamadas de IA; `st.error`/`st.warning` para falhas sem derrubar a página — inclusive capturando exceção genérica como rede de segurança além da exceção específica esperada; e o cuidado já existente de resetar TODOS os estados dependentes da imagem atual (`imagem_gerada_b64`, `candidatos_atual`, `anuncio_atual`, etc.) quando o usuário troca de arquivo de upload ou gera uma nova imagem do zero — um estado órfão colado numa imagem/anúncio errado é o bug mais fácil de introduzir aqui. Texto de interface sempre em português (BR). Nunca quebre as duas abas existentes (Gerador Automático / Modo Gratuito) ao adicionar ou alterar algo — valide rodando `streamlit run app.py` sempre que possível, e no mínimo garanta que o arquivo compila (`python -m py_compile Local_AI/estudio_shopee/app.py`). Disciplina de execução (igual ao executor genérico): leia `_sistema/PROTOCOLO_TAREFAS.md` e o arquivo da tarefa por completo antes de começar; se houver reprovação registrada (Verificação/Revisão), corrija exatamente o apontado antes de qualquer outra coisa; implemente; rode/valide apenas o que sua tarefa tocou (a suíte completa é responsabilidade do testador); commite ao final (`T-XXX: descrição`, incluindo o arquivo da tarefa atualizado); registre tudo nas seções corretas do arquivo da tarefa (Notas de execução) antes de terminar. Confinamento: não toque em NADA fora de `projetos/ia-hibrida-limpa/`.",
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Edit",
+          "Write",
+          "Bash",
+          "PowerShell"
+        ]
+      }
+    },
+    "maxTurns": 200,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-30T15:19:24.669Z",
+  "iniciadoEm": "2026-07-30T15:19:24.679Z",
+  "sessionId": "574856cd-3a97-4c2b-b061-f35cc1ffacb2",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "resumos": [
+    {
+      "indice": 1,
+      "agente": "revisor",
+      "linhas": [
+        "T-004 (Ciclo 2) aprovada em revisão: commit 0f31e5b no Local_AI corrige timing de leitura de widgets em app.py. Achado menor inofensivo; correção resolve causa raiz.",
+        "T-006 desbloqueada. Tarefa atualizada com veredito e status concluído."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-004 Ciclo 2 aprovada"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commit 0f31e5b revisado e validado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "app.py: fallback inalcançável (menor)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-004.md atualizado com veredito"
+        }
+      ],
+      "custoUsd": 0.0047989999999999994,
+      "naoDeu": false
+    },
+    {
+      "indice": 2,
+      "agente": "testador",
+      "linhas": [
+        "Fase 2 de `ia-hibrida-limpa` aprovada: fluxo de geração, edição e salvamento de anúncios Shopee validado ponta a ponta. Todos os 4 testes passaram, nenhuma regressão.",
+        "T-003 e T-004 concluídas com ciclo 2; arquivo `.txt` salvo com valores editados e timestamp idêntico ao `.png`."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "Fase 2 APROVADA — marco completo"
+        },
+        {
+          "tipo": "feito",
+          "texto": "5/5 testes `test_gerador_anuncio.py` PASSARAM"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-003, T-004 revisão aprovada"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Arquivo `.txt` com valores editados"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-006 despacho para executor (projeto quieto)"
+        }
+      ],
+      "custoUsd": 0.006771,
+      "naoDeu": false
+    },
+    {
+      "indice": 3,
+      "agente": "executor",
+      "linhas": [
+        "T-006 (documentação) concluída: how_to_use.md + CLAUDE.md + requirements.txt atualizados. Testes passaram (5/5)."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "how_to_use.md: seção Anúncio Shopee"
+        },
+        {
+          "tipo": "feito",
+          "texto": "CLAUDE.md: Arquitetura, Stack, Testes"
+        },
+        {
+          "tipo": "feito",
+          "texto": "requirements.txt criado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "5 testes passaram (pytest)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "3 commits: 67a4b3a, 915f835, ef115b8"
+        }
+      ],
+      "custoUsd": 0.005991,
+      "naoDeu": false
+    },
+    {
+      "indice": 4,
+      "agente": "revisor",
+      "linhas": [
+        "Revisão de T-006 concluída — documentação reprovada por inconsistência com código. Botão citado em how_to_use.md:297 não existe; o real tem rótulo dinâmico em app.py:632.",
+        "Retrabalho despachado para corrigir citação do botão e imprecisão menor em how_to_use.md:342-345."
+      ],
+      "itens": [
+        {
+          "tipo": "atencao",
+          "texto": "how_to_use.md:297 — botão inexistente"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-006 reprovada — volta para em-execucao"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Revisão linha a linha concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Ciclo 2 iniciado — correção do botão"
+        }
+      ],
+      "custoUsd": 0.004817999999999999,
+      "naoDeu": false
+    },
+    {
+      "indice": 5,
+      "agente": "executor",
+      "linhas": [
+        "Retrabalho de T-006 Ciclo 2 concluído: corrigidos 2 achados no `how_to_use.md` (rótulo de botão dinâmico e posição de erro). Nenhum código Python alterado, só documentação.",
+        "Commits registrados em `Local_AI` e repo externo; status mantido em `em-execucao` para pular `em-teste` direto para revisão."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "how_to_use.md: 2 correções validadas"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commits 4c91f38 e 7ff5a0a registrados"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Nenhum arquivo .py modificado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Status: em-execucao → em-revisao"
+        }
+      ],
+      "custoUsd": 0.0053089999999999995,
+      "naoDeu": false
+    },
+    {
+      "indice": 6,
+      "agente": "revisor",
+      "linhas": [
+        "T-006 aprovada no Ciclo 2: ambos achados do Ciclo 1 (importante e menor) foram corrigidos com precisão em `how_to_use.md`.",
+        "Todas as 6 tarefas do projeto `ia-hibrida-limpa` estão concluídas; Fase 3 finalizada, marco pendente de testador."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-006 status → concluida"
+        },
+        {
+          "tipo": "feito",
+          "texto": "how_to_use.md:296-300 corrigido"
+        },
+        {
+          "tipo": "feito",
+          "texto": "how_to_use.md:344-348 corrigido"
+        },
+        {
+          "tipo": "feito",
+          "texto": "6/6 tarefas concluídas"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Marco Fase 3 pendente de testador"
+        }
+      ],
+      "custoUsd": 0.0052250000000000005,
+      "naoDeu": false
+    },
+    {
+      "indice": 7,
+      "agente": "testador",
+      "linhas": [
+        "Todas as 3 fases do projeto aprovadas: Fase 1 (Fundação), Fase 2 (Núcleo) e Fase 3 (Refinamento). Feature de geração de anúncio completa, integrada, testada (5/5 testes passaram) e documentada."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "5/5 testes automatizados passaram em 0.25s"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Marco Fase 3 aprovado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Documentação sincronizada com código"
+        },
+        {
+          "tipo": "feito",
+          "texto": "6/6 tarefas do projeto concluídas"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Feature sem placeholders ou gaps"
+        }
+      ],
+      "custoUsd": 0.008566,
+      "naoDeu": false
+    }
+  ],
+  "terminadoEm": "2026-07-30T15:45:50.155Z",
+  "resultado": {
+    "sessionId": "574856cd-3a97-4c2b-b061-f35cc1ffacb2",
+    "custoUsd": 7.420269450000001,
+    "numTurnos": 10,
+    "erro": false,
+    "texto": "Tudo limpo e commitado. Sessão de `/trabalhar` encerrada — pipeline esgotado.\n\n## Relatório final\n\n**Projeto `ia-hibrida-limpa`** (único projeto ativo) — **6/6 tarefas concluídas**, todas as 3 fases do PLANO.md com marco aprovado:\n\n| Fase | Marco | Data |\n|---|---|---|\n| 1 — Fundação | ✅ aprovado | 2026-07-28 |\n| 2 — Núcleo | ✅ aprovado | 2026-07-30 (hoje) |\n| 3 — Refinamento | ✅ aprovado | 2026-07-30 (hoje) |\n\n**Nesta sessão** (continuação após limite de cota da sessão anterior):\n- **T-004** (persistência do anúncio junto do render) — revisor aprovou o Ciclo 2, corrigindo um bug real de sincronização do Streamlit encontrado no Ciclo 1 (o `.txt` podia salvar título/descrição desatualizados quando edição e clique chegavam no mesmo rerun).\n- **Marco Fase 2** aprovado — fluxo ponta a ponta (gerar → editar → aprovar → salvar) verificado de verdade via `AppTest`.\n- **T-006** (documentação) — 2 ciclos: o revisor pegou um rótulo de botão inventado/desatualizado no `how_to_use.md` (copiado por engano de uma seção antiga), corrigido no Ciclo 2 e aprovado.\n- **Marco Fase 3** aprovado — suíte de testes (5/5, sem custo de API) e documentação conferidas contra o código real.\n\n**Bloqueios:** nenhum.\n\n**Destaque:** a feature \"Anúncio completo\" no Estúdio Shopee está **completa, integrada, testada e documentada** de ponta a ponta.\n\n**Registrado fora do pipeline formal (não executado):** o restante do `how_to_use.md` (fluxo antigo v5.0/RunPod) segue desatualizado — candidato a virar tarefa futura de reescrita, se você quiser priorizar.\n\n**Próxima rodada de `/trabalhar`:** sem trabalho pendente no escopo atual — vai precisar de uma ideia nova (`/ideia`) ou de um projeto novo para ter o que fazer.",
+    "tokens": {
+      "entrada": 1267,
+      "saida": 129899,
+      "cacheLeitura": 13504196,
+      "cacheEscrita": 602192,
+      "porModelo": {
+        "claude-haiku-4-5-20251001": {
+          "entrada": 907,
+          "saida": 34307,
+          "cacheLeitura": 2268838,
+          "custoUsd": 0.5706708
+        },
+        "claude-sonnet-5": {
+          "entrada": 360,
+          "saida": 95592,
+          "cacheLeitura": 11235358,
+          "custoUsd": 6.849598649999998
+        }
+      }
+    },
+    "sessoes": 8
+  }
+}

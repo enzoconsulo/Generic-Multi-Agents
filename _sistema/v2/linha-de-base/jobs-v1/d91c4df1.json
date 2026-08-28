@@ -1,0 +1,26 @@
+{
+  "id": "d91c4df1",
+  "tipo": "claude",
+  "titulo": "Conferir integridade — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz). O usuário pediu, pelo\npainel, uma checagem de integridade do projeto `ia-hibrida-limpa` — o equivalente ao\n`/manutencao`, mas com o escopo fechado NESTE projeto.\n\nConfinamento: leia o que precisar da fábrica, mas só ALTERE arquivos dentro de\n`C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa`. Nada de tocar em outros projetos nem no sistema.\n\nConfira, nesta ordem:\n\n1. **Tarefas** (`C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa/_gestao/tarefas/*.md`) — escaneie os frontmatters por busca,\n   não abra tudo. Procure: `status` fora do vocabulário do protocolo; tarefa `pronta` com\n   dependência que não está `concluida`; tarefa `concluida` com critério de aceite ainda\n   desmarcado; `dependencias` apontando para T-NNN que não existe; ids duplicados.\n2. **Plano** (`PLANO.md`) — fase cujas tarefas estão todas `concluida` mas sem a linha\n   `Marco:` preenchida; tarefa que não pertence a nenhuma fase.\n3. **Git** — o projeto é um repositório? Há trabalho não commitado parado há tempo? O\n   `.gitignore` cobre o que o ecossistema do projeto gera?\n4. **Estrutura** — `_gestao/` tem ESPECIFICACAO, PLANO, DECISOES e PROGRESSO?\n\nRegra que separa esta ação de um replanejamento: **corrija sozinho o que é mecânico e\ninequívoco** (marcar critério que a Verificação já comprova, promover tarefa cuja\ndependência fechou, campo de frontmatter fora do formato). **Apenas REPORTE o que exige\njulgamento de escopo** — se corrigir exige decidir o que o projeto deveria fazer, não é\nmanutenção, é planejamento, e não é seu papel aqui.\n\nAo final, responda ao usuário em português (BR), em duas listas curtas: **corrigi** e\n**precisa da sua decisão**. Se estiver tudo íntegro, diga isso em uma linha — inventar\nachado para justificar a execução é o pior resultado possível desta ação.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 80
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-28T18:49:34.084Z",
+  "iniciadoEm": "2026-07-28T18:49:34.090Z",
+  "sessionId": "381bba31-d440-4688-8aa4-725e5911f073",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-28T18:52:22.268Z",
+  "resultado": {
+    "sessionId": "381bba31-d440-4688-8aa4-725e5911f073",
+    "custoUsd": 0.6997669999999999,
+    "numTurnos": 17,
+    "erro": false,
+    "texto": "Manutenção concluída no escopo de `ia-hibrida-limpa`. Resultado:\n\n**Corrigi:**\n- Havia 2 arquivos de tarefa com atualização de estado pronta mas nunca commitada (resquício de um `/trabalhar` interrompido antes do commit final): T-001 já estava com Ciclo 2 do testador (8/8 critérios) e do revisor (aprovado sem ressalvas) registrados no arquivo, mas o `status: concluida` seguia fora do git; T-002 já estava com os 6 critérios marcados e `status: em-teste`, também fora do git. Fiz o commit de resgate (`da543b8`) — nenhum conteúdo foi alterado, só persistido o que já estava escrito nos arquivos.\n\n**Precisa da sua decisão:**\n- O submódulo `Local_AI` está **19 commits à frente de `origin/main`** (o commit `7967a66`, feito pelo painel, já deixou isso anotado: o ponteiro do submódulo aponta para `9d0d08c`, que ainda não existe no remoto `enzoconsulo/Local_AI`). Enquanto isso, um clone novo desta fábrica não consegue resolver o submódulo. Dar `git push` no `Local_AI` é decisão sua (é o repositório pessoal do seu app, fora do escopo desta fábrica) — não fiz isso.\n\n**Tudo o mais está íntegro:** vocabulário de status, ids, `dependencias` (nenhuma aponta pra tarefa inexistente ou forma ciclo), nenhuma tarefa `pronta`/`backlog` com dependência mal calculada, nenhum critério desmarcado em tarefa `concluida`, `PLANO.md` com as 3 fases corretas e `Marco: pendente` coerente (Fase 1 só fecha quando T-002 também estiver `concluida`), `_gestao/` completo (ESPECIFICACAO, PLANO, DECISOES, PROGRESSO), e o `.gitignore` do submódulo `Local_AI` cobre corretamente `.env`, `__pycache__`, dados/exports — nada de segredo ou lixo versionado."
+  }
+}

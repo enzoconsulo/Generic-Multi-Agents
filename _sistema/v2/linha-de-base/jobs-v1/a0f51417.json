@@ -1,0 +1,17 @@
+{
+  "id": "a0f51417",
+  "tipo": "claude",
+  "titulo": "/status",
+  "escopo": "global",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/status",
+    "cwd": "C:\\Users\\enzoconsulo\\Documents\\Gerador_de_projetos",
+    "modelo": "fable",
+    "fallback": "opus"
+  },
+  "estado": "cancelado",
+  "criadoEm": "2026-07-22T02:11:35.195Z",
+  "iniciadoEm": "2026-07-22T02:11:35.198Z",
+  "terminadoEm": "2026-07-22T02:11:39.406Z"
+}

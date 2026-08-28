@@ -1,0 +1,65 @@
+{
+  "id": "3bb93223",
+  "tipo": "ci",
+  "titulo": "CI: _cronometro",
+  "escopo": "projeto:_cronometro",
+  "usaClaude": false,
+  "params": {
+    "projeto": "_cronometro",
+    "fabricaRaiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "dirDados": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\painel\\dados"
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-28T03:49:05.951Z",
+  "iniciadoEm": "2026-07-28T03:49:05.959Z",
+  "terminadoEm": "2026-07-28T03:49:37.055Z",
+  "resultado": {
+    "jobId": "3bb93223",
+    "projeto": "_cronometro",
+    "estado": "sucesso",
+    "iniciadoEm": "2026-07-28T03:49:06.000Z",
+    "terminadoEm": "2026-07-28T03:49:37.030Z",
+    "estagios": [
+      {
+        "estagio": "instalar",
+        "estado": "sucesso",
+        "comando": "node lento.js",
+        "iniciadoEm": "2026-07-28T03:49:06.023Z",
+        "terminadoEm": "2026-07-28T03:49:36.970Z",
+        "duracaoMs": 30947,
+        "codigoSaida": 0,
+        "aviso": null
+      },
+      {
+        "estagio": "lint",
+        "estado": "pulado",
+        "comando": null,
+        "iniciadoEm": null,
+        "terminadoEm": null,
+        "duracaoMs": null,
+        "codigoSaida": null,
+        "aviso": "Estágio desabilitado na configuração."
+      },
+      {
+        "estagio": "testes",
+        "estado": "pulado",
+        "comando": null,
+        "iniciadoEm": null,
+        "terminadoEm": null,
+        "duracaoMs": null,
+        "codigoSaida": null,
+        "aviso": "Estágio desabilitado na configuração."
+      },
+      {
+        "estagio": "build",
+        "estado": "pulado",
+        "comando": null,
+        "iniciadoEm": null,
+        "terminadoEm": null,
+        "duracaoMs": null,
+        "codigoSaida": null,
+        "aviso": "Estágio desabilitado na configuração."
+      }
+    ]
+  }
+}

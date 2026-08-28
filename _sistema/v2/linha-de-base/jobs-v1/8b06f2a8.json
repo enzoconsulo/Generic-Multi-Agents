@@ -1,0 +1,21 @@
+{
+  "id": "8b06f2a8",
+  "tipo": "importar",
+  "titulo": "Importar ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": false,
+  "params": {
+    "origem": "C:\\Users\\enzoc\\OneDrive\\Documentos\\IA_hibrida_limpa",
+    "nome": "ia-hibrida-limpa",
+    "fabricaRaiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modeloAnalise": "sonnet"
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-27T18:11:33.712Z",
+  "iniciadoEm": "2026-07-27T18:11:33.718Z",
+  "terminadoEm": "2026-07-27T18:11:40.287Z",
+  "resultado": {
+    "nome": "ia-hibrida-limpa",
+    "destino": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa"
+  }
+}

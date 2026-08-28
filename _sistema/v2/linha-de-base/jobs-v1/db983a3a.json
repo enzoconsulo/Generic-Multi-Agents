@@ -1,0 +1,109 @@
+{
+  "id": "db983a3a",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-16T04:15:36.853Z",
+  "iniciadoEm": "2026-08-16T04:15:36.856Z",
+  "terminadoEm": "2026-08-16T04:39:35.236Z",
+  "resultado": {
+    "despachos": 3,
+    "tarefasConcluidas": [
+      "T-048"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 4,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-048",
+        "custoUsd": 4.5966942,
+        "despachos": 3,
+        "retrabalhoUsd": 0.9592044000000001,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [
+      {
+        "tarefa": "T-048",
+        "papel": "verificador",
+        "escrito": 2,
+        "mantido": 1
+      }
+    ],
+    "estouros": [
+      {
+        "tarefa": "T-048",
+        "agente": "executor",
+        "chamadas": 53,
+        "orcado": 30
+      }
+    ],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 4.5966942,
+      "custosObservados": [
+        4.5966942
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 4.5966942,
+    "texto": "Pipeline de banco-imobiliario: 3 despacho(s), 1 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nConcluídas: T-048.\n4 critério(s) resolvidos por comando, sem gastar modelo.\nOrçamento de ferramentas estourado (idas ao modelo custam ao quadrado): T-048/executor 53 de 30.\nCONTRATO VIOLADO — o verificador escreveu `tentativas: 2` em T-048 (era 1); campo do construtor, valor ignorado. O número do ciclo se escreve no texto, não no frontmatter.\nGasto estimado: US$ 4.60."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-048 concluída, mas executor excedeu orçamento de chamadas (53 de 30). Verificador violou contrato ao alterar campo tentativas.",
+        "3 despachos processados, 4 critérios resolvidos. Custo estimado US$ 4,60."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-048 concluída"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Executor: 53 chamadas (limite 30)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Verificador alterou tentativas (era 1)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "4 critérios resolvidos por comando"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Gestão commitada: 1965141"
+        }
+      ],
+      "custoUsd": 0.004063,
+      "naoDeu": false
+    }
+  ]
+}

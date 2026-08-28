@@ -5,6 +5,28 @@
 ═══════════════════════════════════════════════════════════════════════════════
 
 
+── 0. COMO OBTER O PROJETO ────────────────────────────────────────────────────
+
+    git clone https://github.com/enzoconsulo/Generic-Multi-Agents.git
+    cd Generic-Multi-Agents
+
+Tudo que este prompt cita vem no clone: os documentos, as 58 tarefas, as ferramentas
+de instalação, o código da v1 que será portado, e os 139 registros de execução da
+v1 que servem de linha de base (em `_sistema/v2/linha-de-base/`).
+
+DUAS COISAS **NÃO** VÊM NO CLONE, e as duas são deliberadas:
+
+  • `projetos/` — os projetos da v1 são repositórios próprios e estão no
+    `.gitignore`. Você não precisa deles. A T-001 cria `projetos/fabrica-v2/`
+    do zero.
+
+  • `painel/dados/` — os logs completos de execução (`*.log.jsonl`) contêm
+    transcrição de agente, ou seja, código dos projetos. Este repositório é
+    público, e publicá-los vazaria pela porta dos fundos o que o `.gitignore`
+    protege pela porta da frente. A contabilidade de que a T-008 precisa está
+    congelada em `_sistema/v2/linha-de-base/jobs-v1/`.
+
+
 ── 1. O QUE É ESTE PROJETO ────────────────────────────────────────────────────
 
 Este repositório é uma FÁBRICA DE SOFTWARE MULTI-AGENTE: um sistema que recebe a

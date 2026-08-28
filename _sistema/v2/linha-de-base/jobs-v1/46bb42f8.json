@@ -1,0 +1,72 @@
+{
+  "id": "46bb42f8",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-09T11:50:24.614Z",
+  "iniciadoEm": "2026-08-09T11:50:24.619Z",
+  "terminadoEm": "2026-08-09T12:06:40.473Z",
+  "resultado": {
+    "despachos": 3,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [
+      "T-030"
+    ],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 3.8331426000000004,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 3.8331426000000004,
+    "texto": "Pipeline de banco-imobiliario: 3 despacho(s), 0 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nReplanejadas automaticamente (esgotaram os ciclos): T-030. O planejador quebrou ou reescreveu a abordagem; as substitutas entram na próxima rodada.\nGasto estimado: US$ 3.83."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-030 esgotou ciclos e foi replanejado automaticamente. Pipeline parou com 3 despachos e nenhuma tarefa concluída — backlog restante tem dependências."
+      ],
+      "itens": [
+        {
+          "tipo": "atencao",
+          "texto": "T-030 sem progresso — dependências bloqueando"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Gestão commitada: 1bd5321"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Replanejamento automático executado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Custo: US$ 3.83"
+        }
+      ],
+      "custoUsd": 0.0017400000000000002,
+      "naoDeu": false
+    }
+  ]
+}

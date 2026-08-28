@@ -1,0 +1,75 @@
+{
+  "id": "fbee26fe",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-08T11:41:28.436Z",
+  "iniciadoEm": "2026-08-08T11:41:28.444Z",
+  "terminadoEm": "2026-08-08T11:59:06.994Z",
+  "resultado": {
+    "despachos": 2,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-025",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "orcamento",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 6.259098000000001,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 6.259098000000001,
+    "texto": "Pipeline de banco-imobiliario: 2 despacho(s), 0 tarefa(s) concluída(s).\nEncerrado pelo TETO DE CUSTO — parada planejada, nada foi cortado no meio.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-025 no executor.\nGasto estimado: US$ 6.26."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-025 falhou no executor (60 turns máximo atingido); T-022 avançou para revisão com documentação. Pipeline encerrado por teto de custo (US$ 6.26 de US$ 8.00)."
+      ],
+      "itens": [
+        {
+          "tipo": "atencao",
+          "texto": "T-025: executor atingiu 60 turns"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-022: em-revisao (README.md)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commit 306e422 (gestão)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Orçamento: US$ 1.74 restante"
+        }
+      ],
+      "custoUsd": 0.003363,
+      "naoDeu": false
+    }
+  ]
+}

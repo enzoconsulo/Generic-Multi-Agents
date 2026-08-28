@@ -1,0 +1,72 @@
+{
+  "id": "3d2f928c",
+  "tipo": "claude",
+  "titulo": "/status",
+  "escopo": "global",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/status",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 40,
+    "watchdogMs": 600000,
+    "esforco": "medium"
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-07-30T00:41:00.164Z",
+  "iniciadoEm": "2026-07-30T00:41:00.174Z",
+  "sessionId": "d27dd821-d626-4dda-9d66-7989620c3087",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-30T00:41:46.437Z",
+  "resultado": {
+    "sessionId": "d27dd821-d626-4dda-9d66-7989620c3087",
+    "custoUsd": 0.29315880000000005,
+    "numTurnos": 8,
+    "erro": false,
+    "texto": "## 📊 Painel de Status — 2026-07-29\n\n### Projetos\n\n| Projeto | Backlog | Pronta | Em andamento | Bloqueada | Concluída | Fase atual | Marco |\n|---|---|---|---|---|---|---|---|\n| **ia-hibrida-limpa** | 2 | 2 | 0 | 0 | 2 | Fase 2 — Núcleo | Fase 1 **aprovado** (28/07) · Fase 2 pendente · Fase 3 pendente |\n\nDetalhe das 6 tarefas:\n- T-001 `concluida`, T-002 `concluida`\n- T-003 `pronta` (UI do anúncio, dep. T-002 ✅, área `app.py`)\n- T-005 `pronta` (testes automatizados do motor, dep. T-002 ✅, área `tests/`)\n- T-004 `backlog` (dep. T-003 ainda não concluída)\n- T-006 `backlog` (dep. T-004 + T-005, nenhuma concluída ainda)\n\n### Bloqueios\nNenhuma tarefa `bloqueada` no momento.\n\n### Prontas para rodar\nEm ordem de prioridade:\n1. **T-003** — UI do anúncio Shopee (alta) — área `Local_AI/estudio_shopee/app.py`\n2. **T-005** — Testes do gerador de anúncio (média) — área `Local_AI/estudio_shopee/tests/`\n\nÁreas disjuntas → dá para rodar as duas em paralelo no mesmo `/trabalhar`.\n\n### Inconsistências\nNenhuma encontrada — dependências apontam para tarefas existentes, status válidos, sem tarefas órfãs.\n\n### Última atividade (log 2026-07-28)\n- Fase 1 do ia-hibrida-limpa fechou com **marco aprovado** (10/10 cenários, sem custo de API real); T-003 e T-005 foram promovidas a `pronta`.\n- Painel ganhou verificação visual real (captura de tela via DevTools) e mediu custo real da fábrica pela primeira vez; testador passou a rodar em `haiku`.\n- As 8 ações por projeto do painel foram validadas ao vivo no ia-hibrida-limpa (US$ 8,50 no total do dia).\n- Pendência aberta registrada: commits do ia-hibrida-limpa vivem dentro do submódulo `Local_AI/` (19 commits à frente de `origin/main`), fora do repo do projeto — decisão ainda não tomada.\n\n**Ideias não roteadas:** 1 — `2026-07-27-anuncio-completo-estudio-shopee.md` (status a conferir, parece já ter virado tarefas T-001..T-006, vale confirmar se pode ser arquivada).\n\n---\n**Próximo passo sugerido:** `/trabalhar ia-hibrida-limpa` — T-003 e T-005 estão prontas e em áreas disjuntas, dá para rodar o pipeline completo em paralelo nas duas.",
+    "tokens": {
+      "entrada": 10,
+      "saida": 1897,
+      "cacheLeitura": 118986,
+      "cacheEscrita": 38163,
+      "porModelo": {
+        "claude-sonnet-5": {
+          "entrada": 10,
+          "saida": 1897,
+          "cacheLeitura": 118986,
+          "custoUsd": 0.29315880000000005
+        }
+      }
+    }
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "Fase 1 do ia-hibrida-limpa aprovada (marco com 10/10 cenários). T-003 e T-005 prontas para rodar em paralelo na Fase 2.",
+        "Nenhum bloqueio. Pendência: 19 commits do submódulo Local_AI/ fora do repo principal."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "Fase 1 aprovado (marco validado)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-003 e T-005 prontas para paralelo"
+        },
+        {
+          "tipo": "feito",
+          "texto": "2 tarefas concluídas, 0 bloqueadas"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "19 commits em Local_AI fora de origin/main"
+        }
+      ],
+      "custoUsd": 0.004591,
+      "naoDeu": false
+    }
+  ]
+}

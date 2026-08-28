@@ -1,0 +1,20 @@
+{
+  "id": "284211c8",
+  "tipo": "claude",
+  "titulo": "Pesquisar — ia-hibrida-limpa",
+  "escopo": "projeto:ia-hibrida-limpa",
+  "usaClaude": true,
+  "params": {
+    "prompt": "Você é o ORQUESTRADOR da fábrica (regras no CLAUDE.md desta raiz). O usuário pediu, pelo\npainel, uma pesquisa técnica para o projeto `ia-hibrida-limpa` antes de tomar uma decisão.\n\nPERGUNTA DO USUÁRIO:\nQuais sao os limites reais de titulo, descricao e palavras-chave de um anuncio na Shopee Brasil, e como isso deveria restringir o schema que o gerador de anuncio produz hoje?\n\nDespache o agente `pesquisador` com este despacho:\n\n```\nProjeto: C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos\\projetos\\ia-hibrida-limpa\nObjeto do trabalho: responder à pergunta acima com pesquisa na web, e gravar o relatório\nem `_gestao/pesquisas/AAAA-MM-DD-slug.md`.\nConfinamento: não toque em NADA fora do caminho do projeto acima. Não altere código nem\ntarefas — este fluxo é somente pesquisa.\nContexto extra: leia antes o CLAUDE.md e a ESPECIFICACAO.md do projeto, para a\nrecomendação levar em conta a stack e as restrições que já existem. Uma recomendação que\nignora o que o projeto já usa é inútil, por mais correta que seja no vácuo.\n```\n\nO relatório precisa terminar em uma RECOMENDAÇÃO com trade-offs explícitos, não em uma\nlista neutra de opções — quem pede pesquisa quer decidir.\n\nAo final, responda ao usuário em português (BR), em no máximo 8 linhas: a recomendação, o\nmotivo em uma frase, e o caminho do relatório gravado. Se as fontes forem fracas ou\nconflitantes, diga isso — confiança falsa é pior que dúvida declarada.\n",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "maxTurns": 60
+  },
+  "estado": "interrompido",
+  "criadoEm": "2026-07-28T19:08:17.590Z",
+  "iniciadoEm": "2026-07-28T19:08:17.592Z",
+  "sessionId": "1988d37f-2823-43a5-a066-2a8174073f79",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "terminadoEm": "2026-07-28T21:24:36.093Z",
+  "erro": "Interrompido pelo watchdog: nenhum sinal de atividade por mais de 15 min."
+}

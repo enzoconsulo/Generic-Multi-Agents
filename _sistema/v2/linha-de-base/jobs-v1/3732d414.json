@@ -1,0 +1,79 @@
+{
+  "id": "3732d414",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-08T20:19:09.013Z",
+  "iniciadoEm": "2026-08-08T20:19:09.039Z",
+  "terminadoEm": "2026-08-08T20:36:05.832Z",
+  "resultado": {
+    "despachos": 3,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 0,
+    "marcos": [],
+    "saneadas": [
+      "T-027"
+    ],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-progresso",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 5.0541588,
+      "custosObservados": [
+        1.5185543
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 5.0541588,
+    "texto": "Pipeline de banco-imobiliario: 3 despacho(s), 0 tarefa(s) concluída(s).\nUm agente terminou sem gravar o próprio status; o laço parou para não repetir o despacho.\nSaneadas na abertura (sobras sem Notas): T-027.\nGasto estimado: US$ 5.05."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-027 devolvida a pronta (sobra limpa). T-026 travada em executor-reforcado após 2 reprovações de frontend — agente não gravou estado e deixou 3 arquivos sem commit.",
+        "Pipeline parou com 0 tarefas concluídas em 3 despachos. Código não revisado em server.log, teste-painel-simples.js, teste-painel.js."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-027 pronta (sessão anterior)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-026 travada — agente não gravou status"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "3 arquivos alterados sem commit"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "server.log, teste-painel*.js não revisados"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Gestão commitada: 5483fa1"
+        }
+      ],
+      "custoUsd": 0.004347,
+      "naoDeu": false
+    }
+  ]
+}

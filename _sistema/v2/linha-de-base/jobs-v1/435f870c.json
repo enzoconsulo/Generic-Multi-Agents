@@ -1,0 +1,69 @@
+{
+  "id": "435f870c",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-08T20:58:58.761Z",
+  "iniciadoEm": "2026-08-08T20:58:58.764Z",
+  "terminadoEm": "2026-08-08T21:19:03.582Z",
+  "resultado": {
+    "despachos": 7,
+    "tarefasConcluidas": [
+      "T-026"
+    ],
+    "promovidas": [],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 16,
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-027",
+        "agente": "revisor"
+      },
+      {
+        "tarefa": "T-028",
+        "agente": "executor"
+      },
+      {
+        "tarefa": "T-029",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "agente-cortado",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 3.8849171000000005,
+      "custosObservados": [
+        0.9937726000000002,
+        0.3710105
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 3.8849171000000005,
+    "texto": "Pipeline de banco-imobiliario: 7 despacho(s), 1 tarefa(s) concluída(s).\nUm agente não devolveu resultado; o laço parou para não empilhar trabalho sobre estado desconhecido.\nConcluídas: T-026.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-027 no revisor; T-028 no executor; T-029 no executor.\n16 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 3.88."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [],
+      "itens": [],
+      "custoUsd": null,
+      "naoDeu": true
+    }
+  ]
+}

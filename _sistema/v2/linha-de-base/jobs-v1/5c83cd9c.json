@@ -1,0 +1,101 @@
+{
+  "id": "5c83cd9c",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-22T09:42:07.964Z",
+  "iniciadoEm": "2026-08-22T09:42:07.968Z",
+  "terminadoEm": "2026-08-22T10:21:18.602Z",
+  "resultado": {
+    "despachos": 7,
+    "tarefasConcluidas": [
+      "T-051",
+      "T-052"
+    ],
+    "promovidas": [
+      "T-052",
+      "T-055"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 2,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-055",
+        "custoUsd": 4.680252,
+        "despachos": 1,
+        "retrabalhoUsd": 0,
+        "retrabalhoDespachos": 0,
+        "naturezas": [],
+        "concluiu": false
+      },
+      {
+        "tarefa": "T-052",
+        "custoUsd": 2.7875360999999996,
+        "despachos": 3,
+        "retrabalhoUsd": 0.7917175999999999,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      },
+      {
+        "tarefa": "T-051",
+        "custoUsd": 2.10073,
+        "despachos": 3,
+        "retrabalhoUsd": 0.9637698000000001,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "foraDeAreas": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-055",
+        "agente": "executor"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 9.5685181,
+      "custosObservados": [
+        2.10073,
+        2.7875360999999996
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "banco-imobiliario",
+    "custoEstimadoUsd": 9.5685181,
+    "texto": "Pipeline de banco-imobiliario: 7 despacho(s), 2 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nNada a retomar: a rodada esvaziou a fila do que era despachável.\nConcluídas: T-051, T-052.\nPromovidas: T-052, T-055.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-055 no executor.\n2 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 9.57."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [],
+      "itens": [],
+      "custoUsd": null,
+      "naoDeu": true
+    }
+  ]
+}

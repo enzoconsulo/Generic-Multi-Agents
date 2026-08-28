@@ -1,0 +1,20 @@
+{
+  "id": "6d5e04a7",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "interrompido",
+  "criadoEm": "2026-08-08T14:17:59.382Z",
+  "iniciadoEm": "2026-08-08T14:17:59.387Z",
+  "terminadoEm": "2026-08-08T14:54:45.610Z",
+  "erro": "Processo do painel reiniciou antes de o job terminar"
+}

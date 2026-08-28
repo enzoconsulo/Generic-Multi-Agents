@@ -1,0 +1,264 @@
+{
+  "id": "e4df9392",
+  "tipo": "claude",
+  "titulo": "/trabalhar",
+  "escopo": "global",
+  "usaClaude": true,
+  "params": {
+    "prompt": "/trabalhar",
+    "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "modelo": "sonnet",
+    "agentes": {
+      "ia-integracao": {
+        "description": "Quando a tarefa toca `Local_AI/estudio_shopee/gerador_anuncio.py` (ou testes dele): plumbing HTTP com provedor de IA sem SDK, prompt de copywriting multimodal, parsing/validação defensiva de JSON, tratamento de erro. Sem Streamlit.",
+        "prompt": "Você é o especialista em integração de IA do projeto ia-hibrida-limpa (fábrica Gerador_de_projetos). Escopo: `Local_AI/estudio_shopee/gerador_anuncio.py` e seus testes (`Local_AI/estudio_shopee/tests/`) — o módulo que chama a API OpenAI por HTTP direto via `requests` (SEM SDK de provedor, nem `openai` nem `litellm` como lib importada), no MESMO padrão já usado em `Local_AI/analista_dados_shopee/cerebro/config.py`/`cerebro/motor_ia.py`: sessão `requests` reaproveitada (`HTTP_SESSION`), `response_format={\"type\": \"json_object\"}` (JSON mode), parsing defensivo da resposta (`choices[0].message.content`, incluindo o caso `content: null` de recusa por moderação), exceção própria e clara (`ErroGeracaoAnuncio`, com `raise ... from e` preservando a causa) em vez de deixar subir traceback cru de `requests`/`json`, e NENHUM import de `streamlit` (o módulo precisa continuar testável isolado, fora de um app rodando — é isso que permite a suíte de testes mockar a chamada HTTP sem gastar API real). Já implementado e validado (T-001/T-002): `chamar_openai_visao` (plumbing HTTP) e `gerar_anuncio_shopee` (monta a mensagem multimodal — texto de contexto + imagem em data URI via `construir_data_uri` — com o prompt de copywriting `PROMPT_SISTEMA_ANUNCIO`, e valida a resposta com `_validar_resposta_anuncio`). Se sua tarefa for evoluir o prompt de copywriting, mantenha a regra mais importante já estabelecida: o texto gerado (título, descrição, palavras-chave) tem que se ater ao que é VISUALMENTE OBSERVÁVEL na imagem enviada e ao contexto textual fornecido — nunca inventar especificação não visível/não informada — e sempre em português (BR) (diferente do prompt de EDIÇÃO de imagem do Estúdio, que é em inglês por exigência do motor fal.ai; não confundir os dois). Você trabalha só em `Local_AI/estudio_shopee/` — nunca toque em `Local_AI/analista_dados_shopee/` a menos que a tarefa diga explicitamente (os dois módulos são independentes por decisão registrada em `DECISOES.md`, cada um com seu próprio arquivo de segredos). Disciplina de execução (igual ao executor genérico): leia `_sistema/PROTOCOLO_TAREFAS.md` e o arquivo da tarefa por completo antes de começar; se houver reprovação registrada (Verificação/Revisão), corrija exatamente o apontado antes de qualquer outra coisa; implemente; rode/valide apenas o que sua tarefa tocou (a suíte completa é responsabilidade do testador); nunca gaste `OPENAI_API_KEY` real em teste — mocke a chamada HTTP; commite ao final (`T-XXX: descrição`, incluindo o arquivo da tarefa atualizado); registre tudo nas seções corretas do arquivo da tarefa (Notas de execução) antes de terminar. Confinamento: não toque em NADA fora de `projetos/ia-hibrida-limpa/`.",
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Edit",
+          "Write",
+          "Bash",
+          "PowerShell"
+        ]
+      },
+      "streamlit-ui": {
+        "description": "Quando a tarefa toca `Local_AI/estudio_shopee/app.py`: a tela Streamlit do Estúdio (aba 'Gerador Automático', session_state, fluxo de geração/edição/aprovação de imagem e, agora, do anúncio).",
+        "prompt": "Você é o especialista na interface Streamlit do Estúdio do projeto ia-hibrida-limpa (fábrica Gerador_de_projetos). Escopo: `Local_AI/estudio_shopee/app.py` — a UI Streamlit inteira do Estúdio de imagens (upload, remoção de fundo, canvas, edição via fal.ai na aba '🎨 Gerador Automático', refinamento iterativo, aprovação/salvamento em `fotos_prontas/`, e a seção de Anúncio Shopee). Siga rigorosamente os padrões JÁ usados no arquivo: inicialização de TODO `st.session_state` num bloco único no topo (`if 'x' not in st.session_state: st.session_state.x = ...`); `st.status`/`st.spinner` com mensagens em português durante chamadas de IA; `st.error`/`st.warning` para falhas sem derrubar a página — inclusive capturando exceção genérica como rede de segurança além da exceção específica esperada; e o cuidado já existente de resetar TODOS os estados dependentes da imagem atual (`imagem_gerada_b64`, `candidatos_atual`, `anuncio_atual`, etc.) quando o usuário troca de arquivo de upload ou gera uma nova imagem do zero — um estado órfão colado numa imagem/anúncio errado é o bug mais fácil de introduzir aqui. Texto de interface sempre em português (BR). Nunca quebre as duas abas existentes (Gerador Automático / Modo Gratuito) ao adicionar ou alterar algo — valide rodando `streamlit run app.py` sempre que possível, e no mínimo garanta que o arquivo compila (`python -m py_compile Local_AI/estudio_shopee/app.py`). Disciplina de execução (igual ao executor genérico): leia `_sistema/PROTOCOLO_TAREFAS.md` e o arquivo da tarefa por completo antes de começar; se houver reprovação registrada (Verificação/Revisão), corrija exatamente o apontado antes de qualquer outra coisa; implemente; rode/valide apenas o que sua tarefa tocou (a suíte completa é responsabilidade do testador); commite ao final (`T-XXX: descrição`, incluindo o arquivo da tarefa atualizado); registre tudo nas seções corretas do arquivo da tarefa (Notas de execução) antes de terminar. Confinamento: não toque em NADA fora de `projetos/ia-hibrida-limpa/`.",
+        "tools": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Edit",
+          "Write",
+          "Bash",
+          "PowerShell"
+        ]
+      }
+    },
+    "maxTurns": 200,
+    "watchdogMs": 1200000
+  },
+  "estado": "falhou",
+  "criadoEm": "2026-07-30T13:19:03.972Z",
+  "iniciadoEm": "2026-07-30T13:19:03.980Z",
+  "sessionId": "096efa29-d4aa-4d19-ab1f-c43c2b78a9fb",
+  "cwd": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-005 completo (testador + revisor aprovaram) e T-003 passou 7/7 critérios do Ciclo 2. Sessão anterior caiu antes de commitar; recuperando estados.",
+        "Atualizando T-003 para em-revisao e T-005 para concluida, depois retoma pipeline."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-005 concluída (testador + revisor)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-003: 7/7 critérios Ciclo 2 aprovados"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "Sessão caiu antes de commitar estados"
+        }
+      ],
+      "custoUsd": 0.001676,
+      "naoDeu": false
+    },
+    {
+      "indice": 1,
+      "agente": "revisor",
+      "linhas": [
+        "T-003 aprovada no Ciclo 2 sem achados. Fix confirmado: 2 chamadas `resetar_anuncio()` adicionadas antes de `st.rerun()` em app.py (linhas 684 e 694).",
+        "T-004 liberada para execução — dependência satisfeita."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-003 promovida a concluida"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Ciclo 2 revisado: commit dca8c68 aprovado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "app.py: resetar_anuncio() em linhas 684, 694"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-004 pronta para dispatch (bloqueio removido)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Custo: ~$1.17 · 21 turnos · cache relido"
+        }
+      ],
+      "custoUsd": 0.005620999999999999,
+      "naoDeu": false
+    },
+    {
+      "indice": 2,
+      "agente": "streamlit-ui",
+      "linhas": [
+        "T-004 concluído: função `salvar_anuncio_txt` adicionada em `app.py` para gravar anúncios em `.txt` junto do PNG. Validação passou (compile + streamlit HTTP 200).",
+        "Tarefa movida para `em-teste`; commits registrados (submódulo `0963d60`, repo externo `3596a7b`)."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "Função `salvar_anuncio_txt` implementada"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Handler \"Aprovar Catálogo\" atualizado"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Validação: compile + streamlit OK"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commits: 0963d60 / 3596a7b"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-004 em-teste, pronto para testador"
+        }
+      ],
+      "custoUsd": 0.004965,
+      "naoDeu": false
+    },
+    {
+      "indice": 3,
+      "agente": "testador",
+      "linhas": [
+        "T-004 testada completamente: 4/4 critérios passaram (arquivo .txt, conteúdo atualizado, sem regressão, sintaxe OK).",
+        "Suíte existente 5/5 testes OK. Tarefa atualizada para em-revisao e pronta para revisão."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-004: 4 critérios aprovados"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Testes suite: 5/5 passaram"
+        },
+        {
+          "tipo": "feito",
+          "texto": "py_compile: sem erros"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Tarefa em-revisao"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-006 desdesbloqueada"
+        }
+      ],
+      "custoUsd": 0.0026490000000000003,
+      "naoDeu": false
+    },
+    {
+      "indice": 4,
+      "agente": "revisor",
+      "linhas": [
+        "Revisão de T-004 concluída: reprovada. Achado importante detectado em app.py:769-784 — handler executa antes da sincronização do session_state, capturando valor desatualizado do `.txt` em rerun combinado.",
+        "Reproduzido mecanicamente com AppTest, registrado na tarefa, frontmatter atualizado para em-execução."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-004 revisada (commit 0963d60)"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "app.py:769-784 handler/sync order"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Achado reproduzido com AppTest"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-004 status: em-execução"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Pronto para Ciclo 2"
+        }
+      ],
+      "custoUsd": 0.002772,
+      "naoDeu": false
+    },
+    {
+      "indice": 5,
+      "agente": "streamlit-ui",
+      "linhas": [
+        "Bug em `app.py` (handler \"Aprovar Catálogo\") reproduzido, corrigido e validado. Leitura de valores antigos resolvida com acesso direto às chaves dos widgets.",
+        "Suíte de regressão passou (5/5), critérios de aceite confirmados, commits finalizados em `Local_AI` e `ia-hibrida-limpa`."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "Bug reproduzido e causa raiz confirmada"
+        },
+        {
+          "tipo": "feito",
+          "texto": "app.py corrigido (widgets sincronizados)"
+        },
+        {
+          "tipo": "feito",
+          "texto": "4 critérios de aceite revalidados"
+        },
+        {
+          "tipo": "feito",
+          "texto": "test_gerador_anuncio.py: 5/5 OK"
+        },
+        {
+          "tipo": "feito",
+          "texto": "Commits 0f31e5b + b4d0537, T-004 Ciclo 2"
+        }
+      ],
+      "custoUsd": 0.005737,
+      "naoDeu": false
+    }
+  ],
+  "terminadoEm": "2026-07-30T13:52:03.647Z",
+  "erro": "Limite de uso da assinatura batido — retoma após 12:10pm (America/Sao_Paulo). Nada foi entregue; redispare quando a cota voltar.",
+  "resultado": {
+    "sessionId": "096efa29-d4aa-4d19-ab1f-c43c2b78a9fb",
+    "custoUsd": 1.1650907499999998,
+    "numTurnos": 21,
+    "erro": true,
+    "texto": "Nada mais a fazer agora — o revisor está rodando em background e não há outra tarefa `pronta` no projeto para paralelizar. Vou aguardar a notificação de conclusão para continuar o pipeline (dispatch do que vier a seguir: promoção de T-003 a `concluida`, promoção de T-004 a `pronta`, ou retrabalho se reprovado).",
+    "tokens": {
+      "entrada": 599,
+      "saida": 13819,
+      "cacheLeitura": 1004515,
+      "cacheEscrita": 124972,
+      "porModelo": {
+        "claude-haiku-4-5-20251001": {
+          "entrada": 519,
+          "saida": 11,
+          "cacheLeitura": 0,
+          "custoUsd": 0.0005740000000000001
+        },
+        "claude-sonnet-5": {
+          "entrada": 80,
+          "saida": 13808,
+          "cacheLeitura": 1004515,
+          "custoUsd": 1.16451675
+        }
+      }
+    },
+    "motivo": "limite-uso",
+    "reabreEm": "12:10pm (America/Sao_Paulo)"
+  }
+}

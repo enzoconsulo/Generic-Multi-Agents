@@ -1,0 +1,126 @@
+{
+  "id": "8db33007",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar shopee-rodizio",
+  "escopo": "projeto:shopee-rodizio",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "shopee-rodizio",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-25T09:22:39.960Z",
+  "iniciadoEm": "2026-08-25T09:22:39.962Z",
+  "terminadoEm": "2026-08-25T09:48:49.551Z",
+  "resultado": {
+    "despachos": 10,
+    "tarefasConcluidas": [
+      "T-007",
+      "T-010"
+    ],
+    "promovidas": [
+      "T-008"
+    ],
+    "paraReplanejar": [],
+    "bloqueadas": [],
+    "criteriosExecutados": 4,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-008",
+        "custoUsd": 4.3192637,
+        "despachos": 5,
+        "retrabalhoUsd": 2.9239213000000004,
+        "retrabalhoDespachos": 4,
+        "naturezas": [
+          "conformidade"
+        ],
+        "concluiu": false
+      },
+      {
+        "tarefa": "T-010",
+        "custoUsd": 1.6048423999999997,
+        "despachos": 3,
+        "retrabalhoUsd": 0.65676,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      },
+      {
+        "tarefa": "T-007",
+        "custoUsd": 0.6926711999999999,
+        "despachos": 2,
+        "retrabalhoUsd": 0.6926711999999999,
+        "retrabalhoDespachos": 2,
+        "naturezas": [],
+        "concluiu": true
+      }
+    ],
+    "impedimentos": [],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "foraDeAreas": [],
+    "marcos": [],
+    "saneadas": [],
+    "etapasFalhas": [
+      {
+        "tarefa": "T-008",
+        "agente": "testador"
+      }
+    ],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 6.6167773,
+      "custosObservados": [
+        0.6926711999999999,
+        1.6048423999999997
+      ],
+      "agentesEmVoo": 0
+    },
+    "projeto": "shopee-rodizio",
+    "custoEstimadoUsd": 6.6167773,
+    "texto": "Pipeline de shopee-rodizio: 10 despacho(s), 2 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nNada a retomar: a rodada esvaziou a fila do que era despachável.\nConcluídas: T-007, T-010.\nPromovidas: T-008.\nEtapas que falharam (tarefa fora desta rodada, as outras seguiram): T-008 no testador.\n4 critério(s) resolvidos por comando, sem gastar modelo.\nGasto estimado: US$ 6.62."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [
+        "T-007 e T-010 concluídas; T-008 reprovado em conformidade (erro de entendimento) e testador travou em 40 turnos.",
+        "2 arquivos alterados sem commit em src/shopee_rodizio e tests/test_ciclo.py — revisor não validou."
+      ],
+      "itens": [
+        {
+          "tipo": "feito",
+          "texto": "T-007 concluída"
+        },
+        {
+          "tipo": "feito",
+          "texto": "T-010 concluída"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-008 reprovado: conformidade"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "T-008 testador: 40 turnos atingidos"
+        },
+        {
+          "tipo": "atencao",
+          "texto": "2 arquivos sem commit pós-build"
+        }
+      ],
+      "custoUsd": 0.004907,
+      "naoDeu": false
+    }
+  ]
+}

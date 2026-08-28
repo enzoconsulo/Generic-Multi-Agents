@@ -1,0 +1,21 @@
+{
+  "id": "f367d76f",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar banco-imobiliario",
+  "escopo": "projeto:banco-imobiliario",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "banco-imobiliario",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "interrompido",
+  "criadoEm": "2026-08-23T20:28:18.061Z",
+  "iniciadoEm": "2026-08-23T20:28:18.064Z",
+  "terminadoEm": "2026-08-23T21:48:07.035Z",
+  "erro": "Etapa do executor abortada em T-061 (Operation aborted, 21:00); job ficou sem processo e foi encerrado à mão, do mesmo jeito que o saneamento de boot da fila faria."
+}

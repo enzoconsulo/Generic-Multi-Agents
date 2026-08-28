@@ -1,0 +1,95 @@
+{
+  "id": "949d26ea",
+  "tipo": "pipeline",
+  "titulo": "/trabalhar shopee-rodizio · retomada",
+  "escopo": "projeto:shopee-rodizio",
+  "usaClaude": true,
+  "params": {
+    "acao": "trabalhar",
+    "raiz": "C:\\Users\\enzoc\\OneDrive\\Documentos\\Gerador_de_projetos",
+    "projeto": "shopee-rodizio",
+    "modelo": "sonnet",
+    "reforco": "opus",
+    "tetoUsd": 8,
+    "watchdogMs": 1200000
+  },
+  "estado": "concluido",
+  "criadoEm": "2026-08-25T18:35:11.634Z",
+  "iniciadoEm": "2026-08-25T18:35:11.639Z",
+  "terminadoEm": "2026-08-25T18:46:05.483Z",
+  "resultado": {
+    "despachos": 3,
+    "tarefasConcluidas": [],
+    "promovidas": [],
+    "paraReplanejar": [
+      "T-009"
+    ],
+    "bloqueadas": [],
+    "criteriosExecutados": 2,
+    "criteriosSemComando": [],
+    "criteriosQuebrados": [],
+    "custoPorTarefa": [
+      {
+        "tarefa": "T-009",
+        "custoUsd": 1.8572646,
+        "despachos": 2,
+        "retrabalhoUsd": 1.8572646,
+        "retrabalhoDespachos": 2,
+        "naturezas": [
+          "mecanica"
+        ],
+        "concluiu": false
+      }
+    ],
+    "impedimentos": [
+      {
+        "tarefa": "T-009",
+        "motivo": "critério com comando impossível — `verificar: grep -c Restart=on-failure systemd/shopee-rodizio.service` (linha 46) usa `grep`, que não resolve no shell não-interativo (PowerShell/cmd) da passada mecânica; troque por `findstr` ou `Select-String` (comando abaixo). O conteúdo entregue está correto e não é o que reprova."
+      }
+    ],
+    "tentativasIgnoradas": [],
+    "estouros": [],
+    "foraDeAreas": [
+      {
+        "tarefa": "T-009",
+        "agente": "executor",
+        "arquivos": [
+          "test-fase2.log"
+        ]
+      },
+      {
+        "tarefa": "T-009",
+        "agente": "executor-reforcado",
+        "arquivos": [
+          "test-fase2.log"
+        ]
+      }
+    ],
+    "marcos": [],
+    "saneadas": [
+      "T-009"
+    ],
+    "etapasFalhas": [],
+    "documentou": false,
+    "encerrouPor": "sem-trabalho",
+    "orcamento": {
+      "tetoUsd": 8,
+      "gastoUsd": 3.501110400000001,
+      "custosObservados": [],
+      "agentesEmVoo": 0
+    },
+    "projeto": "shopee-rodizio",
+    "custoEstimadoUsd": 3.501110400000001,
+    "texto": "Pipeline de shopee-rodizio: 3 despacho(s), 0 tarefa(s) concluída(s).\nNão há mais tarefa despachável (o backlog restante depende de algo).\nNada a retomar: a rodada esvaziou a fila do que era despachável.\nSaneadas na abertura (sobras sem Notas): T-009.\n2 critério(s) resolvidos por comando, sem gastar modelo.\nMUTEX FURADO — executor alterou, em T-009, arquivo fora das `areas` declaradas: test-fase2.log. Não entra no commit da tarefa nem no diff do revisor; está anotado nas Notas. Se a alteração era legítima, a `area` da tarefa é que está incompleta.\nMUTEX FURADO — executor-reforcado alterou, em T-009, arquivo fora das `areas` declaradas: test-fase2.log. Não entra no commit da tarefa nem no diff do revisor; está anotado nas Notas. Se a alteração era legítima, a `area` da tarefa é que está incompleta.\nIMPEDIMENTO declarado em T-009 — critério com comando impossível — `verificar: grep -c Restart=on-failure systemd/shopee-rodizio.service` (linha 46) usa `grep`, que não resolve no shell não-interativo (PowerShell/cmd) da passada mecânica; troque por `findstr` ou `Select-String` (comando abaixo). O conteúdo entregue está correto e não é o que reprova.\nReplanejadas automaticamente (esgotaram os ciclos): T-009. O planejador quebrou ou reescreveu a abordagem; as substitutas entram na próxima rodada.\nGasto estimado: US$ 3.50."
+  },
+  "resumos": [
+    {
+      "indice": 0,
+      "agente": null,
+      "linhas": [],
+      "itens": [],
+      "custoUsd": 0.002103,
+      "naoDeu": true
+    }
+  ]
+}
