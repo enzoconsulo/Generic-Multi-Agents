@@ -197,8 +197,17 @@ planejado, construído, verificado, revisado e entregue — sem intervenção.
 
 ---
 
-**Total estimado: ~60 a 70 tarefas** de 30–90 minutos — a faixa que a própria fábrica usa.
-Os números são para dimensionar, não são compromisso; firmá-los é trabalho do planejador.
+**Total: 54 tarefas**, decompostas e escritas — não estimadas. Estão em
+`_sistema/v2/tarefas/`, uma por arquivo, no formato do protocolo da fábrica, com objetivo,
+contexto (o "como fazer", com as armadilhas já mapeadas) e critérios de aceite executáveis.
+
+O índice linear, com as dependências, é `_sistema/v2/ROTEIRO.md`. Ele e as tarefas saem do
+mesmo gerador (`_sistema/v2/gerar-tarefas.py`), então não podem divergir — e o gerador
+**nunca sobrescreve tarefa já executada**, porque estado não se regenera.
+
+**Para começar numa máquina nova**, cole `prompt_inicial.txt` (na raiz) numa sessão nova do
+Claude Code: ele explica o projeto, a ordem de leitura, o loop de execução e as regras que
+não se negociam.
 
 ---
 

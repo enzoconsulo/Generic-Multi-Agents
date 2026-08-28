@@ -1,0 +1,234 @@
+═══════════════════════════════════════════════════════════════════════════════
+ PROMPT INICIAL — Fábrica de Software Multi-Agente v2 (Elixir/OTP)
+ Cole isto numa sessão nova do Claude Code, na raiz deste repositório.
+ Escrito em 2026-08-28. Autor do projeto: Enzo Consulo (TCC).
+═══════════════════════════════════════════════════════════════════════════════
+
+
+── 1. O QUE É ESTE PROJETO ────────────────────────────────────────────────────
+
+Este repositório é uma FÁBRICA DE SOFTWARE MULTI-AGENTE: um sistema que recebe a
+descrição de um projeto em linguagem natural e o constrói de ponta a ponta, com
+agentes especializados que planejam, implementam, verificam, revisam e
+documentam. A intervenção humana obrigatória acontece uma vez só, no pedido.
+
+Ela é o Trabalho de Conclusão de Curso do Enzo, e existe em duas versões:
+
+  • v1 — EXISTE, RODA E ESTÁ EM PRODUÇÃO. TypeScript/Node, ~17.400 linhas, um
+    painel web, 89 tarefas vivas em 3 projetos, 139 execuções gravadas. É o
+    protótipo que provou o desenho. NÃO MEXA NELA sem pedido explícito.
+
+  • v2 — A REIMPLEMENTAÇÃO EM ELIXIR/OTP. É o que vamos construir. Hoje ela é
+    um diretório vazio: existe planejamento completo, e nenhuma linha de código.
+
+A TESE, que é o que o TCC defende:
+
+    Um sistema multi-agente não falha por escrever mal — falha por governar
+    mal. E governança escrita em prosa dentro de um prompt é governança
+    OPCIONAL. A v2 move para o compilador, para a árvore de supervisão e para
+    o esquema do banco tudo o que hoje é frase imperativa dirigida a um modelo.
+
+    A v2 não precisa ser mais esperta que a v1. Precisa ser mais difícil de
+    operar errado.
+
+Toda decisão de arquitetura desce dessa frase. Quando estiver em dúvida entre
+duas abordagens, escolha a que torna a regra IMPOSSÍVEL de violar em vez da que
+pede para o modelo se comportar.
+
+
+── 2. OBJETIVO E METAS ────────────────────────────────────────────────────────
+
+OBJETIVO FINAL: um projeto inteiro planejado, construído, verificado, revisado e
+entregue sem intervenção humana, com o custo acompanhado numa tela — rodando em
+um computador comum (perfil alvo declarado: 8 GB de RAM, 4 núcleos).
+
+METAS INTERMEDIÁRIAS, seis versões, cada uma usável:
+
+    v0.1  A fundação que se prova sozinha      →  a suíte roda sem rede e sem cota
+    v0.2  Um agente faz uma tarefa             →  + o prefixo é escrito 1× e lido depois
+    v0.3  A linha de produção                  →  ← DAQUI EM DIANTE JÁ É UMA FÁBRICA
+    v0.4  A fábrica que aguenta queda          →  matar uma tarefa não afeta as outras
+    v0.5  A fábrica que lembra    (OPCIONAL)   →  o agente cita a decisão anterior
+    v1.0  A fábrica completa                   →  projeto inteiro sem intervenção
+
+São 54 tarefas atômicas, já escritas, em `_sistema/v2/tarefas/`.
+
+E a meta que fecha o TCC: comparar quatro números da v2 contra a linha de base
+medida da v1 — proporção de despacho desperdiçado, custo por tarefa concluída,
+contexto por despacho, e o que se perde ao matar um agente em voo. Sem essa
+comparação o trabalho termina numa afirmação em vez de num resultado.
+
+
+── 3. LEIA ESTES ARQUIVOS, NESTA ORDEM ────────────────────────────────────────
+
+Não pule. Cada um responde uma pergunta diferente, e confundi-los é o jeito mais
+rápido de redecidir algo que já custou uma sessão inteira.
+
+  1. `_sistema/PLANO_V2.md`
+     → as seis versões, o que cada uma entrega, e como montar a máquina.
+
+  2. `_sistema/v2/ROTEIRO.md`
+     → as 54 tarefas em ordem, com dependências. É o índice de execução.
+
+  3. `_sistema/DECISOES_FECHADAS.md`
+     → O QUE NÃO SE REABRE. Leia antes de propor qualquer mudança de rumo.
+       Cada item ali custou uma sessão para ser respondido.
+
+  4. `_sistema/MIGRACAO_V2.md`
+     → a análise: a v1 medida, os 19 mecanismos que ela tem e a documentação
+       não descreve, e a economia real. É o "por quê" de quase tudo.
+
+  5. `_sistema/AMBIENTE_V2.md`
+     → o que instalar e as SEIS ARMADILHAS que já custaram tempo. Leia ANTES
+       de montar o ambiente, não depois.
+
+  6. Os `.docx` na raiz (`-7` é a documentação completa)
+     → a arquitetura da v2 como apresentada à banca. São binários; para ler,
+       extraia o texto com python-docx.
+
+  7. `CLAUDE.md` da raiz
+     → a constituição da v1. Vale para operar a v1, não para construir a v2.
+
+
+── 4. ANTES DE ESCREVER CÓDIGO: MONTE O AMBIENTE ──────────────────────────────
+
+Se esta é uma máquina nova, o ambiente não veio junto — instalação não se copia.
+Siga `_sistema/AMBIENTE_V2.md`, seção "Ordem no PC novo". Resumo:
+
+    1. Erlang/OTP 29
+    2. Elixir 1.20.x — O BUILD DO OTP 29 (`elixir-otp-29.zip`), não outro.
+       Confira o .sha256sum. Descasamento de OTP foi problema real aqui.
+    3. PostgreSQL 18 — e CONFIRME que existe `lib\postgres.lib` e que o
+       cluster foi inicializado. Uma instalação quebrada responde normalmente
+       a `psql --version`; isso não prova nada.
+    4. Visual Studio Build Tools, workload C++ (só para compilar o pgvector)
+    5. `_sistema/ferramentas/instalar-pgvector.ps1 -PgRoot <raiz> -Versao v0.8.6`
+    6. `_sistema/ferramentas/banco-v2.ps1 conferir`
+       → tem de imprimir "pgvector operante"
+    7. Claude Code CLI autenticado (é o operário padrão da v2)
+
+Só depois disso comece a T-001.
+
+
+── 5. COMO TRABALHAR — O LOOP, UMA TAREFA POR VEZ ─────────────────────────────
+
+Este é o procedimento. Repita 54 vezes.
+
+  PASSO 1 — Escolha a próxima tarefa.
+    Abra `_sistema/v2/ROTEIRO.md` e pegue a primeira tarefa cujo `status:` ainda
+    é `backlog` E cujas dependências estejam todas `concluida`.
+
+  PASSO 2 — Leia o arquivo da tarefa INTEIRO.
+    `_sistema/v2/tarefas/T-0NN-*.md`. Ele traz Objetivo, Contexto (que é o
+    "como fazer", com as armadilhas já mapeadas) e os Critérios de aceite.
+
+  PASSO 3 — Faça o trabalho.
+    Só o que a tarefa pede. Não amplie escopo. Se descobrir que falta algo,
+    ANOTE nas Notas de execução e siga — tarefa nova é decisão do Enzo.
+
+  PASSO 4 — Rode os critérios de aceite, um a um.
+    Os que têm a linha `verificar: <comando>` são executáveis: rode o comando
+    de verdade e cole o resultado na seção Verificação. Os sem comando são de
+    inspeção: abra o arquivo e confira.
+
+  PASSO 5 — Registre e commite.
+    Preencha "Notas de execução" (o que fez, arquivos, comandos, hash do
+    commit). Mude `status:` para `concluida` e `atualizada:` para a data de
+    hoje. Commite com a mensagem `T-NNN: <título da tarefa>`, incluindo o
+    arquivo da tarefa.
+
+  PASSO 6 — `/clear` e volte ao passo 1.
+    Uma sessão por tarefa. Isto NÃO é cerimônia: o custo de uma sessão cresce
+    ao quadrado, porque cada volta relê tudo que veio antes. Duas tarefas na
+    mesma sessão custam mais que duas sessões separadas. Foi medido na v1.
+
+QUANDO UMA TAREFA FALHA:
+    Tente no máximo 3 vezes. Na 4ª, mude `status:` para `bloqueada`, escreva o
+    motivo na tarefa, e PARE para falar com o Enzo. Não invente uma solução
+    diferente da planejada sem avisar — o plano é o que o professor vai ler.
+
+QUANDO O CRITÉRIO ESTIVER ERRADO (e não a entrega):
+    Acontece. Se o comando de `verificar:` for impossível nesta máquina ou
+    estiver mal escrito, NÃO force a entrega para satisfazê-lo e NÃO reescreva
+    o critério sozinho: diga isso explicitamente ao Enzo. Na v1 um critério
+    escrito de cabeça custou 4 ciclos e US$ 12,90 com o código correto desde o
+    primeiro. Critério é a única coisa que o construtor não pode consertar.
+
+
+── 6. REGRAS QUE NÃO SE NEGOCIAM ──────────────────────────────────────────────
+
+Todas já foram decididas e estão em `_sistema/DECISOES_FECHADAS.md` com o
+motivo. Não as reabra sem um fato novo.
+
+  • IDIOMA: tudo em português — módulo, função, variável, mensagem de erro,
+    commit. `Fabrica.Tarefa`, nunca `Fabrica.Task`.
+
+  • O BANCO É A VERDADE. O agente NUNCA escreve estado. Ele reporta por
+    `registrar_resultado`; quem muda status e conta tentativas é o sistema. A
+    ferramenta de mudar status não existe para agente nenhum.
+
+  • O GIT FICA, INTEIRO. Código versionado, uma tarefa = um commit, markdown
+    gerado a partir do banco e commitado. Recuperação tem duas fontes: banco
+    e árvore git.
+
+  • O OPERÁRIO É DUPLO. `Operario.ClaudeCLI` é o PADRÃO (roda na assinatura,
+    consome cota, não gera fatura). `Operario.MessagesAPI` existe para provar
+    o ganho de cache, e só ele custa dinheiro de verdade.
+
+  • A FÁBRICA CONSOME COTA, NÃO PAGA POR TOKEN. Todo valor em dólar que o
+    sistema registra é estimativa contábil. Não trate como fatura.
+
+  • PERFIL ALVO: 8 GB de RAM. A memória semântica (v0.5) é OPCIONAL e é a
+    única parte que carrega modelo. Nada antes dela pode exigir máquina forte.
+
+  • QUEM CONSTRÓI NUNCA APROVA. Verificador e revisor não recebem a ferramenta
+    de escrever. É impossibilidade, não recomendação.
+
+  • NUNCA CORTE UM AGENTE EM VOO POR CUSTO. O teto impede COMEÇAR o que não
+    cabe; interromper no meio paga igual e não entrega nada.
+
+
+── 7. O QUE AINDA DEPENDE DE DECISÃO DO ENZO ──────────────────────────────────
+
+Não decida sozinho. Pergunte quando chegar a hora.
+
+  1. Quem constrói a v2 — a própria v1, ou o Claude Code direto?
+     (construir pela v1 é o teste mais duro possível, e é material de TCC;
+      mas amarra o cronograma à estabilidade da v1)
+
+  2. Onde a v2 nasce. Recomendação registrada: repositório PRÓPRIO, ao lado,
+     com a v1 intocada operando os 3 projetos atuais. A virada acontece só no
+     marco da v1.0, sobre um projeto novo e pequeno.
+
+  3. Se a v0.5 (memória semântica) entra ou fica de fora nesta entrega.
+
+
+── 8. PARA O PROFESSOR / BANCA ────────────────────────────────────────────────
+
+O desenvolvimento é rastreável do começo ao fim, e de propósito:
+
+  • O PLANEJAMENTO está em `_sistema/PLANO_V2.md` e `_sistema/MIGRACAO_V2.md`,
+    ambos escritos ANTES da primeira linha de código e versionados em git com
+    data.
+
+  • AS DECISÕES estão em `_sistema/DECISOES_FECHADAS.md`, cada uma com o
+    motivo e com o que a provocou — várias nasceram de medição, não de opinião.
+
+  • AS 54 TAREFAS estão em `_sistema/v2/tarefas/`, cada uma com objetivo,
+    contexto, critérios de aceite executáveis, e — depois de executada — o
+    relatório do que foi feito e o resultado de cada critério.
+
+  • O PROGRESSO é o `status:` de cada tarefa e o histórico de commits: uma
+    tarefa = um commit, com a mensagem `T-NNN: título`.
+
+  • A COMPARAÇÃO FINAL fica em `_gestao/ENTREGA.md`, confrontando a v2 com a
+    linha de base medida da v1 — inclusive nos números que piorarem, se
+    piorarem. Um resultado misto e honesto vale mais que um resultado só com
+    o que deu certo.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ COMECE AQUI: leia os arquivos da seção 3, confirme o ambiente da seção 4, e
+ então abra `_sistema/v2/tarefas/T-001-scaffold.md` e execute a T-001.
+ Antes de começar, me diga em uma frase o que você entendeu que vai construir.
+═══════════════════════════════════════════════════════════════════════════════
