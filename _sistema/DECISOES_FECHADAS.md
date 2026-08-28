@@ -74,3 +74,30 @@ rotativo por natureza; regra e decisão não podem morar nele.)
   número citado sem o arquivo de onde saiu vira premissa que ninguém consegue conferir.
   **Reabrir SÓ SE** um `.log.jsonl` mostrar verificadores consecutivos com espera real — o
   instrumento para isso é contar pares de etapas `verificador` sem nada entre elas.
+
+## Migração para a v2 em Elixir/OTP
+
+Análise completa em `_sistema/MIGRACAO_V2.md`; o projeto da v2 está nos `.docx` da raiz.
+As duas decisões abaixo foram fechadas pelo usuário em **2026-08-28**.
+
+- **A fábrica NÃO paga por token — ela consome COTA.** OAuth, `subscriptionType: pro`,
+  `hasExtraUsageEnabled: false`, sem `ANTHROPIC_API_KEY`. Todo valor em dólar registrado
+  pelo sistema (`US$ 22,55` numa rodada, `R$ 550` numa noite) é **estimativa contábil de
+  tokens, não fatura**. Não trate esses números como dinheiro gasto, e não proponha
+  "economia" que só faça sentido contra uma fatura por API. O que aperta de verdade é a
+  parede de cota — daí `ehLimiteDeUso`, `horaDeReabertura` e o rearme do piloto.
+- **O operário da v2 é DUPLO, com padrão no CLI.** `behaviour Fabrica.Operario` com
+  `Falso` (F1, marco), `ClaudeCLI` (F2, **padrão de operação**, roda na assinatura) e
+  `MessagesAPI`/Req (F2, controle byte a byte do `cache_control`, exercitado só em
+  orçamento pequeno e declarado para provar o ganho). **Não reabra como "Req ou SDK"** —
+  a decisão foi não escolher, e o motivo é que ir só de Req empilha três apostas numa fase
+  (laço novo + ferramentas novas + cobrança nova). Reabrir SÓ SE o `ClaudeCLI` se mostrar
+  incapaz de sustentar a máquina de estados, com o caso registrado.
+- **Na v2 o banco é a verdade; o agente reporta por FERRAMENTA, nunca escrevendo estado.**
+  `registrar_resultado` grava na mesma transação da transição; a ferramenta de mudar status
+  não existe para agente nenhum — impossibilidade, não regra pedida no prompt. É a
+  generalização do que a v1 já tinha descoberto com `ultima-reprovacao: # NÃO ESCREVA.
+  Campo do MOTOR`. O markdown vira artefato GERADO e commitado, para leitura humana.
+  Consequências já aceitas: os 12 prompts são reescritos, o importador das 89 tarefas é
+  tarefa explícita da F3, e **backup do Postgres vira requisito da F1** (na v1 o git do
+  projeto cobria isso de graça).
