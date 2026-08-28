@@ -108,6 +108,16 @@ As duas decisões abaixo foram fechadas pelo usuário em **2026-08-28**.
   de `tool_use`/`tool_result` erra o cache em silêncio); o **mínimo cacheável por modelo**,
   que não é monotônico — 512 no Opus 5, 1024 no Sonnet 5, **4096 no Haiku 4.5**, e o
   `testador` roda em Haiku; e **requisições paralelas idênticas não compartilham cache**.
+- **PERFIL ALVO DA v2: 8 GB de RAM e 4 núcleos.** Pedido do usuário em 28/08 ("leve, rodando
+  em qualquer computador médio"). É restrição de arquitetura, não preferência: desenvolver na
+  máquina forte é ótimo, **depender dela não**. Medido: BEAM, PostgreSQL e pgvector juntos
+  pesam pouco (o índice HNSW de 20k × 384 dim não moveu a memória livre). **A única peça
+  pesada do desenho inteiro é o modelo de embedding local.**
+- **O EMBEDDING TAMBÉM É ADAPTADOR, e a memória semântica é OPCIONAL.** `behaviour
+  Fabrica.Embedder` com `Falso` (v0.1, determinístico por hash — é o que a suíte usa para
+  sempre), `Servico` (v0.5, padrão em máquina modesta) e `Local` (v0.5, Bumblebee, opcional).
+  **Nenhuma versão anterior à v0.5 carrega modelo nenhum**, e sem a v0.5 a fábrica funciona
+  inteira — só não cita precedente. Não reabra como "precisa de GPU/muita RAM": não precisa.
 - **O GIT FICA, inteiro, na v2** — está explícito nos dois documentos ("reconstrói o mundo
   lendo o banco **e o git**"; "tarefa concluída vira um commit próprio"; "a indexação roda
   ao commitar"). A decisão do banco muda **uma coisa só**: o markdown deixa de ser onde o
