@@ -6,7 +6,7 @@ versao: v0.1
 status: backlog
 prioridade: alta
 dependencias: [T-001]
-areas: [prioridade/linha-de-base/extrair.exs, prioridade/linha-de-base/LINHA_DE_BASE.md, test/fabrica/linha_de_base_test.exs]
+areas: [priv/linha-de-base/extrair.exs, priv/linha-de-base/LINHA_DE_BASE.md, test/fabrica/linha_de_base_test.exs]
 tentativas: 0
 criada: 2026-08-28
 atualizada: 2026-08-28

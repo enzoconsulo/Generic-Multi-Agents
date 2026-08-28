@@ -22,7 +22,7 @@ Esta e a ultima versao, e ela e a entrega do TCC. O planejamento dela foi escrit
 existir qualquer dado; agora existem cinco versoes de dados reais.
 
 **Releia:** `_sistema/PLANO_V2.md` (bloco da v1.0), `_sistema/MIGRACAO_V2.md` secao 7 (o que
-a v1 acrescenta a esta versao), e `prioridade/linha-de-base/LINHA_DE_BASE.md` (T-008).
+a v1 acrescenta a esta versao), e `priv/linha-de-base/LINHA_DE_BASE.md` (T-008).
 
 **Confira e ajuste:**
 

@@ -1,13 +1,71 @@
-# Ambiente da v2 — o que está montado nesta máquina
+# Ambiente da v2 — o que está montado
 
 **Montado e provado em 2026-08-28.** Este arquivo é o estado real do ambiente, não a
 intenção. Quem retomar o projeto lê isto antes de instalar qualquer coisa.
 
 Análise que motivou: `_sistema/MIGRACAO_V2.md`, seção 5.
 
+> **Há DUAS máquinas.** A seção 0 é a máquina 2 (a que está construindo a v2); as seções
+> 1 a 4 descrevem a máquina 1, onde o ambiente foi montado primeiro. **As armadilhas da
+> seção 5 e as medições de pgvector da seção 4 valem para as duas** — foram medidas na
+> máquina mais apertada e passaram lá. Não apague a máquina 1: ela é a origem das medições
+> e é onde os `*.log.jsonl` da v1 existem.
+
 ---
 
-## 1. Em uma tela
+## 0. Máquina 2 — `C:\Users\enzoconsulo`, montada em 2026-08-28
+
+Montada do zero seguindo a seção "Ordem no PC novo", com **um desvio deliberado** (Elixir/OTP,
+abaixo). Provada pelo `banco-v2.ps1 conferir` imprimindo `pgvector operante`.
+
+| peça | versão | onde |
+|---|---|---|
+| Erlang/OTP | **28.1** (erts-16.1) | `~\.elixir-install\installs\otp\28.1` |
+| Elixir | **1.19.4, compilado com OTP 28** | `~\.elixir-install\installs\elixir\1.19.4-otp-28` |
+| Phoenix installer | **1.8.13** | `~\.mix\archives\phx_new-1.8.13` |
+| PostgreSQL | **18.4** (msvc-19.44) | `C:\pgsql\18` — 156 MB, só `bin/include/lib/share` |
+| dados do cluster | — | `C:\pgsql\dados`, 127.0.0.1:5432, auth `trust` |
+| pgvector | **0.8.6**, compilado com MSVC **19.51** (VS 2026 BT 18.7.3) | dentro do PostgreSQL acima |
+| banco de trabalho | — | `fabrica_v2_dev`, com `CREATE EXTENSION vector` feito |
+| máquina | 15,98 GB RAM · 4 núcleos · 45 GB livres em C: | Windows 10 Pro 19045 |
+
+### O desvio: esta máquina fica no OTP 28 / Elixir 1.19.4
+
+A seção 4 manda OTP 29 + Elixir 1.20.x. **Aqui não.** Decisão do Enzo em 28/08, com o motivo:
+
+- **o par instalado é CASADO** (1.19.4-otp-28 sobre OTP 28.1). A armadilha da seção 2 era
+  *descasamento* — Elixir compilado para um OTP rodando sobre outro. Não é o caso aqui;
+- **nenhuma das 58 tarefas exige OTP 29**;
+- **subir custaria um comando ELEVADO.** As entradas de Elixir/OTP nesta máquina estão
+  duplicadas no PATH de **Machine** *e* de **User**, e Machine resolve primeiro. Instalar
+  OTP 29 sem editar o PATH de Machine (que exige admin) deixaria o `elixir` resolvendo para
+  1.19.4 assim mesmo — um upgrade invisível, que é pior que nenhum.
+
+**Descartado de propósito:** apontar uma junction de `otp\28.1` para `otp\29.0.5`. Funciona
+sem admin e é mentira em disco — um diretório chamado `28.1` com OTP 29 dentro.
+
+> Se um dia o OTP 29 for necessário: os instaladores já baixados ficaram em
+> `%TEMP%\v2-downloads` (`otp29.exe` 148 MB, `elixir.zip` = v1.20.4-otp-29). E lembre que
+> **o `hex` e o `phx_new` são por versão de OTP** — trocar o OTP obriga a reinstalar os dois.
+
+### O que mudou na ferramenta por causa desta máquina
+
+`instalar-pgvector.ps1` procurava o `vcvars64.bat` numa **lista fixa** de caminhos (VS 2019 e
+2022). Esta máquina tem **VS 2026 Build Tools** em
+`C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools`, e o script abortava com
+"vcvars64.bat nao encontrado" **tendo o compilador instalado e funcionando**. Passou a usar o
+`vswhere` (forma oficial e independente de versão), com a lista fixa como reserva.
+
+### Nota de toolchain, atualizada
+
+A seção 4 registra a mistura MSVC **19.29** (pgvector) × **19.44** (postgres) funcionando.
+Aqui a distância é maior — **19.51 × 19.44** — e **também funciona**: linkou, carregou, e o
+`conferir` passou com a ordenação por cosseno correta. Mesma UCRT. Registrado porque era
+risco real e foi conferido, não presumido.
+
+---
+
+## 1. Em uma tela — máquina 1 (`C:\Users\enzoc`)
 
 | peça | versão | onde | como se usa |
 |---|---|---|---|

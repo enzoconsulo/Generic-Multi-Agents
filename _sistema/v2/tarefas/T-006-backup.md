@@ -23,7 +23,7 @@ trabalho" passa a exigir dump — e e o tipo de coisa que so se descobre faltand
 perder. Ver `MIGRACAO_V2.md`, 6.2.
 
 `mix fabrica.backup` chama `pg_dump` com `--format=custom` para um arquivo em
-`prioridade/backups/AAAA-MM-DD-HHMMSS.dump` (o diretorio entra no `.gitignore` — dump nao
+`priv/backups/AAAA-MM-DD-HHMMSS.dump` (o diretorio entra no `.gitignore` — dump nao
 se versiona). `mix fabrica.restaurar <arquivo>` chama `pg_restore --clean --if-exists`.
 
 Resolva o caminho do `pg_dump` por configuracao (`config :fabrica, :pg_bin`), com o
@@ -43,7 +43,7 @@ passar sem testar nada.
       `verificar: mix test test/mix/backup_test.exs`
 - [ ] Sem `pg_dump` disponivel, o teste e PULADO com mensagem clara, nunca falha em silencio.
       `verificar: mix test test/mix/backup_test.exs`
-- [ ] `prioridade/backups/` esta no `.gitignore` (inspecionavel).
+- [ ] `priv/backups/` esta no `.gitignore` (inspecionavel).
 
 ## Notas de execucao
 

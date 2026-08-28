@@ -71,16 +71,34 @@ $versaoServidor = (& "$PgRoot\bin\postgres.exe" --version)
 Write-Host "  servidor: $versaoServidor"
 
 Passo 'Localizando o MSVC (vcvars64.bat)'
+# PRIMEIRO o vswhere, que e a forma OFICIAL e independente de versao: ele vem com o
+# instalador do Visual Studio e sabe onde cada instalacao esta, inclusive as que ainda
+# nao existiam quando este script foi escrito. A lista fixa abaixo ficou como reserva.
+# POR QUE: a lista fixa so conhecia 2019 e 2022. Numa maquina com VS 2026 Build Tools
+# (em `...\Microsoft Visual Studio\18\BuildTools`) o script abortava com
+# "vcvars64.bat nao encontrado" tendo o compilador instalado e funcionando.
 $vcvars = $null
-$candidatos = @(
-  'C:\Program Files\Microsoft Visual Studio\2022\BuildTools',
-  'C:\Program Files\Microsoft Visual Studio\2022\Community',
-  'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools',
-  'C:\Program Files (x86)\Microsoft Visual Studio\2019\Community'
-)
-foreach ($c in $candidatos) {
-  $p = Join-Path $c 'VC\Auxiliary\Build\vcvars64.bat'
-  if (Test-Path $p) { $vcvars = $p; break }
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (Test-Path $vswhere) {
+  $raiz = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+  if ($raiz) {
+    $p = Join-Path $raiz.Trim() 'VC\Auxiliary\Build\vcvars64.bat'
+    if (Test-Path $p) { $vcvars = $p }
+  }
+}
+if (-not $vcvars) {
+  $candidatos = @(
+    'C:\Program Files\Microsoft Visual Studio\2022\BuildTools',
+    'C:\Program Files\Microsoft Visual Studio\2022\Community',
+    'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools',
+    'C:\Program Files (x86)\Microsoft Visual Studio\2019\Community'
+  )
+  foreach ($c in $candidatos) {
+    $p = Join-Path $c 'VC\Auxiliary\Build\vcvars64.bat'
+    if (Test-Path $p) { $vcvars = $p; break }
+  }
 }
 if (-not $vcvars) { throw 'vcvars64.bat nao encontrado — instale os Build Tools do Visual Studio (workload C++).' }
 Write-Host "  $vcvars"

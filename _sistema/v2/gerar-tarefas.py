@@ -328,7 +328,7 @@ trabalho" passa a exigir dump — e e o tipo de coisa que so se descobre faltand
 perder. Ver `MIGRACAO_V2.md`, 6.2.
 
 `mix fabrica.backup` chama `pg_dump` com `--format=custom` para um arquivo em
-`prioridade/backups/AAAA-MM-DD-HHMMSS.dump` (o diretorio entra no `.gitignore` — dump nao
+`priv/backups/AAAA-MM-DD-HHMMSS.dump` (o diretorio entra no `.gitignore` — dump nao
 se versiona). `mix fabrica.restaurar <arquivo>` chama `pg_restore --clean --if-exists`.
 
 Resolva o caminho do `pg_dump` por configuracao (`config :fabrica, :pg_bin`), com o
@@ -345,7 +345,7 @@ passar sem testar nada.
         ("`mix fabrica.backup` grava um arquivo de dump e imprime o caminho.", "mix test test/mix/backup_test.exs"),
         ("O ciclo backup -> apagar -> restaurar devolve os mesmos dados (teste de round trip).", "mix test test/mix/backup_test.exs"),
         ("Sem `pg_dump` disponivel, o teste e PULADO com mensagem clara, nunca falha em silencio.", "mix test test/mix/backup_test.exs"),
-        ("`prioridade/backups/` esta no `.gitignore` (inspecionavel).", None),
+        ("`priv/backups/` esta no `.gitignore` (inspecionavel).", None),
     ],
 )
 
@@ -388,7 +388,7 @@ de quem escreve a tarefa — que as tarefas seguintes copiam para a linha `verif
 
 tarefa(
     "v0.1", "linha-de-base", "Linha de base de medicao, extraida dos 139 jobs da v1", ["v0.1:scaffold"],
-    ["prioridade/linha-de-base/extrair.exs", "prioridade/linha-de-base/LINHA_DE_BASE.md", "test/fabrica/linha_de_base_test.exs"],
+    ["priv/linha-de-base/extrair.exs", "priv/linha-de-base/LINHA_DE_BASE.md", "test/fabrica/linha_de_base_test.exs"],
     """
 Extrair dos jobs ja gravados pela v1 os numeros contra os quais a v2 vai ser comparada, e
 grava-los num documento. Sem isso o TCC fecha numa afirmacao em vez de num resultado.
@@ -1704,7 +1704,7 @@ secao 4 (o que ja foi medido de pgvector), e `_sistema/MIGRACAO_V2.md` secao 5.
      offline, e nao manda o conteudo do projeto para fora.
   3. **Se nao couber, `Embedder.Servico` vira o padrao** — e ai ha custo externo por chamada,
      que precisa ser dito ao Enzo ANTES de comecar, nao depois.
-  4. **Ha corpus suficiente para indexar?** A T-032 importou as 89 tarefas da v1. Confira
+  4. **Ha corpus suficiente para indexar?** A T-033 importou as 89 tarefas da v1. Confira
      quantos trechos isso gera de verdade. Se forem poucas centenas, a avaliacao de
      recuperacao (T-044) precisa de um conjunto de perguntas menor e mais honesto — e vale
      dizer isso em vez de fabricar um numero bonito.
@@ -1872,7 +1872,7 @@ melhor — "quais tarefas estao bloqueadas" e um WHERE, nao uma pergunta em ling
 
 tarefa(
     "v0.5", "avaliacao-recuperacao", "Avaliacao da qualidade da recuperacao", ["v0.5:busca-hibrida"],
-    ["prioridade/avaliacao/perguntas.exs", "test/fabrica/memoria/avaliacao_test.exs"],
+    ["priv/avaliacao/perguntas.exs", "test/fabrica/memoria/avaliacao_test.exs"],
     """
 Um conjunto de perguntas com resposta conhecida, medido a cada mudanca na indexacao — e a
 regra de que recuperacao pior que a linha de base nao entra no prompt.
@@ -1946,7 +1946,7 @@ Esta e a ultima versao, e ela e a entrega do TCC. O planejamento dela foi escrit
 existir qualquer dado; agora existem cinco versoes de dados reais.
 
 **Releia:** `_sistema/PLANO_V2.md` (bloco da v1.0), `_sistema/MIGRACAO_V2.md` secao 7 (o que
-a v1 acrescenta a esta versao), e `prioridade/linha-de-base/LINHA_DE_BASE.md` (T-008).
+a v1 acrescenta a esta versao), e `priv/linha-de-base/LINHA_DE_BASE.md` (T-008).
 
 **Confira e ajuste:**
 

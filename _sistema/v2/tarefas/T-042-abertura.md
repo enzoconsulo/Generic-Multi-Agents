@@ -37,7 +37,7 @@ secao 4 (o que ja foi medido de pgvector), e `_sistema/MIGRACAO_V2.md` secao 5.
      offline, e nao manda o conteudo do projeto para fora.
   3. **Se nao couber, `Embedder.Servico` vira o padrao** — e ai ha custo externo por chamada,
      que precisa ser dito ao Enzo ANTES de comecar, nao depois.
-  4. **Ha corpus suficiente para indexar?** A T-032 importou as 89 tarefas da v1. Confira
+  4. **Ha corpus suficiente para indexar?** A T-033 importou as 89 tarefas da v1. Confira
      quantos trechos isso gera de verdade. Se forem poucas centenas, a avaliacao de
      recuperacao (T-044) precisa de um conjunto de perguntas menor e mais honesto — e vale
      dizer isso em vez de fabricar um numero bonito.

@@ -6,7 +6,7 @@ versao: v0.5
 status: backlog
 prioridade: alta
 dependencias: [T-044]
-areas: [prioridade/avaliacao/perguntas.exs, test/fabrica/memoria/avaliacao_test.exs]
+areas: [priv/avaliacao/perguntas.exs, test/fabrica/memoria/avaliacao_test.exs]
 tentativas: 0
 criada: 2026-08-28
 atualizada: 2026-08-28
