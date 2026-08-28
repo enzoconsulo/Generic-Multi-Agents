@@ -48,10 +48,10 @@ METAS INTERMEDIÁRIAS, seis versões, cada uma usável:
     v0.2  Um agente faz uma tarefa             →  + o prefixo é escrito 1× e lido depois
     v0.3  A linha de produção                  →  ← DAQUI EM DIANTE JÁ É UMA FÁBRICA
     v0.4  A fábrica que aguenta queda          →  matar uma tarefa não afeta as outras
-    v0.5  A fábrica que lembra    (OPCIONAL)   →  o agente cita a decisão anterior
+    v0.5  A fábrica que lembra                 →  o agente cita a decisão anterior
     v1.0  A fábrica completa                   →  projeto inteiro sem intervenção
 
-São 54 tarefas atômicas, já escritas, em `_sistema/v2/tarefas/`.
+São 58 tarefas atômicas, já escritas, em `_sistema/v2/tarefas/`.
 
 E a meta que fecha o TCC: comparar quatro números da v2 contra a linha de base
 medida da v1 — proporção de despacho desperdiçado, custo por tarefa concluída,
@@ -68,7 +68,7 @@ rápido de redecidir algo que já custou uma sessão inteira.
      → as seis versões, o que cada uma entrega, e como montar a máquina.
 
   2. `_sistema/v2/ROTEIRO.md`
-     → as 54 tarefas em ordem, com dependências. É o índice de execução.
+     → as 58 tarefas em ordem, com dependências. É o índice de execução.
 
   3. `_sistema/DECISOES_FECHADAS.md`
      → O QUE NÃO SE REABRE. Leia antes de propor qualquer mudança de rumo.
@@ -107,12 +107,15 @@ Siga `_sistema/AMBIENTE_V2.md`, seção "Ordem no PC novo". Resumo:
        → tem de imprimir "pgvector operante"
     7. Claude Code CLI autenticado (é o operário padrão da v2)
 
+O REPOSITÓRIO DA v2 FICA EM `projetos/fabrica-v2/` — git próprio, ao lado, já
+fora do .gitignore da raiz. A T-001 cria a estrutura lá. A v1 fica INTOCADA.
+
 Só depois disso comece a T-001.
 
 
 ── 5. COMO TRABALHAR — O LOOP, UMA TAREFA POR VEZ ─────────────────────────────
 
-Este é o procedimento. Repita 54 vezes.
+Este é o procedimento. Repita 58 vezes.
 
   PASSO 1 — Escolha a próxima tarefa.
     Abra `_sistema/v2/ROTEIRO.md` e pegue a primeira tarefa cujo `status:` ainda
@@ -178,8 +181,9 @@ motivo. Não as reabra sem um fato novo.
   • A FÁBRICA CONSOME COTA, NÃO PAGA POR TOKEN. Todo valor em dólar que o
     sistema registra é estimativa contábil. Não trate como fatura.
 
-  • PERFIL ALVO: 8 GB de RAM. A memória semântica (v0.5) é OPCIONAL e é a
-    única parte que carrega modelo. Nada antes dela pode exigir máquina forte.
+  • PERFIL ALVO: 8 GB de RAM. A memória semântica (v0.5) é a única parte que
+    carrega modelo, e QUAL adaptador usar se decide com medição na T-042.
+    Nada antes da v0.5 pode exigir máquina forte.
 
   • QUEM CONSTRÓI NUNCA APROVA. Verificador e revisor não recebem a ferramenta
     de escrever. É impossibilidade, não recomendação.
@@ -188,19 +192,49 @@ motivo. Não as reabra sem um fato novo.
     cabe; interromper no meio paga igual e não entrega nada.
 
 
-── 7. O QUE AINDA DEPENDE DE DECISÃO DO ENZO ──────────────────────────────────
+── 7. DECISÕES JÁ FECHADAS (28/08/2026) ───────────────────────────────────────
 
-Não decida sozinho. Pergunte quando chegar a hora.
+Não as reabra. Estão em `_sistema/DECISOES_FECHADAS.md` com o motivo.
 
-  1. Quem constrói a v2 — a própria v1, ou o Claude Code direto?
-     (construir pela v1 é o teste mais duro possível, e é material de TCC;
-      mas amarra o cronograma à estabilidade da v1)
+  • QUEM CONSTRÓI: o Claude Code direto, uma sessão por tarefa. Não a v1.
+    (a possibilidade de a própria v2 se construir a partir da v0.3 ficou
+     registrada e NÃO foi escolhida agora — reabrir só depois do marco da
+     v0.3, como experimento declarado)
 
-  2. Onde a v2 nasce. Recomendação registrada: repositório PRÓPRIO, ao lado,
-     com a v1 intocada operando os 3 projetos atuais. A virada acontece só no
-     marco da v1.0, sobre um projeto novo e pequeno.
+  • ONDE: `projetos/fabrica-v2/` — repositório git próprio, ao lado. A v1 fica
+    intocada operando os 3 projetos atuais.
 
-  3. Se a v0.5 (memória semântica) entra ou fica de fora nesta entrega.
+  • v0.5 (memória semântica): ESCOPO FIRME. Não é mais opcional. O que segue
+    aberto é só qual adaptador de embedding vira o padrão, e isso se decide
+    COM MEDIÇÃO na T-042 — nunca por palpite.
+
+
+── 7b. O PLANEJAMENTO NÃO PARA NA PRIMEIRA TAREFA ─────────────────────────────
+
+As 58 tarefas foram escritas de uma vez, antes de existir uma linha de código.
+As da v0.1 e v0.2 envelhecem pouco. As demais serão executadas semanas depois,
+sobre um código que já tomou decisões que o plano não podia prever.
+
+Por isso cada versão a partir da v0.3 ABRE com uma tarefa de conferência, que
+não escreve código de produção:
+
+    T-021  abertura da v0.3  → o esquema real do banco, a forma do estado do
+                               laço, o veredito do MessagesAPI, e ABRIR O
+                               CÓDIGO DA v1 antes de portá-lo
+    T-035  abertura da v0.4  → os custos que a v0.3 mediu, se o paralelismo
+                               acontece de fato, a API atual do Oban, e o
+                               PICO REAL DE MEMÓRIA
+    T-042  abertura da v0.5  → MEDIR o modelo de embedding antes de escolher
+                               local vs. serviço; conferir o corpus
+    T-049  abertura da v1.0  → o que o banco realmente grava vs. o que as
+                               telas assumem; reextrair a linha de base
+
+Cada uma termina registrando em `_gestao/PROGRESSO.md` O QUE FOI AJUSTADO E
+POR QUÊ. "Conferido, nada divergiu" também é registro. Ajuste sem justificativa
+é indistinguível de desvio do plano.
+
+NÃO PULE ESSAS TAREFAS. Elas são o que mantém o planejamento vivo em vez de
+virar um documento que ninguém releu.
 
 
 ── 8. PARA O PROFESSOR / BANCA ────────────────────────────────────────────────
@@ -214,7 +248,7 @@ O desenvolvimento é rastreável do começo ao fim, e de propósito:
   • AS DECISÕES estão em `_sistema/DECISOES_FECHADAS.md`, cada uma com o
     motivo e com o que a provocou — várias nasceram de medição, não de opinião.
 
-  • AS 54 TAREFAS estão em `_sistema/v2/tarefas/`, cada uma com objetivo,
+  • AS 58 TAREFAS estão em `_sistema/v2/tarefas/`, cada uma com objetivo,
     contexto, critérios de aceite executáveis, e — depois de executada — o
     relatório do que foi feito e o resultado de cada critério.
 

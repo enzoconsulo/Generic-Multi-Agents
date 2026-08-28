@@ -62,7 +62,7 @@ VERSOES = [
         "nome": "A fabrica que lembra",
         "entrega": "O agente comeca a tarefa sabendo o que ja foi decidido, e por que.",
         "marco": "Num projeto com historico, o agente cita a decisao anterior em vez de decidir de novo.",
-        "opcional": True,
+        "opcional": False,
     },
     {
         "id": "v1.0",
@@ -113,8 +113,13 @@ comandos reais, `_gestao/GUIA.md` preenchido e um commit contendo tudo isso. Est
 fundacao: toda tarefa seguinte depende dela.
 """,
     """
-Rode `mix phx.new fabrica --database postgres --no-mailer --no-gettext` na raiz do
-repositorio da v2. LiveView fica LIGADO (e a tela da v1.0) mas nenhuma pagina propria e
+O REPOSITORIO DA v2 E `projetos/fabrica-v2/` (decisao de 28/08, em
+`DECISOES_FECHADAS.md`): git proprio, ao lado, ja fora do `.gitignore` da raiz da fabrica.
+A v1 fica INTOCADA. Crie o diretorio, rode `git init` nele, e trabalhe la dentro — nada
+desta tarefa toca a arvore da v1.
+
+Rode `mix phx.new fabrica --database postgres --no-mailer --no-gettext` dentro dele.
+LiveView fica LIGADO (e a tela da v1.0) mas nenhuma pagina propria e
 criada agora — o scaffold do Phoenix ja vem com a pagina inicial e ela basta.
 
 Configure em `mix.exs` as dependencias de qualidade: `credo` e `dialyxir` (ambas
@@ -148,7 +153,7 @@ resto da fabrica. `Fabrica.Tarefa`, nao `Fabrica.Task`. Esta decisao esta em
 )
 
 tarefa(
-    "v0.1", "esquema", "Esquema do banco: projetos, tarefas, ciclos, despachos e custos", ["T-001"],
+    "v0.1", "esquema", "Esquema do banco: projetos, tarefas, ciclos, despachos e custos", ["v0.1:scaffold"],
     ["priv/repo/migrations", "lib/fabrica/projetos", "lib/fabrica/tarefas", "test/fabrica/esquema_test.exs"],
     """
 Criar as migracoes e os schemas Ecto que sustentam o estado inteiro da fabrica. O banco e
@@ -195,7 +200,7 @@ o esquema e os schemas. A maquina de estados e a v0.3.
 )
 
 tarefa(
-    "v0.1", "operario-behaviour", "behaviour Fabrica.Operario e o adaptador Falso", ["T-001"],
+    "v0.1", "operario-behaviour", "behaviour Fabrica.Operario e o adaptador Falso", ["v0.1:scaffold"],
     ["lib/fabrica/operario.ex", "lib/fabrica/operario/falso.ex", "test/fabrica/operario/falso_test.exs"],
     """
 Definir o contrato `Fabrica.Operario` — a fronteira que separa a governanca do fornecedor
@@ -236,7 +241,7 @@ HTTP. E paranoia barata e protege o marco desta versao.
 )
 
 tarefa(
-    "v0.1", "embedder-behaviour", "behaviour Fabrica.Embedder e o adaptador Falso", ["T-001"],
+    "v0.1", "embedder-behaviour", "behaviour Fabrica.Embedder e o adaptador Falso", ["v0.1:scaffold"],
     ["lib/fabrica/embedder.ex", "lib/fabrica/embedder/falso.ex", "test/fabrica/embedder/falso_test.exs"],
     """
 Definir o contrato `Fabrica.Embedder` e implementar `Embedder.Falso`, que produz vetores
@@ -271,7 +276,7 @@ inteira do projeto ao commitar, e uma API de um-por-vez tornaria isso lento por 
 )
 
 tarefa(
-    "v0.1", "contabilidade", "Contabilidade em duas unidades: cota consumida e dolar-equivalente", ["T-002", "T-003"],
+    "v0.1", "contabilidade", "Contabilidade em duas unidades: cota consumida e dolar-equivalente", ["v0.1:esquema", "v0.1:operario-behaviour"],
     ["lib/fabrica/custo/precos.ex", "lib/fabrica/custo/consumo.ex", "test/fabrica/custo/precos_test.exs"],
     """
 Gravar, por VOLTA, os seis numeros de consumo e derivar deles as duas unidades que a v2
@@ -310,7 +315,7 @@ essa reparticao. Um total esconde exatamente o numero que decide o desenho.
 )
 
 tarefa(
-    "v0.1", "backup", "Backup e restauracao do banco", ["T-002"],
+    "v0.1", "backup", "Backup e restauracao do banco", ["v0.1:esquema"],
     ["lib/mix/tasks/fabrica.backup.ex", "lib/mix/tasks/fabrica.restaurar.ex", "test/mix/backup_test.exs"],
     """
 Duas tarefas mix — `mix fabrica.backup` e `mix fabrica.restaurar` — que gravam e leem um
@@ -345,7 +350,7 @@ passar sem testar nada.
 )
 
 tarefa(
-    "v0.1", "verificacao-continua", "Verificacao continua local, com Dialyzer em estagio proprio", ["T-001"],
+    "v0.1", "verificacao-continua", "Verificacao continua local, com Dialyzer em estagio proprio", ["v0.1:scaffold"],
     ["lib/mix/tasks/fabrica.ci.ex", "_gestao/ci.json", "test/mix/ci_test.exs"],
     """
 Um comando unico que roda a bateria completa do projeto em estagios nomeados, com o
@@ -382,7 +387,7 @@ de quem escreve a tarefa — que as tarefas seguintes copiam para a linha `verif
 )
 
 tarefa(
-    "v0.1", "linha-de-base", "Linha de base de medicao, extraida dos 139 jobs da v1", ["T-001"],
+    "v0.1", "linha-de-base", "Linha de base de medicao, extraida dos 139 jobs da v1", ["v0.1:scaffold"],
     ["prioridade/linha-de-base/extrair.exs", "prioridade/linha-de-base/LINHA_DE_BASE.md", "test/fabrica/linha_de_base_test.exs"],
     """
 Extrair dos jobs ja gravados pela v1 os numeros contra os quais a v2 vai ser comparada, e
@@ -424,7 +429,7 @@ confere que os quatro numeros saem certos. Nao dependa de os jobs da v1 estarem 
 )
 
 tarefa(
-    "v0.1", "marco", "MARCO da v0.1: a suite roda sem rede e sem cota", ["T-002", "T-003", "T-004", "T-005", "T-006", "T-007", "T-008"],
+    "v0.1", "marco", "MARCO da v0.1: a suite roda sem rede e sem cota", ["v0.1:esquema", "v0.1:operario-behaviour", "v0.1:embedder-behaviour", "v0.1:contabilidade", "v0.1:backup", "v0.1:verificacao-continua", "v0.1:linha-de-base"],
     ["_gestao/PROGRESSO.md"],
     """
 Verificar, de ponta a ponta, que o marco da v0.1 foi atingido: a suite inteira roda sem
@@ -461,7 +466,7 @@ veredito. Se reprovado, liste as causas raiz — uma tarefa corretiva por causa.
 # ===========================================================================
 
 tarefa(
-    "v0.2", "indice-denso", "Gerador do indice denso do projeto (mix fabrica.mapa)", ["T-001"],
+    "v0.2", "indice-denso", "Gerador do indice denso do projeto (mix fabrica.mapa)", ["v0.1:scaffold"],
     ["lib/fabrica/indice/mapa.ex", "lib/mix/tasks/fabrica.mapa.ex", "test/fabrica/indice/mapa_test.exs"],
     """
 Porte do `mapa.mjs` da v1: um gerador DETERMINISTICO, sem modelo, que produz a arvore de
@@ -496,7 +501,7 @@ Grave em `_gestao/MAPA.md`. Alvo de tamanho: ~5% do tamanho do fonte.
 )
 
 tarefa(
-    "v0.2", "prefixo", "Montador do prefixo estavel, com pontos de cache", ["T-003", "T-009", "T-010"],
+    "v0.2", "prefixo", "Montador do prefixo estavel, com pontos de cache", ["v0.1:operario-behaviour", "v0.1:marco", "v0.2:indice-denso"],
     ["lib/fabrica/prompt/prefixo.ex", "lib/fabrica/prompt/bloco.ex", "test/fabrica/prompt/prefixo_test.exs"],
     """
 Montar a parte estavel da requisicao — ferramentas, doutrina do papel e indice do projeto —
@@ -544,7 +549,7 @@ falha se os bytes divergirem. E ele que protege a economia inteira, e ele e a ra
 )
 
 tarefa(
-    "v0.2", "ferramentas-arquivo", "Ferramentas de arquivo com confinamento", ["T-001"],
+    "v0.2", "ferramentas-arquivo", "Ferramentas de arquivo com confinamento", ["v0.1:scaffold"],
     ["lib/fabrica/ferramentas/arquivo.ex", "lib/fabrica/ferramentas/confinamento.ex", "test/fabrica/ferramentas/confinamento_test.exs"],
     """
 As ferramentas `ler`, `escrever`, `editar`, `listar` e `buscar`, todas confinadas ao
@@ -581,7 +586,7 @@ vez — a mesma disciplina da ferramenta que voce esta usando agora. Isso evita 
 )
 
 tarefa(
-    "v0.2", "ferramenta-comando", "Ferramenta de comando, com prazo e morte da ARVORE de processos", ["T-012"],
+    "v0.2", "ferramenta-comando", "Ferramenta de comando, com prazo e morte da ARVORE de processos", ["v0.2:ferramentas-arquivo"],
     ["lib/fabrica/ferramentas/comando.ex", "lib/fabrica/ferramentas/arvore_processos.ex", "test/fabrica/ferramentas/comando_test.exs"],
     """
 Executar um comando externo no diretorio do projeto, com prazo, captura de saida e —
@@ -614,7 +619,7 @@ Prazo padrao de 2 minutos por comando, configuravel por chamada.
 )
 
 tarefa(
-    "v0.2", "guardas", "Guarda de processos e guarda de ferramental", ["T-013"],
+    "v0.2", "guardas", "Guarda de processos e guarda de ferramental", ["v0.2:ferramenta-comando"],
     ["lib/fabrica/ferramentas/guardas.ex", "test/fabrica/ferramentas/guardas_test.exs"],
     """
 Duas guardas que avaliam um comando ANTES de ele rodar: o agente nao pode matar a propria
@@ -651,7 +656,7 @@ testaveis exaustivamente, e e la que mora todo o julgamento.
 )
 
 tarefa(
-    "v0.2", "laco", "O laco de tool use como processo supervisionado", ["T-003", "T-011", "T-012", "T-013", "T-014"],
+    "v0.2", "laco", "O laco de tool use como processo supervisionado", ["v0.1:operario-behaviour", "v0.2:prefixo", "v0.2:ferramentas-arquivo", "v0.2:ferramenta-comando", "v0.2:guardas"],
     ["lib/fabrica/agente/laco.ex", "lib/fabrica/agente/estado.ex", "test/fabrica/agente/laco_test.exs"],
     """
 O nucleo do sistema: um `GenServer` que monta a requisicao, chama o operario, executa as
@@ -707,7 +712,7 @@ teto de voltas interrompe quando estourado.
 )
 
 tarefa(
-    "v0.2", "registrar-resultado", "A ferramenta registrar_resultado, e a ausencia da de mudar estado", ["T-002", "T-015"],
+    "v0.2", "registrar-resultado", "A ferramenta registrar_resultado, e a ausencia da de mudar estado", ["v0.1:esquema", "v0.2:laco"],
     ["lib/fabrica/ferramentas/registrar_resultado.ex", "test/fabrica/ferramentas/registrar_resultado_test.exs"],
     """
 A unica forma de um agente reportar o que fez: uma chamada estruturada que o sistema grava
@@ -742,7 +747,7 @@ da conta.
 )
 
 tarefa(
-    "v0.2", "orcamento-ferramentas", "Teto de chamadas de ferramenta por papel", ["T-015"],
+    "v0.2", "orcamento-ferramentas", "Teto de chamadas de ferramenta por papel", ["v0.2:laco"],
     ["lib/fabrica/agente/orcamento_ferramentas.ex", "test/fabrica/agente/orcamento_ferramentas_test.exs"],
     """
 Um teto de chamadas de ferramenta por papel, medido e nao chutado, que MEDE o estouro e o
@@ -774,7 +779,7 @@ Grave o estouro em `despachos`, com o teto e o realizado.
 )
 
 tarefa(
-    "v0.2", "operario-cli", "Operario.ClaudeCLI — o adaptador padrao de operacao", ["T-003", "T-015"],
+    "v0.2", "operario-cli", "Operario.ClaudeCLI — o adaptador padrao de operacao", ["v0.1:operario-behaviour", "v0.2:laco"],
     ["lib/fabrica/operario/claude_cli.ex", "test/fabrica/operario/claude_cli_test.exs"],
     """
 O adaptador que conversa com o Claude Code CLI. E o PADRAO de operacao: roda na assinatura,
@@ -811,7 +816,7 @@ cota, que e o marco da v0.1 e nao pode ser quebrado aqui.
 )
 
 tarefa(
-    "v0.2", "operario-api", "Operario.MessagesAPI — Req, com controle de cache", ["T-003", "T-011"],
+    "v0.2", "operario-api", "Operario.MessagesAPI — Req, com controle de cache", ["v0.1:operario-behaviour", "v0.2:prefixo"],
     ["lib/fabrica/operario/messages_api.ex", "test/fabrica/operario/messages_api_test.exs"],
     """
 O adaptador que fala HTTP direto com a Messages API usando Req, com controle byte a byte do
@@ -855,7 +860,7 @@ Autenticacao por `ANTHROPIC_API_KEY`, lida SO neste modulo. O teste usa um `Req.
 )
 
 tarefa(
-    "v0.2", "marco", "MARCO da v0.2: uma tarefa resolvida, e o prefixo escrito uma vez", ["T-016", "T-017", "T-018", "T-019"],
+    "v0.2", "marco", "MARCO da v0.2: uma tarefa resolvida, e o prefixo escrito uma vez", ["v0.2:registrar-resultado", "v0.2:orcamento-ferramentas", "v0.2:operario-cli", "v0.2:operario-api"],
     ["_gestao/PROGRESSO.md"],
     """
 Verificar os DOIS marcos da v0.2: um agente resolve uma tarefa real de ponta a ponta com
@@ -900,7 +905,63 @@ escrita.
 # ===========================================================================
 
 tarefa(
-    "v0.3", "estados", "Os seis estados e a transicao transacional", ["T-002", "T-005"],
+    "v0.3", "abertura", "ABERTURA da v0.3: conferir o plano contra o codigo que existe", ["v0.2:marco"],
+    ["_gestao/PROGRESSO.md", "_sistema/v2/tarefas"],
+    """
+Antes de implementar a v0.3, confrontar o planejamento com o codigo que a v0.1 e a v0.2
+realmente produziram, e ajustar as tarefas desta versao onde a realidade divergiu do plano.
+Nenhum codigo de producao e escrito nesta tarefa.
+""",
+    """
+POR QUE ESTA TAREFA EXISTE: as 54 tarefas foram escritas de uma vez, em 28/08/2026, antes
+de existir uma linha de codigo. As da v0.1 e v0.2 envelhecem pouco porque sao executadas
+logo. Estas aqui vao ser executadas depois, sobre um codigo que ja tomou decisoes que o
+planejamento nao podia prever. Ajustar aqui, de uma vez e com registro, e melhor que
+improvisar tarefa a tarefa.
+
+**Releia primeiro** (nesta ordem):
+  - `_sistema/PLANO_V2.md`, secao 3, o bloco da v0.3
+  - `_sistema/MIGRACAO_V2.md`, **secao 3** — os 19 mecanismos da v1 que nao estao na
+    documentacao. A v0.3 e a versao que absorve a maior parte deles
+  - `_sistema/DECISOES_FECHADAS.md` inteiro
+  - `_gestao/PROGRESSO.md` — o veredito dos marcos da v0.1 e da v0.2
+
+**Confira, item a item, e ajuste o que divergiu:**
+
+  1. **O esquema real do banco** (T-002 executada) contra o que as tarefas desta versao
+     assumem. Nome de coluna, nome de tabela e tipo de enum costumam mudar na hora de
+     escrever a migracao. Se mudou, corrija o texto das tarefas — nao deixe a tarefa
+     mentindo sobre o proprio banco.
+  2. **A forma do estado do laco** (T-015) contra o que a transicao transacional precisa
+     ler. Se o laco guarda o consumo de um jeito diferente do que a T-021 assume, decida
+     agora qual dos dois muda.
+  3. **O veredito do marco da v0.2 sobre o `MessagesAPI`.** Se ele NAO se justificou, o
+     escalonamento de modelo desta versao mira o `ClaudeCLI` e a tarefa precisa dizer isso.
+  4. **Abra o codigo da v1 que vai ser portado, ANTES de portar.** Sao quatro arquivos, e
+     eles sao a fonte, nao a memoria de quem escreveu a tarefa:
+     `pipeline/diagnostico.ts`, `pipeline/criterios.ts`, `pipeline/orcamento.ts`,
+     `pipeline/maquina.ts`. Confira se os casos de teste de la estao cobertos pelos
+     criterios das tarefas desta versao.
+  5. **Os numeros que a v1 mediu** (tetos de voltas, custo padrao de tarefa) continuam
+     valendo? Eles vieram de medicao naquele contexto; anote se algum precisa ser
+     remedido depois.
+
+**Registre em `_gestao/PROGRESSO.md`**: o que foi conferido, o que foi ajustado e por que.
+Um ajuste sem justificativa registrada e indistinguivel de um desvio do plano — e e
+exatamente isso que a banca vai perguntar.
+
+Se nada precisou mudar, escreva isso tambem. "Conferido, nada divergiu" e informacao.
+""",
+    [
+        ("Os cinco itens acima foram conferidos, um a um, com o resultado anotado.", None),
+        ("Toda tarefa da v0.3 que divergia do codigo real foi corrigida (ou registrado que nenhuma divergia).", None),
+        ("`_gestao/PROGRESSO.md` registra o que foi ajustado e a justificativa de cada ajuste.", None),
+        ("Nenhum codigo de producao foi alterado nesta tarefa.", "git diff --stat HEAD~1 -- lib test"),
+    ],
+)
+
+tarefa(
+    "v0.3", "estados", "Os seis estados e a transicao transacional", ["v0.1:esquema", "v0.1:contabilidade"],
     ["lib/fabrica/tarefas/maquina.ex", "lib/fabrica/tarefas/transicao.ex", "test/fabrica/tarefas/transicao_test.exs"],
     """
 A maquina de estados da tarefa: quais transicoes existem, e a garantia de que cada uma
@@ -942,7 +1003,7 @@ nem o status, nem o ciclo, nem o consumo.
 )
 
 tarefa(
-    "v0.3", "promocao", "Promocao por dependencias e ordenacao da fila", ["T-021"],
+    "v0.3", "promocao", "Promocao por dependencias e ordenacao da fila", ["v0.3:estados"],
     ["lib/fabrica/tarefas/fila.ex", "test/fabrica/tarefas/fila_test.exs"],
     """
 Decidir, deterministicamente, quais tarefas passam de `backlog` para `pronta` e em que
@@ -973,7 +1034,7 @@ Ciclo de dependencias e defeito de planejamento, nao situacao normal: detecte e 
 )
 
 tarefa(
-    "v0.3", "equipe", "Equipe sob demanda: especialistas versionados e resolucao do construtor", ["T-002", "T-022"],
+    "v0.3", "equipe", "Equipe sob demanda: especialistas versionados e resolucao do construtor", ["v0.1:esquema", "v0.3:promocao"],
     ["lib/fabrica/equipe.ex", "lib/fabrica/equipe/resolucao.ex", "test/fabrica/equipe/resolucao_test.exs"],
     """
 Os especialistas do projeto como dado versionado no banco, e a resolucao deterministica de
@@ -1009,7 +1070,7 @@ especialista inexistente e defeito de planejamento que so aparece se alguem escr
 )
 
 tarefa(
-    "v0.3", "criterios", "Criterios executaveis: leitura, allowlist e passada mecanica", ["T-013", "T-021"],
+    "v0.3", "criterios", "Criterios executaveis: leitura, allowlist e passada mecanica", ["v0.2:ferramenta-comando", "v0.3:estados"],
     ["lib/fabrica/criterios.ex", "lib/fabrica/criterios/allowlist.ex", "test/fabrica/criterios_test.exs"],
     """
 Rodar de graca, antes de despachar qualquer verificador, todo criterio que tem comando —
@@ -1042,7 +1103,7 @@ Ao fim, produza o relatorio no formato da escada de prova: cada criterio rotulad
 )
 
 tarefa(
-    "v0.3", "classe-falha", "Classe de falha: o comando quebrou, ou a entrega falhou?", ["T-024"],
+    "v0.3", "classe-falha", "Classe de falha: o comando quebrou, ou a entrega falhou?", ["v0.3:criterios"],
     ["lib/fabrica/criterios/classe_falha.ex", "test/fabrica/criterios/classe_falha_test.exs"],
     """
 Distinguir, quando um criterio nao passa, se o problema e o COMANDO (mal escrito,
@@ -1078,7 +1139,7 @@ os testes precisam ser exaustivos.
 )
 
 tarefa(
-    "v0.3", "criterio-suite", "O criterio implicito da suite e a deteccao de ecossistema", ["T-024"],
+    "v0.3", "criterio-suite", "O criterio implicito da suite e a deteccao de ecossistema", ["v0.3:criterios"],
     ["lib/fabrica/criterios/suite.ex", "lib/fabrica/ecossistemas.ex", "test/fabrica/criterios/suite_test.exs"],
     """
 Rodar a suite do projeto em TODA verificacao, sem que ela esteja escrita em tarefa nenhuma —
@@ -1106,7 +1167,7 @@ para aparecer no relatorio sem ter sido escrito por ninguem.
 )
 
 tarefa(
-    "v0.3", "portoes", "Os dois portoes, e a ausencia da ferramenta de corrigir", ["T-021", "T-024", "T-025"],
+    "v0.3", "portoes", "Os dois portoes, e a ausencia da ferramenta de corrigir", ["v0.3:estados", "v0.3:criterios", "v0.3:classe-falha"],
     ["lib/fabrica/portoes/verificador.ex", "lib/fabrica/portoes/revisor.ex", "test/fabrica/portoes_test.exs"],
     """
 Os dois julgamentos independentes: o verificador responde "funciona?" executando os
@@ -1141,7 +1202,7 @@ O formato dos achados importa: e dele que a T-030 extrai a politica de retrabalh
 )
 
 tarefa(
-    "v0.3", "diagnostico", "Diagnostico de reprovacao: decidir COMO refazer, nao so que refazer", ["T-025", "T-027"],
+    "v0.3", "diagnostico", "Diagnostico de reprovacao: decidir COMO refazer, nao so que refazer", ["v0.3:classe-falha", "v0.3:portoes"],
     ["lib/fabrica/retrabalho/diagnostico.ex", "lib/fabrica/retrabalho/politica.ex", "test/fabrica/retrabalho/diagnostico_test.exs"],
     """
 Ler a reprovacao, classificar a natureza da falha e derivar a POLITICA do proximo despacho:
@@ -1181,7 +1242,7 @@ Modulo PURO. Todo o julgamento mora aqui, e por isso e aqui que os testes sao ex
 )
 
 tarefa(
-    "v0.3", "escada-fracasso", "A escada de resposta ao fracasso, e o limite de 3 ciclos", ["T-028"],
+    "v0.3", "escada-fracasso", "A escada de resposta ao fracasso, e o limite de 3 ciclos", ["v0.3:diagnostico"],
     ["lib/fabrica/retrabalho/escada.ex", "test/fabrica/retrabalho/escada_test.exs"],
     """
 Os quatro degraus: sobe de modelo, troca de especialista, replaneja, bloqueia. Cada um so e
@@ -1217,7 +1278,7 @@ nao era incrementado. Mesmo com o contador correto, o teto fica — defesa em pr
 )
 
 tarefa(
-    "v0.3", "orcamento", "Orcamento com parada limpa: teto por rodada e por tarefa", ["T-005", "T-021"],
+    "v0.3", "orcamento", "Orcamento com parada limpa: teto por rodada e por tarefa", ["v0.1:contabilidade", "v0.3:estados"],
     ["lib/fabrica/orcamento.ex", "test/fabrica/orcamento_test.exs"],
     """
 Impedir que a rodada COMECE trabalho que nao cabe no orcamento — e nunca cortar agente em
@@ -1252,7 +1313,7 @@ Modulo puro; quem chama aplica.
 )
 
 tarefa(
-    "v0.3", "markdown-gerado", "Geracao do markdown a partir do banco, e o commit da tarefa", ["T-016", "T-021"],
+    "v0.3", "markdown-gerado", "Geracao do markdown a partir do banco, e o commit da tarefa", ["v0.2:registrar-resultado", "v0.3:estados"],
     ["lib/fabrica/publicacao/markdown.ex", "lib/fabrica/publicacao/git.ex", "test/fabrica/publicacao/markdown_test.exs"],
     """
 Gerar o arquivo markdown da tarefa a partir do banco e commita-lo junto com o trabalho —
@@ -1286,7 +1347,7 @@ silencio.
 )
 
 tarefa(
-    "v0.3", "importador", "Importador das 89 tarefas vivas da v1", ["T-002", "T-031"],
+    "v0.3", "importador", "Importador das 89 tarefas vivas da v1", ["v0.1:esquema", "v0.3:markdown-gerado"],
     ["lib/mix/tasks/fabrica.importar.ex", "test/mix/importar_test.exs"],
     """
 Ler os arquivos de tarefa da v1 (`projetos/*/_gestao/tarefas/*.md`) e trazer o estado
@@ -1321,7 +1382,7 @@ status estranho de proposito nas fixtures — ela e o caso de teste.
 )
 
 tarefa(
-    "v0.3", "marco", "MARCO da v0.3: uma tarefa percorre os seis estados e conclui", ["T-029", "T-030", "T-031", "T-032"],
+    "v0.3", "marco", "MARCO da v0.3: uma tarefa percorre os seis estados e conclui", ["v0.3:escada-fracasso", "v0.3:orcamento", "v0.3:markdown-gerado", "v0.3:importador"],
     ["_gestao/PROGRESSO.md"],
     """
 Verificar o marco: uma tarefa percorre os seis estados, reprova DE PROPOSITO, e retrabalhada
@@ -1358,7 +1419,49 @@ entraram. Registre o numero.
 # ===========================================================================
 
 tarefa(
-    "v0.4", "supervisao", "Arvore de supervisao e registro de processos", ["T-015", "T-021"],
+    "v0.4", "abertura", "ABERTURA da v0.4: conferir concorrencia e numeros medidos", ["v0.3:marco"],
+    ["_gestao/PROGRESSO.md", "_sistema/v2/tarefas"],
+    """
+Antes de implementar a concorrencia, confrontar o plano com o que a v0.3 mediu de verdade —
+e com o que as bibliotecas de fila e supervisao oferecem hoje. Nenhum codigo de producao.
+""",
+    """
+**Releia:** `_sistema/PLANO_V2.md` (bloco da v0.4) e `_sistema/DECISOES_FECHADAS.md`,
+especialmente o item sobre `git worktree` por verificador, que e uma otimizacao JA
+DESCARTADA com medicao — nao a reinvente aqui.
+
+**Confira e ajuste:**
+
+  1. **Os custos que a v0.3 mediu de verdade.** O teto por tarefa e a estimativa da proxima
+     foram escritos com numeros da v1. Agora existem numeros da v2. Se divergirem muito,
+     corrija os defaults das tarefas desta versao — e registre os dois numeros lado a lado.
+  2. **O paralelismo acontece de fato?** A v1 mediu que quase nunca havia duas tarefas
+     despachaveis com `areas` disjuntas ao mesmo tempo: em 43 rodadas, o 3-wide de
+     construtores nao ocorreu uma vez. Se o mesmo valer aqui, o valor desta versao esta na
+     SUPERVISAO e na RECUPERACAO, nao na vazao — e a tarefa de paralelismo pode encolher.
+     Meca antes de decidir.
+  3. **A versao atual do Oban** e a API dela. Fila durable e area que muda entre versoes
+     maiores; confira a documentacao corrente antes de escrever a migracao.
+  4. **O formato da mensagem de cota do CLI.** A T-018 extraiu o horario de reabertura de um
+     formato observado em 2026. Confirme que ele continua o mesmo — e, se nao, ajuste o
+     parse ANTES de a v0.4 depender dele.
+  5. **A memoria disponivel na maquina onde isto vai rodar.** Tres agentes em paralelo mais
+     Postgres mais a suite de um projeto e o pico de consumo do sistema inteiro. Meca o
+     pico real na v0.3 e decida o limite de concorrencia com esse numero, nao com o 3
+     escrito no plano.
+
+**Registre em `_gestao/PROGRESSO.md`** o que foi conferido, o que mudou e por que.
+""",
+    [
+        ("Os custos medidos na v0.3 foram comparados com os defaults do plano, e os dois numeros estao registrados.", None),
+        ("Foi medido se o paralelismo de construtores acontece de fato, e a conclusao esta registrada.", None),
+        ("O formato da mensagem de cota do CLI foi reconferido contra a realidade atual.", None),
+        ("O limite de concorrencia foi decidido a partir do pico de memoria MEDIDO, nao do numero do plano.", None),
+    ],
+)
+
+tarefa(
+    "v0.4", "supervisao", "Arvore de supervisao e registro de processos", ["v0.2:laco", "v0.3:estados"],
     ["lib/fabrica/application.ex", "lib/fabrica/agente/supervisor.ex", "test/fabrica/agente/supervisor_test.exs"],
     """
 Cada tarefa em voo vira um processo supervisionado, com endereco e dono — e o estado dela
@@ -1390,7 +1493,7 @@ isso que a tela da v1.0 vai usar.
 )
 
 tarefa(
-    "v0.4", "oban", "Fila duravel: enfileirar e mudar estado na mesma transacao", ["T-021", "T-034"],
+    "v0.4", "oban", "Fila duravel: enfileirar e mudar estado na mesma transacao", ["v0.3:estados", "v0.4:supervisao"],
     ["lib/fabrica/fila/trabalho.ex", "priv/repo/migrations", "test/fabrica/fila/trabalho_test.exs"],
     """
 Trocar a fila em memoria por Oban, para que enfileirar um trabalho e mudar o estado da
@@ -1425,7 +1528,7 @@ despachos na v1.
 )
 
 tarefa(
-    "v0.4", "paralelismo", "Paralelismo com `areas` como exclusao mutua verificada", ["T-022", "T-035"],
+    "v0.4", "paralelismo", "Paralelismo com `areas` como exclusao mutua verificada", ["v0.3:promocao", "v0.4:oban"],
     ["lib/fabrica/fila/exclusao.ex", "test/fabrica/fila/exclusao_test.exs"],
     """
 Rodar ate tres construtores ao mesmo tempo no mesmo projeto, somente quando as `areas`
@@ -1460,7 +1563,7 @@ com construtor ativo no MESMO projeto.
 )
 
 tarefa(
-    "v0.4", "parede-cota", "A parede de cota: reconhecer, dormir e rearmar", ["T-018", "T-035"],
+    "v0.4", "parede-cota", "A parede de cota: reconhecer, dormir e rearmar", ["v0.2:operario-cli", "v0.4:oban"],
     ["lib/fabrica/cota.ex", "test/fabrica/cota_test.exs"],
     """
 Reconhecer que a cota da assinatura acabou, extrair o horario de reabertura, dormir ate la e
@@ -1498,7 +1601,7 @@ tela da v1.0 mostra e o que evita o usuario achar que a fabrica travou.
 )
 
 tarefa(
-    "v0.4", "recuperacao", "Recuperacao apos queda: sobras na arvore git e trabalho parcial", ["T-031", "T-034"],
+    "v0.4", "recuperacao", "Recuperacao apos queda: sobras na arvore git e trabalho parcial", ["v0.3:markdown-gerado", "v0.4:supervisao"],
     ["lib/fabrica/recuperacao.ex", "test/fabrica/recuperacao_test.exs"],
     """
 Na subida, sanear o que a sessao anterior deixou pela metade: tarefas em estado
@@ -1529,7 +1632,7 @@ ter saneamento: ninguem descobre que ele parou de funcionar.
 )
 
 tarefa(
-    "v0.4", "marco", "MARCO da v0.4: tres tarefas em paralelo, e matar uma nao derruba as outras", ["T-036", "T-037", "T-038"],
+    "v0.4", "marco", "MARCO da v0.4: tres tarefas em paralelo, e matar uma nao derruba as outras", ["v0.4:paralelismo", "v0.4:parede-cota", "v0.4:recuperacao"],
     ["_gestao/PROGRESSO.md"],
     """
 Verificar o marco: tres tarefas rodam em paralelo; matar o processo de uma no meio nao
@@ -1564,7 +1667,54 @@ Registre em `_gestao/PROGRESSO.md` o veredito e o que foi observado em cada pass
 # ===========================================================================
 
 tarefa(
-    "v0.5", "ingestao", "Ingestao da historia do projeto ao commitar", ["T-004", "T-031"],
+    "v0.5", "abertura", "ABERTURA da v0.5: decidir o embedding com medicao, nao com palpite", ["v0.4:marco"],
+    ["_gestao/PROGRESSO.md", "_gestao/DECISOES.md", "_sistema/v2/tarefas"],
+    """
+Antes de construir a memoria semantica, tomar a unica decisao de ambiente que ficou em
+aberto — embedding local ou por servico — com medicao na maquina real. Nenhum codigo de
+producao.
+""",
+    """
+A v0.5 esta no ESCOPO FIRME da entrega (decisao do Enzo, 28/08/2026). O que continua aberto
+e COMO o embedding roda, e essa e a unica peca pesada do desenho inteiro: o perfil alvo
+declarado da v2 e 8 GB de RAM.
+
+**Releia:** `_sistema/PLANO_V2.md` secao 2 (o requisito de maquina), `_sistema/AMBIENTE_V2.md`
+secao 4 (o que ja foi medido de pgvector), e `_sistema/MIGRACAO_V2.md` secao 5.
+
+**Confira e decida:**
+
+  1. **O pgvector ainda esta de pe nesta maquina?** Rode
+     `_sistema/ferramentas/banco-v2.ps1 conferir`. Se for uma maquina nova, monte o ambiente
+     antes — `AMBIENTE_V2.md`, secao "Ordem no PC novo".
+  2. **MECA o modelo local antes de escolher.** Baixe o modelo de 384 dimensoes candidato,
+     carregue com Bumblebee, e anote: tamanho em disco, memoria residente, e tempo para
+     vetorizar 1.000 trechos em lote. Um MiniLM de 384 dim costuma caber com folga em 8 GB —
+     mas "costuma" nao e medicao. **Se couber, `Embedder.Local` e o padrao**: e gratis,
+     offline, e nao manda o conteudo do projeto para fora.
+  3. **Se nao couber, `Embedder.Servico` vira o padrao** — e ai ha custo externo por chamada,
+     que precisa ser dito ao Enzo ANTES de comecar, nao depois.
+  4. **Ha corpus suficiente para indexar?** A T-032 importou as 89 tarefas da v1. Confira
+     quantos trechos isso gera de verdade. Se forem poucas centenas, a avaliacao de
+     recuperacao (T-044) precisa de um conjunto de perguntas menor e mais honesto — e vale
+     dizer isso em vez de fabricar um numero bonito.
+  5. **Releia o risco declarado:** recuperacao que traz trecho inutil piora a resposta em vez
+     de melhorar. A regra ja esta na T-044 e nao se negocia: **recuperacao abaixo da linha de
+     base DESLIGA o bloco de contexto**, nao apenas avisa.
+
+**Registre a decisao em `_gestao/DECISOES.md`** com os numeros medidos — e nao so a escolha.
+Decisao sem o numero que a motivou vira palpite na leitura seguinte.
+""",
+    [
+        ("`banco-v2.ps1 conferir` imprime `pgvector operante` nesta maquina.", None),
+        ("O modelo local foi MEDIDO (disco, memoria residente, tempo por 1.000 trechos) e os numeros estao registrados.", None),
+        ("A escolha local vs. servico esta em `_gestao/DECISOES.md` com os numeros que a motivaram.", None),
+        ("O tamanho real do corpus importado foi contado, e a T-044 ajustada se ele for pequeno.", None),
+    ],
+)
+
+tarefa(
+    "v0.5", "ingestao", "Ingestao da historia do projeto ao commitar", ["v0.1:embedder-behaviour", "v0.3:markdown-gerado"],
     ["lib/fabrica/memoria/ingestao.ex", "lib/fabrica/memoria/trecho.ex", "test/fabrica/memoria/ingestao_test.exs"],
     """
 Ao commitar, cortar e indexar a HISTORIA do projeto — decisoes com motivo, achados de
@@ -1598,7 +1748,7 @@ projeto grande.
 )
 
 tarefa(
-    "v0.5", "busca-hibrida", "Busca hibrida com fusao reciproca de postos", ["T-040"],
+    "v0.5", "busca-hibrida", "Busca hibrida com fusao reciproca de postos", ["v0.5:ingestao"],
     ["lib/fabrica/memoria/busca.ex", "test/fabrica/memoria/busca_test.exs"],
     """
 Responder "isto ja foi resolvido aqui, e o que foi decidido na epoca?" com duas buscas ao
@@ -1638,7 +1788,7 @@ o teste precisa travar isso explicitamente.
 )
 
 tarefa(
-    "v0.5", "embedder-real", "Embedder.Servico e Embedder.Local", ["T-004"],
+    "v0.5", "embedder-real", "Embedder.Servico e Embedder.Local", ["v0.1:embedder-behaviour"],
     ["lib/fabrica/embedder/servico.ex", "lib/fabrica/embedder/local.ex", "test/fabrica/embedder/servico_test.exs"],
     """
 Os dois adaptadores reais de embedding: um por chamada HTTP (padrao em maquina modesta) e
@@ -1674,7 +1824,7 @@ usa stub de HTTP; o do `Local` e marcado para pular por padrao.
 )
 
 tarefa(
-    "v0.5", "bloco-contexto", "O bloco de contexto recuperado, com a fonte citada", ["T-041", "T-011"],
+    "v0.5", "bloco-contexto", "O bloco de contexto recuperado, com a fonte citada", ["v0.5:busca-hibrida", "v0.2:prefixo"],
     ["lib/fabrica/memoria/contexto.ex", "test/fabrica/memoria/contexto_test.exs"],
     """
 Montar, no inicio do despacho, o bloco com os melhores trechos recuperados — cada um com a
@@ -1711,7 +1861,7 @@ melhor — "quais tarefas estao bloqueadas" e um WHERE, nao uma pergunta em ling
 )
 
 tarefa(
-    "v0.5", "avaliacao-recuperacao", "Avaliacao da qualidade da recuperacao", ["T-041"],
+    "v0.5", "avaliacao-recuperacao", "Avaliacao da qualidade da recuperacao", ["v0.5:busca-hibrida"],
     ["prioridade/avaliacao/perguntas.exs", "test/fabrica/memoria/avaliacao_test.exs"],
     """
 Um conjunto de perguntas com resposta conhecida, medido a cada mudanca na indexacao — e a
@@ -1743,7 +1893,7 @@ recorrente que a v1 catalogou sete vezes.
 )
 
 tarefa(
-    "v0.5", "marco", "MARCO da v0.5: o agente cita a decisao anterior", ["T-042", "T-043", "T-044"],
+    "v0.5", "marco", "MARCO da v0.5: o agente cita a decisao anterior", ["v0.5:embedder-real", "v0.5:bloco-contexto", "v0.5:avaliacao-recuperacao"],
     ["_gestao/PROGRESSO.md"],
     """
 Verificar o marco: num projeto com historico, o agente cita a decisao anterior em vez de
@@ -1774,7 +1924,49 @@ cache antes e depois.
 # ===========================================================================
 
 tarefa(
-    "v1.0", "telemetria", "Barramento de eventos e telemetria por despacho", ["T-015", "T-034"],
+    "v1.0", "abertura", "ABERTURA da v1.0: o que a tela precisa mostrar, e a medicao final", ["v0.5:marco"],
+    ["_gestao/PROGRESSO.md", "_sistema/v2/tarefas"],
+    """
+Antes de construir o painel e a trilha generica, decidir o que a tela precisa mostrar a
+partir do que o sistema REALMENTE grava — e preparar a comparacao final com a linha de base.
+Nenhum codigo de producao.
+""",
+    """
+Esta e a ultima versao, e ela e a entrega do TCC. O planejamento dela foi escrito antes de
+existir qualquer dado; agora existem cinco versoes de dados reais.
+
+**Releia:** `_sistema/PLANO_V2.md` (bloco da v1.0), `_sistema/MIGRACAO_V2.md` secao 7 (o que
+a v1 acrescenta a esta versao), e `prioridade/linha-de-base/LINHA_DE_BASE.md` (T-008).
+
+**Confira e ajuste:**
+
+  1. **O que o sistema grava de verdade** contra o que as tarefas de painel assumem. A tela
+     nao pode prometer um numero que o banco nao tem. Liste as colunas reais de `consumos`,
+     `despachos` e `ciclos` e confronte com o que T-047 e T-048 desenham.
+  2. **A versao atual do Phoenix/LiveView** e a API dela. O scaffold foi criado na v0.1, ha
+     meses; confira se ha mudanca relevante antes de escrever a primeira tela.
+  3. **Existe um projeto real para o teste da trilha generica?** O marco pede um artefato
+     nao-software entregue de ponta a ponta. Escolha qual AGORA — um documento, um deck —
+     e confira que ele tem verificador possivel. Sem isso o marco vira demonstracao vazia.
+  4. **A LINHA_DE_BASE.md ainda e comparavel?** Ela foi extraida dos jobs da v1 na T-008. Se
+     a v1 continuou rodando desde entao, ha mais jobs — reextraia, para a comparacao usar a
+     mesma janela. E confirme que os quatro numeros da v2 sao mensuraveis com o que o sistema
+     grava hoje; se algum nao for, ESTA e a hora de acrescentar a instrumentacao, nao no fim.
+  5. **Escolha o projeto pequeno do marco final.** 8 a 12 tarefas, novo, nao um dos tres
+     projetos vivos da v1 — migrar projeto em voo nunca foi o plano.
+
+**Registre em `_gestao/PROGRESSO.md`** as escolhas dos itens 3 e 5, e o que foi ajustado.
+""",
+    [
+        ("As colunas reais do banco foram confrontadas com o que as tarefas de painel assumem.", None),
+        ("O projeto da trilha generica foi escolhido e tem verificador possivel (registrado).", None),
+        ("A linha de base foi reextraida se a v1 continuou rodando, e os quatro numeros sao mensuraveis hoje.", None),
+        ("O projeto pequeno do marco final foi escolhido e registrado.", None),
+    ],
+)
+
+tarefa(
+    "v1.0", "telemetria", "Barramento de eventos e telemetria por despacho", ["v0.2:laco", "v0.4:supervisao"],
     ["lib/fabrica/eventos.ex", "lib/fabrica/telemetria.ex", "test/fabrica/eventos_test.exs"],
     """
 Cada despacho emite eventos — inicio, fim, modelo, voltas, tokens escritos e lidos, custo e
@@ -1804,7 +1996,7 @@ desenho, e ele precisa estar visivel na tela, nao so no banco.
 )
 
 tarefa(
-    "v1.0", "painel-quadro", "Painel: quadro de tarefas por estado, ao vivo", ["T-046"],
+    "v1.0", "painel-quadro", "Painel: quadro de tarefas por estado, ao vivo", ["v1.0:telemetria"],
     ["lib/fabrica_web/live/quadro_live.ex", "test/fabrica_web/live/quadro_live_test.exs"],
     """
 A tela principal: as tarefas do projeto agrupadas pelos seis estados, atualizando sozinha
@@ -1835,7 +2027,7 @@ olhar o PNG e aposta, e ja falhou duas vezes na v1. Grave em `_gestao/evidencias
 )
 
 tarefa(
-    "v1.0", "painel-console", "Painel: console ao vivo do agente e custo da rodada", ["T-046", "T-047"],
+    "v1.0", "painel-console", "Painel: console ao vivo do agente e custo da rodada", ["v1.0:telemetria", "v1.0:painel-quadro"],
     ["lib/fabrica_web/live/console_live.ex", "test/fabrica_web/live/console_live_test.exs"],
     """
 Ver o que o agente esta fazendo agora, volta a volta, e quanto a rodada ja gastou —
@@ -1869,7 +2061,7 @@ o registro completo por consulta.
 )
 
 tarefa(
-    "v1.0", "parar-retomar", "Parar e retomar: um botao que encerra um processo supervisionado", ["T-034", "T-047"],
+    "v1.0", "parar-retomar", "Parar e retomar: um botao que encerra um processo supervisionado", ["v0.4:supervisao", "v1.0:painel-quadro"],
     ["lib/fabrica_web/live/componentes/controles.ex", "test/fabrica_web/controles_test.exs"],
     """
 Cortar um agente pela tela — e o supervisor devolve a tarefa a fila, sem deixar trabalho pela
@@ -1899,7 +2091,7 @@ ser informada em vez de reflexa.
 )
 
 tarefa(
-    "v1.0", "piloto-decisao", "Piloto automatico: a decisao (funcao pura)", ["T-030", "T-037"],
+    "v1.0", "piloto-decisao", "Piloto automatico: a decisao (funcao pura)", ["v0.3:orcamento", "v0.4:parede-cota"],
     ["lib/fabrica/piloto/decisao.ex", "test/fabrica/piloto/decisao_test.exs"],
     """
 A tabela de decisao que diz se o piloto continua, dorme ou para — pura, testavel, e com a
@@ -1937,7 +2129,7 @@ Desligar NAO corta a rodada em voo.
 )
 
 tarefa(
-    "v1.0", "piloto-mecanica", "Piloto automatico: a mecanica e a tela", ["T-050"],
+    "v1.0", "piloto-mecanica", "Piloto automatico: a mecanica e a tela", ["v1.0:piloto-decisao"],
     ["lib/fabrica/piloto/servidor.ex", "lib/fabrica_web/live/componentes/piloto.ex", "test/fabrica/piloto/servidor_test.exs"],
     """
 O processo que escuta o fim de uma rodada, consulta a decisao e dispara a proxima — mais o
@@ -1966,7 +2158,7 @@ dormindo — a hora do rearme. O usuario precisa saber se esta dormindo ou trava
 )
 
 tarefa(
-    "v1.0", "trilha-generica", "A trilha generica e a escada de prova com rotulo obrigatorio", ["T-024", "T-027"],
+    "v1.0", "trilha-generica", "A trilha generica e a escada de prova com rotulo obrigatorio", ["v0.3:criterios", "v0.3:portoes"],
     ["lib/fabrica/trilhas.ex", "lib/fabrica/criterios/grau.ex", "test/fabrica/trilhas_test.exs"],
     """
 Rotear o pipeline inteiro pelo `dominio` do projeto, e obrigar o verificador a declarar em
@@ -2002,7 +2194,7 @@ Duas pecas completam o desenho, e as duas sao regra do planejador:
 )
 
 tarefa(
-    "v1.0", "seguranca", "Varredura de segredos antes de publicar", ["T-031"],
+    "v1.0", "seguranca", "Varredura de segredos antes de publicar", ["v0.3:markdown-gerado"],
     ["lib/fabrica/seguranca.ex", "test/fabrica/seguranca_test.exs"],
     """
 Varrer o repositorio por segredos antes de qualquer publicacao, e recusar quando encontrar.
@@ -2029,7 +2221,7 @@ versionada), nunca por desligar a varredura.
 )
 
 tarefa(
-    "v1.0", "marco", "MARCO da v1.0: um projeto inteiro, sem intervencao", ["T-048", "T-049", "T-051", "T-052", "T-053"],
+    "v1.0", "marco", "MARCO da v1.0: um projeto inteiro, sem intervencao", ["v1.0:painel-console", "v1.0:parar-retomar", "v1.0:piloto-mecanica", "v1.0:trilha-generica", "v1.0:seguranca"],
     ["_gestao/PROGRESSO.md", "_gestao/ENTREGA.md"],
     """
 Verificar o marco final: um projeto inteiro e planejado, construido e entregue sem
@@ -2077,29 +2269,48 @@ def codigo(i):
     return "T-%03d" % (i + 1)
 
 
-def validar():
-    """Falha ANTES de escrever qualquer arquivo se a numeracao estiver errada.
+def indice():
+    """Mapa "versao:slug" -> posicao.
 
-    Dependencia que aponta para a propria tarefa, para o futuro, ou para um codigo
-    inexistente e o erro classico de quem numera escrevendo — e ele so aparece meses
-    depois, quando a fila se recusa a promover alguma coisa e ninguem entende por que.
+    As dependencias sao escritas por NOME, nao por numero, e a razao e insercao: numero
+    de tarefa e POSICAO, e posicao muda toda vez que uma tarefa entra no meio.
+    Referencia por nome sobrevive a insercao; referencia por numero quebra em silencio —
+    a validacao pega dependencia que aponta para o futuro, mas nao pega dependencia que
+    aponta para a tarefa ERRADA que por acaso vem antes.
     """
-    existentes = {codigo(i) for i in range(len(T))}
+    return {"%s:%s" % (t["v"], t["slug"]): i for i, t in enumerate(T)}
+
+
+def resolver(t):
+    """Codigos T-NNN das dependencias de uma tarefa, na ordem declarada."""
+    ix = indice()
+    return [codigo(ix[d]) for d in t["dep"]]
+
+
+def validar():
+    """Falha ANTES de escrever qualquer arquivo se as ligacoes estiverem erradas."""
+    ix = indice()
     problemas = []
+    if len(ix) != len(T):
+        problemas.append("ha 'versao:slug' repetido — cada par tem de ser unico")
     for i, t in enumerate(T):
-        meu = codigo(i)
+        meu = "%s:%s" % (t["v"], t["slug"])
         for d in t["dep"]:
-            if d not in existentes:
+            if d not in ix:
                 problemas.append("%s depende de %s, que nao existe" % (meu, d))
-            elif d >= meu:
-                problemas.append("%s depende de %s, que vem depois dela" % (meu, d))
+            elif ix[d] >= i:
+                problemas.append(
+                    "%s (%s) depende de %s (%s), que vem depois dela"
+                    % (meu, codigo(i), d, codigo(ix[d]))
+                )
     if problemas:
-        raise SystemExit("DEPENDENCIAS INVALIDAS:\n  " + "\n  ".join(problemas))
+        raise SystemExit("DEPENDENCIAS INVALIDAS:" + "".join(
+            chr(10) + "  " + x for x in problemas))
 
 
 def render_tarefa(i, t):
     cod = codigo(i)
-    deps = "[" + ", ".join(t["dep"]) + "]"
+    deps = "[" + ", ".join(resolver(t)) + "]"
     areas = "[" + ", ".join(t["areas"]) + "]"
 
     linhas = []
@@ -2175,7 +2386,7 @@ def render_roteiro():
         l.append("| tarefa | o que faz | depende de |")
         l.append("|---|---|---|")
         for i, t in itens:
-            dep = ", ".join(t["dep"]) if t["dep"] else "—"
+            dep = ", ".join(resolver(t)) if t["dep"] else "—"
             l.append("| **%s** | %s | %s |" % (codigo(i), t["titulo"], dep))
         l.append("")
         l.append("> **Marco da %s:** %s" % (v["id"], v["marco"]))

@@ -108,6 +108,22 @@ As duas decisões abaixo foram fechadas pelo usuário em **2026-08-28**.
   de `tool_use`/`tool_result` erra o cache em silêncio); o **mínimo cacheável por modelo**,
   que não é monotônico — 512 no Opus 5, 1024 no Sonnet 5, **4096 no Haiku 4.5**, e o
   `testador` roda em Haiku; e **requisições paralelas idênticas não compartilham cache**.
+- **QUEM CONSTRÓI A v2: o Claude Code direto, uma sessão por tarefa.** Decidido em 28/08.
+  É para isso que as 58 tarefas de `_sistema/v2/tarefas/` foram escritas. **Não** pela v1
+  (amarraria o cronograma à estabilidade de um sistema com 89 tarefas vivas, e os agentes
+  dela são calibrados para a doutrina dela, não para Elixir). A opção de a própria v2 se
+  construir a partir da v0.3 foi considerada e **não escolhida agora** — reabrir só depois
+  do marco da v0.3, com a v2 já provada, e como experimento declarado.
+- **ONDE A v2 NASCE: `projetos/fabrica-v2/`.** Repositório git próprio, como todo projeto da
+  fábrica — já está no `.gitignore` da raiz, então a história da v1 e a da v2 ficam
+  separadas de verdade. A v1 fica **intocada** operando os 3 projetos atuais. A virada
+  acontece só no marco da v1.0, sobre um projeto novo e pequeno; **nunca migrar projeto em
+  voo**.
+- **A v0.5 (memória semântica) ESTÁ NO ESCOPO FIRME** da entrega do TCC. Não é mais
+  opcional. O que continua aberto é só **como o embedding roda** — local (Bumblebee) ou por
+  serviço — e isso é decidido **com medição** na T-042, não por palpite: mede-se disco,
+  memória residente e tempo por 1.000 trechos antes de escolher. Se couber em 8 GB, local é
+  o padrão (grátis, offline, não manda o projeto para fora).
 - **PERFIL ALVO DA v2: 8 GB de RAM e 4 núcleos.** Pedido do usuário em 28/08 ("leve, rodando
   em qualquer computador médio"). É restrição de arquitetura, não preferência: desenvolver na
   máquina forte é ótimo, **depender dela não**. Medido: BEAM, PostgreSQL e pgvector juntos

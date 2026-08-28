@@ -1,4 +1,4 @@
-# Roteiro da v2 — as 54 tarefas, em ordem
+# Roteiro da v2 — as 58 tarefas, em ordem
 
 **Gerado por `gerar-tarefas.py`. Nao edite a mao** — edite a especificacao no
 gerador e rode de novo. Ele nunca sobrescreve tarefa que ja existe.
@@ -59,19 +59,20 @@ Contexto do porque de cada coisa: `_sistema/PLANO_V2.md` (as versoes),
 
 | tarefa | o que faz | depende de |
 |---|---|---|
-| **T-021** | Os seis estados e a transicao transacional | T-002, T-005 |
-| **T-022** | Promocao por dependencias e ordenacao da fila | T-021 |
-| **T-023** | Equipe sob demanda: especialistas versionados e resolucao do construtor | T-002, T-022 |
-| **T-024** | Criterios executaveis: leitura, allowlist e passada mecanica | T-013, T-021 |
-| **T-025** | Classe de falha: o comando quebrou, ou a entrega falhou? | T-024 |
-| **T-026** | O criterio implicito da suite e a deteccao de ecossistema | T-024 |
-| **T-027** | Os dois portoes, e a ausencia da ferramenta de corrigir | T-021, T-024, T-025 |
-| **T-028** | Diagnostico de reprovacao: decidir COMO refazer, nao so que refazer | T-025, T-027 |
-| **T-029** | A escada de resposta ao fracasso, e o limite de 3 ciclos | T-028 |
-| **T-030** | Orcamento com parada limpa: teto por rodada e por tarefa | T-005, T-021 |
-| **T-031** | Geracao do markdown a partir do banco, e o commit da tarefa | T-016, T-021 |
-| **T-032** | Importador das 89 tarefas vivas da v1 | T-002, T-031 |
-| **T-033** | MARCO da v0.3: uma tarefa percorre os seis estados e conclui | T-029, T-030, T-031, T-032 |
+| **T-021** | ABERTURA da v0.3: conferir o plano contra o codigo que existe | T-020 |
+| **T-022** | Os seis estados e a transicao transacional | T-002, T-005 |
+| **T-023** | Promocao por dependencias e ordenacao da fila | T-022 |
+| **T-024** | Equipe sob demanda: especialistas versionados e resolucao do construtor | T-002, T-023 |
+| **T-025** | Criterios executaveis: leitura, allowlist e passada mecanica | T-013, T-022 |
+| **T-026** | Classe de falha: o comando quebrou, ou a entrega falhou? | T-025 |
+| **T-027** | O criterio implicito da suite e a deteccao de ecossistema | T-025 |
+| **T-028** | Os dois portoes, e a ausencia da ferramenta de corrigir | T-022, T-025, T-026 |
+| **T-029** | Diagnostico de reprovacao: decidir COMO refazer, nao so que refazer | T-026, T-028 |
+| **T-030** | A escada de resposta ao fracasso, e o limite de 3 ciclos | T-029 |
+| **T-031** | Orcamento com parada limpa: teto por rodada e por tarefa | T-005, T-022 |
+| **T-032** | Geracao do markdown a partir do banco, e o commit da tarefa | T-016, T-022 |
+| **T-033** | Importador das 89 tarefas vivas da v1 | T-002, T-032 |
+| **T-034** | MARCO da v0.3: uma tarefa percorre os seis estados e conclui | T-030, T-031, T-032, T-033 |
 
 > **Marco da v0.3:** Uma tarefa percorre os seis estados, reprova DE PROPOSITO, e retrabalhada e conclui, com tudo registrado em transacao.
 
@@ -83,29 +84,31 @@ Contexto do porque de cada coisa: `_sistema/PLANO_V2.md` (as versoes),
 
 | tarefa | o que faz | depende de |
 |---|---|---|
-| **T-034** | Arvore de supervisao e registro de processos | T-015, T-021 |
-| **T-035** | Fila duravel: enfileirar e mudar estado na mesma transacao | T-021, T-034 |
-| **T-036** | Paralelismo com `areas` como exclusao mutua verificada | T-022, T-035 |
-| **T-037** | A parede de cota: reconhecer, dormir e rearmar | T-018, T-035 |
-| **T-038** | Recuperacao apos queda: sobras na arvore git e trabalho parcial | T-031, T-034 |
-| **T-039** | MARCO da v0.4: tres tarefas em paralelo, e matar uma nao derruba as outras | T-036, T-037, T-038 |
+| **T-035** | ABERTURA da v0.4: conferir concorrencia e numeros medidos | T-034 |
+| **T-036** | Arvore de supervisao e registro de processos | T-015, T-022 |
+| **T-037** | Fila duravel: enfileirar e mudar estado na mesma transacao | T-022, T-036 |
+| **T-038** | Paralelismo com `areas` como exclusao mutua verificada | T-023, T-037 |
+| **T-039** | A parede de cota: reconhecer, dormir e rearmar | T-018, T-037 |
+| **T-040** | Recuperacao apos queda: sobras na arvore git e trabalho parcial | T-032, T-036 |
+| **T-041** | MARCO da v0.4: tres tarefas em paralelo, e matar uma nao derruba as outras | T-038, T-039, T-040 |
 
 > **Marco da v0.4:** Tres tarefas rodam em paralelo; matar o processo de uma nao afeta as outras duas, e ela volta a fila.
 
 ---
 
-## v0.5 — A fabrica que lembra *(opcional)*
+## v0.5 — A fabrica que lembra
 
 **Entrega:** O agente comeca a tarefa sabendo o que ja foi decidido, e por que.
 
 | tarefa | o que faz | depende de |
 |---|---|---|
-| **T-040** | Ingestao da historia do projeto ao commitar | T-004, T-031 |
-| **T-041** | Busca hibrida com fusao reciproca de postos | T-040 |
-| **T-042** | Embedder.Servico e Embedder.Local | T-004 |
-| **T-043** | O bloco de contexto recuperado, com a fonte citada | T-041, T-011 |
-| **T-044** | Avaliacao da qualidade da recuperacao | T-041 |
-| **T-045** | MARCO da v0.5: o agente cita a decisao anterior | T-042, T-043, T-044 |
+| **T-042** | ABERTURA da v0.5: decidir o embedding com medicao, nao com palpite | T-041 |
+| **T-043** | Ingestao da historia do projeto ao commitar | T-004, T-032 |
+| **T-044** | Busca hibrida com fusao reciproca de postos | T-043 |
+| **T-045** | Embedder.Servico e Embedder.Local | T-004 |
+| **T-046** | O bloco de contexto recuperado, com a fonte citada | T-044, T-011 |
+| **T-047** | Avaliacao da qualidade da recuperacao | T-044 |
+| **T-048** | MARCO da v0.5: o agente cita a decisao anterior | T-045, T-046, T-047 |
 
 > **Marco da v0.5:** Num projeto com historico, o agente cita a decisao anterior em vez de decidir de novo.
 
@@ -117,15 +120,16 @@ Contexto do porque de cada coisa: `_sistema/PLANO_V2.md` (as versoes),
 
 | tarefa | o que faz | depende de |
 |---|---|---|
-| **T-046** | Barramento de eventos e telemetria por despacho | T-015, T-034 |
-| **T-047** | Painel: quadro de tarefas por estado, ao vivo | T-046 |
-| **T-048** | Painel: console ao vivo do agente e custo da rodada | T-046, T-047 |
-| **T-049** | Parar e retomar: um botao que encerra um processo supervisionado | T-034, T-047 |
-| **T-050** | Piloto automatico: a decisao (funcao pura) | T-030, T-037 |
-| **T-051** | Piloto automatico: a mecanica e a tela | T-050 |
-| **T-052** | A trilha generica e a escada de prova com rotulo obrigatorio | T-024, T-027 |
-| **T-053** | Varredura de segredos antes de publicar | T-031 |
-| **T-054** | MARCO da v1.0: um projeto inteiro, sem intervencao | T-048, T-049, T-051, T-052, T-053 |
+| **T-049** | ABERTURA da v1.0: o que a tela precisa mostrar, e a medicao final | T-048 |
+| **T-050** | Barramento de eventos e telemetria por despacho | T-015, T-036 |
+| **T-051** | Painel: quadro de tarefas por estado, ao vivo | T-050 |
+| **T-052** | Painel: console ao vivo do agente e custo da rodada | T-050, T-051 |
+| **T-053** | Parar e retomar: um botao que encerra um processo supervisionado | T-036, T-051 |
+| **T-054** | Piloto automatico: a decisao (funcao pura) | T-031, T-039 |
+| **T-055** | Piloto automatico: a mecanica e a tela | T-054 |
+| **T-056** | A trilha generica e a escada de prova com rotulo obrigatorio | T-025, T-028 |
+| **T-057** | Varredura de segredos antes de publicar | T-032 |
+| **T-058** | MARCO da v1.0: um projeto inteiro, sem intervencao | T-052, T-053, T-055, T-056, T-057 |
 
 > **Marco da v1.0:** Um projeto inteiro e planejado, construido e entregue sem intervencao, com o custo acompanhado na tela.
 

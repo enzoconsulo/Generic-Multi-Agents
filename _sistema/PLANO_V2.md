@@ -50,12 +50,15 @@ Mesmo padrão já aprovado para o operário. Um `behaviour` `Fabrica.Embedder`:
 |---|---|---|
 | `Embedder.Falso` | vetores determinísticos por hash — sem rede, sem modelo, sem custo | **v0.1**, e é o que a suíte usa para sempre |
 | `Embedder.Servico` | uma chamada HTTP devolve o vetor | **v0.5**, padrão em máquina modesta |
-| `Embedder.Local` | Bumblebee + modelo pequeno (384 dim), rodando no nó | **v0.5**, opcional, para a máquina forte |
+| `Embedder.Local` | Bumblebee + modelo pequeno (384 dim), rodando no nó | **v0.5** — o padrão, **se a medição da T-042 mostrar que cabe** |
 
-E a consequência que garante o requisito: **a memória semântica (v0.5) é OPCIONAL.**
-Sem ela a fábrica funciona inteira — só não cita precedente. Nenhuma versão anterior à v0.5
-carrega modelo nenhum. Assim a v1.0 roda num computador médio, e a máquina forte serve para
-ir mais rápido, não para viabilizar.
+E a consequência que garante o requisito: **nenhuma versão anterior à v0.5 carrega modelo
+nenhum**, e a v0.5 escolhe o adaptador **por medição** (T-042: disco, memória residente e
+tempo por 1.000 trechos, medidos antes de decidir). Assim a v1.0 roda num computador médio,
+e a máquina forte serve para ir mais rápido, não para viabilizar.
+
+> **A v0.5 está no escopo firme** da entrega (decisão de 28/08). Ela deixou de ser opcional;
+> o que ficou aberto é só qual adaptador de embedding vira o padrão.
 
 > Isto **preserva a tese do TCC**, não a enfraquece: a Parte VI argumenta que os dois índices
 > respondem perguntas diferentes e que o semântico é o caro e aproximado. Torná-lo opcional
@@ -160,7 +163,7 @@ outras seguirem — e a morta voltar para a fila.
 
 ---
 
-### v0.5 — A fábrica que lembra *(opcional)*
+### v0.5 — A fábrica que lembra
 **O que você consegue fazer:** o agente começa a tarefa já sabendo "isto foi decidido assim,
 por este motivo" — em vez de decidir de novo, às vezes ao contrário.
 
@@ -172,11 +175,10 @@ por este motivo" — em vez de decidir de novo, às vezes ao contrário.
   do fonte)
 
 > **Marco:** num projeto com histórico, o agente cita a decisão anterior em vez de decidir de
-> novo. ~6–8 tarefas.
+> novo. T-042 … T-048.
 >
 > **A consulta SQL desta fase já foi provada rodando** nesta máquina, com dado de verdade
-> (`AMBIENTE_V2.md`, seção 4). **É a única versão opcional** — sem ela a fábrica funciona
-> inteira, e é isso que garante o requisito de rodar em máquina média.
+> (`AMBIENTE_V2.md`, seção 4).
 
 ---
 
@@ -197,7 +199,7 @@ planejado, construído, verificado, revisado e entregue — sem intervenção.
 
 ---
 
-**Total: 54 tarefas**, decompostas e escritas — não estimadas. Estão em
+**Total: 58 tarefas**, decompostas e escritas — não estimadas. Estão em
 `_sistema/v2/tarefas/`, uma por arquivo, no formato do protocolo da fábrica, com objetivo,
 contexto (o "como fazer", com as armadilhas já mapeadas) e critérios de aceite executáveis.
 
@@ -245,22 +247,65 @@ subir, e o `Embedder.Local` passa a ser viável. **Nada disso é requisito** —
 
 ---
 
-## 5. O que falta decidir antes da primeira tarefa
+## 5. As decisões, fechadas
 
-Três perguntas. Nenhuma é técnica; todas mudam o formato do trabalho.
+Todas em `DECISOES_FECHADAS.md` com o motivo. Não se reabrem sem fato novo.
 
-1. **Quem constrói a v2 — a v1, ou você direto?**
-   Construir a v2 *pela* v1 é o teste mais duro que a fábrica pode receber e é material de
-   TCC por si só. Mas amarra o cronograma da v2 à estabilidade da v1, e a v1 tem 89 tarefas
-   vivas. A alternativa é implementar direto, com a fábrica de fora.
-2. **Onde a v2 nasce.** Recomendação registrada: **repositório próprio, ao lado**, com a v1
-   intocada operando os 3 projetos atuais. Virada só no marco da v1.0, sobre um projeto novo
-   e pequeno. Nunca migrar projeto em voo.
-3. **A linha de base de medição.** A tese é "mais difícil de operar errado" — sem número
-   comparável, o TCC fecha numa afirmação. Os 139 jobs em `painel/dados/jobs/` já são a linha
-   de base, e lê-los **não custa nada**. Declarar antes da v0.1: proporção de despacho
-   desperdiçado, custo por tarefa concluída, contexto por despacho, e o que se perde ao matar
-   um agente em voo.
+| decisão | fechada em 28/08 |
+|---|---|
+| **Quem constrói** | O **Claude Code direto**, uma sessão por tarefa — é para isso que as 58 tarefas foram escritas. Não pela v1: amarraria o cronograma à estabilidade de um sistema com 89 tarefas vivas, e os agentes dela são calibrados para a doutrina dela, não para Elixir. |
+| **Onde nasce** | **`projetos/fabrica-v2/`** — repositório git próprio, como todo projeto da fábrica, já fora do `.gitignore` da raiz. A v1 fica **intocada** operando os 3 projetos atuais. |
+| **v0.5** | **Escopo firme.** Deixou de ser opcional. O que continua aberto é só qual adaptador de embedding vira o padrão — e isso se decide **com medição**, na T-042. |
+| **Linha de base** | Extraída dos 139 jobs da v1 na **T-008**, antes de qualquer código, e de graça. Sem ela o TCC fecha numa afirmação em vez de num resultado. |
 
-Fechadas as três, o passo seguinte é decompor a v0.1 em tarefas do protocolo, com critério
-executável — e aí sim começa a implementação.
+**Uma possibilidade que ficou registrada e não escolhida:** a partir da v0.3 a v2 já é uma
+fábrica funcionando, e poderia construir as próprias funcionalidades restantes. É a narrativa
+mais forte possível para a banca — o sistema provando a tese sobre si mesmo. Não foi escolhida
+agora porque a v2 na v0.3 é nova e não provada. **Reabrir depois do marco da v0.3**, como
+experimento declarado e com volta atrás fácil.
+
+---
+
+## 6. O planejamento não para na primeira tarefa
+
+As 58 tarefas foram escritas de uma vez, em 28/08/2026, antes de existir uma linha de código.
+As da v0.1 e v0.2 envelhecem pouco porque são executadas logo. **As demais serão executadas
+semanas ou meses depois, sobre um código que já tomou decisões que o planejamento não podia
+prever** — e tarefa escrita com meses de antecedência envelhece.
+
+O jeito errado de lidar com isso é descobrir na hora da implementação, tarefa a tarefa,
+improvisando. Por isso cada versão a partir da v0.3 abre com uma **tarefa de abertura**, que
+não escreve código de produção nenhum:
+
+| tarefa | o que ela confere antes de a versão começar |
+|---|---|
+| **T-021** abertura da v0.3 | o esquema real do banco contra o que as tarefas assumem · a forma do estado do laço · o veredito do marco da v0.2 sobre o `MessagesAPI` · **abrir o código da v1 que vai ser portado, antes de portar** · se os números medidos da v1 ainda valem |
+| **T-035** abertura da v0.4 | os custos que a v0.3 mediu de verdade contra os defaults do plano · **se o paralelismo acontece de fato** (na v1, o 3-wide não ocorreu uma vez em 43 rodadas) · a API atual do Oban · o formato da mensagem de cota · o **pico real de memória**, que decide o limite de concorrência |
+| **T-042** abertura da v0.5 | o pgvector ainda de pé · **medir o modelo local** (disco, memória residente, tempo por 1.000 trechos) antes de escolher local vs. serviço · se há corpus suficiente para indexar |
+| **T-049** abertura da v1.0 | o que o banco **realmente grava** contra o que as telas assumem · a API atual do LiveView · escolher o projeto da trilha genérica · **reextrair a linha de base** se a v1 continuou rodando |
+
+Cada uma termina registrando em `_gestao/PROGRESSO.md` **o que foi ajustado e por quê** — e
+"conferido, nada divergiu" também é registro. Um ajuste sem justificativa é indistinguível de
+um desvio do plano, e é exatamente isso que a banca vai perguntar.
+
+---
+
+## 7. Onde o planejamento fica visível, do começo ao fim
+
+Para quem for auditar o trabalho — inclusive o professor:
+
+| o quê | onde |
+|---|---|
+| A arquitetura, como apresentada | os `.docx` da raiz (`-7` completo, 8 partes, 21 figuras) |
+| A análise que confronta a doc com a v1 real | `_sistema/MIGRACAO_V2.md` |
+| As decisões, com o motivo e o que as provocou | `_sistema/DECISOES_FECHADAS.md` |
+| O plano em versões incrementais | este arquivo |
+| O ambiente, com as armadilhas medidas | `_sistema/AMBIENTE_V2.md` |
+| As 58 tarefas, e o estado de cada uma | `_sistema/v2/tarefas/` e `_sistema/v2/ROTEIRO.md` |
+| O que foi ajustado no meio do caminho | as tarefas de abertura + `_gestao/PROGRESSO.md` |
+| O progresso | o `status:` de cada tarefa e o histórico de commits (`T-NNN: título`) |
+| O resultado, contra a linha de base | `_gestao/ENTREGA.md` (T-058) |
+
+**Tudo isso é anterior à primeira linha de código e está versionado em git com data.** É essa
+sequência — planejar, medir, decidir com o motivo registrado, executar, e reconferir o plano
+a cada versão — que torna o desenvolvimento defensável, e não só o resultado final.

@@ -19,8 +19,13 @@ comandos reais, `_gestao/GUIA.md` preenchido e um commit contendo tudo isso. Est
 fundacao: toda tarefa seguinte depende dela.
 
 ## Contexto
-Rode `mix phx.new fabrica --database postgres --no-mailer --no-gettext` na raiz do
-repositorio da v2. LiveView fica LIGADO (e a tela da v1.0) mas nenhuma pagina propria e
+O REPOSITORIO DA v2 E `projetos/fabrica-v2/` (decisao de 28/08, em
+`DECISOES_FECHADAS.md`): git proprio, ao lado, ja fora do `.gitignore` da raiz da fabrica.
+A v1 fica INTOCADA. Crie o diretorio, rode `git init` nele, e trabalhe la dentro — nada
+desta tarefa toca a arvore da v1.
+
+Rode `mix phx.new fabrica --database postgres --no-mailer --no-gettext` dentro dele.
+LiveView fica LIGADO (e a tela da v1.0) mas nenhuma pagina propria e
 criada agora — o scaffold do Phoenix ja vem com a pagina inicial e ela basta.
 
 Configure em `mix.exs` as dependencias de qualidade: `credo` e `dialyxir` (ambas
