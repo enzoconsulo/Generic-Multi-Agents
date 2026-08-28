@@ -200,16 +200,24 @@ F6; até lá o painel da v1 continua sendo a tela.
 
 ---
 
-## 5. O ambiente, medido
+## 5. O ambiente — RESOLVIDO em 2026-08-28
 
-| item | estado | consequência |
+Estado completo, com as provas e as armadilhas: **`_sistema/AMBIENTE_V2.md`**. Resumo:
+
+| item | estado | |
 |---|---|---|
-| Elixir | 1.20.0, **compilado contra OTP 28** | |
-| Erlang | **OTP 29** (erts-17.0.1) | **descasamento** — alinhar é item da F1, antes de qualquer código |
-| PostgreSQL | 18 instalado | serve |
-| pgvector | **não verificado**; **sem Docker** na máquina | extensão compilada; no Windows não é trivial. Ameaça direta à F5 |
-| Memória | ~7,9 GB, ~1,3 GB livres | **aperta a F5**: BEAM + Postgres + modelo de embedding residente + suíte de projeto. Já há histórico de 8 `node.exe` órfãos por estouro |
-| SO | Windows 11 | Elixir/OTP em Windows é o caminho menos trilhado: matar árvore de processo, prazos e `System.cmd` são trabalho específico |
+| Elixir / Erlang | **1.20.0 compilado com OTP 29**, sobre OTP 29 | ✅ descasamento resolvido; provado por `mix new/compile/test` |
+| PostgreSQL | **18.4** em `C:\pgsql\18`, cluster em `C:\pgsql\dados`, 127.0.0.1:5432 | ✅ a instalação anterior em `Program Files` estava **incompleta** (sem `lib/`, sem cluster) e só *parecia* boa |
+| pgvector | **0.8.6**, compilado com MSVC | ✅ script reproduzível em `_sistema/ferramentas/instalar-pgvector.ps1` |
+| **HNSW em escala** | 20k vetores × 384 dim: índice em **4,1 s**, 38 MB, usado pelo planejador, consulta em **1,3 ms**, memória 1,45 → 1,43 GB | ✅ **o risco de pgvector estava superestimado** |
+| Busca híbrida (RRF) | a consulta da seção 9 do `-3-completo` roda de verdade | ✅ |
+| Memória | ~7,9 GB, ~1,4 GB livres | ⚠️ continua sendo a escassez real da máquina |
+| **Bumblebee/Nx (EXLA)** | **não testado** | ⚠️ **é este o risco que sobra da F5**, e ele é ordens de grandeza mais pesado que o pgvector |
+| SO | Windows 11 | ⚠️ Elixir/OTP em Windows é o caminho menos trilhado: matar árvore de processo, prazos e `System.cmd` são trabalho específico |
+
+**A medição separou um risco que a análise tratava como um só.** "pgvector + embedding
+local sob 1,3 GB" era, na verdade, duas perguntas: o banco vetorial é confortável aqui; o
+modelo de embedding residente é que precisa ser decidido — local ou por serviço.
 
 ---
 
@@ -294,8 +302,9 @@ que o inventário da seção 3 existe.
   desperdiçado** (agente cortado, reprovação falsa, tarefa girando), custo por tarefa
   concluída, contexto por despacho (53,5k → 11–14k já medido), e o que se perde ao matar um
   agente em voo. Declarar isso antes da F1.
-- **pgvector e embedding sob 1,3 GB livres** (seção 5) — o único risco de ambiente, e o único
-  que dá para desarmar sem escrever código.
+- ~~pgvector e embedding sob 1,3 GB livres~~ — **pgvector resolvido e medido** (seção 5 e
+  `AMBIENTE_V2.md`). Sobra decidir o **embedding**: Bumblebee/Nx local vs. serviço por
+  chamada. É o único risco de ambiente que resta.
 - **Nomenclatura PT-BR** (`Fabrica.Tarefa`, `Fabrica.Portao`, `Fabrica.Operario`) — registrar
   para não ser reaberto na primeira tarefa.
 - **Correção nos `.docx`:** o `-3-completo` afirma que a v1 tinha o hash de commit no prefixo;
@@ -308,7 +317,8 @@ que o inventário da seção 3 existe.
 ## 9. Sequência
 
 1. ~~Fechar as decisões do operário e da fonte de verdade~~ — **feito**, seção 6.
-2. Desarmar o risco de ambiente: alinhar Elixir/OTP e provar pgvector nesta máquina.
+2. ~~Desarmar o risco de ambiente: alinhar Elixir/OTP e provar pgvector~~ — **feito em
+   28/08**; ver `_sistema/AMBIENTE_V2.md`. Resta decidir o embedding (local vs. serviço).
 3. Declarar a linha de base de medição a partir dos 139 jobs já gravados — de graça.
 4. Planejar: as 6 fases da documentação, com o conteúdo da seção 7, decompostas em tarefas do
    protocolo com critério executável.
