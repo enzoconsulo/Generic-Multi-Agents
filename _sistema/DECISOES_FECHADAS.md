@@ -86,13 +86,35 @@ As duas decisões abaixo foram fechadas pelo usuário em **2026-08-28**.
   tokens, não fatura**. Não trate esses números como dinheiro gasto, e não proponha
   "economia" que só faça sentido contra uma fatura por API. O que aperta de verdade é a
   parede de cota — daí `ehLimiteDeUso`, `horaDeReabertura` e o rearme do piloto.
+- **O CACHE DA v1 JÁ ENTREGA ~80% DE ECONOMIA — não proponha "ligar cache".** Medido em
+  28/08 sobre os 27 jobs de `dados/jobs/` com contabilidade completa: 93,14% dos tokens de
+  entrada são LEITURA de cache (0,1×), 6,66% escrita, 0,20% preço cheio; razão 14:1; custo
+  efetivo 0,18–0,21× do mesmo trabalho sem cache.
+  **O que sobra, e é o alvo real: a escrita é 6,66% dos tokens e ~50% da conta de entrada**,
+  porque cada despacho é sessão nova e sessão nova escreve prefixo novo (~21 por rodada).
+  Multiplicador de escrita conferido contra os 12 jobs com custo real do SDK: fica entre
+  1,25× e 2,0×, mais perto de 1,75× — **compatível com mistura de TTL de 5 min e 1 h**, ou
+  seja, o CLI já usa o TTL longo em parte.
 - **O operário da v2 é DUPLO, com padrão no CLI.** `behaviour Fabrica.Operario` com
   `Falso` (F1, marco), `ClaudeCLI` (F2, **padrão de operação**, roda na assinatura) e
-  `MessagesAPI`/Req (F2, controle byte a byte do `cache_control`, exercitado só em
-  orçamento pequeno e declarado para provar o ganho). **Não reabra como "Req ou SDK"** —
-  a decisão foi não escolher, e o motivo é que ir só de Req empilha três apostas numa fase
-  (laço novo + ferramentas novas + cobrança nova). Reabrir SÓ SE o `ClaudeCLI` se mostrar
-  incapaz de sustentar a máquina de estados, com o caso registrado.
+  `MessagesAPI`/Req (F2, controle de `cache_control`, TTL e pontos de corte). **Não reabra
+  como "Req ou SDK"** — a decisão foi não escolher, e o motivo é que ir só de Req empilha
+  três apostas numa fase (laço novo + ferramentas novas + cobrança nova). O prêmio do Req
+  é dimensionado e específico: transformar ~21 escritas de prefixo por rodada em 1–2. Por
+  isso a **F2 ganha um marco a mais**: o prefixo do projeto é escrito uma vez e lido pelos
+  despachos seguintes, provado por `cache_read_input_tokens`.
+- **Três armadilhas de cache que a v1 não tem como ver** (referência: skill `claude-api`,
+  `shared/prompt-caching.md`): a **janela de 20 blocos** para trás (uma volta com centenas
+  de `tool_use`/`tool_result` erra o cache em silêncio); o **mínimo cacheável por modelo**,
+  que não é monotônico — 512 no Opus 5, 1024 no Sonnet 5, **4096 no Haiku 4.5**, e o
+  `testador` roda em Haiku; e **requisições paralelas idênticas não compartilham cache**.
+- **O GIT FICA, inteiro, na v2** — está explícito nos dois documentos ("reconstrói o mundo
+  lendo o banco **e o git**"; "tarefa concluída vira um commit próprio"; "a indexação roda
+  ao commitar"). A decisão do banco muda **uma coisa só**: o markdown deixa de ser onde o
+  agente escreve estado, e passa a ser gerado a partir do banco e commitado. Recuperação
+  continua com duas fontes (banco + árvore git). E isso **reduz** cota, não aumenta: hoje o
+  agente gasta voltas lendo e reescrevendo o arquivo da tarefa; `registrar_resultado` é uma
+  volta estruturada, e volta é o termo dominante da conta.
 - **Na v2 o banco é a verdade; o agente reporta por FERRAMENTA, nunca escrevendo estado.**
   `registrar_resultado` grava na mesma transação da transição; a ferramenta de mudar status
   não existe para agente nenhum — impossibilidade, não regra pedida no prompt. É a
