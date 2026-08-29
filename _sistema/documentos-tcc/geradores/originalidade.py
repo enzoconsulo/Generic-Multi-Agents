@@ -60,6 +60,13 @@ def _sombra(celula, cor):
     celula._tc.get_or_add_tcPr().append(el)
 
 
+def _nao_partir(linha):
+    """Impede a linha de tabela de se dividir entre duas paginas."""
+    trPr = linha._tr.get_or_add_trPr()
+    el = OxmlElement("w:cantSplit")
+    trPr.append(el)
+
+
 def _borda_inferior(par, cor="C9D1DD", tamanho=6):
     pPr = par._p.get_or_add_pPr()
     bd = OxmlElement("w:pBdr")
@@ -193,6 +200,8 @@ def tabela(d, cabecalho, linhas, larguras=None, fonte=8.8):
                 r = p.add_run(t_)
                 r.font.size = Pt(fonte)
                 r.font.bold = neg
+    for row in t.rows:
+        _nao_partir(row)
     if larguras:
         for i, w in enumerate(larguras):
             for row in t.rows:
@@ -223,3 +232,160 @@ def para_pdf(docx):
     finally:
         app.Quit()
     return pdf
+
+
+# ----------------------------------------------------------------- semaforo/diagramas
+# Adicionado na 6a versao: o texto sozinho fazia este trabalho e o softwarefabrik
+# parecerem a mesma coisa. Cor e desenho separam o que texto corrido nao separa.
+SEMAFORO = {
+    "igual":   ("E3F3E7", RGBColor(0x1B, 0x6B, 0x33), "IGUAL"),
+    "parcial": ("FDF3D6", RGBColor(0x8A, 0x5D, 0x00), "PARCIAL"),
+    "difere":  ("FBE4E2", RGBColor(0xA8, 0x2A, 0x21), "DIFERE"),
+}
+CAIXA = "E8EFF9"
+CAIXA_DESTAQUE = "D6E6FA"
+
+
+def pagina_nova(d):
+    """Quebra de pagina. Usada para nao separar a legenda da tabela que ela explica."""
+    from docx.enum.text import WD_BREAK
+    d.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
+
+
+def legenda(d, fonte=8.2):
+    """Faixa horizontal com os tres estados do semaforo."""
+    t = d.add_table(rows=1, cols=3)
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    rotulos = [
+        ("igual", "mesma escolha"),
+        ("parcial", "mesma intenção, outro meio"),
+        ("difere", "escolha oposta"),
+    ]
+    for i, (chave, glosa) in enumerate(rotulos):
+        fundo, tinta, nome = SEMAFORO[chave]
+        c = t.rows[0].cells[i]
+        _sombra(c, fundo)
+        c.text = ""
+        p = c.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_after = Pt(1)
+        r = p.add_run(nome + "  ")
+        r.font.size = Pt(fonte)
+        r.font.bold = True
+        r.font.color.rgb = tinta
+        r2 = p.add_run(glosa)
+        r2.font.size = Pt(fonte)
+        r2.font.color.rgb = tinta
+        c.width = Cm(5.33)
+    _nao_partir(t.rows[0])
+    # a legenda so faz sentido colada a tabela que ela explica
+    pf = d.add_paragraph().paragraph_format
+    pf.space_after = Pt(4)
+    pf.keep_with_next = True
+    return t
+
+
+def tabela_semaforo(d, cabecalho, linhas, larguras, fonte=8.3):
+    """linhas: (estado, celula, celula, ...) — a 1a coluna vira o selo colorido.
+
+    O estado tinge a linha inteira, de leve: e a cor que carrega a leitura, nao o texto.
+    """
+    t = d.add_table(rows=1, cols=len(cabecalho))
+    t.style = "Table Grid"
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for i, h in enumerate(cabecalho):
+        c = t.rows[0].cells[i]
+        _sombra(c, AZUL_TAB)
+        c.text = ""
+        p = c.paragraphs[0]
+        p.paragraph_format.space_after = Pt(1)
+        r = p.add_run(h)
+        r.font.size = Pt(fonte)
+        r.font.bold = True
+        r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    for linha in linhas:
+        estado, valores = linha[0], list(linha[1:])
+        fundo, tinta, nome = SEMAFORO[estado]
+        cs = t.add_row().cells
+        # selo
+        _sombra(cs[0], fundo)
+        cs[0].text = ""
+        p = cs[0].paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_after = Pt(1)
+        r = p.add_run(nome)
+        r.font.size = Pt(fonte - 0.4)
+        r.font.bold = True
+        r.font.color.rgb = tinta
+        for i, val in enumerate(valores, start=1):
+            _sombra(cs[i], fundo if estado != "igual" else "F2F9F4")
+            cs[i].text = ""
+            p = cs[i].paragraphs[0]
+            p.paragraph_format.space_after = Pt(1)
+            for t_, neg in (val if isinstance(val, list) else [(val, False)]):
+                r = p.add_run(t_)
+                r.font.size = Pt(fonte)
+                r.font.bold = neg
+    for row in t.rows:
+        _nao_partir(row)
+    for i, w in enumerate(larguras):
+        for row in t.rows:
+            row.cells[i].width = Cm(w)
+    d.add_paragraph().paragraph_format.space_after = Pt(4)
+    return t
+
+
+def diagrama(d, rotulo, passos, destaque=None, fonte=8.2, total=15.8, seta=0.62):
+    """Fluxo horizontal: caixas sombreadas separadas por setas, sem bordas de tabela.
+
+    passos: lista de strings. destaque: indices que recebem o azul mais forte.
+    """
+    destaque = destaque or []
+    n = len(passos)
+    largura = (total - seta * (n - 1)) / n
+    t = d.add_table(rows=1, cols=2 * n - 1)
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    cs = t.rows[0].cells
+    for i, passo in enumerate(passos):
+        c = cs[2 * i]
+        _sombra(c, CAIXA_DESTAQUE if i in destaque else CAIXA)
+        c.text = ""
+        p = c.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_after = Pt(1)
+        r = p.add_run(passo)
+        r.font.size = Pt(fonte)
+        r.font.bold = i in destaque
+        r.font.color.rgb = AZUL if i in destaque else PRETO
+        c.width = Cm(largura)
+        if i < n - 1:
+            a = cs[2 * i + 1]
+            a.text = ""
+            pa = a.paragraphs[0]
+            pa.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            pa.paragraph_format.space_after = Pt(1)
+            ra = pa.add_run("\u2192")
+            ra.font.size = Pt(fonte + 1)
+            ra.font.color.rgb = CINZA
+            a.width = Cm(seta)
+    p = d.add_paragraph()
+    p.paragraph_format.space_after = Pt(9)
+    p.paragraph_format.space_before = Pt(1)
+    r = p.add_run(rotulo)
+    r.font.size = Pt(8)
+    r.font.color.rgb = CINZA
+    r.font.italic = True
+    return t
+
+
+def rotulo_diagrama(d, texto_):
+    """Titulo curto acima de um diagrama."""
+    p = d.add_paragraph()
+    p.paragraph_format.space_before = Pt(8)
+    p.paragraph_format.space_after = Pt(3)
+    p.paragraph_format.keep_with_next = True
+    r = p.add_run(texto_)
+    r.font.size = Pt(9.5)
+    r.font.bold = True
+    r.font.color.rgb = AZUL
+    return p
