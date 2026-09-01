@@ -100,6 +100,36 @@ Notas de execucao e deixe para a tarefa dona do arquivo — ha oito delas espera
 
 ## Notas de execucao
 
+### Ciclo 1 — CORTADO: o processo do Claude Code encerrou com o agente em voo
+
+Nao e reprovacao e nao gasta ficha. Saneamento de 01/09 — **sobrou trabalho util, tudo em
+disco e nao commitado**:
+
+| arquivo | o que e |
+|---|---|
+| `priv/probes/cli_governanca.exs` (21 KB) | o probe, escrito inteiro |
+| `priv/probes/amostras/sessao-com-ferramenta.jsonl` (25 KB) | amostra de stream real, criterio 5 |
+| `priv/probes/_ultima_saida.txt` | saida da ultima corrida, ate o meio da Secao 2 |
+
+**O que a corrida ja mediu contra o `claude` 2.1.258 instalado** (nao remedir do zero):
+
+- `--permission-mode` aceita `acceptEdits, auto, bypassPermissions, manual, dontAsk, plan`.
+- **Sem nenhuma flag, a escrita e negada** — reproduz o marco 1: *"requested permissions to
+  write to ..., but you haven't granted it yet"*, arquivo nao criado.
+- **`acceptEdits` ESCREVE.** `auto` nao escreveu; `bypassPermissions` nao escreveu (sem
+  `tool_result` de erro capturado — merece segunda olhada).
+- `--allowedTools` / `--disallowedTools` sao allow/deny de APROVACAO AUTOMATICA; quem
+  restringe o VOCABULARIO de verdade e **`--tools`**, que aceita `""` para desligar todas.
+- `--add-dir` existe (diretorio adicional de acesso).
+- **`--max-turns` nao aparece no `--help`** da 2.1.258, e o probe registra que ela funciona
+  assim mesmo, achado por teste comportamental. Nao-documentada: tratar como tal.
+
+**Consequencia que ja da para adiantar, e e a boa noticia da tarefa:** o menor modo de
+permissao que faz uma escrita passar e `acceptEdits`, **nao** `bypassPermissions` — entao a
+questao do `--dangerously-skip-permissions` provavelmente nao se coloca. Confirmar no ciclo 2
+antes de tratar como fato fechado.
+
+
 
 ## Verificacao
 
