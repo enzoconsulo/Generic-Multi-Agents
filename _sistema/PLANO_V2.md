@@ -121,6 +121,147 @@ custo discriminado volta a volta.
 >
 > **Marco 2: BLOQUEADO** — não há `ANTHROPIC_API_KEY` nesta máquina.
 
+#### O replanejamento de 01/09 — as três causas, e o pedido de escopo do mesmo dia
+
+O marco 1 reprovou com **três causas independentes**, medidas contra o `claude` real. A nº 2
+não é defeito de implementação: é **incompatibilidade de projeto**, e é ela que organiza tudo
+o mais.
+
+| # | causa | onde | tarefa |
+|---|---|---|---|
+| 1 | o `ClaudeCLI` nunca passa flag de modo de permissão. Em `--print` headless não há quem aprove, então **toda escrita de arquivo é negada** — bloqueia qualquer tarefa real, não só esta | `operario/claude_cli.ex` | **T-018c** |
+| 2 | o modelo de ferramentas do `Laco` (dispatch por nome, num mapa que o CHAMADOR registra) é estruturalmente incompatível com o CLI, cujo vocabulário de `tool_use` vem de DENTRO (Write, Bash, Edit, Read…) | a fronteira `Operario` + `agente/laco.ex` | **T-003a** |
+| 3 | `montar/1` calcula `motivo_parada` olhando TODOS os blocos do stream inteiro, e não só o último turno — um `tool_use` já resolvido pelo próprio CLI aparece ao `Laco` como ferramenta pendente | `operario/claude_cli.ex` | **T-018e** |
+
+Consertar 1 e 3 antes de decidir 2 é jogar conserto fora: a 3 muda de forma conforme a
+família (ver abaixo), e a 1 precisa saber qual vocabulário de ferramenta o CLI vai receber.
+
+**O pedido de escopo do Enzo (01/09):** a camada de operário deve ser **opcional e trocável** —
+Claude por assinatura (CLI), Claude por API, e mais adiante outras assinaturas e outros CLIs
+cobrados por token, a critério do usuário. *"algo genérico ou o mais perto disso sem perder o
+desempenho, abrangindo só pro claude assinatura por agora"*. Isto é a causa 2 vista do outro
+lado, e por isso entra no mesmo replanejamento. As duas famílias:
+
+| família | exemplo | quem roda o laço de ferramentas | governança por |
+|---|---|---|---|
+| **agente completo** | `claude --print`, outros CLIs | o próprio CLI | flags: permissão, ferramentas permitidas, diretório, teto de turnos |
+| **endpoint de modelo** | Messages API, outras APIs por token | a fábrica (`Agente.Laco`) | as ferramentas da fábrica (T-012 a T-017) |
+
+**O que fica FORA, por decisão:** registro de provedores, negociação de capacidades, plugins,
+adaptadores para provedores que ninguém pediu. Só Claude-assinatura agora. **A régua:**
+acrescentar um provedor depois é *escrever um adaptador e declará-lo* — nunca mexer no miolo. A
+T-003a tem critério de aceite que PROVA isso, com um adaptador de cada família definido só no
+teste, conduzido pelo `Laco` sem uma linha alterada em `lib/`.
+
+#### Decisão em aberto (é do Enzo): como a fronteira acomoda as duas famílias
+
+**A — uma fronteira, duas famílias declaradas.** `Fabrica.Operario` ganha `familia/0`
+(`:agente_completo | :endpoint_de_modelo`), e o `Laco` ramifica **uma vez**, no despacho da
+volta: família endpoint segue idêntica ao que existe hoje; família agente-completo faz uma
+volta, não executa ferramenta nenhuma e lê o desfecho da resposta.
+*Custa:* 1 tarefa de desenho, mais uma linha em cada adaptador que divergir do padrão.
+**Nenhuma ida a mais ao modelo** — a ramificação é uma função pura em Elixir — e **nada de
+prefixo novo**: ao contrário, a família agente-completo deixa de mandar a lista de ferramentas
+da fábrica, que hoje viaja sem uso.
+*Perde:* o `Laco` deixa de ter um caminho só; passam a existir dois, e os dois precisam de
+teste. E a contabilidade "por volta" degenera para "por sessão" na família agente-completo
+(ver os marcos, abaixo).
+
+**B — dois contratos separados.** `Fabrica.Operario` fica sendo só endpoint; nasce um contrato
+próprio para CLIs, e quem despacha escolhe o caminho.
+*Custa:* 2–3 tarefas. O `ClaudeCLI` deixa de ser `Operario`, e `Operario.configurado/0`, o
+`Falso`, o `Laco` e os testes do marco da v0.1 mudam junto.
+*Ganha:* nenhuma ramificação dentro do laço; cada contrato com o vocabulário exato do que faz.
+*Perde:* a fronteira COMUM onde as duas famílias são comparáveis — que é o miolo do marco 2 e
+do argumento de custo do TCC. A Parte VI defende **uma** fronteira separando governança de
+fornecedor; dois contratos enfraquecem exatamente essa tese.
+
+**C — fazer o CLI parecer um endpoint** (desligar as ferramentas dele e obter `tool_use` para a
+fábrica executar).
+*Custa:* alto, e provavelmente impossível: `claude --print` não oferece modo "proponha a
+ferramenta e pare". Seria preciso combinar por convenção de prosa e reparsear — reimplementar
+`tool use` por texto.
+*Perde:* tudo que o CLI faz bem (o laço, o cache, o retry dele) em troca de um parser frágil.
+**Não recomendada**; está listada porque é a única que preservaria o `Laco` intacto, e é bom
+que esteja escrito por que isso não compensa.
+
+**D — MCP: a fábrica serve as PRÓPRIAS ferramentas ao CLI.** É uma escolha *dentro* da A, e não
+uma alternativa a ela. O CLI continua rodando o laço, mas as ferramentas que ele chama são as
+da fábrica (`ler`, `escrever`, `editar`, `rodar`, `registrar_resultado`), servidas por um
+servidor local, com as nativas desligadas.
+*Custa:* 1–2 tarefas além da A, e uma peça a mais no caminho quente (um processo por sessão),
+cujo desempenho precisa ser medido.
+*Ganha, e é muito:* o confinamento da T-012 e o orçamento da T-017 continuam valendo
+**literalmente**, porque quem executa a ferramenta volta a ser a fábrica — inclusive `rodar`,
+que é o buraco que a auditoria por caminho não cobre (comando de shell não se audita por
+parsing). E `registrar_resultado`, a única forma de o agente reportar, volta a existir sob o
+CLI.
+*Perde:* depende de o CLI instalado ter essa superfície — por isso D só é decidível **depois**
+da medição da T-018b.
+
+> **Recomendação: A agora; D se a T-018b disser que cabe.** A é o menor desenho que resolve a
+> causa 2 e atende o pedido de escopo sem generalidade especulativa. Se D for viável, ela entra
+> como tarefa a mais **sem tocar no desenho da A** — o que é, ele próprio, o teste da régua
+> "acrescentar provedor não mexe no miolo". Se não for, a governança fica pela via da
+> T-012a/T-017a (flags + auditoria do stream), que é mais fraca, e o que ela não cobre está
+> escrito lá.
+
+**Sobre `--dangerously-skip-permissions`:** ela não é aceita como resposta. A T-018b mede quais
+modos de permissão existem na versão instalada e qual o mínimo que faz uma escrita passar. Se a
+medição mostrar que a flag ampla é a única que funciona, ela só entra acompanhada da T-012a, que
+tem de PROVAR contra o `claude` real que uma sessão mandada escrever fora da raiz não consegue —
+e, onde a prevenção não alcançar, uma auditoria que reprova o despacho com o mesmo
+`Confinamento.resolver/2` que já governa a família endpoint. Confinamento é propriedade de nível
+de marco neste projeto: a v0.1 provou ausência de rede com esse rigor.
+
+#### O que isso muda no enunciado dos marcos (proposta — os enunciados não foram alterados)
+
+**Marco 1.** Hoje: *"um agente resolve uma tarefa real de ponta a ponta, com custo por volta
+gravado"*. Sob a família agente-completo, **uma volta do laço é uma sessão inteira do CLI** —
+"uma linha por volta" vira "uma linha por sessão", e a afirmação *"a soma bate com o total"* fica
+verdadeira com N=1. Foi literalmente o que a medição de 01/09 mostrou: 1 volta, 95558 = 95558,
+as duas afirmações PASSARAM. Duas saídas, e a escolha é do Enzo:
+  1. **aceitar**, e o marco passa a dizer que a prova forte de custo volta a volta pertence à
+     família endpoint (marco 2 e v0.3);
+  2. **manter os dentes**: o `ClaudeCLI` emite uma linha de consumo por **turno interno** do CLI
+     — o `usage` de cada evento `assistant` já vem no stream e hoje é descartado. Custa **1
+     tarefa a mais (~45–60 min)** e um campo novo na `Resposta`.
+  Recomendo (2) se o TCC for citar o número por volta; (1) se não for.
+
+**Marco 2.** No mérito, **não muda**: ele é da família endpoint por construção, e o `ClaudeCLI`
+nunca poderia prová-lo — o CLI gerencia o cache sozinho e não expõe controle ponto a ponto
+(decisão já fechada). O que a reprovação do marco 1 esclarece é que **os dois marcos medem
+famílias diferentes e não se substituem**. Proposta de redação, para a v0.2 poder fechar sem
+ficar refém de uma chave que não existe nesta máquina:
+  - **2a, provável sem chave e sem gastar:** o prefixo é byte a byte estável e o `MessagesAPI`
+    posiciona os pontos de cache que o `Prefixo` marca (`mix test`);
+  - **2b, a medição paga:** exige `ANTHROPIC_API_KEY`, continua bloqueada, teto de US$ 2 já
+    autorizado. Fica declarada pendente em vez de reprovada.
+
+#### As dez tarefas da correção
+
+Vivem em `_sistema/v2/tarefas/`, com sufixo de letra na tarefa de origem do defeito — como as
+T-018a, T-020a e T-022a, elas não entram no `ROTEIRO.md`, que indexa o plano original.
+
+| tarefa | entrega | depende de | esforço |
+|---|---|---|---|
+| **T-018b** | mede a superfície de governança do `claude --print` real: flags que existem, o que faz uma escrita passar, se o vocabulário se restringe, se o diretório confina, o teto de turnos, a forma do stream e o prompt por `stdin`. **Fundação: instrui as outras nove** | T-018a | 60–90 min |
+| **T-003a** | causa 2: a fronteira declara a **família** e o `Laco` para de executar ferramenta que não é dele | T-018b | 60–90 min |
+| **T-018c** | causa 1: modo de permissão e tradução `Catalogo` → vocabulário do CLI, por papel | T-018b, T-003a | 60–90 min |
+| **T-013a** | `Comando` sabe alimentar `stdin` a partir de arquivo, sem interpolar nada na linha | T-018b | 30–45 min |
+| **T-018d** | o prompt sai da linha de comando do `ClaudeCLI` — sem isso, nenhuma tarefa real cabe | T-013a, T-018c | 45–60 min |
+| **T-018e** | causa 3: `motivo_parada` sai do evento terminal, não do stream inteiro | T-003a, T-018b | 30–45 min |
+| **T-012a** | o confinamento do CLI é **provado**, não presumido | T-018c | 60–90 min |
+| **T-017a** | o teto de voltas é imposto pelo CLI, e não pedido no prompt | T-018c, T-018e | 45–60 min |
+| **T-017b** | o orçamento de ferramentas conta as chamadas que o CLI fez | T-003a | 30–45 min |
+| **T-020b** | o probe do marco roda verde de ponta a ponta, e o desenho novo vai para o `PROGRESSO.md` | as anteriores | 45–60 min |
+
+**Total: ~7,5 a 11 horas de agente.** A conta cresceu, e vale dizer de onde: **quatro** tarefas
+são o conserto do marco (as três causas mais o prompt), **uma** é a medição que instrui as
+outras, **três** são a governança que a mudança de família obriga a reconstruir do lado do CLI
+(confinamento, teto, orçamento) e **duas** são encaixe e fechamento. O pedido de escopo não
+acrescentou tarefa própria — ele reaproveitou a T-003a, que a causa 2 exigia de qualquer jeito.
+
 **Três armadilhas de cache que a v1 não consegue nem enxergar** (referência conferida):
 janela de **20 blocos** para trás; mínimo cacheável **por modelo** (512 no Opus 5, **4096 no
 Haiku 4.5**, e o verificador roda em Haiku); requisições paralelas idênticas não compartilham
