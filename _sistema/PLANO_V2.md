@@ -111,6 +111,15 @@ custo discriminado volta a volta.
 >
 > O segundo é o que decide se o `MessagesAPI` se justifica — é ~50% da conta de entrada
 > (medido). ~10–12 tarefas.
+>
+> **Marco 1: REPROVADO em 2026-09-01** (T-020, ciclo 3). Três causas raiz independentes,
+> medidas contra o `claude` real por `priv/probes/marco_v02_agente.exs`. A terceira afirmação
+> do marco — contabilidade volta a volta — passou (95558 = 95558); o agente **não resolveu a
+> tarefa**. A causa nº 2 não é defeito, é uma incompatibilidade de projeto: o `Laco` supõe um
+> operário que devolve `tool_use` para a FÁBRICA executar, e `claude --print` é um agente
+> completo, com laço, ferramentas e permissões próprios. Ver T-020 e o replanejamento.
+>
+> **Marco 2: BLOQUEADO** — não há `ANTHROPIC_API_KEY` nesta máquina.
 
 **Três armadilhas de cache que a v1 não consegue nem enxergar** (referência conferida):
 janela de **20 blocos** para trás; mínimo cacheável **por modelo** (512 no Opus 5, **4096 no
