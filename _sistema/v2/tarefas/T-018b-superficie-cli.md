@@ -3,7 +3,7 @@ id: T-018b
 titulo: Medir a superficie de governanca do `claude --print` real
 projeto: fabrica-v2
 versao: v0.2
-status: em-revisao
+status: concluida
 prioridade: alta
 dependencias: [T-018a]
 areas: [priv/probes/cli_governanca.exs, priv/probes/amostras/sessao-com-ferramenta.jsonl, .gitignore, _gestao/PROGRESSO.md]
@@ -99,6 +99,29 @@ Notas de execucao e deixe para a tarefa dona do arquivo — ha oito delas espera
       `verificar: mix fabrica.ci`
 
 ## Notas de execucao
+
+> ### LEIA ISTO ANTES DO HISTORICO ABAIXO — duas conclusoes do Ciclo 1 sao FALSAS
+>
+> As secoes Notas (Ciclo 1 e 2) e Verificacao (Ciclo 1) ficam como registro do que se
+> acreditava, e **contem afirmacoes que a remedicao do Ciclo 2 derrubou**. Nao aja por elas.
+> O que vale, e o que as nove tarefas seguintes devem herdar, esta no `_gestao/PROGRESSO.md`
+> do projeto e e isto:
+>
+> 1. **"So `acceptEdits` escreve" e FALSO.** Escrevem `acceptEdits` **e** `bypassPermissions`;
+>    negam `auto`, `manual`, `dontAsk` e `plan`. A afirmacao antiga era falso negativo do
+>    proprio probe (o nome do modo entrava no arquivo e na senha, e o modelo recusava por
+>    TEXTO, sem alcancar a camada de permissao). **`acceptEdits` continua sendo a escolha —
+>    por privilegio minimo, nao por ser o unico.**
+> 2. **`--disallowedTools` nao protege.** Ela remove `Write` do `system/init` e o arquivo
+>    nasce assim mesmo, porque o modelo troca para `Bash`. Deny-list perde para substituicao;
+>    so a allowlist `--tools` fecha as saidas.
+>
+> E uma clausula sobre a afirmacao mais citada desta tarefa: **"o CLI confina sozinho" vale
+> sob `--permission-mode acceptEdits`**, medido na mesma raiz e rodada (escrita de dentro
+> passa; caminho absoluto e travessia sao negados pelo proprio CLI, com `tool_result`/`is_error`
+> citando o caminho resolvido — nao e recusa do modelo por texto). **Nao foi medido sob
+> `bypassPermissions`**, cujo proposito declarado e desligar exatamente essa checagem.
+
 
 ### Ciclo 1 — CORTADO: o processo do Claude Code encerrou com o agente em voo
 
@@ -481,6 +504,53 @@ nao do executor.
 
 **Prova visual.** Nao se aplica: a tarefa nao produz interface.
 
+
+### Ciclo 2
+
+Conformidade: cumpre
+
+- **Criterio 1** (probe roda inteiro, sete secoes com comando exato e saida observada) ->
+  `priv/probes/cli_governanca.exs`, as sete chamadas de `P.secao/2` (l.119, 181, 270, 371,
+  474, 562, 685). A ressalva do ciclo 1 caiu: a Secao 5 nao imprime mais comando que nao
+  executa — `l.495-499` roda a flag inventada e imprime codigo, `stderr` e `stdout` dela.
+- **Criterio 2** (grafia exata do `--help` + versao ao lado) -> `cli_governanca.exs:119-179`,
+  intacto. Mudou so o que precisava: os rotulos que ADJETIVAVAM as flags antes de mede-las
+  ("nao restringe vocabulario", "restricao REAL") viraram "a flag X (o que ela FAZ e medido
+  na Secao 3)" — a Secao 1 voltou a ser leitura de `--help` e nada mais.
+- **Criterio 3** (sessao real CRIA arquivo na raiz, por `File.exists?`) ->
+  `cli_governanca.exs:232` (`File.exists?` E conteudo), agora com raiz propria por modo
+  (l.226) e pedido identico nos seis (l.221-222).
+- **Criterio 4** (duas tentativas fora da raiz, por `File.exists?` nos caminhos de FORA) ->
+  `cli_governanca.exs:421` (absoluto) e `l.444` (travessia), mais o controle positivo novo em
+  `l.397-400` e o `veredito4` em `l.454-469`.
+- **Criterio 5** (stdout bruto salvo em `priv/probes/amostras/`, caminho impresso) ->
+  `cli_governanca.exs:588-616`. Cumprido nos DOIS ramos: tanto o que grava quanto o que
+  preserva imprimem o caminho da amostra. A fixture continua versionada e rastreada.
+- **Criterio 6** (PROGRESSO com a tabela e o veredito das sete perguntas) ->
+  `_gestao/PROGRESSO.md:394-585`. Cumprido agora tambem no CONTEUDO, que era onde estavam os
+  dois achados `importante`: aviso de errata no topo da secao (l.399-405), veredito 2 com
+  tabela de seis linhas e a mensagem de negacao de cada modo (l.426-450), veredito 3 com
+  tabela das tres flags (l.451-472), veredito 4 com o controle positivo (l.473-485), veredito
+  5 com o controle negativo executado (l.486-495) e uma secao "O que estava errado na
+  primeira redacao" (l.551-585).
+- **Criterio 7** (nada em `lib/`) -> conferido no DIFF, nao no relatorio:
+  `git diff --stat 3cdbc18^ 3cdbc18 -- lib` devolve vazio, e `git show --name-only 3cdbc18`
+  lista exatamente dois arquivos: `_gestao/PROGRESSO.md` e `priv/probes/cli_governanca.exs`.
+- **Criterio 8** (bateria completa nos cinco estagios) -> Verificacao do testador, 5 estagios
+  ok. Nao reexecutei.
+
+**Objetivo — fechado.** O que faltava no ciclo 1 era a palavra "MEDINDO": duas das tres
+afirmacoes que as nove tarefas herdariam nao estavam no grau de prova prometido. As duas
+foram remedidas, e as duas INVERTERAM (`bypassPermissions` escreve; `--disallowedTools`
+remove do vocabulario e mesmo assim nao impede o resultado). O documento herdado nao so
+corrigiu: ele diz, no topo, que quem leu a versao anterior leu coisa errada — que e a forma
+certa de retratar um documento de fundacao.
+
+**Escopo.** Sem sobra e sem falta. O commit toca dois arquivos, os dois dentro das `areas`
+(ampliadas por voce apos o ciclo 1); a divergencia de `areas` do ciclo 1 nao se repete.
+Nenhuma linha de `lib/` — a fronteira que a tarefa impunha foi respeitada, conferida no diff.
+
+**Prova visual.** Nao se aplica: a tarefa nao produz interface.
 ## Revisao
 
 ### Ciclo 1
@@ -574,3 +644,125 @@ Revisao: REPROVADA — 2 achados `importante`, 4 `menor`.
 - Sem roda artesanal: o probe usa `Comando.rodar_separado/3` e `ClaudeCLI.executavel/0`, como
   a tarefa mandou. A reimplementacao de `eventos/1` (l.39-49) e justificada e ate desejavel —
   medir o CLI com o parser privado do proprio adaptador seria petitio principii.
+
+### Ciclo 2
+
+Revisao: APROVADA — os cinco achados do ciclo 1 estao fechados no MECANISMO, nao na redacao.
+Nenhum achado `critica` nem `importante`. Quatro notas `menor`, que nao reprovam.
+
+**Os cinco achados, conferidos um a um no diff — nao no relatorio:**
+
+1. **[fechado — era `importante`] Controle negativo do `--max-turns` agora EXECUTA.**
+   `cli_governanca.exs:495-502` roda `--totalmente-inventado-xyz` de verdade (`P.linha/2` +
+   `Comando.rodar_separado/3`) e imprime codigo, `stderr` e `stdout`; `l.527-529` le o
+   `stderr` da chamada com `--max-turns`. As duas pontas passam pela MESMA funcao
+   (`String.contains?(..., "unknown option")`), entao sao comparaveis. O `veredito5`
+   (l.537-556) deixou de ser `if/else` e virou `cond` de quatro ramos: `INCONCLUSIVO` se o
+   binario parar de rejeitar flag desconhecida, `DESMENTIDO` se rejeitar a `--max-turns`,
+   `PARCIAL` se o `subtype` mudar. O unico ramo que imprime "CONFIRMADO" cita os dois
+   controles medidos naquela rodada. Nao sobrou string constante afirmando comportamento:
+   procurei pelas conclusoes `=>` e pelos vereditos, e todos derivam de variavel medida.
+
+2. **[fechado — era `importante`] `bypassPermissions` realmente descontaminado.** `l.221-222`:
+   `nome_neutro` e `senha_neutra` sao calculados FORA do `Enum.map`, entao `pedir_escrita/2`
+   (l.187) produz o mesmo prompt byte a byte nos seis modos. `l.226` da a cada modo uma raiz
+   propria, cujo nome (`fabrica-cli-governanca-s2-modo-<inteiro unico>`) nao carrega o modo, e
+   `l.252` a apaga depois — nenhum modo herda o arquivo do outro. Procurei o que mais poderia
+   variar com o nome do modo e nao ha: a UNICA diferenca entre as seis chamadas e o valor de
+   `--permission-mode` dentro de `P.linha/3`. A conclusao nova nao tem o vicio da antiga. O
+   `PROGRESSO.md` retratou nos tres lugares que importavam — errata no topo (l.399-405),
+   tabela dos seis modos com a mensagem de negacao de cada um (l.433-440) e a retirada da
+   especulacao sobre `--dangerously-skip-permissions` JUNTO com a premissa dela (l.447-450).
+
+3. **[fechado — era `menor`] `--disallowedTools` medida, e a evidencia mostra as DUAS
+   metades.** `l.302-347`. Metade 1: `l.326` calcula se `Write` esta no `tools` do
+   `system/init` e `l.329` imprime. Metade 2: `l.327` (`File.exists?` de `c.txt`), `l.330` e
+   `l.331`, que imprimem que o arquivo nasceu e por qual ferramenta — `P.nomes_de_tool_use/1`,
+   com a saida registrada `["Write", "Bash", "Bash"]`. O bloco roda sobre
+   `--permission-mode acceptEdits` de proposito (l.309-310), o que isola o efeito da deny-list
+   ja que a Secao 2 mediu que `acceptEdits` sozinho escreve. A conclusao `=>` (l.339-347) e
+   derivada das duas variaveis e tem ramo alternativo para o caso de o arquivo NAO nascer.
+
+4. **[fechado — era `menor`] Controle positivo na propria Secao 4.** `l.388-405`: mesma
+   `raiz4`, mesma flag, mesma rodada, antes das duas negacoes. Ficou mais forte do que eu
+   pedi: o `veredito4` (l.454-469) degrada para `INCONCLUSIVO` quando a escrita de dentro
+   falha, entao a Secao 4 nunca mais pode imprimir "confinamento" a partir de tres ausencias
+   de arquivo.
+
+5. **[fechado — era `menor`] Fixture nao e mais sobrescrita.** `l.592-596` mandam o stdout da
+   rodada para `priv/probes/_scratch/` (ja ignorado — `.gitignore:46`), e `l.603-616` so
+   gravam `amostras/sessao-com-ferramenta.jsonl` quando ele falta ou sob `--regravar-amostra`.
+   Conferido no repositorio e nao no relatorio: `git status --porcelain` vazio depois da
+   rodada, a amostra na arvore tem os mesmos 15657 bytes do `HEAD`, e ela NAO aparece em
+   `git show --name-only 3cdbc18`. Os dois ramos seguem imprimindo o caminho, entao o criterio
+   5 continua cumprido.
+
+**As duas conclusoes materiais que mudaram: o metodo se sustenta.** Conferi o desenho, e nao
+so o resultado — ponto 2 para a descontaminacao, ponto 3 para as duas metades da
+`--disallowedTools`. Nos dois casos o `PROGRESSO.md` diz o que mudou E que a redacao anterior
+estava errada, em vez de reescrever em silencio; e a l.564 nomeia a licao que produziu o
+defeito ("diagnosticar e nao remedir e o mesmo que nao ter diagnosticado").
+
+**Nenhuma afirmacao nova sem experimento entrou nesta rodada.** As linhas de que eu poderia
+desconfiar estao todas atras de medicao: "`--tools` tambem tira o `Bash` do caminho"
+(`PROGRESSO.md:470-471`) sai do `tools` do `system/init` impresso em `l.359` do probe; o
+comportamento de `--allowedTools` (l.318-320) e derivado de duas variaveis medidas; e os
+rotulos da Secao 1 que adjetivavam as flags antes de mede-las foram justamente os
+neutralizados.
+
+- **[menor]** `_gestao/PROGRESSO.md:483-485` — **a frase "o CLI confina sozinho" esta de pe,
+  mas o experimento so a sustenta SOB `acceptEdits`, e a sentenca em negrito nao diz isso.** A
+  medicao esta certa e o escopo aparece duas linhas acima ("com a mesma flag
+  `--permission-mode acceptEdits`"); o que sobra e a sentenca herdavel — "**O CLI tem
+  confinamento proprio — nao e so o `Fabrica.Confinamento` que protege**" — estar sem a
+  clausula. Cenario concreto: o veredito 2 desta MESMA rodada acabou de mostrar que
+  `bypassPermissions` tambem escreve; a tarefa que vier a escolher esse modo (para auto-aprovar
+  comando, e nao so edicao) le a frase sem clausula, conclui que o CLI barra a escrita fora da
+  raiz de qualquer jeito e dispensa o `Fabrica.Confinamento` — sendo que o proposito declarado
+  desse modo e desligar exatamente a checagem que produziu as duas negacoes da Secao 4, e
+  ninguem mediu isso. Conserto: uma clausula ("medido sob `acceptEdits`; nao medido sob
+  `bypassPermissions`"). Nao reprova porque a recomendacao do documento e `acceptEdits`, que e
+  o modo em que a medicao vale.
+
+- **[menor]** `priv/probes/cli_governanca.exs:466-468` e `_gestao/PROGRESSO.md:480-482` — "a
+  UNICA variavel entre os tres casos e o LUGAR" e, ao pe da letra, mais forte que o desenho: o
+  pedido de dentro vem de `pedir_escrita/2` ("neste diretorio") e os dois de fora sao prompts
+  escritos a mao (l.414-417 e l.437-440), entao o TEXTO tambem varia. O que de fato sustenta a
+  conclusao e outra coisa, e ela e boa: a negacao dos dois de fora vem de um `tool_result` com
+  `is_error` citando o caminho resolvido (`P.tool_results_com_erro/1`, l.425-428 e l.448-451),
+  ou seja, do mecanismo do CLI e nao de recusa do modelo por texto — que e exatamente a
+  distincao que a Secao 2 deste ciclo provou existir. Vale trocar a frase pela evidencia real.
+
+- **[menor]** O arquivo desta tarefa ainda carrega, SEM retratacao, a afirmacao que caiu: as
+  Notas de execucao do Ciclo 2 afirmam em negrito "A resposta do Ciclo 1 se confirma:
+  `acceptEdits` e o UNICO modo, dos seis, que escreveu", e o Ciclo 1 lista "`bypassPermissions`
+  nao escreveu". O marcador `[SUPERADA pelo Ciclo 3 ...]` foi posto mais abaixo e cobre so o
+  paragrafo seguinte a ele. Cenario: o proximo agente da linhagem que abrir esta tarefa
+  (retrabalho, replanejamento ou a T-018e) le a frase em negrito antes de chegar ao
+  `PROGRESSO.md`, que e onde a errata mora. Nao reprova porque o documento HERDADO e o
+  `PROGRESSO.md`, que esta correto e explicito — e porque Notas de execucao nao e secao minha.
+
+- **[menor]** `_gestao/PROGRESSO.md:522-524` (texto pre-existente, nao introduzido neste
+  ciclo) — o achado do caminho 8.3 diz que sob o caminho curto passaram "zero modos de
+  permissao, inclusive `acceptEdits` e `bypassPermissions`". Nenhum passou naquela rodada, e
+  isso e verdade; mas agora sabemos que `bypassPermissions` estava contaminado pelo nome do
+  arquivo naquele desenho, entao a falha DELE nao pode ser atribuida ao caminho 8.3. A
+  orientacao pratica do paragrafo (nao usar `System.tmp_dir!/0` como raiz para testar o CLI)
+  nao muda; so a atribuicao de causa de uma das duas celulas.
+
+**O que conferi e esta CERTO** — para nao ser remexido:
+
+- **`lib/` intacto, conferido no diff:** `git diff --stat 3cdbc18^ 3cdbc18 -- lib` vazio, e o
+  commit lista so `_gestao/PROGRESSO.md` e `priv/probes/cli_governanca.exs`. A fronteira da
+  tarefa foi respeitada mesmo com o executor tendo diagnosticado consertos possiveis.
+- O que passou limpo no ciclo 1 continua intacto: Secoes 6 e 7, a amostra versionada, o
+  `.gitignore` (que segue ignorando so saida transitoria) e o veredito 7, que reproduz o
+  caminho de producao.
+- A degradacao dos vereditos e a melhor parte deste ciclo: as Secoes 4 e 5 agora imprimem
+  `INCONCLUSIVO`/`DESMENTIDO` a partir de valores medidos. Um probe de fundacao que sera
+  rerodado contra versoes futuras do CLI precisa exatamente disso, e nao estava no pedido.
+- Sem roda artesanal: continua usando `Comando.rodar_separado/3` e `ClaudeCLI.executavel/0`;
+  o `System.argv()`/`System.get_env` de `l.598-599` e a forma canonica de ler flag em script
+  de `mix run`.
+- Nao abri nenhum arquivo alem do diff nesta revisao: o `MAPA.md` bastou para situar o probe,
+  e as conferencias de arvore foram por `git status` e `git show`.
