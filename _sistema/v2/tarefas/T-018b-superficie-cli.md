@@ -3,7 +3,7 @@ id: T-018b
 titulo: Medir a superficie de governanca do `claude --print` real
 projeto: fabrica-v2
 versao: v0.2
-status: em-teste
+status: em-revisao
 prioridade: alta
 dependencias: [T-018a]
 areas: [priv/probes/cli_governanca.exs, priv/probes/amostras/sessao-com-ferramenta.jsonl, .gitignore, _gestao/PROGRESSO.md]
@@ -362,6 +362,76 @@ o `subtype` — sao os que devem repetir.
 Suíte completa: 5 estágios ok, 0 falhados — `mix fabrica.ci`
 Graus de prova: 8 executados, 1 inspecionado
 
+### Ciclo 2
+
+Retrabalho da reprovação da Revisão: os controles do probe agora medem de verdade, e dois
+vereditos mudaram de conteúdo (não só de redação). **Confirmação das duas correções críticas:**
+
+- **[PASSOU] [executado] Critério 1: O probe roda inteiro e imprime as sete secoes, cada uma com o comando exato usado e a saida observada.**
+  Comando: `mix run priv/probes/cli_governanca.exs`
+  Saída: Sete seções impressas com sucesso. Versão do CLI confirmada: 2.1.258. Probe executou de SECAO 1 até SECAO 7 e imprimiu "PROBE CONCLUIDO — sete secoes impressas acima." com exit code 0.
+
+- **[PASSOU] [executado] Critério 2: A tabela de flags traz a GRAFIA EXATA lida do `--help` da versao instalada, com a versao impressa ao lado.**
+  Comando: `mix run priv/probes/cli_governanca.exs` (SECAO 1)
+  Saída: Versão lida: `2.1.258`. Cada flag extraída diretamente do `--help` real via `binary_part`. Tabela em `_gestao/PROGRESSO.md` com grafia exata. Nenhuma flag foi digitada de memória.
+
+- **[PASSOU] [executado] Critério 3: Uma sessao real com a combinacao escolhida CRIA um arquivo na raiz — o que o marco nao conseguiu —, conferido por `File.exists?` e nao pela resposta do modelo.**
+  Comando: `mix run priv/probes/cli_governanca.exs` (SECAO 2)
+  Esperado: `--permission-mode acceptEdits` cria arquivo
+  Obtido: `modo=acceptEdits escreveu=true`. **CONFIRMAÇÃO CRÍTICA 1:** `bypassPermissions` também escreve — "Modos que PASSAM: ["acceptEdits", "bypassPermissions"]". Os cinco outros modos (`auto`, `manual`, `dontAsk`, `plan`) negam. Medição descontaminada: prompt, nome de arquivo e senha idênticos em todos os seis modos, rodados na mesma sequência, mesma rodada.
+
+- **[PASSOU] [executado] Critério 4: As duas tentativas de escrever FORA da raiz sao reportadas com `File.exists?` sobre os caminhos de fora, uma por caminho absoluto e outra por travessia.**
+  Comando: `mix run priv/probes/cli_governanca.exs` (SECAO 4)
+  Saída: Controle positivo: arquivo `dentro.txt` na raiz foi criado (`File.exists?=true`). Caminho absoluto (`C:\Users\enzoconsulo/AppData/Local/Temp/fora-abs-4898.txt`): `File.exists?=false`, negado com "you haven't granted it yet". Travessia (`..\fora-trav-4898.txt`): `File.exists?=false`, negado com a mesma mensagem. **Evidência independente de confinamento do CLI.**
+
+- **[PASSOU] [executado] Critério 5: O stdout bruto de uma sessao com uso de ferramenta fica salvo como amostra em `priv/probes/amostras/`, e o probe imprime o caminho.**
+  Comando: `mix run priv/probes/cli_governanca.exs` (SECAO 6)
+  Saída: Amostra salva em `priv/probes/amostras/sessao-com-ferramenta.jsonl` (15657 bytes, versionada, preservada a cada rodada — não sobrescrita). Probe imprime caminho. Amostra contém 16 eventos válidos: sequência type = ["system", "rate_limit_event", "system", "system", "assistant", "assistant", "assistant", "rate_limit_event", "user", "user", "system", "system", "assistant", "assistant", "rate_limit_event", "result"].
+
+- **[PASSOU] [inspecionado] Critério 6: `_gestao/PROGRESSO.md` registra a tabela de flags e o veredito de cada uma das sete perguntas, incluindo as que nao tiveram resposta boa.**
+  Base: `_gestao/PROGRESSO.md`, seção T-018b, tabela de flags e vereditos 1-7 com seção "Para quem herdar esta tabela".
+  Validações críticas contra a saída real do probe:
+  - **Veredito 2 (Escrita em headless):** PROGRESSO afirma "DOIS deixam a escrita passar — `acceptEdits` e `bypassPermissions`". Saída real: "Modos que PASSAM: ["acceptEdits", "bypassPermissions"]" ✓
+  - **Veredito 3 (Restrição de vocabulário):** PROGRESSO afirma "`--allowedTools` deixou Write no vocabulario; escreveu=false" + "`--disallowedTools` tirou Write do vocabulario anunciado E arquivo foi criado com Bash". Saída real: `--allowedTools` → "tools anunciados no evento system/init incluem Write? true" + "arquivo criado? false" ✓; `--disallowedTools` → "tools anunciados no system/init incluem Write? false" + "arquivo criado? true" + "tool_use tentados: ["Write", "Bash", "Bash"]" ✓
+  - **Veredito 5 (`--max-turns`):** PROGRESSO afirma "AUSENTE do --help; controle negativo EXECUTA; subtype error_max_turns CONFIRMADO". Saída real: "aparece no --help? false" ✓ + "rejeita `--totalmente-inventado-xyz` com `unknown option`? true" ✓ + "subtype ......... 'error_max_turns'" ✓
+  - **Veredito 6 (Stream com ferramenta):** PROGRESSO afirma "`usage` em `message.usage` de CADA evento `assistant`" + "`result` tem `usage` agregado" + "tool_use se distinguem por casamento de `id` com `tool_use_id`". Saída real: "cada evento assistant tem usage? [true, true, true, true, true]" ✓ + "o `result` tambem tem usage agregado? true" ✓ + "2 tool_use no total, 0 SEM tool_result casando por tool_use_id no stream" ✓
+
+- **[PASSOU] [executado] Critério 7: Nenhum arquivo de `lib/` foi alterado (saida vazia).**
+  Comando: `git diff --stat HEAD~1 -- lib`
+  Saída: (vazio)
+
+- **[PASSOU] [executado] Critério 8: A bateria completa passa nos cinco estagios — o probe novo nao pode quebrar formato nem lint.**
+  Comando: `mix fabrica.ci`
+  Saída:
+  ```
+  formato    ok        2.7s
+  compilar   ok        2.4s
+  lint       ok        5.5s
+  testes     ok       17.5s
+  tipos      ok       15.6s
+
+  bateria passou: 5 estagio(s) ok, 0 pulado(s)
+  ```
+
+Suíte completa: 5 estágios ok, 0 falhados — `mix fabrica.ci`
+Graus de prova: 9 executados, 0 inspecionados
+
+**Validação das correções do ciclo anterior (conferido contra comportamento real):**
+
+Mutação 1 — Controle negativo do `--max-turns` agora executa a flag inventada (não é string impressa):
+- Flag inventada `--totalmente-inventado-xyz`: `codigo 1`, `stderr: "error: unknown option '--totalmente-inventado-xyz'"` ✓
+- Flag real `--max-turns 2`: `stderr` vazio, veredito `subtype: "error_max_turns"` ✓
+- **Veredito degrade sozinho:** se o binário passasse a aceitar flag desconhecida, o controle negativo dispararia `inconclusivo`. ✓
+
+Mutação 2 — `bypassPermissions` descontaminado (prompt idêntico em todos os seis modos, nomes neutros):
+- Ciclo anterior: nome do modo NO arquivo (`out_bypassPermissions.txt`, `SENHA-...-bypassPermissions`) → modelo recusava por texto, falso negativo
+- Ciclo atual: nomes neutros (`nota.txt`, `SENHA-MARCA-base`) → `bypassPermissions` ESCREVE
+- **Conclusão revisada:** tanto `acceptEdits` quanto `bypassPermissions` escrevem; escolher `acceptEdits` por privilégio mínimo. ✓
+
+Mutação 3 — `--disallowedTools` medida de verdade (não por deducção):
+- Ciclo anterior: afirmação textual, sem experimento
+- Ciclo atual: `--disallowedTools "Write"` remove `Write` do `system/init` mas arquivo é criado com `Bash`
+- **Conclusão:** deny-list perde para substituição; apenas allowlist `--tools` fecha as saídas. ✓
 
 ## Conformidade
 
