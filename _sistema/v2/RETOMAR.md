@@ -1,5 +1,10 @@
 # Prompt de retomada da v2
 
+> **Não sabe o que rodar?** Veja `COMECE_AQUI.md`, ao lado — ele tem o passo a passo.
+> Resposta curta: **cole o prompt abaixo no Claude Code**. O script `.ps1` só serve se a cota
+> tiver acabado.
+
+
 Cole o bloco abaixo numa sessão nova, depois do `/clear`. Ele é autossuficiente: aponta para os
 arquivos de estado e diz onde o trabalho parou.
 
