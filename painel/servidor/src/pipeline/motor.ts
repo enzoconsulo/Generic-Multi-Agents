@@ -798,14 +798,33 @@ export async function rodarPipeline(
       // extremo: a máquina não decidiu NADA nesta tarefa. Reportar toda proporção imperfeita
       // viraria ruído — critério estético sem comando é legítimo e normal. Tarefa inteira
       // sem um único comando é planejamento com critério no degrau errado.
-      const semComando = executados.filter((r) => r.estado === "nao-executado").length;
-      if (decididos === 0 && semComando > 0) {
+      // `nao-executado` tem DUAS causas com consertos OPOSTOS, e confundi-las custou caro:
+      // o critério não tinha comando (planejamento: critério no degrau errado) ou tinha um
+      // comando que a máquina RECUSOU (ferramenta: allowlist, binário ausente). A versão
+      // antiga somava as duas e culpava sempre o planejamento — e na fabrica-v2, onde todo
+      // comando é `mix` e `mix` não estava na allowlist, ela acusou tarefas perfeitas de
+      // "defeito de planejamento" e quase levou a replanejar critério que estava certo.
+      const naoExecutados = executados.filter((r) => r.estado === "nao-executado");
+      const semComando = naoExecutados.filter((r) => r.comando === null).length;
+      const recusados = naoExecutados.filter((r) => r.comando !== null);
+
+      if (decididos === 0 && semComando > 0 && recusados.length === 0) {
         rel.criteriosSemComando.push({ tarefa: passo.tarefa.id, julgados: semComando });
         dep.log(
           "info",
           `${passo.tarefa.id}: ${semComando} critério(s) e NENHUM \`verificar:\` — o portão do` +
             " meio desta tarefa é julgamento puro. Defeito de planejamento, não do agente:" +
             " quem conserta é o replanejamento.",
+        );
+      }
+
+      if (recusados.length > 0) {
+        const motivos = [...new Set(recusados.map((r) => r.recusa ?? "recusado"))].join(", ");
+        dep.log(
+          "erro",
+          `${passo.tarefa.id}: ${recusados.length} critério(s) TÊM \`verificar:\` e não rodaram` +
+            ` (${motivos}). Isto NÃO é replanejamento — o critério está certo e a máquina é que` +
+            " não pôde executá-lo. Conserto: a allowlist de `criterios.ts`, ou o ambiente.",
         );
       }
 

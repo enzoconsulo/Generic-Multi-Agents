@@ -66,6 +66,17 @@ describe("avaliarComando — entrada NÃO confiável (escrita por um modelo)", (
     expect(avaliarComando("test -f tests/x.js").ok).toBe(true);
   });
 
+  // A ausência de `mix` custou caro e em silêncio: a fabrica-v2 é Elixir, então TODO
+  // critério dela caía em `binario-nao-permitido`, a passada mecânica nunca rodou, e o
+  // motor ainda culpava o PLANEJAMENTO por isso ("critério no degrau errado"). Este teste
+  // existe para a próxima linguagem que entrar não repetir a viagem.
+  it("aceita `mix`, a ferramenta de build de um projeto Elixir", () => {
+    expect(avaliarComando("mix test")).toEqual({ ok: true, argv: ["mix", "test"] });
+    expect(avaliarComando("mix test test/fabrica/agente/laco_test.exs").ok).toBe(true);
+    expect(avaliarComando("mix format --check-formatted").ok).toBe(true);
+    expect(avaliarComando("mix fabrica.ci").ok).toBe(true);
+  });
+
   // Allowlist, nunca lista de proibições: `ext::<comando>` na URL de remoto já mostrou
   // nesta base que "proibir o que eu lembrar" não fecha nada.
   it("recusa binário fora da allowlist", () => {

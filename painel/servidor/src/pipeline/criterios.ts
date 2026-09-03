@@ -61,6 +61,12 @@ export const BINARIOS_PERMITIDOS: ReadonlySet<string> = new Set([
   "npm", "npx", "node", "pnpm", "yarn",
   "python", "python3", "pytest", "ruff", "mypy",
   "go", "cargo", "dotnet", "mvn", "gradle",
+  // `mix` entra pela mesma porta que `cargo`, `go` e `gradle`: ferramenta de build do
+  // projeto, que compila, testa e roda lint. Faltava, e o custo foi alto e silencioso — a
+  // fabrica-v2 é Elixir, então TODO critério dela caía em `binario-nao-permitido` e a
+  // passada mecânica nunca rodou. Pior: a mensagem do motor culpava o PLANEJAMENTO
+  // ("critério no degrau errado"), e o conserto certo era esta linha.
+  "mix",
   "test", "ls", "cat", "grep", "rg", "find",
   "tsc", "eslint", "prettier", "vitest", "jest",
   "git",
