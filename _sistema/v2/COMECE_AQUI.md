@@ -5,6 +5,41 @@ não para um agente — a versão densa está em `_sistema/logs/2026-09-02.md`.
 
 ---
 
+## 0. A FÁBRICA ESTÁ RODANDO SOZINHA (ligada em 02/09, 21h46)
+
+**Você não precisa fazer nada de madrugada.** O piloto automático do painel está ligado e
+encadeia rodadas sozinho até um dos freios parar.
+
+| | |
+|---|---|
+| painel | `http://127.0.0.1:8765` — rodando destacado, sobrevive a fechar o terminal |
+| projeto | `fabrica-v2`, estratégia `sonnet` (escala para opus no retrabalho) |
+| freios | teto de **US$ 20** no total, **US$ 5** por rodada, **6 rodadas** no máximo |
+| parada automática | acabou tarefa pronta · tarefa pedindo replanejamento · 2 rodadas sem concluir nada · falha |
+| cota | se bater na parede, ele **dorme e rearma** na hora anunciada. Não perde a noite |
+
+### De manhã, faça só isto
+
+1. Abra `http://127.0.0.1:8765` no navegador. O quadro mostra o que andou.
+2. Se o piloto tiver parado, o motivo está escrito lá (e em `painel/dados/piloto.json`).
+3. Aí sim, se quiser continuar no chat, siga o passo a passo da seção 1.
+
+### Se quiser desligar
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8765/api/piloto -Method Post -ContentType application/json -Body '{"ligado":false}'
+```
+
+Desligar **não corta a rodada em voo** — ela termina, e a seguinte não nasce.
+
+> **Uma ressalva honesta:** esta é a **primeira vez** que o pipeline em código roda neste
+> projeto. Verifiquei que o painel lê as 71 tarefas corretamente e que o executor está de fato
+> trabalhando, mas não pude ver uma rodada inteira fechar. Se de manhã algo estiver estranho,
+> a causa mais provável é o primeiro contato — e é para isso que os freios existem. Nada é
+> irreversível: tudo passa por git.
+
+---
+
 ## 1. O que fazer amanhã (passo a passo)
 
 **Você só precisa do passo 2. O resto é conferência e plano B.**
