@@ -93,6 +93,40 @@ evidência visual mais importa.
 improvisar**: se a cena que você precisa já existe, usá-la custa um comando; refazê-la custou
 um dia inteiro na T-036.
 
+## Retomada por cota — `_sistema/ferramentas/retomar-v2.ps1`
+
+Espera a cota da assinatura voltar e retoma o trabalho da v2. Existe porque a cota cortou três
+despachos em três dias (31/08, 01/09, 02/09): nenhum gerou fatura e nenhum perdeu trabalho, mas
+cada corte custa o despacho inteiro, e quem está longe do teclado só descobre horas depois que a
+cota já tinha voltado.
+
+```
+_sistemaerramentasetomar-v2.ps1              # espera e avisa (padrão)
+_sistemaerramentasetomar-v2.ps1 -Modo sondar # lê a cota agora e sai
+_sistemaerramentasetomar-v2.ps1 -Modo auto   # espera e abre o Claude Code
+```
+
+**Como ele sabe que a cota voltou:** não há API de cota. O que existe é o `rate_limit_event` que
+o `claude` emite em toda resposta, com a utilização das duas janelas — fato medido pela T-018a.
+A sonda é uma chamada mínima que lê esse evento; ela gasta alguns tokens de **cota** e **não gera
+fatura**. O intervalo padrão (15 min) é generoso de propósito: sondar de minuto em minuto gastaria
+cota para descobrir que não há cota.
+
+**O modo `auto` abre o Claude Code INTERATIVO, e não `claude --print`.** Num job headless não
+existe quem entregue a notificação de subagente concluído, e o orquestrador cortaria os agentes em
+voo — a armadilha da regra 7 do `CLAUDE.md`, que já custou duas rodadas.
+
+O prompt de retomada fica em `_sistema/v2/RETOMAR.md`, pronto para colar depois de um `/clear`.
+
+**Duas armadilhas do Windows que este script já pagou:**
+
+| sintoma | causa |
+|---|---|
+| `'}' de fechamento ausente` no parser, em linha que tem chave fechada | o PowerShell 5.1 lê script sem BOM como **ANSI**: acento e travessão viram lixo. Por isso este arquivo e o `banco-v2.ps1` são **ASCII puro** |
+| o caminho impresso sai como `_sistema\_sistema2\...` | `Split-Path -Parent` **duas** vezes a partir de `ferramentas/` para em `_sistema`, não na raiz. São **três** |
+
+---
+
 ## Índice do projeto — `_sistema/ferramentas/mapa.mjs`
 
 Gera `_gestao/MAPA.md`: árvore + assinatura e propósito de cada símbolo público, ~5% do tamanho
