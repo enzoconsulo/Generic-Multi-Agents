@@ -105,6 +105,53 @@ saída medida para fechá-la é a fábrica servir as próprias ferramentas ao CL
 
 ---
 
+---
+
+## 4b. O que a troca de família faz com CADA mecanismo de governança
+
+A pergunta certa não é *"perde-se o controle?"* — é *"qual mecanismo passa a sustentar cada
+garantia?"*. Respondida item a item, contra o que está no código hoje.
+
+### Não muda nada
+
+| mecanismo | por quê |
+|---|---|
+| **equipe especializada** (`equipe.json`, prompt de especialista) | é texto de prompt. As duas famílias recebem prompt do mesmo jeito |
+| os **dois portões** e as duas perguntas | é organização do pipeline, não do operário |
+| **limite de 3 ciclos**, escada de fracasso, replanejamento | idem |
+| **critérios de aceite executáveis** e a passada mecânica | rodam fora do agente, antes dele |
+| **contabilidade** (uma linha de consumo por volta, soma batendo) | foi a única das três afirmações do marco 1 que **passou**: 95.558 = 95.558 |
+
+### Muda o mecanismo, a garantia continua de pé
+
+| garantia | como a doc descreve | como passa a ser sustentada |
+|---|---|---|
+| **vocabulário por papel** — `catalogo.ex:40-45`: o revisor só tem `ler listar buscar registrar_resultado` | a fábrica **não oferece** a ferramenta | `--tools` do CLI (allowlist). **Medido: restringe de verdade** |
+| **confinamento de arquivo** (T-012) | a fábrica resolve o caminho e recusa o que sai da raiz | o **próprio CLI** recusa absoluto e travessia. Medido sob `acceptEdits` |
+| **teto de voltas** | campo do estado do laço | `--max-turns`. Medido: funciona (ausente do `--help`) |
+| **orçamento de ferramentas por papel** (T-017) | a fábrica conta porque ela executa | a fábrica **conta lendo o stream**: todo `tool_use` aparece lá (é a T-017b) |
+
+> Sobre o orçamento, um detalhe que evita conclusão errada: a fábrica **já não cortava** chamada
+> no meio — ela mede e não COMEÇA o que não cabe (doutrina da T-065: despacho interrompido custa
+> igual sem entregar nada). Então perder o poder de recusar em voo não perde nada que existisse.
+
+### Genuinamente diferente — duas coisas, e só duas
+
+**1. O shell não é auditável.** O construtor e o verificador precisam rodar comando. Quem executa
+é o `Bash` do CLI, e comando de shell não se audita por análise de caminho. É a única garantia
+que fica **parcial**, e a única que a opção D fecharia.
+
+**2. `registrar_resultado` não existe para o agente do CLI.** A T-016 fez dela a ÚNICA forma de o
+agente reportar, com o contador do lado do sistema. Ela é ferramenta da fábrica: sob `--tools`, o
+agente do CLI não a tem.
+
+O substituto não precisa ser inventado — **é o que a v1 faz há meses e o que funcionou a semana
+inteira**: o agente escreve no arquivo da tarefa, e o sistema lê o arquivo. O estado continua em
+arquivo, continua sendo do sistema, e o agente continua sem poder mexer no próprio status.
+A diferença é que o relato deixa de ser chamada estruturada e volta a ser seção de markdown.
+
+---
+
 ## 5. O que muda na resumida, seção por seção
 
 Nenhuma reescrita. É a versão 6 → 7 do mesmo argumento, e cabe nas 5–8 páginas.
@@ -171,9 +218,30 @@ sistema — não de literatura.
 | decisão | efeito no sistema | efeito no documento |
 |---|---|---|
 | **A** — a fronteira declara a família | obrigatória: sem ela o código não funciona | as mudanças da seção 5 acima. É a menor edição que torna doc e código coerentes |
-| **D** — MCP: a fábrica serve as ferramentas ao CLI | fecha o confinamento de shell | **a favor do documento**: a frase original da seção 3 (*"o sistema as executa"*) volta a valer nas duas famílias |
+| **D** — MCP: a fábrica serve as ferramentas ao CLI | fecha o confinamento de shell e devolve `registrar_resultado` | **a favor do documento**: a frase original da seção 3 (*"o sistema as executa"*) volta a valer nas duas famílias |
 | **custo por volta interna** | +1 tarefa | decide se o documento pode afirmar custo *por volta* na família de assinatura |
 | **partir o marco 2** | destrava metade da prova sem chave | seção 8 passa de *citação* a *demonstração parcial* |
+
+---
+
+## 8b. CORREÇÃO do parecer sobre a opção D (03/09)
+
+**O parecer de 02/09 dizia que D era quase obrigatória, e exagerava.** A correção veio de uma
+pergunta do Enzo: *"limitar o que cada agente pode fazer já não estava planejado?"*. Está — e é
+justamente isso que mostra onde D é e onde não é necessária.
+
+| para que | D é necessária? |
+|---|---|
+| **limitar papel** (*"o revisor só lê e julga"*) | **não.** `--tools` resolve, é medido, e já está no escopo da T-018c |
+| **confinar escrita de arquivo** | **não.** O próprio CLI recusa, medido sob `acceptEdits` |
+| **auditar e contar comando de shell** | **sim.** É a única via |
+| **devolver o `registrar_resultado` estruturado** | **sim** — mas o arquivo de tarefa já é substituto provado (é o que a v1 usa) |
+
+**Parecer revisado: A agora, D não.** Fazer `--tools` por papel primeiro entrega a maior parte da
+garantia por muito menos trabalho. Depois, com o sistema rodando, dá para MEDIR se o `Bash` não
+auditado do construtor é problema real ou preocupação teórica.
+
+Decidir D agora seria decidir sem dado — o erro que este projeto cobrou cinco vezes nesta semana.
 
 ---
 
