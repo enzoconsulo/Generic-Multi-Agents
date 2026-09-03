@@ -5,6 +5,11 @@ documentos de apresentação do TCC sem precisar redescobrir nada.
 
 **Escrito em 2026-08-21**, ao fim da sessão que produziu as versões 3 a 7 e as duas traduções.
 
+> **Leia junto: `DOCUMENTO_x_SISTEMA.md`, ao lado.** Este arquivo conta como os documentos foram
+> feitos; aquele conta onde eles **divergiram do sistema que está sendo construído**. Em 02/09 o
+> marco 1 da v0.2 revelou que a seção 3 da resumida descreve só metade da arquitetura — há duas
+> famílias de operário, não uma. Nada aqui foi apagado por causa disso; o que mudou está lá.
+
 ---
 
 ## 1. O que são estes documentos
