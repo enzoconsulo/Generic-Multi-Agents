@@ -164,5 +164,5 @@ variável do sistema: isso reprovaria o marco da v0.1, que já está aprovado.
 | o que muda nos documentos do TCC | `_sistema/documentos-tcc/DOCUMENTO_x_SISTEMA.md` |
 | o relatório denso, para uma sessão nova | `_sistema/logs/2026-09-02.md` |
 | o estado técnico do projeto | `projetos/fabrica-v2/_gestao/PROGRESSO.md` |
-| as 10 tarefas do replanejamento | `_sistema/v2/tarefas/` |
+| as tarefas, uma por arquivo | `projetos/fabrica-v2/_gestao/tarefas/` |
 | o plano das seis fases e os quatro desenhos | `_sistema/PLANO_V2.md` |

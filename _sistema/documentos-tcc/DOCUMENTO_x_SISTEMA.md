@@ -54,7 +54,7 @@ pronta.
 **A causa raiz nº 2 da terceira tentativa não é defeito de implementação — é incompatibilidade de
 projeto**, e é o assunto deste arquivo.
 
-Registro completo: `_sistema/v2/tarefas/T-020-marco.md`, seção Verificação.
+Registro completo: `projetos/fabrica-v2/_gestao/tarefas/T-020-marco.md`, seção Verificação.
 
 ---
 
@@ -193,7 +193,7 @@ sistema — não de literatura.
 | como os documentos foram feitos, e as preferências do Enzo | `CONTEXTO.md`, ao lado |
 | geradores dos `.docx` (a resumida é `corpo6.py`) | `geradores/` |
 | o plano das seis fases e o veredito de cada marco | `_sistema/PLANO_V2.md` |
-| as tarefas da v2, uma por arquivo | `_sistema/v2/tarefas/` |
+| as tarefas da v2, uma por arquivo | `projetos/fabrica-v2/_gestao/tarefas/` |
 | a medição do CLI real, com evidência | `projetos/fabrica-v2/_gestao/PROGRESSO.md`, seção T-018b |
 | o instrumento que mede | `projetos/fabrica-v2/priv/probes/cli_governanca.exs` |
-| o marco que reprovou, com a reprodução | `_sistema/v2/tarefas/T-020-marco.md` |
+| o marco que reprovou, com a reprodução | `projetos/fabrica-v2/_gestao/tarefas/T-020-marco.md` |

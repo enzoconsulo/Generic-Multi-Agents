@@ -240,7 +240,7 @@ ficar refém de uma chave que não existe nesta máquina:
 
 #### As dez tarefas da correção
 
-Vivem em `_sistema/v2/tarefas/`, com sufixo de letra na tarefa de origem do defeito — como as
+Vivem em `projetos/fabrica-v2/_gestao/tarefas/`, com sufixo de letra na tarefa de origem do defeito — como as
 T-018a, T-020a e T-022a, elas não entram no `ROTEIRO.md`, que indexa o plano original.
 
 | tarefa | entrega | depende de | esforço |
@@ -350,7 +350,7 @@ planejado, construído, verificado, revisado e entregue — sem intervenção.
 ---
 
 **Total: 58 tarefas**, decompostas e escritas — não estimadas. Estão em
-`_sistema/v2/tarefas/`, uma por arquivo, no formato do protocolo da fábrica, com objetivo,
+`projetos/fabrica-v2/_gestao/tarefas/`, uma por arquivo, no formato do protocolo da fábrica, com objetivo,
 contexto (o "como fazer", com as armadilhas já mapeadas) e critérios de aceite executáveis.
 
 O índice linear, com as dependências, é `_sistema/v2/ROTEIRO.md`. Ele e as tarefas saem do
@@ -451,7 +451,7 @@ Para quem for auditar o trabalho — inclusive o professor:
 | As decisões, com o motivo e o que as provocou | `_sistema/DECISOES_FECHADAS.md` |
 | O plano em versões incrementais | este arquivo |
 | O ambiente, com as armadilhas medidas | `_sistema/AMBIENTE_V2.md` |
-| As 58 tarefas, e o estado de cada uma | `_sistema/v2/tarefas/` e `_sistema/v2/ROTEIRO.md` |
+| As tarefas, e o estado de cada uma | `projetos/fabrica-v2/_gestao/tarefas/` |
 | O que foi ajustado no meio do caminho | as tarefas de abertura + `_gestao/PROGRESSO.md` |
 | O progresso | o `status:` de cada tarefa e o histórico de commits (`T-NNN: título`) |
 | O resultado, contra a linha de base | `_gestao/ENTREGA.md` (T-058) |

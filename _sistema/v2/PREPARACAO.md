@@ -228,7 +228,7 @@ Registro para não haver dúvida em sessão futura:
   28/08 (`DECISOES_FECHADAS.md`). Despachar agente da v1 contra a v2 gasta cota e contraria
   decisão fechada.
 - A v1 fica **intocada** operando os 3 projetos dela. Nada fora de `projetos/fabrica-v2/` é
-  tocado, com uma exceção declarada: os arquivos de tarefa em `_sistema/v2/tarefas/`, que é
+  tocado, com uma exceção declarada: os arquivos de tarefa em `projetos/fabrica-v2/_gestao/tarefas/`, que é
   onde o estado da execução mora, e o `_sistema/v2/gerar-tarefas.py` se um defeito de
   redação for corrigido.
 - O loop é o da §5 do `prompt_inicial.txt`: uma tarefa, os critérios rodados de verdade,

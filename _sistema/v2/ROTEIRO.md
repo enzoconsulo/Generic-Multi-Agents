@@ -140,7 +140,7 @@ Contexto do porque de cada coisa: `_sistema/PLANO_V2.md` (as versoes),
 No Claude Code, uma sessao por tarefa (e `/clear` entre elas):
 
 ```
-Leia _sistema/v2/tarefas/T-0NN-*.md e execute a tarefa inteira,
+Leia _gestao/tarefas/T-0NN-*.md e execute a tarefa inteira,
 do codigo ao commit. Rode os criterios de aceite antes de dar por pronta.
 ```
 

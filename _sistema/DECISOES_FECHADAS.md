@@ -109,7 +109,7 @@ As duas decisões abaixo foram fechadas pelo usuário em **2026-08-28**.
   que não é monotônico — 512 no Opus 5, 1024 no Sonnet 5, **4096 no Haiku 4.5**, e o
   `testador` roda em Haiku; e **requisições paralelas idênticas não compartilham cache**.
 - **QUEM CONSTRÓI A v2: o Claude Code direto, uma sessão por tarefa.** Decidido em 28/08.
-  É para isso que as 58 tarefas de `_sistema/v2/tarefas/` foram escritas. **Não** pela v1
+  É para isso que as tarefas de `projetos/fabrica-v2/_gestao/tarefas/` foram escritas. **Não** pela v1
   (amarraria o cronograma à estabilidade de um sistema com 89 tarefas vivas, e os agentes
   dela são calibrados para a doutrina dela, não para Elixir). A opção de a própria v2 se
   construir a partir da v0.3 foi considerada e **não escolhida agora** — reabrir só depois

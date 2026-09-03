@@ -30,7 +30,7 @@ e 2b (medição paga, bloqueada por falta de ANTHROPIC_API_KEY).
 
 Com isso: despache a T-003a e siga o pipeline pelas oito tarefas restantes do
 replanejamento, até o marco 1 da v0.2 (T-020) rodar de novo. As tarefas estão em
-_sistema/v2/tarefas/ — NÃO em _gestao/tarefas/, este projeto é atípico nisso.
+projetos/fabrica-v2/_gestao/tarefas/, como em todo projeto da fábrica.
 
 Regras que esta linhagem já pagou caro para aprender:
 - Despache um agente por vez e ESPERE o resultado. Nunca encerre o turno com agente em voo.
