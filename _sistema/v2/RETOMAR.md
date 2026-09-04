@@ -1,5 +1,9 @@
 # Prompt de retomada da v2
 
+> **TROCA DE MÁQUINA (04/09):** o trabalho passou para a máquina 1. Antes de qualquer
+> coisa, leia `_sistema/TROCA_DE_MAQUINA.md` — o `projetos/fabrica-v2/` é repositório
+> próprio e precisa de um clone separado, e a árvore está VERMELHA por um parcial da T-037.
+>
 > **Não sabe o que rodar?** Veja `COMECE_AQUI.md`, ao lado — ele tem o passo a passo.
 > Resposta curta: **cole o prompt abaixo no Claude Code**. O script `.ps1` só serve se a cota
 > tiver acabado.
@@ -73,14 +77,26 @@ cabeçalho do próprio script.
 
 ---
 
-## Onde o trabalho parou, em quatro linhas
+## Onde o trabalho parou
 
-- **31 de 60 tarefas** concluídas. `mix fabrica.ci` verde nos cinco estágios. As duas árvores
-  git limpas.
-- O **marco 1 da v0.2 reprovou** com três causas raiz; o replanejamento gerou 10 tarefas, das
-  quais a fundação (T-018b, a medição do CLI real) está **concluída**.
-- **Restam 8 tarefas**, ~6,5 a 9,5 h de agente. A primeira é a T-003a, que é o desenho da
-  fronteira de operários.
-- **Bloqueio antigo:** não existe `ANTHROPIC_API_KEY` nesta máquina, e ela **não pode** ser
-  definida globalmente — a prova do marco da v0.1 afirma que ela não está definida durante a
-  suíte. Ela entra só no processo do probe, quando existir.
+> A versão anterior desta seção era de **02/09** e dizia "31 de 60 tarefas". Vencida.
+
+**Em 2026-09-04: 42 de 71 tarefas concluídas** — 2 em execução, 7 prontas, 20 em backlog.
+
+- **A árvore NÃO compila.** `lib/fabrica/fila/resgate.ex:80`, `undefined variable "j"` —
+  parcial da T-037, cujo executor a parede de cota cortou no meio. Foi commitado quebrado
+  de propósito, para viajar. **Todo `mix verificar` reprova por causa dele**, seja qual for
+  a tarefa.
+- **Por isso a T-037 roda primeiro e sozinha.** A T-050 já queimou 2 de 3 tentativas contra
+  essa árvore, sem um único achado contra o código dela.
+- **O piloto automático está desligado** e estourou o teto (US$ 61,20 contra US$ 60,00, em
+  8 rodadas). O estado dele vive em `painel/dados/`, que não é versionado — o teto precisa
+  ser redeclarado na outra máquina.
+- **Bloqueio antigo, inalterado:** não existe `ANTHROPIC_API_KEY`, e ela **não pode** ser
+  definida globalmente — a prova do marco da v0.1 afirma que ela não está definida durante
+  a suíte. Ela entra só no processo do probe, quando existir.
+- **O que a troca DESBLOQUEIA:** a T-034 exige o `projetos/` real da v1, que está na
+  máquina 1. A pendência "copiar `projetos/`" deixa de existir indo para lá.
+
+O detalhe completo está em `projetos/fabrica-v2/_gestao/PROGRESSO.md`, seção "Onde parar e
+onde retomar", e nos rodapés das tarefas T-037 e T-050.
