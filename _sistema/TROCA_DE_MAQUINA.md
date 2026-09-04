@@ -22,16 +22,22 @@ remote nenhum. Era o único bloqueio real da troca.
 
 ### Criar o repositório do projeto (uma vez, na máquina 2)
 
-1. Em `github.com/new`: nome **`fabrica-v2`**, visibilidade **privada**, sem README, sem
-   `.gitignore`, sem licença (o repositório local já tem tudo e um commit inicial do
-   GitHub obrigaria a um merge à toa).
-2. Na máquina 2:
+**O `git remote add` já foi feito** em 04/09 — o repositório local já aponta para
+`https://github.com/enzoconsulo/fabrica-v2.git`. Falta só o outro lado existir, e isso
+exige a sua conta: não há `gh` CLI nesta máquina, e o push devolve `Repository not found`
+até lá.
+
+1. Em `github.com/new`: nome **`fabrica-v2`**, visibilidade **privada**, **sem** README,
+   **sem** `.gitignore`, **sem** licença — o repositório local já tem tudo, e um commit
+   inicial criado pelo GitHub obrigaria a um merge à toa.
+2. Na máquina 2, um comando só:
 
    ```powershell
    cd C:\Users\enzoconsulo\Documents\Generic-Multi-Agents\projetos\fabrica-v2
-   git remote add origin https://github.com/enzoconsulo/fabrica-v2.git
    git push -u origin master
    ```
+
+   São 92 commits, 227 arquivos, ~4,6 MB. A árvore local está limpa.
 
 ---
 
