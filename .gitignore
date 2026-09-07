@@ -13,6 +13,7 @@ desktop.ini
 
 # Documentos do TCC: figuras e PDFs de conferência são gerados pelos scripts
 _sistema/documentos-tcc/geradores/figs3/
+_sistema/documentos-tcc/geradores/figs_plano/
 _sistema/documentos-tcc/geradores/figs_en/
 _sistema/documentos-tcc/geradores/__pycache__/
 _sistema/documentos-tcc/geradores/*.pdf
@@ -23,3 +24,4 @@ _sistema/documentos-tcc/geradores/documento6.py
 _sistema/documentos-tcc/geradores/documento6_en.py
 _sistema/documentos-tcc/geradores/documento7.py
 _sistema/documentos-tcc/geradores/documento7_en.py
+_sistema/documentos-tcc/geradores/plano.py
