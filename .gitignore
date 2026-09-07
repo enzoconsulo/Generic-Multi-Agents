@@ -25,3 +25,8 @@ _sistema/documentos-tcc/geradores/documento6_en.py
 _sistema/documentos-tcc/geradores/documento7.py
 _sistema/documentos-tcc/geradores/documento7_en.py
 _sistema/documentos-tcc/geradores/plano.py
+
+# Kit local de edicao do plano do TCC: prompt, manual e atalho de geracao.
+# E camada de operacao, nao fonte da verdade — os geradores ficam versionados em
+# _sistema/documentos-tcc/geradores/. A pasta e descartavel e reconstruivel.
+/_editar-plano-tcc/
