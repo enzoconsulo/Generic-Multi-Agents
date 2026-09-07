@@ -1,14 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Figuras do PLANO DE DESENVOLVIMENTO (documento de planejamento do TCC).
+"""Figuras do PLANO DE DESENVOLVIMENTO.
 
 Gera PNGs em figs_plano/. Paleta identica a dos documentos de arquitetura
 (documento7_base.py), para que os dois documentos pareçam da mesma familia.
+
+Quatro figuras, de proposito — o documento e curto e cada figura precisa
+carregar informacao que nenhuma tabela carrega melhor:
+
+    fig1_visao_geral   linha do tempo mestra, com inicio e fim do desenvolvimento
+    fig2_arquitetura   as quatro camadas do sistema
+    fig3_ciclo         os seis estados de uma tarefa e os dois portoes
+    fig4_cronograma    as 13 etapas, uma barra cada
+
+O numero do arquivo e o numero da figura NO DOCUMENTO — nao a ordem em que
+sao geradas aqui.
 
     python figuras_plano.py
 """
 import datetime
 import os
-import textwrap
 
 import matplotlib
 matplotlib.use("Agg")
@@ -37,7 +47,6 @@ VERDE = "#14865D"
 LARANJA = "#C24E1E"
 VERMELHO = "#B52C2C"
 PAPEL = "#FFFFFF"
-TRILHO = "#F0F0EC"
 
 plt.rcParams.update({
     "font.family": "DejaVu Sans",
@@ -51,113 +60,189 @@ plt.rcParams.update({
     "savefig.facecolor": PAPEL,
 })
 
-INICIO = datetime.date(2026, 4, 13)
+# ------------------------------------------------------------------ o calendario
+INICIO = datetime.date(2026, 9, 4)
+# O recesso de fim de ano entra ANTES da E8. Sem ele a etapa cairia inteira
+# sobre o Natal e o Ano-Novo, e o prazo deixaria de ser realista.
+RECESSO_ANTES_DE = 8
+DIAS_RECESSO = 15
 
 FASES = {
-    "req": ("Requisitos", AZUL_CLARO),
-    "proj": ("Projeto", ROXO),
-    "impl": ("Implementação", AZUL),
-    "teste": ("Testes e entrega", VERDE),
+    "plan": ("PLANEJAMENTO", ROXO),
+    "desenv": ("DESENVOLVIMENTO", AZUL),
+    "valid": ("VALIDAÇÃO", VERDE),
 }
 
 ETAPAS = [
-    ("E01", "Requisitos e viabilidade", "req"),
-    ("E02", "Estado da arte e linha de base", "req"),
-    ("E03", "Projeto arquitetural", "proj"),
-    ("E04", "Projeto detalhado e ambiente", "proj"),
-    ("E05", "Fundação verificável", "impl"),
-    ("E06", "O agente e as ferramentas", "impl"),
-    ("E07", "Estados e portões", "impl"),
-    ("E08", "Integração e governança", "impl"),
-    ("E09", "Concorrência e falhas", "impl"),
-    ("E10", "Memória do projeto", "impl"),
-    ("E11", "Painel e automação", "impl"),
-    ("E12", "Testes de sistema em uso real", "teste"),
-    ("E13", "Refinamento e entrega", "teste"),
+    (1, "Requisitos e viabilidade", "plan"),
+    (2, "Estado da arte e linha de base", "plan"),
+    (3, "Projeto da arquitetura", "plan"),
+    (4, "Projeto detalhado e ambiente", "plan"),
+    (5, "Fundação do sistema", "desenv"),
+    (6, "O agente e as ferramentas", "desenv"),
+    (7, "Linha de produção de tarefas", "desenv"),
+    (8, "Integração com o fornecedor", "desenv"),
+    (9, "Execução em paralelo", "desenv"),
+    (10, "Memória do projeto", "desenv"),
+    (11, "Painel de acompanhamento", "desenv"),
+    (12, "Testes com projetos reais", "valid"),
+    (13, "Ajustes finais e entrega", "valid"),
 ]
 
 
+def calendario():
+    """Devolve {numero: (inicio, fim)} e o par (inicio, fim) do recesso."""
+    datas, recesso, d = {}, None, INICIO
+    for numero, _, _ in ETAPAS:
+        if numero == RECESSO_ANTES_DE:
+            recesso = (d, d + datetime.timedelta(days=DIAS_RECESSO - 1))
+            d += datetime.timedelta(days=DIAS_RECESSO)
+        datas[numero] = (d, d + datetime.timedelta(days=14))
+        d = d + datetime.timedelta(days=15)
+    return datas, recesso
+
+
+DATAS, RECESSO = calendario()
+FIM = DATAS[13][1]
+
+
+def br(data):
+    return data.strftime("%d/%m/%Y")
+
+
 def salvar(fig, nome):
-    caminho = os.path.join(SAIDA, nome)
-    fig.savefig(caminho, dpi=200, bbox_inches="tight", pad_inches=0.06)
+    fig.savefig(os.path.join(SAIDA, nome), dpi=200, bbox_inches="tight", pad_inches=0.06)
     plt.close(fig)
     print("  ", nome)
 
 
-# ---------------------------------------------------------------- 1. cronograma
-def fig_cronograma():
-    fig, ax = plt.subplots(figsize=(10.2, 4.6))
-    x0 = mdates.date2num(INICIO)
-    rotulo_x = x0 - 5          # coluna de rotulos, alinhada a direita, x fixo
-    esquerda = x0 - 96
+# ------------------------------------------------------------- 1. visao geral
+def fig_visao_geral():
+    """A figura da primeira pagina: as tres fases e onde o desenvolvimento comeca
+    e termina. E a unica coisa que alguem precisa ver para entender o plano."""
+    fig, ax = plt.subplots(figsize=(10.2, 2.7))
+    ax.set_xlim(-1.5, 101.5)
+    ax.set_ylim(0, 36)
+    ax.axis("off")
 
-    for i, (cod, nome, fase) in enumerate(ETAPAS):
+    total = (FIM - INICIO).days + 1
+    x, largura_util = 0.0, 100.0
+
+    blocos = [
+        ("plan", "PLANEJAMENTO", "E1–E4", 60),
+        ("recesso", "RECESSO", "", DIAS_RECESSO),
+        ("desenv", "DESENVOLVIMENTO", "E5–E11", 105),
+        ("valid", "VALIDAÇÃO", "E12–E13", 30),
+    ]
+    bordas = [0.0]
+    for chave, titulo, sub, dias in blocos:
+        w = dias / total * largura_util
+        if chave == "recesso":
+            ax.add_patch(mpatches.Rectangle((x, 12), w, 9, facecolor="#EDEDE9",
+                                            edgecolor="white", linewidth=1.6, zorder=3))
+            ax.text(x + w / 2, 16.5, "recesso", ha="center", va="center", rotation=90,
+                    fontsize=6.4, color=MUDO, fontweight="bold", zorder=4)
+        else:
+            cor = FASES[chave][1]
+            ax.add_patch(mpatches.Rectangle((x, 12), w, 9, facecolor=cor,
+                                            edgecolor="white", linewidth=1.6, zorder=3))
+            estreito = w < 20
+            ax.text(x + w / 2, 18.1, titulo, ha="center", va="center", color="white",
+                    fontsize=7.4 if estreito else 8.6, fontweight="bold", zorder=4)
+            ax.text(x + w / 2, 14.8, "%s · %d dias" % (sub, dias), ha="center",
+                    va="center", color="white", fontsize=6.6 if estreito else 7.2, zorder=4)
+        x += w
+        bordas.append(x)
+
+    inicio_dev, fim_dev = bordas[2], bordas[3]
+
+    # os dois marcadores que o plano precisa deixar obvios
+    for cx, rotulo, data, cor in ((inicio_dev, "INÍCIO DO DESENVOLVIMENTO", DATAS[5][0], AZUL),
+                                  (fim_dev, "FIM DO DESENVOLVIMENTO", DATAS[11][1], AZUL)):
+        ax.add_patch(FancyArrowPatch((cx, 27.2), (cx, 21.6), arrowstyle="-|>",
+                                     mutation_scale=13, color=cor, linewidth=2.0, zorder=5))
+        ax.text(cx, 30.6, "%s\n%s" % (rotulo, br(data)), ha="center", va="center",
+                fontsize=7.6, color="white", fontweight="bold", zorder=6, linespacing=1.5,
+                bbox=dict(boxstyle="round,pad=0.42", facecolor=cor, edgecolor="none"))
+
+    # as duas pontas do projeto
+    ax.text(0, 9.6, "INÍCIO DO PROJETO", ha="left", va="center", fontsize=7,
+            color=CINZA, fontweight="bold")
+    ax.text(0, 6.4, br(INICIO), ha="left", va="center", fontsize=8.6, color=TINTA,
+            fontweight="bold")
+    ax.text(100, 9.6, "ENTREGA FINAL", ha="right", va="center", fontsize=7,
+            color=CINZA, fontweight="bold")
+    ax.text(100, 6.4, br(FIM), ha="right", va="center", fontsize=8.6, color=TINTA,
+            fontweight="bold")
+    ax.text(50, 6.4, "%d dias  ·  13 etapas de 15 dias" % total, ha="center",
+            va="center", fontsize=8, color=MUDO)
+    salvar(fig, "fig1_visao_geral.png")
+
+
+# -------------------------------------------------------------- 2. cronograma
+def fig_cronograma():
+    fig, ax = plt.subplots(figsize=(10.2, 4.8))
+    x0 = mdates.date2num(INICIO)
+    rotulo_x = x0 - 5
+    esquerda = x0 - 104
+
+    for i, (numero, nome, fase) in enumerate(ETAPAS):
         y = len(ETAPAS) - 1 - i
-        ini = INICIO + datetime.timedelta(days=i * 15)
+        ini, fim = DATAS[numero]
         cor = FASES[fase][1]
-        ax.barh(y, 15, left=mdates.date2num(ini), height=0.62,
-                color=cor, edgecolor="white", linewidth=1.1, zorder=3)
-        ax.text(mdates.date2num(ini) + 7.5, y, cod, ha="center", va="center",
+        ax.barh(y, 15, left=mdates.date2num(ini), height=0.62, color=cor,
+                edgecolor="white", linewidth=1.1, zorder=3)
+        ax.text(mdates.date2num(ini) + 7.5, y, "E%d" % numero, ha="center", va="center",
                 color="white", fontsize=7.4, fontweight="bold", zorder=4)
-        ax.text(rotulo_x, y, nome, ha="right", va="center",
+        ax.text(rotulo_x, y, "E%-2d  %s" % (numero, nome), ha="right", va="center",
                 color=TINTA, fontsize=8.2, zorder=4)
         ax.plot([rotulo_x + 1.5, mdates.date2num(ini) - 1], [y, y],
                 color="#E6E6E2", linewidth=0.7, zorder=1)
 
-    ax.set_ylim(-1.15, len(ETAPAS) - 0.15)
-    ax.set_xlim(esquerda, x0 + 199)
+    # o recesso, na faixa da etapa que ele antecede
+    yr = len(ETAPAS) - 1 - (RECESSO_ANTES_DE - 1) + 0.5
+    ax.barh(yr, DIAS_RECESSO, left=mdates.date2num(RECESSO[0]), height=0.34,
+            color="#EDEDE9", edgecolor="#D5D5D0", linewidth=0.8, zorder=3)
+    ax.text(mdates.date2num(RECESSO[0]) + DIAS_RECESSO / 2, yr, "recesso",
+            ha="center", va="center", fontsize=6.2, color=MUDO, zorder=4)
+
+    # as linhas que marcam onde o desenvolvimento comeca e termina
+    for data, texto in ((DATAS[5][0], "início do desenvolvimento"),
+                        (DATAS[11][1] + datetime.timedelta(days=1), "fim do desenvolvimento")):
+        xv = mdates.date2num(data)
+        ax.plot([xv, xv], [-1.5, len(ETAPAS) - 0.4], color=AZUL, linewidth=1.2,
+                linestyle=(0, (5, 3)), zorder=2)
+        ax.text(xv, len(ETAPAS) - 0.3, texto, ha="center", va="bottom", fontsize=6.9,
+                color="white", fontweight="bold", zorder=6,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor=AZUL, edgecolor="none"))
+
+    ax.set_ylim(-1.9, len(ETAPAS) + 0.5)
+    ax.set_xlim(esquerda, mdates.date2num(FIM) + 16)
     ax.xaxis.set_major_locator(mdates.MonthLocator())
     ax.xaxis.set_major_formatter(FuncFormatter(
         lambda v, _: "%s/%02d" % (MESES[mdates.num2date(v).month - 1],
                                   mdates.num2date(v).year % 100)))
     ax.grid(axis="x", color="#EDEDE9", linewidth=0.8, zorder=0)
     ax.set_yticks([])
-    ax.tick_params(axis="x", labelsize=7.6, length=0, pad=4)
+    ax.tick_params(axis="x", labelsize=7.4, length=0, pad=4)
     for lado in ("top", "right", "left"):
         ax.spines[lado].set_visible(False)
     ax.spines["bottom"].set_color("#D9D9D6")
 
-    # marcas das fases, na base
-    limites = [(0, 2, "req", "REQUISITOS"), (2, 4, "proj", "PROJETO"),
-               (4, 11, "impl", "IMPLEMENTAÇÃO"), (11, 13, "teste", "TESTES")]
-    for a, b, fase, texto in limites:
-        xa = mdates.date2num(INICIO + datetime.timedelta(days=a * 15))
-        xb = mdates.date2num(INICIO + datetime.timedelta(days=b * 15))
-        ax.plot([xa, xb - 0.8], [-0.72, -0.72], color=FASES[fase][1],
-                linewidth=3.4, solid_capstyle="butt", zorder=3)
-        ax.text((xa + xb) / 2, -1.0, texto, ha="center", va="center",
+    faixas = [(1, 4, "plan"), (5, 11, "desenv"), (12, 13, "valid")]
+    for a, b, fase in faixas:
+        xa = mdates.date2num(DATAS[a][0])
+        xb = mdates.date2num(DATAS[b][1])
+        ax.plot([xa, xb], [-1.45, -1.45], color=FASES[fase][1], linewidth=3.4,
+                solid_capstyle="butt", zorder=3)
+        ax.text((xa + xb) / 2, -1.75, FASES[fase][0], ha="center", va="center",
                 fontsize=6.9, color=FASES[fase][1], fontweight="bold")
-
-    ax.text(esquerda, len(ETAPAS) - 0.42,
-            "13 etapas de 15 dias  ·  195 dias  ·  13/04/2026 a 24/10/2026",
-            fontsize=8.4, color=MUDO, va="bottom")
-    salvar(fig, "fig1_cronograma.png")
+    salvar(fig, "fig4_cronograma.png")
 
 
-# ------------------------------------------------------------- 2. esforço/fase
-def fig_esforco():
-    fig, ax = plt.subplots(figsize=(10.2, 1.5))
-    dados = [("Requisitos", 30, AZUL_CLARO), ("Projeto", 30, ROXO),
-             ("Implementação", 105, AZUL), ("Testes e entrega", 30, VERDE)]
-    x = 0
-    for nome, dias, cor in dados:
-        ax.barh(0, dias, left=x, height=0.5, color=cor, edgecolor="white", linewidth=1.4)
-        ax.text(x + dias / 2, 0, f"{dias} dias", ha="center", va="center",
-                color="white", fontsize=8.4, fontweight="bold")
-        ax.text(x + dias / 2, -0.42, nome, ha="center", va="center",
-                color=cor, fontsize=8, fontweight="bold")
-        ax.text(x + dias / 2, 0.42, f"{dias / 195 * 100:.0f}%", ha="center", va="center",
-                color=MUDO, fontsize=7.4)
-        x += dias
-    ax.set_xlim(-2, 197)
-    ax.set_ylim(-0.72, 0.66)
-    ax.axis("off")
-    salvar(fig, "fig2_esforco.png")
-
-
-# -------------------------------------------------------------- 3. arquitetura
+# ------------------------------------------------------------- 3. arquitetura
 def fig_arquitetura():
-    fig, ax = plt.subplots(figsize=(10.2, 5.4))
+    fig, ax = plt.subplots(figsize=(10.2, 5.2))
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 62)
     ax.axis("off")
@@ -176,67 +261,60 @@ def fig_arquitetura():
         ax.text(2.2, y + h / 2, texto, fontsize=tam, color="white", fontweight="bold",
                 rotation=90, ha="center", va="center", zorder=3)
 
-    # camada 1 — interface
-    faixa(48, 12, "INTERFACE", VERDE)
-    bloco(6, 48, 44, 12, "Painel ao vivo  ·  Phoenix LiveView",
+    faixa(48, 12, "TELA", VERDE)
+    bloco(6, 48, 44, 12, "Painel ao vivo",
           ["Quadro de tarefas por estado · console do agente",
            "custo da rodada · parar e retomar"], VERDE, "#EAF7F1")
-    bloco(53, 48, 41, 12, "Piloto automático",
+    bloco(53, 48, 41, 12, "Automação das rodadas",
           ["Encadeia rodadas até um critério de parada",
            "teto de gasto e de rodadas obrigatórios"], VERDE, "#EAF7F1")
 
-    # camada 2 — motor
     faixa(27, 18.5, "MOTOR", AZUL)
     bloco(6, 27, 28, 18.5, "Máquina de tarefas",
-          ["Seis estados", "transição transacional",
-           "dois portões independentes", "escada do fracasso"], AZUL, "#EAF2FD")
-    bloco(37, 27, 27, 18.5, "Árvore de supervisão  ·  OTP",
+          ["Seis estados", "mudança de estado em transação",
+           "dois portões independentes", "escada de resposta à falha"], AZUL, "#EAF2FD")
+    bloco(37, 27, 27, 18.5, "Supervisão dos agentes",
           ["Um processo por agente em voo",
-           "DynamicSupervisor + Registry",
+           "cada um com dono e endereço",
            "matar um não derruba os outros"], AZUL, "#EAF2FD")
     bloco(67, 27, 27, 18.5, "Ferramentas confinadas",
           ["ler · escrever · editar · buscar",
            "rodar comando, com prazo",
-           "registrar_resultado"], AZUL, "#EAF2FD")
+           "registrar resultado"], AZUL, "#EAF2FD")
 
-    # camada 3 — fronteiras
     faixa(15, 9.5, "FRONTEIRAS", ROXO, tam=5.6)
-    bloco(6, 15, 44, 9.5, "Fabrica.Operario  (behaviour)",
-          ["Duas famílias: agente completo · endpoint de modelo"], ROXO, "#EFEDFA")
-    bloco(53, 15, 41, 9.5, "Fabrica.Embedder  (behaviour)",
-          ["Falso · serviço · local — escolhido por medição"], ROXO, "#EFEDFA")
+    bloco(6, 15, 44, 9.5, "Fornecedor de modelo",
+          ["Trocável: entra como adaptador, sem mexer no motor"], ROXO, "#EFEDFA")
+    bloco(53, 15, 41, 9.5, "Mecanismo de busca",
+          ["Trocável: escolhido por medição na Etapa 10"], ROXO, "#EFEDFA")
 
-    # camada 4 — persistência
-    faixa(1, 11, "ESTADO", LARANJA)
-    bloco(6, 1, 28, 11, "PostgreSQL + Ecto",
+    faixa(1, 11, "DADOS", LARANJA)
+    bloco(6, 1, 28, 11, "Banco de dados",
           ["Projetos, tarefas, ciclos,", "despachos e custos"], LARANJA, "#FCF0EA")
-    bloco(37, 1, 27, 11, "Oban",
-          ["Fila durável no mesmo banco:", "enfileirar e mudar estado juntos"],
-          LARANJA, "#FCF0EA")
-    bloco(67, 1, 27, 11, "pgvector",
-          ["Memória semântica do projeto,", "busca híbrida com termo exato"],
-          LARANJA, "#FCF0EA")
+    bloco(37, 1, 27, 11, "Fila de trabalhos",
+          ["Enfileirar e mudar o estado", "da tarefa na mesma transação"], LARANJA, "#FCF0EA")
+    bloco(67, 1, 27, 11, "Memória do projeto",
+          ["Histórico consultável, com", "a fonte de cada informação"], LARANJA, "#FCF0EA")
 
     for y0, y1 in ((48, 45.8), (27, 24.8), (15, 12.2)):
         for x in (20, 50, 80):
             ax.add_patch(FancyArrowPatch((x, y0), (x, y1), arrowstyle="-|>",
                                          mutation_scale=8, color="#C9C9C4",
                                          linewidth=1.0, zorder=1))
-    salvar(fig, "fig3_arquitetura.png")
+    salvar(fig, "fig2_arquitetura.png")
 
 
-# ------------------------------------------------------------ 4. ciclo/portões
+# ------------------------------------------------------------------- 4. ciclo
 def fig_ciclo():
     fig, ax = plt.subplots(figsize=(10.2, 3.05))
     ax.set_xlim(0, 100)
     ax.set_ylim(1.6, 34)
     ax.axis("off")
 
-    estados = [("backlog", MUDO), ("pronta", AZUL_CLARO), ("em-execução", AZUL),
-               ("em-teste", LARANJA), ("em-revisão", ROXO), ("concluída", VERDE)]
+    estados = [("na fila", MUDO), ("pronta", AZUL_CLARO), ("em execução", AZUL),
+               ("em teste", LARANJA), ("em revisão", ROXO), ("concluída", VERDE)]
     w, gap = 14.2, 2.6
-    x = 1.5
-    centros = []
+    x, centros = 1.5, []
     for nome, cor in estados:
         ax.add_patch(FancyBboxPatch((x, 18), w, 7.4,
                                     boxstyle="round,pad=0.2,rounding_size=0.7",
@@ -252,145 +330,42 @@ def fig_ciclo():
                                      arrowstyle="-|>", mutation_scale=10,
                                      color=CINZA, linewidth=1.2, zorder=2))
 
-    # quem age em cada transição
-    papeis = [(centros[2], "construtor", AZUL), (centros[3], "verificador", LARANJA),
-              (centros[4], "revisor", ROXO)]
-    for cx, nome, cor in papeis:
+    for cx, nome, cor in ((centros[2], "quem constrói", AZUL),
+                          (centros[3], "quem testa", LARANJA),
+                          (centros[4], "quem revisa", ROXO)):
         ax.text(cx, 27.6, nome, ha="center", va="center", fontsize=7.6,
                 color=cor, fontweight="bold")
 
-    # os dois portões, com a pergunta de cada um
     for cx, pergunta, cor in ((centros[3], "funciona?", LARANJA),
                               (centros[4], "é o que foi pedido?", ROXO)):
         ax.text(cx, 30.8, pergunta, ha="center", va="center", fontsize=7.8,
                 color="white", fontweight="bold", zorder=4,
                 bbox=dict(boxstyle="round,pad=0.34", facecolor=cor, edgecolor="none"))
 
-    # Retorno por reprovação. Traçado como polilinha explícita por BAIXO da fileira:
-    # arc3 curvava para cima e o percurso ficava escondido atrás das caixas.
     for origem, nivel, desloc in ((3, 14.4, 2.8), (4, 10.8, -2.8)):
         xa, xb = centros[origem], centros[2] + desloc
-        ax.plot([xa, xa, xb, xb], [17.9, nivel, nivel, 16.6],
-                color=VERMELHO, linewidth=1.15, linestyle=(0, (4, 2.6)),
-                solid_capstyle="butt", zorder=5)
+        ax.plot([xa, xa, xb, xb], [17.9, nivel, nivel, 16.6], color=VERMELHO,
+                linewidth=1.15, linestyle=(0, (4, 2.6)), solid_capstyle="butt", zorder=5)
         ax.add_patch(FancyArrowPatch((xb, 16.9), (xb, 17.9), arrowstyle="-|>",
                                      mutation_scale=9, color=VERMELHO,
                                      linewidth=1.15, zorder=5))
     ax.text((centros[2] + centros[5]) / 2, 6.8,
-            "reprovada — volta para execução, com o relatório anexado",
+            "reprovada — volta para execução, com o relatório do que faltou",
             ha="center", va="center", fontsize=7.6, color=VERMELHO)
     ax.text((centros[2] + centros[5]) / 2, 3.4,
-            "no 4º ciclo a tarefa é bloqueada; o contador é do sistema, não do agente",
+            "no 4º ciclo a tarefa é bloqueada; quem conta os ciclos é o sistema, não o agente",
             ha="center", va="center", fontsize=7.3, color=MUDO)
     ax.text(1.5, 30.8, "os dois portões,\nduas perguntas", fontsize=8, color=TINTA,
             fontweight="bold", va="center", ha="left")
-    salvar(fig, "fig4_ciclo.png")
-
-
-# ------------------------------------------------------------------- 5. escada
-def fig_escada():
-    fig, ax = plt.subplots(figsize=(10.2, 2.6))
-    ax.set_xlim(0, 100)
-    ax.set_ylim(0.6, 29.2)
-    ax.axis("off")
-
-    degraus = [
-        ("1º ciclo", "Sobe o modelo", "O retrabalho usa um modelo mais forte que o do disparo", AZUL_CLARO),
-        ("2º ciclo", "Troca o especialista", "Duas reprovações sob o mesmo prompt indicam viés de ataque", ROXO),
-        ("3º ciclo", "Replaneja", "A tarefa é quebrada ou reescrita; a original é cancelada", LARANJA),
-        ("4º ciclo", "Bloqueia", "Vai para o humano, com o motivo registrado na tarefa", VERMELHO),
-    ]
-    w, h = 23.0, 15.5
-    for i, (ciclo, titulo, texto, cor) in enumerate(degraus):
-        x = i * (w + 2.2) + 1
-        y = 1.5 + i * 3.9          # o degrau sobe; a altura da caixa nao muda
-        ax.add_patch(FancyBboxPatch((x, y), w, h,
-                                    boxstyle="round,pad=0.25,rounding_size=0.7",
-                                    facecolor="white", edgecolor=cor, linewidth=1.4, zorder=2))
-        ax.add_patch(mpatches.Rectangle((x, y + h - 1.0), w, 1.0, facecolor=cor,
-                                        edgecolor="none", zorder=3))
-        ax.text(x + 1.4, y + h - 3.4, ciclo, fontsize=7.2, color=cor, fontweight="bold")
-        ax.text(x + 1.4, y + h - 6.6, titulo, fontsize=9.4, color=TINTA, fontweight="bold")
-        # textwrap a mao: wrap=True do matplotlib quebra pela largura da FIGURA,
-        # nao pela da caixa, e o texto atravessa os vizinhos.
-        ax.text(x + 1.4, y + h - 9.6, "\n".join(textwrap.wrap(texto, 34)),
-                fontsize=7.3, color=CINZA, va="top", linespacing=1.5)
-    salvar(fig, "fig5_escada.png")
-
-
-# -------------------------------------------------------------- 6. ferramentas
-def fig_ferramentas():
-    fig, ax = plt.subplots(figsize=(10.2, 4.2))
-    ax.set_xlim(0, 102.4)
-    ax.set_ylim(0, 44)
-    ax.axis("off")
-
-    grupos = [
-        ("Linguagem e runtime", AZUL, [("Elixir 1.19", "linguagem"), ("Erlang/OTP 28", "runtime"),
-                                       ("Mix", "build e tarefas"), ("Git", "versionamento")]),
-        ("Web e interface", VERDE, [("Phoenix 1.8", "framework web"), ("LiveView 1.2", "tela ao vivo"),
-                                    ("Bandit", "servidor HTTP"), ("Tailwind + daisyUI", "estilo")]),
-        ("Dados e fila", LARANJA, [("PostgreSQL 18", "banco"), ("Ecto 3.13", "acesso e migrações"),
-                                   ("Oban 2.24", "fila durável"), ("pgvector 0.8", "busca vetorial")]),
-        ("Qualidade", ROXO, [("ExUnit", "testes"), ("Credo", "análise estática"),
-                             ("Dialyzer", "checagem de tipos"), ("mix format", "formatação")]),
-        ("Modelo e rede", AZUL_CLARO, [("Claude Code CLI", "agente completo"),
-                                       ("Messages API", "endpoint de modelo"),
-                                       ("Req", "cliente HTTP"), ("Telemetry", "medição")]),
-    ]
-    w = 18.6
-    for i, (titulo, cor, itens) in enumerate(grupos):
-        x = i * (w + 1.8) + 0.8
-        ax.add_patch(FancyBboxPatch((x, 1), w, 42,
-                                    boxstyle="round,pad=0.25,rounding_size=0.7",
-                                    facecolor="#FBFBF9", edgecolor="#E2E2DE",
-                                    linewidth=1.0, zorder=2))
-        ax.add_patch(mpatches.Rectangle((x, 37.6), w, 5.4, facecolor=cor,
-                                        edgecolor="none", zorder=3))
-        ax.text(x + w / 2, 40.3, titulo, fontsize=7.8, color="white", fontweight="bold",
-                ha="center", va="center", zorder=4)
-        for k, (nome, papel) in enumerate(itens):
-            y = 33.2 - k * 7.6
-            ax.text(x + 1.4, y, nome, fontsize=8.2, color=TINTA, fontweight="bold", va="center")
-            ax.text(x + 1.4, y - 3.0, papel, fontsize=7.1, color=MUDO, va="center")
-    salvar(fig, "fig6_ferramentas.png")
-
-
-# ----------------------------------------------------------------- 7. entregas
-def fig_entregas():
-    fig, ax = plt.subplots(figsize=(10.2, 4.0))
-    marcos = [
-        ("E05", "A suíte roda sem rede,\nsem cota e sem chave", 1),
-        ("E06", "Um agente resolve\numa tarefa real", 2),
-        ("E07", "Uma tarefa reprova,\nretrabalha e conclui", 3),
-        ("E08", "Trocar de fornecedor\nnão toca o miolo", 4),
-        ("E09", "Três tarefas em paralelo;\nmatar uma não derruba", 5),
-        ("E10", "O agente cita\na decisão anterior", 6),
-        ("E11", "Um projeto acompanhado\nna tela, do pedido à entrega", 7),
-    ]
-    xs = [m[2] for m in marcos]
-    ax.step(xs, xs, where="post", color="#DCDCD8", linewidth=1.4, zorder=1)
-    for cod, texto, x in marcos:
-        ax.scatter([x], [x], s=190, color=AZUL, zorder=3, edgecolor="white", linewidth=1.6)
-        ax.text(x, x, cod[1:], color="white", fontsize=7.2, fontweight="bold",
-                ha="center", va="center", zorder=4)
-        ax.text(x + 0.16, x - 0.12, texto, fontsize=7.9, color=TINTA, va="top", zorder=4)
-    ax.set_xlim(0.55, 9.35)
-    ax.set_ylim(0.15, 8.0)
-    ax.axis("off")
-    ax.text(0.6, 7.85, "Cada etapa de implementação fecha num marco verificável — e cada marco\n"
-                       "pressupõe todos os anteriores. Não é porcentagem de conclusão: é capacidade.",
-            fontsize=8, color=MUDO, va="top")
-    salvar(fig, "fig7_marcos.png")
+    salvar(fig, "fig3_ciclo.png")
 
 
 if __name__ == "__main__":
+    print("calendario: %s a %s (%d dias)" % (br(INICIO), br(FIM), (FIM - INICIO).days + 1))
+    print("  desenvolvimento: %s a %s" % (br(DATAS[5][0]), br(DATAS[11][1])))
     print("gerando figuras em", SAIDA)
-    fig_cronograma()
-    fig_esforco()
+    fig_visao_geral()
     fig_arquitetura()
     fig_ciclo()
-    fig_escada()
-    fig_ferramentas()
-    fig_entregas()
+    fig_cronograma()
     print("pronto.")

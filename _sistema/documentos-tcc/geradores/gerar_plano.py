@@ -4,10 +4,9 @@
 Mesma convencao do gerar7.py: concatena as partes e executa, para que o corpo
 possa usar os helpers da base sem import.
 
-Uso:  python gerar_plano.py             -> versao completa, no destino oficial
-      python gerar_plano.py --resumido  -> versao resumida (teto de 10 paginas)
-      python gerar_plano.py <caminho>   -> grava no caminho dado (quando o oficial
-                                           esta aberto no Word e nao pode ser escrito)
+Uso:  python gerar_plano.py            -> grava no destino oficial (raiz da fabrica)
+      python gerar_plano.py <caminho>  -> grava no caminho dado (quando o oficial
+                                          esta aberto no Word e nao pode ser escrito)
 
 As figuras precisam existir; rode antes:  python figuras_plano.py
 Para conferir a paginacao:                python medir_paginas.py <arquivo>
