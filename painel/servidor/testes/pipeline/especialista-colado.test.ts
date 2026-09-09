@@ -18,9 +18,21 @@ import type { TarefaResumo } from "../../src/fabrica/tipos.js";
  * a diferença entre "o campo existe" e "o conteúdo chega" é exatamente o tipo de coisa que
  * esta fábrica já perdeu em silêncio uma vez (o `outputConfig` do SDK, que compilava e era
  * ignorado).
+ *
+ * ATUALIZAÇÃO (09/09): o `equipe.json` deixou de ser lido do projeto e passou a ser um
+ * SNAPSHOT versionado em `testes/fixtures/`. A linha antiga era o caminho ABSOLUTO do
+ * banco-imobiliario na máquina anterior (C:/Users/enzoc/OneDrive/...); `projetos/` está no
+ * .gitignore, então a fábrica mudou de lugar, o arquivo não veio junto e o teste passou a
+ * falhar na COLETA — 986 testes verdes e a suíte vermelha por um arquivo que ninguém mais
+ * tem. Suíte cronicamente vermelha não acusa mais nada, que é o oposto do que este teste
+ * existe para fazer.
+ *
+ * O que se perdeu: ele não acusa mais drift contra um `equipe.json` de verdade em evolução.
+ * O que continua travado, e é a metade que importa aqui: `agente:` entra e o prompt do
+ * especialista sai colado no despacho, pelo código do painel.
  */
 
-const EQUIPE_REAL = "C:/Users/enzoc/OneDrive/Documentos/Gerador_de_projetos/projetos/banco-imobiliario/_gestao/equipe.json";
+const EQUIPE_REAL = new URL("../fixtures/equipe-banco-imobiliario.json", import.meta.url);
 
 function tarefaCom(agente: string | null, tentativas = 0): TarefaResumo {
   return {

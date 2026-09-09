@@ -26,6 +26,8 @@ import type { EstadoJob } from "../tipos.js";
  * 3. **Duas rodadas seguidas sem NENHUMA tarefa concluída param tudo.** É o anteparo
  *    contra o vaivém que já mediu 41 despachos e US$ 22,55 numa rodada só. Um laço
  *    automático sem esse freio transformaria aquele incidente em conta de fim de semana.
+ *    Mas *sem-progresso* mede vaivém, e só ele: rodada cortada pela cota não entra na série
+ *    (ver `avancar`), porque quem para no relógio da assinatura não chegou a tentar.
  */
 
 /** Por que o piloto parou. Vocabulário fechado: é o que a tela traduz e o que o teste trava. */
@@ -123,7 +125,18 @@ export function avancar(
     ...antes,
     gastoUsd: Number((antes.gastoUsd + Math.max(0, desfecho.custoUsd)).toFixed(4)),
     tarefasConcluidas: antes.tarefasConcluidas + desfecho.tarefasConcluidas,
-    rodadasSemProgresso: produziu ? 0 : antes.rodadasSemProgresso + 1,
+    // Rodada cortada pela COTA não conta na série de sem-progresso: ela não chegou a ter
+    // chance de produzir, e o freio ao lado mede vaivém — despacho que volta sem avançar —,
+    // não o relógio da assinatura. Contá-la sobrepõe dois sensores num contador só: a cota
+    // já tem o SEU freio, `sonecas`/MAX_SONECAS, logo abaixo.
+    // MEDIDO (09/09, fabrica-v2): a rodada 00:28 morreu na parede da cota e a 02:00 emperrou
+    // de verdade — duas causas distintas somaram 2 no mesmo contador e o piloto parou a noite
+    // inteira com nove tarefas prontas na fila. Uma rodada ruim não deveria derrubar o laço.
+    rodadasSemProgresso: produziu
+      ? 0
+      : parouPorCota(desfecho)
+        ? antes.rodadasSemProgresso
+        : antes.rodadasSemProgresso + 1,
     // A soneca é contada no ramo de cota, dentro do `decidir`; rodada produtiva zera a série.
     sonecas: produziu ? 0 : antes.sonecas,
     rearmaEm: null,

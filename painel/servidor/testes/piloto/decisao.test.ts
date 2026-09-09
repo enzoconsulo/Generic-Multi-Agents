@@ -86,6 +86,35 @@ describe("piloto — o que continua", () => {
     const dois = avancar(um, desfecho({ tarefasConcluidas: 1 }), AGORA).estado;
     expect(dois.rodadasSemProgresso).toBe(0);
   });
+
+  it("rodada cortada pela COTA não entra na série de sem-progresso", () => {
+    // Incidente de 09/09 (fabrica-v2): a rodada da cota e uma rodada emperrada somaram 2 no
+    // mesmo contador, e o piloto parou a noite inteira com nove tarefas prontas. São dois
+    // sensores diferentes — a cota tem o seu, `sonecas`.
+    const cota = avancar(
+      estado(),
+      desfecho({ motivo: "limite-uso", encerrouPor: "cota", tarefasConcluidas: 0 }),
+      AGORA,
+    );
+    expect(cota.decisao.acao).toBe("dormir");
+    expect(cota.estado.rodadasSemProgresso).toBe(0);
+    expect(cota.estado.sonecas).toBe(1);
+
+    // E a rodada emperrada seguinte continua contando normalmente: o freio não foi removido.
+    const emperrada = avancar(cota.estado, desfecho({ tarefasConcluidas: 0 }), AGORA);
+    expect(emperrada.decisao.acao).toBe("continuar");
+    expect(emperrada.estado.rodadasSemProgresso).toBe(1);
+  });
+
+  it("a série de cota tem o freio DELA: MAX_SONECAS seguidas param o piloto", () => {
+    const { decisao, estado: depois } = avancar(
+      estado({ sonecas: MAX_SONECAS }),
+      desfecho({ motivo: "limite-uso", tarefasConcluidas: 0 }),
+      AGORA,
+    );
+    expect(decisao).toMatchObject({ acao: "parar", motivo: "sem-credito" });
+    expect(depois.ligado).toBe(false);
+  });
 });
 
 describe("piloto — o que para", () => {
