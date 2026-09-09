@@ -84,6 +84,28 @@ export const ECOSSISTEMAS: readonly Ecossistema[] = [
     habilitados: ["instalar", "testes", "build"],
   },
   {
+    // Faltava, e o custo não foi teórico: `fabrica-v2` — o único projeto da fábrica hoje, e
+    // ela mesma em Elixir — rodou 41 rodadas com "sem suíte detectada" no cabeçalho. Sem
+    // ecossistema não há `comandos.testes`, sem ele não há CRITÉRIO IMPLÍCITO DA SUÍTE, e a
+    // rede que roda a bateria de graça em toda verificação simplesmente não existia ali. O
+    // projeto declarava `mix test` em `_gestao/ci.json` o tempo todo — mas aquele arquivo é
+    // do formato do PRÓPRIO projeto (lista de estágios, consumida por `mix fabrica.ci`), e
+    // não o `ConfigCi` que o painel valida. Dois arquivos de mesmo nome e esquemas
+    // diferentes: por isso o conserto é a detecção, e não ler o ci.json do projeto.
+    id: "elixir",
+    rotulo: "Elixir / Mix",
+    marcadores: ["mix.exs"],
+    comandos: {
+      instalar: "mix deps.get",
+      // Credo é a convenção do ecossistema, mas é dependência opcional: fica pronto e
+      // DESLIGADO, como o lint do Node, em vez de quebrar projeto que não o usa.
+      lint: "mix credo --strict",
+      testes: "mix test",
+      build: "mix compile --warnings-as-errors",
+    },
+    habilitados: ["instalar", "testes"],
+  },
+  {
     id: "dotnet",
     rotulo: ".NET",
     marcadores: [".sln", ".csproj", ".fsproj"],

@@ -32,6 +32,7 @@ describe("detectarEcossistema", () => {
       ["requirements.txt", "python"],
       ["go.mod", "go"],
       ["Cargo.toml", "rust"],
+      ["mix.exs", "elixir"],
       ["pom.xml", "maven"],
       ["build.gradle", "gradle"],
     ];

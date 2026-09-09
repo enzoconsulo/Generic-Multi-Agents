@@ -94,6 +94,13 @@ Node é necessário se você for usar o `painel/`, o cockpit web opcional).
 > compila e abre o navegador sozinho. Equivale a `.\iniciar.ps1` (use `-Dev` para modo
 > desenvolvimento, `-SemBuild` para subir mais rápido). O resto desta seção é para usar a
 > fábrica pelo terminal, com o Claude Code.
+
+> **Para deixar rodando sozinho (o dia inteiro, sem ninguém na frente):** use
+> `.\manter-painel.ps1` no lugar do `iniciar.ps1`. Ele não pergunta nada, escreve em
+> `painel\dados\supervisor.log` em vez da tela, e **ressobe o servidor se ele cair** — com
+> recuo progressivo, para que uma queda no arranque vire uma linha legível no log em vez de
+> um laço fechado. Isso importa porque **o piloto automático vive DENTRO do processo do
+> servidor**: servidor no chão é fábrica no chão, e ninguém está lá para perceber.
 1. Abra o terminal e entre na pasta onde clonou a fábrica:
    ```
    cd <caminho-onde-voce-clonou>\Gerador_de_projetos
@@ -337,6 +344,7 @@ A raiz da fábrica é um repositório git que versiona só o sistema — `projet
 CLAUDE.md                          regras do orquestrador           edita: você/orquestrador
 README.md                          este manual                      edita: você/orquestrador
 INICIAR.bat / iniciar.ps1          sobe o painel web (duplo-clique) edita: você
+manter-painel.ps1                  supervisor: mantém o painel de pé edita: você
 .gitignore                         raiz ignora projetos/ e afins    edita: você
 .claude/settings.json              permissões pré-aprovadas         edita: você (§6.3)
 .claude/agents/*.md                definição dos 12 agentes         edita: você (§6.1)
