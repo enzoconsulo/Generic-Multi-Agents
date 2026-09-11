@@ -367,6 +367,15 @@ def conferir(n_etapas, n_requisitos):
         if re.search(padrao, tudo):
             problemas.append("sigla fora das duas permitidas: %s" % sigla)
 
+    # O documento apresenta o trabalho como um projeto que comeca do zero, julgado por
+    # criterios com limite absoluto. Versao anterior, e comparacao com ela, nao entram.
+    for padrao, termo in ((r"prot[óo]tipo", "protótipo"), (r"\bv[12]\b", "v1/v2"),
+                          (r"vers[ãa]o anterior", "versão anterior"),
+                          (r"linha de base", "linha de base"),
+                          (r"medida inicial", "medida inicial")):
+        if re.search(padrao, tudo, re.IGNORECASE):
+            problemas.append("menção fora do escopo do documento: %s" % termo)
+
     for i, tab in enumerate(doc.tables):
         largura = sum(c.width for c in tab.rows[0].cells if c.width) / 360000.0
         if largura > 17.45:

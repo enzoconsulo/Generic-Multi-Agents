@@ -6,14 +6,15 @@ Regras deste documento, que valem para qualquer edicao futura:
   1. DUAS siglas, e so duas: E1..En para as etapas, R1..R15 para os requisitos.
      conferir(), no fim deste arquivo, se recusa a gravar se aparecer outra.
   2. NENHUMA DATA ESCRITA A MAO. Todas vem de calendario_plano.py (modulo `cal`).
-  3. Ordem de apresentacao: visao geral -> problema e objetivo -> cronograma ->
-     requisitos -> funcionamento -> ferramentas -> riscos. O cronograma vem antes
-     dos requisitos de proposito: num planejamento, e o que o orientador procura.
+  3. Ordem de apresentacao: visao geral -> problema, objetivo e criterios ->
+     cronograma e validacao -> requisitos -> funcionamento -> ferramentas -> riscos.
   4. Secao numerada so com secao("titulo") — o numero e automatico.
   5. A validacao nao tem lista fechada: repete o ciclo ate os criterios de
-     "desempenho satisfatorio" (Parte I) serem atingidos. Os criterios sao a
-     condicao de parada dela — mexeu num, confira a Figura 3 e as etapas finais.
-  6. Teto de 10 paginas. Confira com `python medir_paginas.py <arquivo>`.
+     desempenho (Parte I) serem atingidos. Os criterios sao a condicao de parada.
+  6. CRITERIO TEM LIMITE ABSOLUTO, NUNCA COMPARACAO. Cada um diz o que se mede e o
+     valor que conta como atingido. O documento trata o trabalho como um projeto que
+     comeca do zero: nao menciona versao anterior — conferir() recusa.
+  7. Teto de 10 paginas. Confira com `python medir_paginas.py <arquivo>`.
 
 Monte com `python gerar_plano.py`. Nao rode este arquivo sozinho.
 """
@@ -76,8 +77,8 @@ passos([(str(cal.DIAS_TOTAIS), "dias até o prazo", periodo),
          "De %s a %s — etapas %s." % (br(cal.INICIO_DESENVOLVIMENTO), br(cal.FIM_DESENVOLVIMENTO),
                                        cal.faixa("desenv"))),
         (str(cal.dias_da_fase("valid")), "dias de validação",
-         "Do fim do semestre ao início das aulas: testar, medir e refinar até o desempenho ser "
-         "satisfatório.")])
+         "Do fim do semestre ao início das aulas: testar, medir e refinar até os critérios de "
+         "desempenho serem atingidos.")])
 
 caixa("COMO LER ESTE DOCUMENTO",
       "Duas siglas, do começo ao fim: E1 a E%d são as etapas, e R1 a R15 são os requisitos. Não há "
@@ -90,7 +91,7 @@ quebra()
 
 # ================================================================ PARTE I
 parte("I", "O projeto",
-      "O que se quer resolver, o objetivo, e o que conta como desempenho satisfatório.")
+      "O que se quer resolver, o objetivo, e os critérios pelos quais o sistema será julgado.")
 
 secao("O problema")
 
@@ -126,31 +127,44 @@ secao("Objetivo")
 
 p("Projetar, implementar e avaliar um sistema multi-agente para construção de software em que as "
   "regras de governança sejam impostas pela estrutura do programa, e não pedidas em linguagem "
-  "natural a um modelo — e refiná-lo em uso real até atingir desempenho satisfatório, medido "
-  "contra um protótipo já existente na E%d." % PLAN[0])
+  "natural a um modelo — e refiná-lo em uso real, com projetos de teste, até atingir os critérios "
+  "de desempenho definidos a seguir.")
 
-secao("O que é desempenho satisfatório")
+secao("Critérios de desempenho")
 
-p("Estes critérios são a condição de parada da validação: as etapas %s repetem o ciclo de testar, "
-  "medir e corrigir até todos serem atingidos. O que for medido no fim é publicado — inclusive o "
-  "que não tiver chegado lá." % cal.faixa("valid"), tam=9.0, cor=CINZA, depois=3)
+p("São os critérios pelos quais o sistema será julgado, e a condição de parada da validação: as "
+  "etapas %s repetem o ciclo de testar, medir e corrigir até todos serem atingidos. Os limites são "
+  "aprovados na E%d, antes de existir código, e não mudam durante a validação — o que se ajusta é o "
+  "sistema, nunca a régua. Os cinco projetos de teste são definidos na E%d e não são usados durante "
+  "a construção, para que o sistema não seja moldado para eles."
+  % (cal.faixa("valid"), PLAN[0], PLAN[-1]), tam=9.0, cor=CINZA, depois=3)
 
-tabela(["Critério", "Como é medido", "Satisfatório quando"],
+tabela(["Critério", "Como é medido", "Atingido quando"],
        [["*Constrói sozinho",
-         "projetos de teste que nunca foram usados na construção, executados do pedido à entrega",
-         "pelo menos três projetos chegam à entrega sem intervenção humana"],
+         "os cinco projetos de teste, executados do pedido à entrega",
+         "pelo menos 3 dos 5 chegam à entrega sem nenhuma intervenção"],
+        ["*Conclui as tarefas",
+         "proporção de tarefas concluídas, somando os cinco projetos",
+         "80% ou mais"],
+        ["*Pouco retrabalho",
+         "média de execuções por tarefa concluída",
+         "até 2 execuções por tarefa"],
+        ["*Não aprova errado",
+         "tarefas concluídas que falham nos próprios critérios de aceite quando verificadas de novo",
+         "nenhuma"],
         ["*Governa de verdade",
-         "testes que tentam quebrar de propósito cada regra da tabela acima",
-         "todas as tentativas são barradas pela estrutura do programa"],
-        ["*Menos retrabalho", "tentativas por tarefa concluída",
-         "menor que a medida inicial do protótipo"],
-        ["*Menos abandono", "proporção de tarefas bloqueadas por esgotar as tentativas",
-         "menor que a medida inicial do protótipo"],
-        ["*Custo sob controle", "custo por tarefa concluída",
-         "igual ou menor que a medida inicial do protótipo"],
-        ["*Cabe na máquina", "pico de memória durante os projetos de teste",
-         "dentro dos 8 GB do requisito R9"]],
-       [3.4, 7.6, 6.4], tam=8.0)
+         "tentativas provocadas de quebrar cada uma das quatro regras da tabela acima",
+         "todas barradas pela estrutura do programa"],
+        ["*Aguenta falha",
+         "falhas provocadas: agente encerrado no meio da tarefa, banco de dados derrubado",
+         "todas recuperadas sem perder trabalho, e as demais tarefas seguem"],
+        ["*Custo sob controle",
+         "rodadas que ultrapassam o teto de gasto declarado antes delas",
+         "nenhuma"],
+        ["*Cabe na máquina",
+         "pico de memória com três tarefas em paralelo",
+         "até 8 GB (requisito R9)"]],
+       [3.3, 8.0, 6.1], tam=8.0)
 
 quebra()
 
@@ -164,8 +178,8 @@ figura("fig2_cronograma.png",
        "prazo final." % cal.N_ETAPAS, 16.6)
 
 p("Cada etapa termina com uma entrega concreta, e a seguinte só começa quando essa entrega está "
-  "pronta. As etapas %s planejam, as %s constroem e as %s validam e refinam o sistema com projetos "
-  "reais — sem pausa, do fim do semestre ao início das aulas."
+  "pronta. As etapas %s planejam, as %s constroem e as %s validam e refinam o sistema com os "
+  "projetos de teste — sem pausa, do fim do semestre ao início das aulas."
   % (cal.faixa("plan"), cal.faixa("desenv"), cal.faixa("valid")), antes=2, depois=3)
 
 # (titulo, o que sera feito, entrega da etapa) — as datas saem do calendario
@@ -173,24 +187,23 @@ CONTEUDO = {
     1: ("Requisitos e estado da arte",
         "Descrever o problema com precisão; levantar os requisitos R1 a R15 e definir como cada um "
         "será verificado; estudar os sistemas parecidos e escrever o que este trabalho tem de "
-        "diferente; medir o protótipo existente — custo por tarefa, tentativas por tarefa e "
-        "tarefas abandonadas.",
-        "Requisitos aprovados e a medida inicial do protótipo registrada. É contra ela que o "
-        "desempenho do sistema será julgado."),
+        "diferente; revisar e aprovar os critérios de desempenho e o limite de cada um.",
+        "Requisitos e critérios de desempenho aprovados, com os limites fixados. É contra esses "
+        "limites que o sistema será julgado."),
     2: ("Arquitetura e ambiente",
         "Escolher a linguagem e as ferramentas, registrando por que cada alternativa foi recusada; "
         "desenhar as camadas, o caminho da tarefa e os dois portões; quebrar o sistema em tarefas "
-        "com critérios de aceite que são comandos; instalar e testar o ambiente com um roteiro que "
-        "possa ser repetido.",
-        "Arquitetura aprovada, lista de tarefas escrita e ambiente funcionando. É a última etapa "
-        "antes de programar."),
+        "com critérios de aceite que são comandos; definir os cinco projetos de teste da "
+        "validação; instalar e testar o ambiente com um roteiro que possa ser repetido.",
+        "Arquitetura aprovada, lista de tarefas escrita, projetos de teste definidos e ambiente "
+        "funcionando. É a última etapa antes de programar."),
     3: ("Fundação, agente e ferramentas",
         "Criar o projeto com a verificação de qualidade ligada desde o início; criar o banco de "
         "dados com projetos, tarefas, ciclos e custos; construir as ferramentas de arquivo com o "
         "confinamento por dentro e a de comando com prazo; colocar o agente para rodar como "
         "processo isolado, com o custo de cada resposta gravado.",
         "Um agente resolve uma tarefa real do começo ao fim, com o custo gravado — e os testes "
-        "rodam sem internet e sem gastar cota."),
+        "rodam sem internet e sem consumir o serviço do modelo."),
     4: ("Linha de produção de tarefas",
         "Implementar os seis estados de uma tarefa, com cada mudança gravada de uma vez só; a fila "
         "que libera a tarefa quando as anteriores terminam; a execução automática dos critérios de "
@@ -217,23 +230,22 @@ CONTEUDO = {
         "Um projeto inteiro é acompanhado na tela do pedido à entrega, com o custo atualizando em "
         "tempo real. O sistema está completo para ser validado."),
     8: ("Testes com projetos reais",
-        "Executar de três a cinco projetos que nunca foram usados durante a construção, sem "
-        "intervenção; medir cada critério de desempenho contra a medida inicial da E1; testar na "
-        "máquina de 8 GB; provocar falhas de propósito — matar agentes, derrubar o banco, esgotar "
-        "a cota; anotar cada defeito com a sua causa.",
-        "A primeira medição completa: o que já está satisfatório, o que não está, e a lista de "
+        "Executar os cinco projetos de teste do pedido à entrega, sem intervenção; medir cada "
+        "critério de desempenho; testar na máquina de 8 GB com três tarefas em paralelo; provocar "
+        "falhas de propósito — encerrar agentes, derrubar o banco, esgotar o limite de uso do "
+        "fornecedor; anotar cada defeito com a sua causa.",
+        "A primeira medição completa: quais critérios já foram atingidos, quais não, e a lista de "
         "correções em ordem de impacto."),
     9: ("Refinamento",
         "Corrigir os defeitos na ordem de impacto, cada correção com um teste que impede o problema "
         "de voltar; mudar o que a medição mostrou que precisa mudar, registrando o motivo; rodar os "
         "projetos de teste de novo e medir outra vez — quantas voltas forem necessárias.",
-        "Nova medição de todos os critérios, comparada com a da E8, e a lista do que ainda falta "
-        "para o desempenho ser satisfatório."),
+        "Nova medição de todos os critérios e a lista do que ainda falta para atingi-los."),
     10: ("Refinamento final e entrega",
-         "Último ciclo de correção e medição; congelar a versão entregue; comparar o resultado "
-         "final com a medida inicial da E1, critério por critério; escrever o documento de entrega "
-         "com o que foi atingido e o que não foi.",
-         "O sistema em desempenho satisfatório — ou, no critério que não chegar lá, o número "
+         "Último ciclo de correção e medição; congelar a versão entregue; medir o valor final de "
+         "cada critério de desempenho; escrever o documento de entrega com o que foi atingido e o "
+         "que não foi.",
+         "O sistema com os critérios de desempenho atingidos — ou, no que não chegar lá, o valor "
          "medido publicado — e o documento de entrega."),
 }
 if sorted(CONTEUDO) != cal.NUMEROS:
@@ -275,12 +287,12 @@ cronograma = tabela(["Etapa", "O que será feito", "Entrega da etapa"], linhas,
 for indice, texto, fundo, cor in destaques:
     linha_destaque(cronograma, indice, texto, fundo=fundo, cor=cor)
 
-secao("A validação: refinar até o desempenho ser satisfatório")
+secao("A validação: refinar até os critérios serem atingidos")
 
 p("As etapas %s não seguem uma lista fechada de tarefas: repetem o mesmo ciclo até os critérios "
-  "de desempenho satisfatório, da Parte I, serem atingidos. Cada defeito encontrado vira uma "
-  "correção com a causa registrada e um teste que impede a volta dele. Se a medição mostrar que uma "
-  "parte do desenho precisa mudar, a mudança entra aqui, registrada com o motivo."
+  "de desempenho, da Parte I, serem atingidos. Cada defeito encontrado vira uma correção com a "
+  "causa registrada e um teste que impede a volta dele. Se a medição mostrar que uma parte do "
+  "desenho precisa mudar, a mudança entra aqui, registrada com o motivo."
   % cal.faixa("valid"), depois=2)
 
 figura("fig3_validacao.png",
@@ -296,9 +308,10 @@ def _fim(n):
 
 tabela(["Data", "O que será entregue"],
        [["*%s  ·  fim da E1" % _fim(1),
-         "Requisitos aprovados, estudo dos sistemas parecidos e a medida inicial do protótipo"],
+         "Requisitos e critérios de desempenho aprovados, e o estudo dos sistemas parecidos"],
         ["*%s  ·  fim da E2" % _fim(2),
-         "Arquitetura com as decisões justificadas, lista de tarefas e ambiente funcionando"],
+         "Arquitetura com as decisões justificadas, projetos de teste definidos e ambiente "
+         "funcionando"],
         ["*%s  ·  fim da E4" % _fim(4),
          "Demonstração ao vivo: uma tarefa percorrendo os seis estados, com uma reprovação "
          "provocada"],
@@ -307,9 +320,9 @@ tabela(["Data", "O que será entregue"],
         ["*%s  ·  fim da E7" % _fim(7),
          "Demonstração do sistema completo: um projeto inteiro acompanhado na tela"],
         ["*%s  ·  fim da E8" % _fim(8),
-         "Primeira medição dos critérios de desempenho, com os projetos de teste reais"],
+         "Primeira medição dos critérios de desempenho, com os cinco projetos de teste"],
         ["*%s  ·  prazo final" % br(cal.PRAZO_FINAL),
-         "Documento de entrega, com o resultado final comparado à medida inicial da E1"]],
+         "Documento de entrega, com o valor final medido de cada critério de desempenho"]],
        [4.4, 13.0])
 
 quebra()
@@ -352,8 +365,8 @@ tabela(["#", "Restrição", "O mecanismo que a garante", "Etapa"],
          "uma tabela própria, alimentada a cada resposta do modelo", "E3"],
         ["*R11", "Nenhum agente escreve fora da pasta do projeto",
          "a própria ferramenta de escrita recusa o caminho de fora", "E3"],
-        ["*R12", "Os testes rodam sem internet, sem consumir cota e sem chave de acesso",
-         "substitutos de mentira, e um teste que falha se a chave existir", "E3"],
+        ["*R12", "Os testes rodam sem internet e sem consumir o serviço do modelo",
+         "substitutos de mentira, e um teste que falha se a chave de acesso existir", "E3"],
         ["*R13", "A morte de um agente não derruba os outros nem perde o trabalho",
          "cada agente é um processo isolado, e a fila devolve a tarefa", "E5"],
         ["*R14", "O gasto de uma rodada não passa de um teto declarado",
@@ -470,7 +483,7 @@ codigo(["mix verificar   # quatro estagios, do mais barato ao mais caro",
         "  1. formatacao do codigo          # segundos",
         "  2. compilacao                    # qualquer aviso reprova",
         "  3. analise de estilo             # modo estrito",
-        "  4. testes automaticos            # sem internet, sem cota"])
+        "  4. testes automaticos            # sem internet, sem custo"])
 
 # ================================================================ PARTE VI
 parte("VI", "Riscos", "O que pode dar errado, e o que já está previsto para cada caso.",
@@ -485,18 +498,18 @@ tabela(["Risco", "Impacto", "O que está previsto"],
          "alto",
          "a ordem das etapas põe primeiro o que sustenta o resto; se algo atrasar, o corte sai do "
          "painel (E7) ou da memória (E6), nunca da validação"],
-        ["*O desempenho não chegar ao satisfatório até o início das aulas", "alto",
+        ["*Os critérios de desempenho não serem atingidos até o início das aulas", "alto",
          "os critérios são medidos a cada ciclo desde a E8; o que não for atingido é publicado com "
-         "o número medido, e o que faltou fica registrado como trabalho futuro"],
+         "o valor medido e registrado como trabalho futuro"],
         ["*As tarefas escritas na E2 envelhecerem até serem executadas", "médio",
          "as etapas E4 a E7 começam conferindo o plano contra o código que já existe"],
-        ["*O custo de execução passar do previsto", "alto",
-         "custo gravado desde a E3, e teto de gasto por rodada na E5"],
-        ["*O limite de cota interromper um trabalho no meio", "médio",
-         "reconhecer a parada, guardar o que já foi feito e retomar depois"],
+        ["*O custo de uso do modelo passar do previsto", "alto",
+         "custo gravado a cada resposta desde a E3, e teto de gasto por rodada na E5"],
+        ["*O limite de uso do fornecedor interromper uma execução do sistema no meio", "médio",
+         "o sistema reconhece a parada, guarda o que já foi feito e retoma quando o limite libera"],
         ["*A busca por significado não caber na máquina de 8 GB", "médio",
          "a E6 mede antes de escolher, e o componente é trocável"],
-        ["*Uma medição depender de acesso pago indisponível", "baixo",
+        ["*Um teste depender de acesso pago ao fornecedor do modelo", "baixo",
          "cada entrega tem uma parte demonstrável sem custo e outra que exige gasto"]],
        [5.0, 1.6, 10.8], tam=7.8)
 
