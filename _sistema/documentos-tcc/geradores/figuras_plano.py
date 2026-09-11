@@ -5,13 +5,14 @@ Gera PNGs em figs_plano/. Paleta identica a dos documentos de arquitetura
 (documento7_base.py), para que os documentos pareçam da mesma familia.
 
 As datas NAO moram aqui: vem de calendario_plano.py, o mesmo arquivo que o texto
-le. Mudar prazo, etapa ou recesso e mexer so la, e as duas figuras de tempo se
+le. Mudar prazo, etapa ou recesso e mexer so la, e as figuras de tempo se
 redesenham sozinhas.
 
     fig1_visao_geral   linha do tempo mestra, com inicio e fim do desenvolvimento
-    fig2_cronograma    uma barra por etapa, com recesso e prazo final
-    fig3_arquitetura   as quatro camadas do sistema
-    fig4_ciclo         os seis estados de uma tarefa e os dois portoes
+    fig2_cronograma    uma barra por etapa, com o prazo final
+    fig3_validacao     o ciclo testar -> medir -> corrigir da validacao
+    fig4_arquitetura   as quatro camadas do sistema
+    fig5_ciclo         os seis estados de uma tarefa e os dois portoes
 
 O numero do arquivo e o numero da figura NO DOCUMENTO.
 
@@ -72,9 +73,14 @@ def salvar(fig, nome):
     print("  ", nome)
 
 
+def seta(ax, de, para, cor, largura=1.3, escala=11):
+    ax.add_patch(FancyArrowPatch(de, para, arrowstyle="-|>", mutation_scale=escala,
+                                 color=cor, linewidth=largura, zorder=5))
+
+
 def trechos():
     """A linha do tempo em trechos contiguos: etapas vizinhas da mesma fase fundidas,
-    o recesso no lugar dele, e a margem entre a ultima etapa e o prazo final."""
+    o recesso no lugar dele (se houver), e a margem ate o prazo final (se houver)."""
     lista = []
     for n in cal.NUMEROS:
         if cal.RECESSO and n == cal.RECESSO_ANTES_DA_ETAPA:
@@ -127,9 +133,9 @@ def fig_visao_geral():
             ax.add_patch(mpatches.Rectangle((x, 12), w, 9, facecolor=cor,
                                             edgecolor="white", linewidth=1.6, zorder=3))
             estreito = w < 16
-            dias = len(tr["etapas"]) * cal.DIAS_POR_ETAPA
+            dias = sum(cal.DURACAO[n] for n in tr["etapas"])
             ax.text(x + w / 2, 18.1, cal.FASES[tr["fase"]].upper(), ha="center",
-                    va="center", color="white", fontsize=7.0 if estreito else 8.6,
+                    va="center", color="white", fontsize=7.0 if estreito else 8.4,
                     fontweight="bold", zorder=4)
             ax.text(x + w / 2, 14.8, "%s · %d dias" % (rotulo_etapas(tr["etapas"]), dias),
                     ha="center", va="center", color="white",
@@ -140,8 +146,7 @@ def fig_visao_geral():
                   (x_de(cal.FIM_DESENVOLVIMENTO + UM_DIA), "FIM DO DESENVOLVIMENTO",
                    cal.FIM_DESENVOLVIMENTO))
     for cx, rotulo, data in marcadores:
-        ax.add_patch(FancyArrowPatch((cx, 27.2), (cx, 21.6), arrowstyle="-|>",
-                                     mutation_scale=13, color=AZUL, linewidth=2.0, zorder=5))
+        seta(ax, (cx, 27.2), (cx, 21.6), AZUL, largura=2.0, escala=13)
         ax.text(cx, 30.6, "%s\n%s" % (rotulo, cal.br(data)), ha="center", va="center",
                 fontsize=7.6, color="white", fontweight="bold", zorder=6, linespacing=1.5,
                 bbox=dict(boxstyle="round,pad=0.42", facecolor=AZUL, edgecolor="none"))
@@ -150,13 +155,14 @@ def fig_visao_geral():
             color=CINZA, fontweight="bold")
     ax.text(0, 6.4, cal.br(cal.INICIO), ha="left", va="center", fontsize=8.6,
             color=TINTA, fontweight="bold")
-    ax.text(100, 9.6, "PRAZO FINAL", ha="right", va="center", fontsize=7,
-            color=VERDE, fontweight="bold")
+    ax.text(100, 9.6, "PRAZO FINAL · INÍCIO DAS AULAS", ha="right", va="center",
+            fontsize=7, color=VERDE, fontweight="bold")
     ax.text(100, 6.4, cal.br(cal.PRAZO_FINAL), ha="right", va="center", fontsize=8.6,
             color=TINTA, fontweight="bold")
-    ax.text(50, 6.4, "%d dias  ·  %d etapas de %d dias  ·  %d dias de margem"
-            % (total, cal.N_ETAPAS, cal.DIAS_POR_ETAPA, cal.MARGEM),
-            ha="center", va="center", fontsize=8, color=MUDO)
+
+    resumo = "%d dias  ·  %d etapas" % (total, cal.N_ETAPAS)
+    resumo += "  ·  %d dias de margem" % cal.MARGEM if cal.MARGEM else "  ·  sem pausa"
+    ax.text(50, 6.4, resumo, ha="center", va="center", fontsize=8, color=MUDO)
     salvar(fig, "fig1_visao_geral.png")
 
 
@@ -185,14 +191,15 @@ def fig_cronograma():
                     edgecolor="#D5D5D0", linewidth=0.8, zorder=3)
             ax.text(inicio_barra + dias / 2, y, "recesso", ha="center", va="center",
                     fontsize=6.6, color=MUDO, zorder=4)
-            ax.text(rotulo_x, y, "Recesso de fim de ano", ha="right", va="center",
+            ax.text(rotulo_x, y, "Recesso", ha="right", va="center",
                     color=MUDO, fontsize=8.0, style="italic", zorder=4)
         else:
             ini, _ = cal.DATAS[n]
             inicio_barra = mdates.date2num(ini)
-            ax.barh(y, cal.DIAS_POR_ETAPA, left=inicio_barra, height=0.62,
+            dias = cal.DURACAO[n]
+            ax.barh(y, dias, left=inicio_barra, height=0.62,
                     color=COR_FASE[cal.FASE[n]], edgecolor="white", linewidth=1.1, zorder=3)
-            ax.text(inicio_barra + cal.DIAS_POR_ETAPA / 2, y, "E%d" % n, ha="center",
+            ax.text(inicio_barra + dias / 2, y, "E%d" % n, ha="center",
                     va="center", color="white", fontsize=7.4, fontweight="bold", zorder=4)
             ax.text(rotulo_x, y, "E%d   %s" % (n, cal.NOME[n]), ha="right", va="center",
                     color=TINTA, fontsize=8.2, zorder=4)
@@ -217,7 +224,7 @@ def fig_cronograma():
         ax.plot([xa, xb - 0.8], [-1.0, -1.0], color=COR_FASE[fase], linewidth=3.4,
                 solid_capstyle="butt", zorder=3)
         ax.text((xa + xb) / 2, -1.38, cal.FASES[fase].upper(), ha="center", va="center",
-                fontsize=6.9, color=COR_FASE[fase], fontweight="bold")
+                fontsize=6.6, color=COR_FASE[fase], fontweight="bold")
 
     ax.set_ylim(-1.75, topo + 1.6)
     ax.set_xlim(esquerda, direita)
@@ -243,7 +250,62 @@ def fig_cronograma():
     salvar(fig, "fig2_cronograma.png")
 
 
-# ------------------------------------------------------------- 3. arquitetura
+# ------------------------------------------------------------ 3. validacao
+def fig_validacao():
+    """O ciclo da fase de validacao. Ela nao tem lista fechada de tarefas: repete
+    testar -> medir -> corrigir ate os criterios de desempenho serem atingidos."""
+    fig, ax = plt.subplots(figsize=(10.2, 2.7))
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 34)
+    ax.axis("off")
+
+    ns = cal.etapas_da_fase("valid")
+    inicio, fim = cal.DATAS[ns[0]][0], cal.DATAS[ns[-1]][1]
+
+    def bloco(x, y, w, h, texto, borda, fundo, cor_texto=TINTA):
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.3,rounding_size=0.8",
+                                    facecolor=fundo, edgecolor=borda, linewidth=1.4, zorder=3))
+        ax.text(x + w / 2, y + h / 2, texto, ha="center", va="center", fontsize=8.0,
+                color=cor_texto, fontweight="bold", zorder=4, linespacing=1.35)
+
+    bloco(1.5, 17, 19, 8, "Rodar os projetos\nde teste", VERDE, "#EAF7F1")
+    bloco(26, 17, 19, 8, "Medir cada critério\nde desempenho", VERDE, "#EAF7F1")
+
+    cx, cy, mx, my = 58.5, 21, 8.8, 6.4
+    ax.add_patch(mpatches.Polygon([(cx - mx, cy), (cx, cy + my), (cx + mx, cy), (cx, cy - my)],
+                                  closed=True, facecolor="#FDF1EA", edgecolor=LARANJA,
+                                  linewidth=1.4, zorder=3))
+    ax.text(cx, cy, "satisfatório?", ha="center", va="center", fontsize=8.0,
+            color=LARANJA, fontweight="bold", zorder=4)
+
+    bloco(76.5, 17, 22, 8, "Entregar\n%s" % cal.br(fim), VERDE, VERDE, cor_texto="white")
+    bloco(26, 2.5, 19, 8, "Corrigir e ajustar,\ncom a causa registrada", VERMELHO, "#FBECEA")
+
+    seta(ax, (20.9, 21), (25.6, 21), CINZA)
+    seta(ax, (45.4, 21), (cx - mx - 0.2, 21), CINZA)
+    seta(ax, (cx + mx + 0.2, 21), (76.1, 21), VERDE, largura=1.6)
+    ax.text((cx + mx + 76.1) / 2, 22.9, "sim", ha="center", va="bottom", fontsize=7.8,
+            color=VERDE, fontweight="bold")
+
+    # nao: desce do losango, volta pela correcao e sobe de novo para os testes
+    ax.plot([cx, cx, 45.6], [cy - my, 6.5, 6.5], color=VERMELHO, linewidth=1.3, zorder=4)
+    seta(ax, (46.6, 6.5), (45.5, 6.5), VERMELHO)
+    ax.text(cx + 1.4, 10.6, "não", ha="left", va="center", fontsize=7.8,
+            color=VERMELHO, fontweight="bold")
+    ax.plot([25.7, 11, 11], [6.5, 6.5, 15.4], color=VERMELHO, linewidth=1.3, zorder=4)
+    seta(ax, (11, 15.2), (11, 16.6), VERMELHO)
+    ax.text(18.3, 4.2, "repete o ciclo", ha="center", va="center", fontsize=7.2,
+            color=MUDO, style="italic")
+
+    ax.text(87.5, 12.6, "ao atingir os critérios —\nou no prazo, com o número medido",
+            ha="center", va="center", fontsize=7.0, color=MUDO, linespacing=1.4)
+    ax.text(1.5, 31.2, "%s  ·  de %s a %s  ·  do fim do semestre ao início das aulas"
+            % (cal.faixa("valid"), cal.br(inicio), cal.br(fim)),
+            ha="left", va="center", fontsize=8.0, color=VERDE, fontweight="bold")
+    salvar(fig, "fig3_validacao.png")
+
+
+# ------------------------------------------------------------- 4. arquitetura
 def fig_arquitetura():
     fig, ax = plt.subplots(figsize=(10.2, 5.2))
     ax.set_xlim(0, 100)
@@ -304,10 +366,10 @@ def fig_arquitetura():
             ax.add_patch(FancyArrowPatch((x, y0), (x, y1), arrowstyle="-|>",
                                          mutation_scale=8, color="#C9C9C4",
                                          linewidth=1.0, zorder=1))
-    salvar(fig, "fig3_arquitetura.png")
+    salvar(fig, "fig4_arquitetura.png")
 
 
-# ------------------------------------------------------------------- 4. ciclo
+# ------------------------------------------------------------------- 5. ciclo
 def fig_ciclo():
     fig, ax = plt.subplots(figsize=(10.2, 3.05))
     ax.set_xlim(0, 100)
@@ -362,7 +424,7 @@ def fig_ciclo():
             ha="center", va="center", fontsize=7.3, color=MUDO)
     ax.text(1.5, 30.8, "os dois portões,\nduas perguntas", fontsize=8, color=TINTA,
             fontweight="bold", va="center", ha="left")
-    salvar(fig, "fig4_ciclo.png")
+    salvar(fig, "fig5_ciclo.png")
 
 
 if __name__ == "__main__":
@@ -373,6 +435,7 @@ if __name__ == "__main__":
     print("gerando figuras em", SAIDA)
     fig_visao_geral()
     fig_cronograma()
+    fig_validacao()
     fig_arquitetura()
     fig_ciclo()
     print("pronto.")
