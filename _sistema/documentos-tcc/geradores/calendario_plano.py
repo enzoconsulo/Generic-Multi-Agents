@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """O CALENDARIO do plano de desenvolvimento — fonte unica de todas as datas.
 
-As figuras (figuras_plano.py) e o texto (plano_corpo.py) leem daqui. Antes, as
-datas eram repetidas a mao em ~15 lugares do texto, e o calendario ja mudou quatro
-vezes. Mudar o calendario e mexer SO neste arquivo.
+As figuras (figuras_plano.py) e o texto (plano_corpo.py) leem daqui. Mudar o
+calendario e mexer SO neste arquivo.
 
     python calendario_plano.py      # imprime o calendario resultante e confere o prazo
 """
@@ -31,12 +30,14 @@ FASES = {
 }
 
 # (numero, nome curto usado nas figuras, fase)
+# Da E2 a E7, cada etapa constroi uma parte completa do sistema, com entrega propria:
+# o documento e modular, e cada etapa pode ser apresentada sozinha.
 ETAPAS = [
-    (1, "Requisitos e estado da arte", "plan"),
-    (2, "Arquitetura e ambiente", "plan"),
-    (3, "Fundação, agente e ferramentas", "desenv"),
+    (1, "Planejamento e arquitetura", "plan"),
+    (2, "Fundação do sistema", "desenv"),
+    (3, "O agente e as ferramentas", "desenv"),
     (4, "Linha de produção de tarefas", "desenv"),
-    (5, "Integração e execução em paralelo", "desenv"),
+    (5, "Paralelismo e tolerância a falhas", "desenv"),
     (6, "Memória do projeto", "desenv"),
     (7, "Painel e automação", "desenv"),
     (8, "Testes com projetos reais", "valid"),
@@ -111,7 +112,7 @@ def br(data, ano=True):
 
 
 def faixa(fase):
-    """'E3 a E7' — o intervalo de etapas de uma fase, por extenso."""
+    """'E2 a E7' — o intervalo de etapas de uma fase, por extenso."""
     ns = etapas_da_fase(fase)
     if len(ns) == 1:
         return "E%d" % ns[0]

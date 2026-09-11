@@ -70,7 +70,16 @@ def _mono(par):
 def altura_paragrafo(par, largura_cm):
     pf = par.paragraph_format
     tam = _tam_do_paragrafo(par)
-    espaco = pf.line_spacing if isinstance(pf.line_spacing, float) else 1.05
+    ls = pf.line_spacing
+    if hasattr(ls, "pt"):
+        # Altura EXATA por linha (o respiro() entre blocos usa isto). Sem este caso o
+        # medidor contava cada respiro de 4 pt como uma linha inteira de texto.
+        linhas = 1
+        if par.text:
+            por_linha = max(1.0, largura_cm * PT_POR_CM / (LARGURA_CARACTERE * tam))
+            linhas = max(1, math.ceil(len(par.text) / por_linha))
+        return linhas * ls.pt + _pt(pf.space_before) + _pt(pf.space_after, 3.0)
+    espaco = ls if isinstance(ls, float) else 1.05
     h = _altura_texto(par.text, tam, largura_cm, espaco, mono=_mono(par))
     h += _pt(pf.space_before) + _pt(pf.space_after, 3.0)
     return h

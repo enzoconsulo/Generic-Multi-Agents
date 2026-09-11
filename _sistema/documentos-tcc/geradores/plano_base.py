@@ -1,17 +1,30 @@
 # -*- coding: utf-8 -*-
 """Base do PLANO DE DESENVOLVIMENTO: estilos e helpers.
 
-Copia de documento7_base.py com FIGS e DESTINO trocados, para que o plano
-saia no mesmo padrao visual dos documentos de arquitetura. O conteudo vem
-de plano_corpo.py; monte com `python gerar_plano.py`.
+Nasceu como copia de documento7_base.py (mesmo padrao visual dos documentos de
+arquitetura), com FIGS e DESTINO trocados. O conteudo vem de plano_corpo.py;
+monte com `python gerar_plano.py`.
+
+O que mudou em relacao ao documento7_base.py, e por que:
+  - respiro(): o espaco entre blocos e um paragrafo de altura EXATA. Antes era um
+    paragrafo vazio comum, de 9,5 pt — medido: 28 linhas em branco no documento.
+  - tabelas: nenhuma linha se parte entre paginas, e o cabecalho se repete quando a
+    tabela atravessa a pagina.
+  - faixa de parte e figura ficam presas ao que vem depois, para nao sobrarem
+    sozinhas no pe da pagina.
+  - celulas de passos() alinhadas a esquerda: justificado em coluna estreita abria
+    buracos entre as palavras.
+  - celula rica, secao(), linha_destaque() e conferir() — ver cada funcao.
 """
 import os
+import re
+
 from docx import Document
-from docx.shared import Pt, Cm, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.oxml.ns import qn
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
 from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.shared import Cm, Pt, RGBColor
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 FIGS = os.path.join(AQUI, "figs_plano")
@@ -80,6 +93,19 @@ for nome, tam, cor, antes, depois in [("Heading 1", 12.5, AZUL, 8, 2),
     st.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
 
+def respiro(pt=4):
+    """Espaco entre dois blocos, com altura EXATA de `pt` pontos.
+
+    Duas tabelas seguidas sem paragrafo no meio viram uma tabela so no Word, entao o
+    paragrafo separador e obrigatorio. O que nao era obrigatorio e ele ter a altura de
+    uma linha de texto: eram 28 linhas em branco espalhadas pelo documento."""
+    par = doc.add_paragraph()
+    par.paragraph_format.space_before = Pt(0)
+    par.paragraph_format.space_after = Pt(0)
+    par.paragraph_format.line_spacing = Pt(pt)
+    return par
+
+
 def p(texto="", tam=9.5, cor=TINTA, negrito=False, italico=False,
       alinhamento=None, antes=0, depois=3, espaco=1.05):
     par = doc.add_paragraph()
@@ -123,10 +149,11 @@ def figura(arquivo, legenda, largura=14.0):
     par.alignment = WD_ALIGN_PARAGRAPH.CENTER
     par.paragraph_format.space_before = Pt(3)
     par.paragraph_format.space_after = Pt(1)
+    par.paragraph_format.keep_with_next = True      # a figura nunca se separa da legenda
     par.add_run().add_picture(os.path.join(FIGS, arquivo), width=Cm(largura))
     cap = doc.add_paragraph()
     cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    cap.paragraph_format.space_after = Pt(5)
+    cap.paragraph_format.space_after = Pt(6)
     fonte(cap.add_run(legenda), tam=7.5, cor=MUDO, italico=True)
 
 
@@ -144,6 +171,15 @@ def _sem_bordas(t, lados=("top", "left", "bottom", "right", "insideH", "insideV"
         el.set(qn("w:val"), "none")
         borders.append(el)
     t._tbl.tblPr.append(borders)
+
+
+def _linha_inteira(linha, cabecalho=False):
+    """A linha nao se parte entre duas paginas; no cabecalho, ela ainda se repete no
+    topo de cada pagina que a tabela atravessar."""
+    trPr = linha._tr.get_or_add_trPr()
+    trPr.append(OxmlElement("w:cantSplit"))
+    if cabecalho:
+        trPr.append(OxmlElement("w:tblHeader"))
 
 
 def tabela(cabecalho, linhas, larguras, tam=8.2):
@@ -166,8 +202,10 @@ def tabela(cabecalho, linhas, larguras, tam=8.2):
         par.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
         fonte(par.add_run(texto), tam=tam, negrito=True, cor=BRANCO)
         sombra(cel, "2A78D6")
+    _linha_inteira(t.rows[0], cabecalho=True)
     for j, linha in enumerate(linhas):
-        cells = t.add_row().cells
+        row = t.add_row()
+        cells = row.cells
         for i, texto in enumerate(linha):
             cells[i].text = ""
             par = cells[i].paragraphs[0]
@@ -192,10 +230,11 @@ def tabela(cabecalho, linhas, larguras, tam=8.2):
                       cor=TINTA if (negrito or mono) else CINZA, negrito=negrito)
             if j % 2 == 1:
                 sombra(cells[i], "F5F5F2")
+        _linha_inteira(row)
     for linha in t.rows:
         for i, cel in enumerate(linha.cells):
             cel.width = Cm(larguras[i])
-    doc.add_paragraph().paragraph_format.space_after = Pt(1)
+    respiro(5)
     return t
 
 
@@ -219,13 +258,14 @@ def caixa(titulo, texto, cor="2A78D6", fundo="EAF2FD", cor_titulo=AZUL, tam=8.7)
     if titulo:
         fonte(par.add_run(titulo + "  "), tam=tam, negrito=True, cor=cor_titulo)
     fonte(par.add_run(texto), tam=tam, cor=TINTA)
-    doc.add_paragraph().paragraph_format.space_after = Pt(1)
+    _linha_inteira(t.rows[0])
+    respiro(5)
     return t
 
 
 def parte(numero, titulo_txt, resumo, cor="2A78D6"):
     """Divisor de parte: faixa colorida com numero, titulo e uma linha de resumo."""
-    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+    respiro(8)
     t = doc.add_table(rows=1, cols=1)
     t.alignment = WD_TABLE_ALIGNMENT.CENTER
     cel = t.rows[0].cells[0]
@@ -236,14 +276,17 @@ def parte(numero, titulo_txt, resumo, cor="2A78D6"):
     par.paragraph_format.space_before = Pt(3)
     par.paragraph_format.space_after = Pt(1)
     par.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    par.paragraph_format.keep_with_next = True
     fonte(par.add_run("PARTE " + numero + "   "), tam=8.5, negrito=True, cor=BRANCO)
     fonte(par.add_run(titulo_txt), tam=12.5, negrito=True, cor=BRANCO)
     par2 = cel.add_paragraph()
     par2.paragraph_format.space_before = Pt(0)
     par2.paragraph_format.space_after = Pt(3)
     par2.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    par2.paragraph_format.keep_with_next = True     # a faixa nunca fica sozinha no pe da pagina
     fonte(par2.add_run(resumo), tam=8.6, cor=BRANCO, italico=True)
-    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+    _linha_inteira(t.rows[0])
+    respiro(2).paragraph_format.keep_with_next = True
     return t
 
 
@@ -259,14 +302,17 @@ def passos(itens):
         par.paragraph_format.space_before = Pt(1)
         par.paragraph_format.space_after = Pt(0)
         par.paragraph_format.line_spacing = 1.02
+        par.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
         fonte(par.add_run(num + "  "), tam=10.5, negrito=True, cor=AZUL)
         fonte(par.add_run(tit), tam=8.2, negrito=True, cor=TINTA)
         par2 = cel.add_paragraph()
         par2.paragraph_format.space_before = Pt(0)
         par2.paragraph_format.space_after = Pt(2)
         par2.paragraph_format.line_spacing = 1.02
+        par2.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
         fonte(par2.add_run(txt), tam=7.8, cor=CINZA)
-    doc.add_paragraph().paragraph_format.space_after = Pt(1)
+    _linha_inteira(t.rows[0])
+    respiro(5)
     return t
 
 
@@ -282,24 +328,23 @@ def codigo(linhas, legenda=None):
     el.set(qn("w:sz"), "18")
     el.set(qn("w:color"), "C3C2B7")
     t._tbl.tblPr[-1].append(el)
-    primeiro = True
-    for l in linhas:
-        par = cel.paragraphs[0] if primeiro else cel.add_paragraph()
-        par.paragraph_format.space_before = Pt(2 if primeiro else 0)
-        par.paragraph_format.space_after = Pt(0)
+    for k, l in enumerate(linhas):
+        par = cel.paragraphs[0] if k == 0 else cel.add_paragraph()
+        par.paragraph_format.space_before = Pt(2 if k == 0 else 0)
+        par.paragraph_format.space_after = Pt(2 if k == len(linhas) - 1 else 0)
         par.paragraph_format.line_spacing = 1.0
         par.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        primeiro = False
         comentario = l.strip().startswith("#") or l.strip().startswith("--")
         fonte(par.add_run(l if l else " "), nome=MONO, tam=7.4,
               cor=RGBColor(0x1B, 0xAF, 0x7A) if comentario else TINTA)
+    _linha_inteira(t.rows[0])
     if legenda:
         cap = doc.add_paragraph()
         cap.paragraph_format.space_before = Pt(1)
         cap.paragraph_format.space_after = Pt(5)
         fonte(cap.add_run(legenda), tam=7.5, cor=MUDO, italico=True)
     else:
-        doc.add_paragraph().paragraph_format.space_after = Pt(1)
+        respiro(5)
 
 
 def quebra():
@@ -321,7 +366,7 @@ def secao(titulo):
 def linha_destaque(t, indice, texto, fundo="184F95", cor=BRANCO, tam=7.8):
     """Funde a linha `indice` de uma tabela (0 = cabecalho) numa faixa unica, de ponta a
     ponta. O cronograma usa para marcar o inicio do projeto, o inicio e o fim do
-    desenvolvimento, o recesso e o prazo final."""
+    desenvolvimento e o prazo final."""
     linha = t.rows[indice]
     cel = linha.cells[0].merge(linha.cells[-1])
     tcPr = cel._tc.get_or_add_tcPr()
@@ -344,7 +389,6 @@ def conferir(n_etapas, n_requisitos):
     """Confere as regras do documento ANTES de gravar, e se recusa a gravar se alguma
     quebrar. Um .docx fora das regras sobrescrevendo o bom e o pior desfecho possivel —
     e estas conferencias eram feitas a mao, depois, quando alguem lembrava."""
-    import re
     textos = [par.text for par in doc.paragraphs]
     for tab in doc.tables:
         for linha in tab.rows:

@@ -132,14 +132,20 @@ def fig_visao_geral():
             cor = COR_FASE[tr["fase"]]
             ax.add_patch(mpatches.Rectangle((x, 12), w, 9, facecolor=cor,
                                             edgecolor="white", linewidth=1.6, zorder=3))
-            estreito = w < 16
+            # Tres tamanhos de fonte: um bloco de uma etapa so (~10% da largura) nao
+            # comporta nem a fonte reduzida dos blocos de duas.
+            if w < 12:
+                tam_titulo, tam_sub = 6.2, 6.0
+            elif w < 16:
+                tam_titulo, tam_sub = 7.0, 6.4
+            else:
+                tam_titulo, tam_sub = 8.4, 7.2
             dias = sum(cal.DURACAO[n] for n in tr["etapas"])
             ax.text(x + w / 2, 18.1, cal.FASES[tr["fase"]].upper(), ha="center",
-                    va="center", color="white", fontsize=7.0 if estreito else 8.4,
+                    va="center", color="white", fontsize=tam_titulo,
                     fontweight="bold", zorder=4)
             ax.text(x + w / 2, 14.8, "%s · %d dias" % (rotulo_etapas(tr["etapas"]), dias),
-                    ha="center", va="center", color="white",
-                    fontsize=6.4 if estreito else 7.2, zorder=4)
+                    ha="center", va="center", color="white", fontsize=tam_sub, zorder=4)
 
     marcadores = ((x_de(cal.INICIO_DESENVOLVIMENTO), "INÍCIO DO DESENVOLVIMENTO",
                    cal.INICIO_DESENVOLVIMENTO),
