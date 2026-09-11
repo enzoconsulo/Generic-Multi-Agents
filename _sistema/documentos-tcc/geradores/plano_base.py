@@ -175,12 +175,21 @@ def tabela(cabecalho, linhas, larguras, tam=8.2):
             par.paragraph_format.space_before = Pt(0)
             par.paragraph_format.line_spacing = 1.0
             par.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            negrito = texto.startswith("*")
-            mono = texto.startswith("`")
-            limpo = texto.lstrip("*`")
-            fonte(par.add_run(limpo), nome=MONO if mono else FONTE,
-                  tam=tam - 0.5 if mono else tam,
-                  cor=TINTA if (negrito or mono) else CINZA, negrito=negrito)
+            if isinstance(texto, (list, tuple)):
+                # Celula rica: [(texto, negrito), ...]. So o pedaco marcado sai em
+                # negrito — com o prefixo "*", a celula INTEIRA ficava em negrito, e
+                # um paragrafo todo em negrito a 7,5 pt e dificil de ler.
+                for pedaco in texto:
+                    forte = bool(pedaco[1])
+                    fonte(par.add_run(pedaco[0]), tam=tam, cor=TINTA if forte else CINZA,
+                          negrito=forte)
+            else:
+                negrito = texto.startswith("*")
+                mono = texto.startswith("`")
+                limpo = texto.lstrip("*`")
+                fonte(par.add_run(limpo), nome=MONO if mono else FONTE,
+                      tam=tam - 0.5 if mono else tam,
+                      cor=TINTA if (negrito or mono) else CINZA, negrito=negrito)
             if j % 2 == 1:
                 sombra(cells[i], "F5F5F2")
     for linha in t.rows:
@@ -297,3 +306,78 @@ def quebra():
     par = doc.add_paragraph()
     par.paragraph_format.space_after = Pt(0)
     par.add_run().add_break(WD_BREAK.PAGE)
+
+
+_numero_da_secao = [0]
+
+
+def secao(titulo):
+    """Titulo de secao NUMERADO AUTOMATICAMENTE — nunca escreva o numero a mao.
+    A renumeracao por substituicao de texto ja produziu duas secoes "7." e duas "13."."""
+    _numero_da_secao[0] += 1
+    return doc.add_heading("%d.  %s" % (_numero_da_secao[0], titulo), level=1)
+
+
+def linha_destaque(t, indice, texto, fundo="184F95", cor=BRANCO, tam=7.8):
+    """Funde a linha `indice` de uma tabela (0 = cabecalho) numa faixa unica, de ponta a
+    ponta. O cronograma usa para marcar o inicio do projeto, o inicio e o fim do
+    desenvolvimento, o recesso e o prazo final."""
+    linha = t.rows[indice]
+    cel = linha.cells[0].merge(linha.cells[-1])
+    tcPr = cel._tc.get_or_add_tcPr()
+    for antiga in tcPr.findall(qn("w:shd")):
+        tcPr.remove(antiga)
+    sombra(cel, fundo)
+    for sobra in cel.paragraphs[1:]:
+        sobra._p.getparent().remove(sobra._p)
+    par = cel.paragraphs[0]
+    for run in list(par.runs):
+        run._r.getparent().remove(run._r)
+    par.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    par.paragraph_format.space_before = Pt(1.5)
+    par.paragraph_format.space_after = Pt(1.5)
+    fonte(par.add_run(texto), tam=tam, negrito=True, cor=cor)
+    return cel
+
+
+def conferir(n_etapas, n_requisitos):
+    """Confere as regras do documento ANTES de gravar, e se recusa a gravar se alguma
+    quebrar. Um .docx fora das regras sobrescrevendo o bom e o pior desfecho possivel —
+    e estas conferencias eram feitas a mao, depois, quando alguem lembrava."""
+    import re
+    textos = [par.text for par in doc.paragraphs]
+    for tab in doc.tables:
+        for linha in tab.rows:
+            for cel in linha.cells:
+                textos.append(cel.text)
+    tudo = "\n".join(textos)
+    problemas = []
+
+    for letra, total in (("E", n_etapas), ("R", n_requisitos)):
+        citados = {int(x) for x in re.findall(r"\b%s(\d{1,2})\b" % letra, tudo)}
+        for x in sorted(citados):
+            if not 1 <= x <= total:
+                problemas.append("%s%d é citado, mas não existe (vai de %s1 a %s%d)"
+                                 % (letra, x, letra, letra, total))
+        for x in sorted(set(range(1, total + 1)) - citados):
+            problemas.append("%s%d nunca aparece no documento" % (letra, x))
+
+    for padrao, sigla in ((r"\bRF-\d", "RF-"), (r"\bRNF-\d", "RNF-"), (r"\bOE\d", "OE"),
+                          (r"\bMARCO\b", "MARCO"), (r"\bv0\.\d", "v0.x"), (r"\bT-\d{3}\b", "T-NNN")):
+        if re.search(padrao, tudo):
+            problemas.append("sigla fora das duas permitidas: %s" % sigla)
+
+    for i, tab in enumerate(doc.tables):
+        largura = sum(c.width for c in tab.rows[0].cells if c.width) / 360000.0
+        if largura > 17.45:
+            problemas.append("tabela %d tem %.1f cm de largura (máximo 17,4)" % (i + 1, largura))
+    for forma in doc.inline_shapes:
+        if forma.width / 360000.0 > 17.45:
+            problemas.append("figura com %.1f cm de largura (máximo 17,4)"
+                             % (forma.width / 360000.0))
+
+    if problemas:
+        print("NAO GRAVADO — o documento quebra as regras:")
+        for prob in problemas:
+            print("  - " + prob)
+        raise SystemExit(1)

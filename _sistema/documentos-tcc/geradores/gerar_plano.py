@@ -8,8 +8,11 @@ Uso:  python gerar_plano.py            -> grava no destino oficial (raiz da fabr
       python gerar_plano.py <caminho>  -> grava no caminho dado (quando o oficial
                                           esta aberto no Word e nao pode ser escrito)
 
-As figuras precisam existir; rode antes:  python figuras_plano.py
-Para conferir a paginacao:                python medir_paginas.py <arquivo>
+Antes:   python figuras_plano.py        (as figuras precisam existir)
+Depois:  python medir_paginas.py <arquivo>
+
+O corpo chama conferir() antes de gravar: se o documento quebrar uma das regras
+(sigla fora do padrao, etapa inexistente, tabela larga demais), nada e gravado.
 """
 import io
 import os
@@ -17,19 +20,15 @@ import re
 import sys
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
+# O corpo importa calendario_plano. Garante o import mesmo rodando de outra pasta.
+if AQUI not in sys.path:
+    sys.path.insert(0, AQUI)
+
 args = sys.argv[1:]
-resumido = "--resumido" in args
-args = [a for a in args if a != "--resumido"]
-
-corpo = "plano_corpo_resumido.py" if resumido else "plano_corpo.py"
-montado = "plano_resumido.py" if resumido else "plano.py"
+montado = "plano.py"
 fonte = "\n".join(io.open(os.path.join(AQUI, n), encoding="utf-8").read()
-                  for n in ["plano_base.py", corpo])
+                  for n in ["plano_base.py", "plano_corpo.py"])
 io.open(os.path.join(AQUI, montado), "w", encoding="utf-8").write(fonte)
-
-if resumido:
-    fonte = fonte.replace('"fabrica-multi-agente-plano-de-desenvolvimento.docx"',
-                          '"fabrica-multi-agente-plano-de-desenvolvimento-resumido.docx"')
 
 if args:
     destino = os.path.abspath(args[0])

@@ -3,18 +3,25 @@
 
 Regras deste documento, que valem para qualquer edicao futura:
 
-  1. DUAS siglas, e so duas: E1..E13 para as etapas, R1..R15 para os
-     requisitos. Nada de codigo separado para marco, fase ou tipo de tarefa —
-     o que a etapa entrega e chamado de "entrega da etapa", por extenso.
-  2. Texto objetivo. Onde couber tabela, vai tabela: rende muito mais
-     informacao por centimetro que paragrafo corrido.
-  3. Comeca pela visao geral. Quem ler so a primeira pagina tem de sair
-     sabendo quando o projeto comeca, quando o desenvolvimento comeca e
-     termina, e quando a entrega acontece.
-  4. Teto de 10 paginas. Confira com `python medir_paginas.py <arquivo>`.
+  1. DUAS siglas, e so duas: E1..En para as etapas, R1..R15 para os requisitos.
+     conferir(), no fim deste arquivo, se recusa a gravar se aparecer outra.
+  2. NENHUMA DATA ESCRITA A MAO. Todas vem de calendario_plano.py (modulo `cal`).
+     A data de inicio ja mudou duas vezes; na segunda, havia ~15 lugares para
+     acertar no texto.
+  3. Ordem de apresentacao: visao geral -> problema e objetivo -> cronograma ->
+     requisitos -> funcionamento -> ferramentas -> riscos. O cronograma vem antes
+     dos requisitos de proposito: num planejamento, e o que o orientador procura.
+  4. Secao numerada so com secao("titulo") — o numero e automatico.
+  5. Teto de 10 paginas. Confira com `python medir_paginas.py <arquivo>`.
 
 Monte com `python gerar_plano.py`. Nao rode este arquivo sozinho.
 """
+import calendario_plano as cal
+
+br = cal.br
+PLAN = cal.etapas_da_fase("plan")
+DESENV = cal.etapas_da_fase("desenv")
+VALID = cal.etapas_da_fase("valid")
 
 # ================================================================ CAPA
 p("Fábrica de Software Multi-Agente", tam=20, cor=AZUL, negrito=True,
@@ -45,43 +52,50 @@ caixa("O QUE SERÁ CONSTRUÍDO",
       "sozinho.")
 
 figura("fig1_visao_geral.png",
-       "Figura 1 — O projeto do começo ao fim. São 210 dias corridos, divididos em 13 etapas de "
-       "15 dias, mais um recesso de fim de ano.", 17.0)
+       "Figura 1 — O projeto do começo ao fim: %d dias corridos até o prazo final, %d etapas de "
+       "%d dias, recesso de fim de ano e %d dias de margem."
+       % (cal.DIAS_TOTAIS, cal.N_ETAPAS, cal.DIAS_POR_ETAPA, cal.MARGEM), 17.0)
 
-passos([("210", "dias de projeto",
-         "De 04/09/2026 a 01/04/2027, incluindo 15 dias de recesso entre 18/12 e 01/01."),
-        ("13", "etapas de 15 dias",
-         "Cada etapa termina com uma entrega concreta, que precisa estar pronta para a seguinte "
-         "começar."),
-        ("105", "dias de desenvolvimento",
-         "A construção do sistema vai de 03/11/2026 a 02/03/2027 — as etapas E5 a E11."),
-        ("30", "dias de validação",
-         "As etapas E12 e E13 testam o sistema com projetos reais e fazem os ajustes finais.")])
+if cal.RECESSO:
+    periodo = "De %s a %s. Recesso de %s a %s." % (
+        br(cal.INICIO), br(cal.PRAZO_FINAL), br(cal.RECESSO[0], False), br(cal.RECESSO[1]))
+else:
+    periodo = "De %s a %s, sem recesso." % (br(cal.INICIO), br(cal.PRAZO_FINAL))
+
+if cal.RECESSO and cal.RECESSO_ANTES_DA_ETAPA == VALID[-1] and len(VALID) == 2:
+    validacao = ("A E%d testa com projetos reais antes do recesso; a E%d ajusta e entrega "
+                 "depois dele." % (VALID[0], VALID[1]))
+else:
+    validacao = "As etapas %s testam com projetos reais e fazem os ajustes finais." % cal.faixa("valid")
+
+passos([(str(cal.DIAS_TOTAIS), "dias até o prazo", periodo),
+        (str(cal.N_ETAPAS), "etapas de %d dias" % cal.DIAS_POR_ETAPA,
+         "Cada uma termina com uma entrega concreta; a seguinte só começa quando ela está pronta."),
+        (str(cal.dias_da_fase("desenv")), "dias de desenvolvimento",
+         "De %s a %s — etapas %s." % (br(cal.INICIO_DESENVOLVIMENTO), br(cal.FIM_DESENVOLVIMENTO),
+                                       cal.faixa("desenv"))),
+        (str(cal.dias_da_fase("valid")), "dias de validação", validacao)])
 
 caixa("COMO LER ESTE DOCUMENTO",
-      "Ele usa apenas duas siglas, do começo ao fim: E1 a E13 são as treze etapas, e R1 a R15 são "
-      "os requisitos. Não há código separado para marco, fase ou tipo de tarefa — o que cada "
-      "etapa produz é chamado de entrega da etapa, escrito por extenso. Cada seção é curta de "
-      "propósito, e as figuras carregam o que texto explicaria pior.",
+      "Duas siglas, do começo ao fim: E1 a E%d são as etapas, e R1 a R15 são os requisitos. Não há "
+      "código para marco, fase ou tipo de tarefa — o que cada etapa produz é chamado de entrega da "
+      "etapa, por extenso. A ordem é a de uma apresentação: o problema e o objetivo, o cronograma, "
+      "os requisitos, como o sistema vai funcionar, as ferramentas e os riscos." % cal.N_ETAPAS,
       cor="14865D", fundo="E7F7F1", cor_titulo=VERDE)
 
 quebra()
 
 # ================================================================ PARTE I
-parte("I", "O projeto", "O que se quer resolver, e o que o sistema fará.")
+parte("I", "O projeto", "O que se quer resolver, o objetivo e como o resultado será julgado.")
 
-doc.add_heading("1.  O problema", level=1)
+secao("O problema")
 
-p("Modelos de linguagem escrevem código competente; isso já não é o gargalo. A dificuldade "
-  "aparece no trabalho longo — uma tarefa com vinte decisões encadeadas, verificação no meio e "
-  "correção depois. O modelo perde o fio, não porque escreve pior, mas porque nada no sistema o "
-  "obriga a manter o rumo.")
-
-p("Os sistemas que existem hoje colocam vários modelos para conversar entre si. A intuição é boa "
-  "e esbarra num limite: a coordenação entre eles é escrita como texto dentro de um pedido ao "
-  "modelo. \"Não modifique arquivos fora do projeto\", \"não tente mais de três vezes\", \"não "
-  "aprove seu próprio trabalho\". São instruções — e instrução dirigida a um modelo é pedido, não "
-  "garantia.", antes=1)
+p("Modelos de linguagem já escrevem código competente; o gargalo aparece no trabalho longo — uma "
+  "tarefa com vinte decisões encadeadas, verificação no meio e correção depois. Os sistemas que "
+  "existem hoje colocam vários modelos para conversar, mas a coordenação entre eles é escrita como "
+  "texto dentro do pedido ao modelo: \"não modifique arquivos fora do projeto\", \"não tente mais de "
+  "três vezes\", \"não aprove seu próprio trabalho\". Instrução dirigida a um modelo é pedido, não "
+  "garantia.")
 
 caixa("A IDEIA CENTRAL DO TRABALHO",
       "Um sistema multi-agente não falha por escrever mal: falha por governar mal. A proposta é "
@@ -90,7 +104,7 @@ caixa("A IDEIA CENTRAL DO TRABALHO",
       "precisa ser mais difícil de operar errado.",
       cor="B52C2C", fundo="FBECEA", cor_titulo=VERMELHO)
 
-doc.add_heading("2.  Onde cada regra vai morar", level=1)
+secao("Onde cada regra vai morar")
 
 tabela(["A regra", "Como ela costuma existir", "Onde ela vai passar a morar"],
        [["*Não escrever fora do projeto", "um pedido no texto",
@@ -104,99 +118,249 @@ tabela(["A regra", "Como ela costuma existir", "Onde ela vai passar a morar"],
          "o sistema impede o trabalho de começar quando o custo estimado não cabe"]],
        [4.0, 4.4, 9.0])
 
-doc.add_heading("3.  Objetivo", level=1)
+secao("Objetivo")
 
 p("Projetar, implementar e avaliar um sistema multi-agente para construção de software em que as "
   "regras de governança sejam impostas pela estrutura do programa, e não pedidas em linguagem "
-  "natural a um modelo. Ao final, o resultado será comparado com o de um protótipo já existente, "
-  "medido na etapa E2, nas mesmas dimensões: custo por tarefa concluída, número de tentativas por "
-  "tarefa e proporção de tarefas abandonadas.")
+  "natural a um modelo. O resultado será comparado com o de um protótipo já existente, medido na "
+  "E%d, nas mesmas dimensões: custo por tarefa concluída, tentativas por tarefa e proporção de "
+  "tarefas abandonadas." % PLAN[0])
+
+secao("Como o resultado será julgado")
+
+p("O trabalho será bem-sucedido se, ao fim da E%d, as quatro afirmações abaixo puderem ser "
+  "demonstradas ao vivo — e não apenas descritas." % cal.NUMEROS[-1],
+  tam=9.0, cor=CINZA, depois=3)
+
+passos([("1", "Constrói sozinho",
+         "Um projeto real é planejado, construído, testado, revisado e entregue sem intervenção "
+         "depois do pedido."),
+        ("2", "Governa de verdade",
+         "Cada regra da tabela acima tem um teste que a prova, incluindo testes que tentam "
+         "quebrá-la de propósito e falham."),
+        ("3", "Cabe na máquina",
+         "Roda nos 8 GB e 4 núcleos do requisito R9, com o pico de memória medido."),
+        ("4", "Melhora o medido",
+         "O resultado é comparado à medida inicial da E%d, com o número publicado — inclusive se "
+         "for desfavorável." % PLAN[0])])
+
+quebra()
 
 # ================================================================ PARTE II
-parte("II", "Os requisitos",
-      "O que o sistema precisa fazer, sob que restrições, e em que etapa cada um é atendido.",
-      cor="4A3AA7")
+parte("II", "O cronograma",
+      "As %d etapas, o que cada uma entrega e quando o orientador recebe cada resultado."
+      % cal.N_ETAPAS, cor="14865D")
 
-doc.add_heading("4.  O que o sistema precisa fazer", level=1)
+figura("fig2_cronograma.png",
+       "Figura 2 — As %d etapas. As linhas tracejadas marcam o início e o fim do desenvolvimento e o "
+       "prazo final." % cal.N_ETAPAS, 16.6)
 
-tabela(["#", "Requisito", "Como será verificado", "Etapa"],
-       [["*R1", "Transformar uma descrição em linguagem natural em especificação, plano e lista de "
-                "tarefas", "um pedido real produz as três coisas", "E7"],
-        ["*R2", "Fazer cada tarefa percorrer seis estados, registrando cada mudança junto com o "
-                "relatório e o custo", "o histórico de uma tarefa mostra as seis passagens", "E7"],
-        ["*R3", "Submeter toda entrega a dois julgamentos independentes: um verifica se funciona, "
-                "outro se é o que foi pedido", "os dois portões reprovam por motivos diferentes",
-         "E7"],
-        ["*R4", "Devolver a entrega reprovada com o relatório do que faltou, decidindo como "
-                "refazer a partir da causa", "uma reprovação provocada gera a decisão correta",
-         "E7"],
-        ["*R5", "Limitar o retrabalho, replanejar a tarefa uma vez e, se ainda falhar, entregá-la "
-                "ao humano", "uma tarefa impossível chega ao humano em quatro ciclos", "E7"],
-        ["*R6", "Construir tarefas independentes ao mesmo tempo, sem que uma interfira no arquivo "
-                "da outra", "três tarefas em paralelo, sem conflito", "E9"],
-        ["*R7", "Consultar o histórico do próprio projeto antes de decidir, citando a fonte",
-         "o agente cita a decisão anterior, e a citação confere", "E10"],
-        ["*R8", "Mostrar andamento, custo e saída de cada agente numa tela, ao vivo",
-         "um projeto inteiro acompanhado do pedido à entrega", "E11"]],
-       [1.1, 6.6, 6.5, 3.2], tam=8.0)
+p("Cada etapa dura %d dias e termina com uma entrega concreta; a seguinte só começa quando essa "
+  "entrega está pronta. As etapas %s planejam, as %s constroem e as %s validam com projetos reais."
+  % (cal.DIAS_POR_ETAPA, cal.faixa("plan"), cal.faixa("desenv"), cal.faixa("valid")),
+  antes=2, depois=3)
 
-doc.add_heading("5.  Sob que restrições", level=1)
+# (titulo, o que sera feito, entrega da etapa) — as datas saem do calendario
+CONTEUDO = {
+    1: ("Requisitos e estado da arte",
+        "Descrever o problema com precisão; levantar os requisitos R1 a R15 e definir como cada um "
+        "será verificado; estudar os sistemas parecidos e escrever o que este trabalho tem de "
+        "diferente; medir o protótipo existente — custo por tarefa, tentativas por tarefa e "
+        "tarefas abandonadas.",
+        "Requisitos aprovados e a medida inicial do protótipo registrada. É contra essa medida que "
+        "o resultado final será comparado."),
+    2: ("Arquitetura e ambiente",
+        "Escolher a linguagem e as ferramentas, registrando por que cada alternativa foi recusada; "
+        "desenhar as camadas, o caminho da tarefa e os dois portões; quebrar o sistema em tarefas "
+        "com critérios de aceite que são comandos; instalar e testar o ambiente com um roteiro que "
+        "possa ser repetido.",
+        "Arquitetura aprovada, lista de tarefas escrita e ambiente funcionando. É a última etapa "
+        "antes de programar."),
+    3: ("Fundação, agente e ferramentas",
+        "Criar o projeto com a verificação de qualidade ligada desde o início; criar o banco de "
+        "dados com projetos, tarefas, ciclos e custos; construir as ferramentas de arquivo com o "
+        "confinamento por dentro e a de comando com prazo; colocar o agente para rodar como "
+        "processo isolado, com o custo de cada resposta gravado.",
+        "Um agente resolve uma tarefa real do começo ao fim, com o custo gravado — e os testes "
+        "rodam sem internet e sem gastar cota."),
+    4: ("Linha de produção de tarefas",
+        "Implementar os seis estados de uma tarefa, com cada mudança gravada de uma vez só; a fila "
+        "que libera a tarefa quando as anteriores terminam; a execução automática dos critérios de "
+        "aceite; os dois portões; e a resposta em quatro degraus quando uma tarefa falha.",
+        "Uma tarefa percorre os seis estados, é reprovada de propósito, é refeita e conclui — com "
+        "tudo registrado."),
+    5: ("Integração e execução em paralelo",
+        "Medir o que o fornecedor do modelo realmente permite controlar, com o instrumento de "
+        "medição escrito antes de ser usado; provar o confinamento em vez de supor; supervisionar "
+        "um processo por tarefa em andamento; impedir que duas tarefas mexam no mesmo arquivo e que "
+        "comece o que não cabe no orçamento.",
+        "Três tarefas rodam em paralelo; matar uma no meio não afeta as outras, e ela volta à fila. "
+        "Trocar de fornecedor não exige mexer no núcleo."),
+    6: ("Memória e painel",
+        "Guardar o histórico do projeto conforme ele é escrito e buscá-lo por significado e por "
+        "termo exato, citando a fonte; medir memória e tempo antes de escolher onde essa busca vai "
+        "rodar; construir a tela com o quadro de tarefas ao vivo, o console do agente, o custo da "
+        "rodada e o botão de parar.",
+        "Um projeto inteiro é acompanhado na tela do pedido à entrega, e o agente cita decisões "
+        "anteriores em vez de decidir de novo."),
+    7: ("Testes com projetos reais",
+        "Executar de três a cinco projetos que nunca foram usados durante a construção, sem "
+        "intervenção; testar na máquina de 8 GB medindo o pico de memória; provocar falhas de "
+        "propósito — matar agentes, derrubar o banco, esgotar a cota; anotar cada defeito com a "
+        "sua causa.",
+        "O comportamento real do sistema documentado, inclusive onde falhou, e a lista de "
+        "correções priorizada para a etapa seguinte."),
+    8: ("Ajustes finais e entrega",
+        "Corrigir o que a E7 revelou, cada correção com um teste que impede o problema de voltar; "
+        "rodar os projetos de teste de novo; comparar o resultado com a medida inicial da E1; "
+        "escrever o documento de entrega.",
+        "Um projeto construído sem intervenção e o resultado comparado com a medida inicial, com o "
+        "número publicado."),
+}
+if sorted(CONTEUDO) != cal.NUMEROS:
+    raise SystemExit("A tabela do cronograma cobre as etapas %s, mas o calendario tem %s. "
+                     "Acerte CONTEUDO em plano_corpo.py." % (sorted(CONTEUDO), cal.NUMEROS))
 
-tabela(["#", "Restrição", "O mecanismo que a garante", "Etapa"],
-       [["*R9", "Roda em uma máquina modesta: 8 GB de memória e 4 núcleos",
-         "nada pesado é carregado antes da E10, e o único componente pesado é trocável", "E10"],
-        ["*R10", "O custo é contado em duas unidades: cota consumida e valor em dinheiro",
-         "uma tabela própria, alimentada a cada resposta do modelo", "E5"],
-        ["*R11", "Nenhum agente escreve fora da pasta do projeto",
-         "a própria ferramenta de escrita recusa o caminho de fora", "E6"],
-        ["*R12", "Os testes rodam sem internet, sem consumir cota e sem chave de acesso",
-         "substitutos de mentira, e um teste que falha se a chave existir", "E5"],
-        ["*R13", "A morte de um agente não derruba os outros nem perde o trabalho",
-         "cada agente é um processo isolado, e a fila devolve a tarefa", "E9"],
-        ["*R14", "O gasto de uma rodada não passa de um teto declarado",
-         "o sistema impede começar o que não cabe, e nunca corta no meio", "E9"],
-        ["*R15", "Trocar o fornecedor do modelo não exige mexer no núcleo",
-         "o fornecedor entra por uma fronteira, como peça encaixável", "E8"]],
-       [1.2, 6.2, 6.8, 3.2], tam=8.0)
+linhas, destaques = [], []
+
+
+def _destaque(texto, fundo, cor=BRANCO):
+    linhas.append(["", "", ""])
+    destaques.append((len(linhas), texto, fundo, cor))   # indice na tabela: 0 e o cabecalho
+
+
+_destaque("INÍCIO DO PROJETO   ·   %s" % br(cal.INICIO), "4A3AA7")
+for n in cal.NUMEROS:
+    if n == DESENV[0]:
+        _destaque("INÍCIO DO DESENVOLVIMENTO   ·   %s" % br(cal.INICIO_DESENVOLVIMENTO), "184F95")
+    if cal.RECESSO and n == cal.RECESSO_ANTES_DA_ETAPA:
+        _destaque("RECESSO DE FIM DE ANO   ·   %s a %s"
+                  % (br(cal.RECESSO[0]), br(cal.RECESSO[1])), "E4E4DF", cor=CINZA)
+    titulo, fazer, entrega = CONTEUDO[n]
+    ini, fim = cal.DATAS[n]
+    linhas.append(["*E%d\n%s a\n%s" % (n, br(ini, False), br(fim)),
+                   [(titulo + ".  ", True), (fazer, False)],
+                   entrega])
+    if n == DESENV[-1]:
+        _destaque("FIM DO DESENVOLVIMENTO   ·   %s" % br(cal.FIM_DESENVOLVIMENTO), "184F95")
+_destaque("PRAZO FINAL DE ENTREGA   ·   %s   ·   %d dias de margem depois da E%d"
+          % (br(cal.PRAZO_FINAL), cal.MARGEM, cal.NUMEROS[-1]), "14865D")
+
+cronograma = tabela(["Etapa", "O que será feito", "Entrega da etapa"], linhas,
+                    [1.9, 9.7, 5.8], tam=7.6)
+for indice, texto, fundo, cor in destaques:
+    linha_destaque(cronograma, indice, texto, fundo=fundo, cor=cor)
+
+secao("O que o orientador recebe, e quando")
+
+
+def _fim(n):
+    return br(cal.DATAS[n][1])
+
+
+tabela(["Data", "O que será entregue"],
+       [["*%s  ·  fim da E1" % _fim(1),
+         "Requisitos aprovados, estudo dos sistemas parecidos e a medida inicial do protótipo"],
+        ["*%s  ·  fim da E2" % _fim(2),
+         "Arquitetura com as decisões justificadas, lista de tarefas e ambiente funcionando"],
+        ["*%s  ·  fim da E4" % _fim(4),
+         "Demonstração ao vivo: uma tarefa percorrendo os seis estados, com uma reprovação "
+         "provocada"],
+        ["*%s  ·  fim da E5" % _fim(5),
+         "Demonstração: três tarefas em paralelo e a recuperação de uma falha provocada"],
+        ["*%s  ·  fim da E6" % _fim(6),
+         "Demonstração: um projeto inteiro acompanhado na tela, do pedido à entrega"],
+        ["*%s  ·  fim da E7" % _fim(7),
+         "Relatório dos testes com projetos reais e a lista de correções"],
+        ["*%s  ·  prazo final" % br(cal.PRAZO_FINAL),
+         "Documento de entrega, com o resultado comparado à medida inicial da E1"]],
+       [4.4, 13.0])
 
 quebra()
 
 # ================================================================ PARTE III
-parte("III", "Como o sistema vai funcionar",
+parte("III", "Os requisitos",
+      "O que o sistema precisa fazer, sob que restrições, e em que etapa cada um é atendido.",
+      cor="4A3AA7")
+
+secao("O que o sistema precisa fazer")
+
+tabela(["#", "Requisito", "Como será verificado", "Etapa"],
+       [["*R1", "Transformar uma descrição em linguagem natural em especificação, plano e lista de "
+                "tarefas", "um pedido real produz as três coisas", "E4"],
+        ["*R2", "Fazer cada tarefa percorrer seis estados, registrando cada mudança junto com o "
+                "relatório e o custo", "o histórico de uma tarefa mostra as seis passagens", "E4"],
+        ["*R3", "Submeter toda entrega a dois julgamentos independentes: um verifica se funciona, "
+                "outro se é o que foi pedido", "os dois portões reprovam por motivos diferentes",
+         "E4"],
+        ["*R4", "Devolver a entrega reprovada com o relatório do que faltou, decidindo como "
+                "refazer a partir da causa", "uma reprovação provocada gera a decisão correta",
+         "E4"],
+        ["*R5", "Limitar o retrabalho, replanejar a tarefa uma vez e, se ainda falhar, entregá-la "
+                "ao humano", "uma tarefa impossível chega ao humano em quatro ciclos", "E4"],
+        ["*R6", "Construir tarefas independentes ao mesmo tempo, sem que uma interfira no arquivo "
+                "da outra", "três tarefas em paralelo, sem conflito", "E5"],
+        ["*R7", "Consultar o histórico do próprio projeto antes de decidir, citando a fonte",
+         "o agente cita a decisão anterior, e a citação confere", "E6"],
+        ["*R8", "Mostrar andamento, custo e saída de cada agente numa tela, ao vivo",
+         "um projeto inteiro acompanhado do pedido à entrega", "E6"]],
+       [1.1, 7.0, 6.9, 2.4], tam=8.0)
+
+secao("Sob que restrições")
+
+tabela(["#", "Restrição", "O mecanismo que a garante", "Etapa"],
+       [["*R9", "Roda em uma máquina modesta: 8 GB de memória e 4 núcleos",
+         "o único componente pesado — a busca por significado — é trocável e escolhido por medição",
+         "E6"],
+        ["*R10", "O custo é contado em duas unidades: cota consumida e valor em dinheiro",
+         "uma tabela própria, alimentada a cada resposta do modelo", "E3"],
+        ["*R11", "Nenhum agente escreve fora da pasta do projeto",
+         "a própria ferramenta de escrita recusa o caminho de fora", "E3"],
+        ["*R12", "Os testes rodam sem internet, sem consumir cota e sem chave de acesso",
+         "substitutos de mentira, e um teste que falha se a chave existir", "E3"],
+        ["*R13", "A morte de um agente não derruba os outros nem perde o trabalho",
+         "cada agente é um processo isolado, e a fila devolve a tarefa", "E5"],
+        ["*R14", "O gasto de uma rodada não passa de um teto declarado",
+         "o sistema impede começar o que não cabe, e nunca corta no meio", "E5"],
+        ["*R15", "Trocar o fornecedor do modelo não exige mexer no núcleo",
+         "o fornecedor entra por uma fronteira, como peça encaixável", "E5"]],
+       [1.2, 6.5, 7.3, 2.4], tam=8.0)
+
+# ================================================================ PARTE IV
+parte("IV", "Como o sistema vai funcionar",
       "As quatro camadas, o caminho de uma tarefa e o que acontece quando ela falha.",
       cor="184F95")
 
-doc.add_heading("6.  As quatro camadas", level=1)
+secao("As quatro camadas")
 
 p("Cada camada só conhece a de baixo. A tela não conversa com o modelo: ela lê o mesmo banco de "
-  "dados e escuta os mesmos avisos que o motor emite — assim ela não tem uma cópia própria do "
-  "estado para divergir.", depois=2)
+  "dados e escuta os mesmos avisos que o motor emite — assim nunca mostra um estado diferente do "
+  "real.", depois=2)
 
-figura("fig2_arquitetura.png",
-       "Figura 2 — As quatro camadas. As duas fronteiras do meio, em roxo, são o que permite "
-       "trocar o fornecedor do modelo ou o mecanismo de busca sem mexer no motor (R15).", 15.4)
+figura("fig3_arquitetura.png",
+       "Figura 3 — As quatro camadas. As duas fronteiras do meio, em roxo, permitem trocar o "
+       "fornecedor do modelo ou o mecanismo de busca sem mexer no motor (R15).", 15.0)
 
-doc.add_heading("7.  O caminho de uma tarefa", level=1)
+secao("O caminho de uma tarefa")
 
 p("A unidade de trabalho é a tarefa: pequena, com objetivo escrito e critérios de aceite que são "
   "comandos, não opiniões. Ela percorre seis estados, e cada passagem é feita por um agente "
   "diferente daquele que construiu.", depois=2)
 
-figura("fig3_ciclo.png",
-       "Figura 3 — Os seis estados e os dois portões. As perguntas são independentes: uma entrega "
+figura("fig4_ciclo.png",
+       "Figura 4 — Os seis estados e os dois portões. As perguntas são independentes: uma entrega "
        "pode funcionar perfeitamente e ainda assim não ser a que foi pedida.", 16.0)
 
 rico([("A ferramenta que o revisor não recebe.  ", True, AZUL),
-      ("Quem revisa não tem, entre suas ferramentas, nenhuma que escreva em arquivo. Não é uma "
-       "instrução para que não corrija: é a ausência da capacidade. É o exemplo mais direto da "
-       "ideia central — a separação entre construir e aprovar deixa de depender de disciplina e "
-       "passa a depender da estrutura.", False)], tam=9.2, antes=1, depois=3)
+      ("Quem revisa não tem nenhuma ferramenta que escreva em arquivo. Não é uma instrução para que "
+       "não corrija: é a ausência da capacidade — a separação entre construir e aprovar deixa de "
+       "depender de disciplina e passa a depender da estrutura.", False)],
+     tam=9.2, antes=1, depois=3)
 
-doc.add_heading("8.  O que acontece quando uma tarefa falha", level=1)
+secao("O que acontece quando uma tarefa falha")
 
-p("Falha é o caso comum, não a exceção. Cada reprovação muda a estratégia, em vez de repetir a "
-  "aposta que já falhou. Quem conta os ciclos é o sistema: o agente não tem ferramenta para mexer "
-  "no contador.", depois=2)
+p("Cada reprovação muda a estratégia, em vez de repetir a aposta que já falhou. Quem conta os "
+  "ciclos é o sistema: o agente não tem ferramenta para mexer no contador.", depois=2)
 
 tabela(["Ciclo", "O que o sistema faz", "Por quê"],
        [["*1º", "Refaz com um modelo mais forte",
@@ -209,25 +373,21 @@ tabela(["Ciclo", "O que o sistema faz", "Por quê"],
          "com o motivo registrado; insistir mais custa dinheiro sem aumentar a chance de acerto"]],
        [1.4, 5.2, 10.8])
 
-# ================================================================ PARTE IV
-parte("IV", "As ferramentas",
-      "O que será usado para construir, e por que cada escolha.", cor="C24E1E")
+# ================================================================ PARTE V
+parte("V", "As ferramentas", "O que será usado para construir, e por que cada escolha.",
+      cor="C24E1E")
 
-doc.add_heading("9.  Por que Elixir", level=1)
+secao("Por que Elixir")
 
 p("O sistema não faz contas pesadas: ele espera. Cada agente passa a maior parte do tempo "
-  "aguardando a resposta de um serviço remoto que demora dezenas de segundos e pode falhar. O "
-  "problema real é manter dezenas desses trabalhos em andamento ao mesmo tempo, poder cortar um "
-  "com segurança e sobreviver quando um morre.")
+  "aguardando um serviço remoto que demora dezenas de segundos e pode falhar, e o desafio é manter "
+  "dezenas desses trabalhos em andamento, cortar um com segurança e sobreviver quando um morre. "
+  "Elixir roda sobre uma plataforma feita para isso: cada agente vira um processo isolado, com "
+  "dono, com quem o encerre e com quem perceba que ele morreu. O custo da escolha é um ecossistema "
+  "de inteligência artificial menor que o de Python — aceitável, porque a parte pesada aqui é "
+  "espera de rede, não cálculo.")
 
-p("Elixir roda sobre uma plataforma criada exatamente para isso, e ela dá de graça o que resolve "
-  "o problema central do projeto: um agente em execução vira um processo isolado, com dono, com "
-  "quem o mate quando preciso e com quem perceba que ele morreu. Em ambientes onde agentes são "
-  "apenas chamadas de função dentro de um laço, nada disso existe sem ser construído à mão. O "
-  "custo dessa escolha é um ecossistema de inteligência artificial menor que o de Python — "
-  "aceitável, porque a parte pesada aqui é espera de rede, não cálculo.", antes=1)
-
-doc.add_heading("10.  A pilha, camada por camada", level=1)
+secao("A pilha, ferramenta por ferramenta")
 
 tabela(["Ferramenta", "Ver.", "Para que serve", "Por que ela"],
        [["*Elixir", "1.19", "Linguagem de todo o sistema", "acesso à plataforma descrita acima"],
@@ -264,11 +424,11 @@ tabela(["Ferramenta", "Ver.", "Para que serve", "Por que ela"],
          "cada projeto gerado nasce como repositório próprio, com um registro por tarefa"]],
        [2.7, 1.0, 5.5, 8.2], tam=7.6)
 
-doc.add_heading("11.  A verificação, num comando só", level=1)
+secao("A verificação, num comando só")
 
-p("Todo o controle de qualidade fica atrás de um comando. A ordem é a regra: o que falha mais "
-  "rápido e mais barato roda primeiro, e o primeiro que falhar interrompe os seguintes. É este "
-  "comando que roda em toda verificação — à mão ou quando um agente confere a própria entrega.")
+p("Todo o controle de qualidade fica atrás de um comando. O que falha mais rápido e mais barato "
+  "roda primeiro, e o primeiro estágio que falhar interrompe os seguintes. É este comando que roda "
+  "em toda verificação — à mão ou quando um agente confere a própria entrega.")
 
 codigo(["mix verificar   # quatro estagios, do mais barato ao mais caro",
         "  1. formatacao do codigo          # segundos",
@@ -276,185 +436,33 @@ codigo(["mix verificar   # quatro estagios, do mais barato ao mais caro",
         "  3. analise de estilo             # modo estrito",
         "  4. testes automaticos            # sem internet, sem cota"])
 
-quebra()
-
-# ================================================================ PARTE V
-parte("V", "O cronograma",
-      "As 13 etapas, com o que cada uma faz e o que precisa estar pronto no fim dela.",
-      cor="14865D")
-
-figura("fig4_cronograma.png",
-       "Figura 4 — As 13 etapas. As linhas tracejadas marcam o começo e o fim do desenvolvimento; "
-       "o recesso de fim de ano separa a E7 da E8.", 16.6)
-
-p("Cada etapa dura 15 dias e termina com uma entrega concreta. A regra é simples: a etapa "
-  "seguinte só começa quando a entrega da anterior está pronta. As etapas E1 a E4 planejam, as E5 "
-  "a E11 constroem e as E12 e E13 validam com projetos reais.", antes=2, depois=3)
-
-tabela(["Etapa", "O que será feito", "Entrega da etapa"],
-       [["*E1\n04/09 a\n18/09/26",
-         "*Requisitos e viabilidade.  Descrever o problema com precisão; levantar o que o sistema "
-         "precisa fazer e sob que restrições, definindo para cada item como ele será verificado; "
-         "fixar a máquina alvo de 8 GB e 4 núcleos; delimitar o que fica fora do escopo.",
-         "Os requisitos R1 a R15 escritos e aprovados. A partir daqui, requisito novo só entra com "
-         "registro do motivo."],
-
-        ["*E2\n19/09 a\n03/10/26",
-         "*Estado da arte e medida inicial.  Estudar os sistemas parecidos que já existem e "
-         "escrever o que este trabalho tem de diferente; medir o protótipo já em uso, extraindo "
-         "custo por tarefa, número de tentativas e proporção de tarefas abandonadas.",
-         "A medida inicial registrada e congelada. É contra ela que o resultado final será "
-         "comparado na E13."],
-
-        ["*E3\n04/10 a\n18/10/26",
-         "*Projeto da arquitetura.  Escolher a linguagem e as ferramentas, registrando por que "
-         "cada alternativa foi recusada; desenhar as quatro camadas, o caminho da tarefa, os dois "
-         "portões e as fronteiras trocáveis; ligar cada regra a um mecanismo concreto.",
-         "O desenho da arquitetura aprovado, com as decisões e seus motivos escritos. Decisão "
-         "fechada não se reabre sem fato novo."],
-
-        ["*E4\n19/10 a\n02/11/26",
-         "*Projeto detalhado e ambiente.  Quebrar o sistema em partes construíveis e escrever as "
-         "tarefas de cada uma, com critérios de aceite que são comandos; instalar e testar o "
-         "ambiente de trabalho com um roteiro que possa ser repetido em outra máquina.",
-         "O ambiente funcionando e a lista de tarefas escrita. É a última etapa antes de "
-         "programar."],
-
-        ["*E5\n03/11 a\n17/11/26",
-         "*Fundação do sistema.  Criar o projeto já com a barra de qualidade ligada; criar o banco "
-         "de dados com projetos, tarefas, ciclos e custos; montar as duas fronteiras com "
-         "substitutos de mentira; implementar a contagem de custo em duas unidades e a cópia de "
-         "segurança do banco.",
-         "*Início do desenvolvimento.  Os testes rodam sem internet, sem cota e sem chave — "
-         "provado por um teste que falha de propósito se a chave existir (R12, R10)."],
-
-        ["*E6\n18/11 a\n02/12/26",
-         "*O agente e as ferramentas.  Gerar o resumo do projeto que orienta o agente sem que ele "
-         "leia o código inteiro; construir as ferramentas de arquivo já com o confinamento por "
-         "dentro; a ferramenta de comando com prazo; o agente como processo isolado; o limite de "
-         "chamadas por papel.",
-         "Um agente resolve uma tarefa real do começo ao fim, e o custo de cada resposta fica "
-         "gravado e confere com o total (R11)."],
-
-        ["*E7\n03/12 a\n17/12/26",
-         "*Linha de produção de tarefas.  Implementar os seis estados, com cada mudança gravada de "
-         "uma vez só; a fila que libera tarefa quando as anteriores terminam; a execução automática "
-         "dos critérios de aceite; os dois portões; e a escada de resposta à falha.",
-         "Uma tarefa percorre os seis estados, é reprovada de propósito, é refeita e conclui — com "
-         "tudo registrado (R1 a R5)."],
-
-        ["*—\n18/12/26 a\n01/01/27", "*Recesso de fim de ano.  Sem atividade planejada.",
-         "—"],
-
-        ["*E8\n02/01 a\n16/01/27",
-         "*Integração com o fornecedor.  Escrever e guardar o instrumento de medição antes de "
-         "usá-lo; medir o que o fornecedor realmente oferece de controle — permissões, pasta de "
-         "trabalho, limite de turnos; provar o confinamento em vez de supor. Etapa com folga "
-         "reservada para o que a medição revelar.",
-         "Trocar de fornecedor não mexe no núcleo: dois encaixes definidos só no teste funcionam "
-         "sem alterar uma linha do sistema (R15)."],
-
-        ["*E9\n17/01 a\n31/01/27",
-         "*Execução em paralelo.  Montar a supervisão, com um processo por tarefa em andamento; a "
-         "fila que grava o trabalho junto com a mudança de estado; o travamento por área de "
-         "arquivo; o teto de gasto que impede começar o que não cabe; e a recuperação de trabalho "
-         "interrompido.",
-         "Três tarefas em paralelo; matar uma no meio não afeta as outras, e ela volta à fila sem "
-         "perder o que já foi feito (R6, R13, R14)."],
-
-        ["*E10\n01/02 a\n15/02/27",
-         "*Memória do projeto.  Medir espaço, memória e tempo antes de escolher onde o mecanismo "
-         "de busca vai rodar; guardar o histórico do projeto conforme ele é escrito; combinar "
-         "busca por significado com busca por termo exato; montar o trecho de contexto com a fonte "
-         "citada.",
-         "Num projeto com histórico, o agente cita a decisão anterior em vez de decidir de novo, e "
-         "a citação aponta para a fonte certa (R7, R9)."],
-
-        ["*E11\n16/02 a\n02/03/27",
-         "*Painel de acompanhamento.  Conferir o que o banco realmente grava contra o que a tela "
-         "pretende mostrar; construir o quadro de tarefas ao vivo, o console do agente e o custo "
-         "da rodada; o botão de parar e retomar; e o encadeamento automático de rodadas, com teto "
-         "de gasto obrigatório.",
-         "*Fim do desenvolvimento.  Um projeto inteiro é acompanhado na tela do pedido à entrega, "
-         "com o custo atualizando em tempo real (R8)."],
-
-        ["*E12\n03/03 a\n17/03/27",
-         "*Testes com projetos reais.  Escolher de três a cinco projetos que nunca foram usados "
-         "durante a construção e executar cada um sem intervenção; testar na máquina de 8 GB "
-         "medindo o pico de memória; provocar falhas de propósito — matar agentes, derrubar o "
-         "banco, esgotar a cota; anotar cada defeito com a sua causa.",
-         "Os projetos rodaram do pedido à entrega, e o comportamento real está documentado — "
-         "inclusive onde o sistema falhou."],
-
-        ["*E13\n18/03 a\n01/04/27",
-         "*Ajustes finais e entrega.  Corrigir o que a E12 revelou, cada correção com o teste que "
-         "impede o problema de voltar; rodar os projetos de teste de novo; comparar o resultado "
-         "com a medida inicial da E2 nas mesmas dimensões; escrever o documento de entrega.",
-         "*Entrega final.  Um projeto inteiro construído sem intervenção, e o resultado comparado "
-         "com a medida inicial, com o número publicado."]],
-       [1.8, 9.6, 6.0], tam=7.5)
-
-quebra()
-
 # ================================================================ PARTE VI
-parte("VI", "Riscos, entregas e resultado",
-      "O que pode dar errado, o que o orientador recebe e como o sucesso será julgado.",
+parte("VI", "Riscos", "O que pode dar errado, e o que já está previsto para cada caso.",
       cor="B52C2C")
 
-doc.add_heading("12.  Riscos e o que fazer com eles", level=1)
+secao("Riscos e o que fazer com eles")
 
 tabela(["Risco", "Impacto", "O que está previsto"],
        [["*O fornecedor do modelo não oferecer o controle que o projeto supõe", "alto",
-         "a E8 mede antes de decidir, com o instrumento guardado antes de ser usado, e tem folga "
-         "para o replanejamento"],
-        ["*As tarefas escritas na E4 envelhecerem até serem executadas", "médio",
-         "as etapas E7, E9, E10 e E11 começam conferindo o plano contra o código que já existe"],
+         "a E5 mede antes de decidir, com o instrumento de medição escrito antes de ser usado"],
+        ["*O desenvolvimento, com %d dias, não caber no prazo" % cal.dias_da_fase("desenv"),
+         "alto",
+         "a ordem das etapas põe primeiro o que sustenta o resto; se algo atrasar, o corte sai da "
+         "E6 (memória e painel), nunca da E7 e da E8"],
+        ["*As tarefas escritas na E2 envelhecerem até serem executadas", "médio",
+         "as etapas E4, E5 e E6 começam conferindo o plano contra o código que já existe"],
         ["*O custo de execução passar do previsto", "alto",
-         "contagem em duas unidades desde a E5, e teto de gasto por rodada na E9"],
+         "custo gravado desde a E3, e teto de gasto por rodada na E5"],
         ["*O limite de cota interromper um trabalho no meio", "médio",
          "reconhecer a parada, guardar o que já foi feito e retomar depois"],
-        ["*O mecanismo de busca não caber na máquina de 8 GB", "médio",
-         "a E10 mede antes de escolher, e o componente é trocável desde a E5"],
-        ["*Atraso acumulado comprimir as etapas finais", "alto",
-         "E12 e E13 não são negociáveis; se algo atrasar, o corte sai do escopo da E10 ou da E11"],
+        ["*A busca por significado não caber na máquina de 8 GB", "médio",
+         "a E6 mede antes de escolher, e o componente é trocável"],
+        ["*Um imprevisto encostar a entrega no prazo", "médio",
+         "a E%d termina em %s: sobram %d dias de margem até %s"
+         % (cal.NUMEROS[-1], br(cal.FIM_DA_ULTIMA_ETAPA), cal.MARGEM, br(cal.PRAZO_FINAL))],
         ["*Uma medição depender de acesso pago indisponível", "baixo",
-         "cada entrega é dividida em uma parte demonstrável sem custo e outra que exige gasto"]],
+         "cada entrega tem uma parte demonstrável sem custo e outra que exige gasto"]],
        [5.0, 1.6, 10.8], tam=7.8)
-
-doc.add_heading("13.  O que o orientador recebe, e quando", level=1)
-
-tabela(["Data", "Entrega"],
-       [["*03/10/2026  ·  fim da E2",
-         "Requisitos aprovados, estudo dos sistemas parecidos e a medida inicial do protótipo"],
-        ["*02/11/2026  ·  fim da E4",
-         "Arquitetura com as decisões justificadas, e a lista de tarefas completa"],
-        ["*17/12/2026  ·  fim da E7",
-         "Demonstração ao vivo: uma tarefa percorrendo os seis estados, com uma reprovação "
-         "provocada"],
-        ["*31/01/2027  ·  fim da E9",
-         "Demonstração: três tarefas em paralelo, e recuperação de uma falha provocada"],
-        ["*02/03/2027  ·  fim da E11",
-         "Demonstração: um projeto inteiro acompanhado na tela, do pedido à entrega"],
-        ["*01/04/2027  ·  fim da E13",
-         "Documento de entrega, com o resultado comparado à medida inicial da E2"]],
-       [4.6, 12.8])
-
-doc.add_heading("14.  Como o sucesso será julgado", level=1)
-
-p("O trabalho será bem-sucedido se, ao fim da E13, as quatro afirmações abaixo puderem ser "
-  "demonstradas ao vivo — e não apenas descritas.", tam=9.0, cor=CINZA, depois=3)
-
-passos([("1", "Constrói sozinho",
-         "Um projeto real é planejado, construído, testado, revisado e entregue sem intervenção "
-         "depois do pedido."),
-        ("2", "Governa de verdade",
-         "Cada regra da seção 2 tem um teste que a prova, incluindo testes que tentam quebrá-la de "
-         "propósito e falham."),
-        ("3", "Cabe na máquina",
-         "Roda nos 8 GB e 4 núcleos do requisito R9, com o pico de memória medido."),
-        ("4", "Melhora o medido",
-         "O resultado é comparado à medida inicial da E2, com o número publicado — inclusive se "
-         "for desfavorável.")])
 
 caixa("O QUE FICA, SE TUDO O MAIS MUDAR",
       "Modelos vão melhorar, ficar mais baratos e mudar de nome. A parte deste trabalho que não "
@@ -462,5 +470,6 @@ caixa("O QUE FICA, SE TUDO O MAIS MUDAR",
       "independentes feitos por quem não construiu, falha limitada com uma tentativa de "
       "redimensionamento antes de desistir, e tudo registrado no instante em que acontece.")
 
+conferir(n_etapas=cal.N_ETAPAS, n_requisitos=15)
 doc.save(DESTINO)
 print("gerado:", DESTINO)
