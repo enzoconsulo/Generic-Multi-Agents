@@ -464,6 +464,29 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
       'Etapas que falharam (tarefa fora desta rodada, as outras seguiram): ' +
         r.etapasFalhas.map((e) => e.tarefa + ' no ' + e.agente).join('; ') + '.',
     );
+    // A CAUSA vai junto (13/09). No job `670a8756` esta linha listou T-047, T-052 e T-053 e foi
+    // lida como três tarefas quebradas; as três tinham caído na mesma recusa da conta, antes de
+    // qualquer trabalho, e a mensagem estava só no log. Quando a causa é UMA para todas, a frase
+    // diz isso com todas as letras: o conserto é do ambiente, e redisparar sem mexer nele
+    // repete a queda.
+    const umaLinha = (texto: string): string => {
+      const t = texto.replace(/\s+/g, " ").trim();
+      return t.length > 240 ? `${t.slice(0, 237)}...` : t;
+    };
+    const causas = [...new Set(r.etapasFalhas.map((e) => umaLinha(e.erro ?? "")))].filter(
+      (c) => c !== "",
+    );
+    if (causas.length > 0) {
+      const todasIguais =
+        causas.length === 1 &&
+        r.etapasFalhas.length > 1 &&
+        r.etapasFalhas.every((e) => umaLinha(e.erro ?? "") === causas[0]);
+      linhas.push(
+        (todasIguais
+          ? "A MESMA causa derrubou todas — é o ambiente ou a conta, não as tarefas: "
+          : "Causa informada pelo provedor: ") + causas.join(" | "),
+      );
+    }
   }
   if (r.documentou) linhas.push("Documentação atualizada.");
   if (r.criteriosExecutados > 0) {
@@ -540,15 +563,48 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
       linhas.push(`IMPEDIMENTO declarado em ${i.tarefa} — ${i.motivo}`);
     }
   }
-  if (r.paraReplanejar.length > 0) {
+  // O desfecho do replanejamento é CONFERIDO no disco pelo motor (13/09). Antes esta linha
+  // anunciava "replanejada" para toda tarefa mandada ao planejador — inclusive quando ele caiu
+  // (job `670a8756`) e quando terminou sem mexer em nada (`8c555970`), que foram as duas
+  // vezes em que a T-045 do fabrica-v2 "foi replanejada" sem nenhuma substituta existir.
+  const porDesfecho = (d: RelatorioMotor["replanejamentos"][number]["desfecho"]): string[] =>
+    r.replanejamentos.filter((x) => x.desfecho === d).map((x) => x.tarefa);
+  const replanejadas = porDesfecho("replanejada");
+  const caiu = porDesfecho("planejador-caiu");
+  const semEfeito = porDesfecho("sem-efeito");
+  if (replanejadas.length > 0) {
     linhas.push(
-      `Replanejadas automaticamente (esgotaram os ciclos): ${r.paraReplanejar.join(", ")}.` +
-        " O planejador quebrou ou reescreveu a abordagem; as substitutas entram na próxima" +
-        " rodada.",
+      `Replanejadas automaticamente: ${replanejadas.join(", ")}. O planejador cancelou ou` +
+        " reescreveu a tarefa (conferido no disco); as substitutas entram na próxima rodada.",
     );
   }
-  if (r.bloqueadas.length > 0) {
-    linhas.push(`BLOQUEADAS para você: ${r.bloqueadas.join(", ")} (já eram replanejamento).`);
+  if (caiu.length > 0) {
+    linhas.push(
+      `Replanejamento NÃO aconteceu em ${caiu.join(", ")}: o planejador caiu antes de terminar` +
+        " (a causa está junto das etapas que falharam). A próxima rodada tenta de novo.",
+    );
+  }
+  const bloqueadasSemEfeito = semEfeito.filter((id) => r.bloqueadas.includes(id));
+  const soltasSemEfeito = semEfeito.filter((id) => !r.bloqueadas.includes(id));
+  if (bloqueadasSemEfeito.length > 0) {
+    linhas.push(
+      `Planejador SEM EFEITO em ${bloqueadasSemEfeito.join(", ")}: terminou sem cancelar a` +
+        " tarefa nem criar substitutas, e o gatilho continua no arquivo. BLOQUEADA(S) para você" +
+        " — redisparar só pagaria o mesmo planejador de novo. Decida no quadro: aprovar a" +
+        " entrega, reescrever a tarefa ou cancelá-la.",
+    );
+  }
+  if (soltasSemEfeito.length > 0) {
+    linhas.push(
+      `O planejador rodou em ${soltasSemEfeito.join(", ")} e não criou substitutas nem cancelou` +
+        " nada — a tarefa segue como estava.",
+    );
+  }
+  const outrasBloqueadas = r.bloqueadas.filter((id) => !bloqueadasSemEfeito.includes(id));
+  if (outrasBloqueadas.length > 0) {
+    linhas.push(
+      `BLOQUEADAS para você: ${outrasBloqueadas.join(", ")} (o motivo está no log da rodada).`,
+    );
   }
   linhas.push(`Gasto estimado: US$ ${r.orcamento.gastoUsd.toFixed(2)}.`);
   return linhas.join("\n");

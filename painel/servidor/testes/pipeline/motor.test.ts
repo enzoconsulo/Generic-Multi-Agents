@@ -246,11 +246,87 @@ describe("rodarPipeline — passada mecânica (I5)", () => {
 describe("rodarPipeline — esgotamento de ciclos", () => {
   // Bloquear e replanejar são desfechos DIFERENTES, e a diferença é uma regra escrita
   // (autocorreção vale uma vez por linhagem), não julgamento — por isso mora no motor.
+  /** Planejador que cumpre o contrato: cancela a original e cria a substituta com linhagem. */
+  function comPlanejadorQueReplaneja(m: ReturnType<typeof mundo>, id: string) {
+    const original = m.dep.despachar;
+    m.dep.despachar = async (pedido) => {
+      if (pedido.papel !== "planejador") return original(pedido);
+      m.despachos.push(pedido);
+      const atual = m.tarefas.get(id);
+      if (atual !== undefined) atual.status = "cancelada";
+      m.tarefas.set(
+        `${id}a`,
+        tarefa({ id: `${id}a`, status: "backlog", replanejadaDe: id, dependencias: [id] }),
+      );
+      return { custoUsd: 0.5, concluiu: true };
+    };
+    return m;
+  }
+
   it("tarefa esgotada sem linhagem vai para REPLANEJAMENTO (decisão do modelo)", async () => {
-    const { dep } = mundo([tarefa({ id: "T-001", status: "pronta", tentativas: 4 })]);
-    const rel = await rodarPipeline(ctxBase, dep);
+    const m = comPlanejadorQueReplaneja(
+      mundo([tarefa({ id: "T-001", status: "pronta", tentativas: 4 })]),
+      "T-001",
+    );
+    const rel = await rodarPipeline(ctxBase, m.dep);
     expect(rel.paraReplanejar).toContain("T-001");
     expect(rel.bloqueadas).not.toContain("T-001");
+    expect(rel.replanejamentos).toEqual([{ tarefa: "T-001", desfecho: "replanejada" }]);
+  });
+
+  /**
+   * T-045 do fabrica-v2 (jobs `8c555970` e `670a8756`, 12/09): a entrega estava pronta, o
+   * contador tinha passado de 3 por ciclos de ambiente e de registro, e o planejador não tinha o
+   * que replanejar. Ele terminou sem mexer em nada — e como o gatilho continuava no arquivo, a
+   * rodada seguinte o despachou de novo, com o relatório dizendo "replanejada" as duas vezes.
+   */
+  it("planejador SEM EFEITO bloqueia a tarefa, em vez de ser redespachado a cada rodada", async () => {
+    const m = mundo([tarefa({ id: "T-001", status: "em-teste", tentativas: 4 })]);
+    m.dep.despachar = async (pedido) => {
+      m.despachos.push(pedido);
+      return { custoUsd: 0.5, concluiu: true }; // terminou e não mudou nada no disco
+    };
+    const rel = await rodarPipeline(ctxBase, m.dep);
+    expect(rel.replanejamentos).toEqual([{ tarefa: "T-001", desfecho: "sem-efeito" }]);
+    expect(rel.bloqueadas).toContain("T-001");
+    expect(m.tarefas.get("T-001")?.status).toBe("bloqueada");
+
+    // A rodada SEGUINTE não paga o mesmo planejador de novo.
+    m.despachos.length = 0;
+    await rodarPipeline(ctxBase, m.dep);
+    expect(m.despachos.filter((d) => d.papel === "planejador")).toHaveLength(0);
+  });
+
+  it("tarefa CONCLUÍDA com `tentativas` acima do teto não chama o planejador", async () => {
+    const { dep, despachos } = mundo([tarefa({ id: "T-001", status: "concluida", tentativas: 4 })]);
+    const rel = await rodarPipeline(ctxBase, dep);
+    expect(despachos.filter((d) => d.papel === "planejador")).toHaveLength(0);
+    expect(rel.paraReplanejar).toHaveLength(0);
+  });
+
+  /**
+   * Job `670a8756` (12/09): o planejador caiu, o relatório marcou `agente-cortado` — e o laço
+   * despachou mais três construtores, porque o `break` saía só do `for` das tarefas esgotadas.
+   */
+  it("planejador que CAI encerra a rodada — o laço não segue despachando as outras", async () => {
+    const m = mundo([
+      tarefa({ id: "T-001", status: "em-teste", tentativas: 4 }),
+      tarefa({ id: "T-002", status: "pronta", areas: ["b.js"] }),
+    ]);
+    const papeis: string[] = [];
+    m.dep.despachar = async (pedido) => {
+      papeis.push(pedido.papel);
+      return {
+        custoUsd: 0,
+        concluiu: false,
+        erro: "Your organization has disabled Claude subscription access for Claude Code",
+      };
+    };
+    const rel = await rodarPipeline(ctxBase, m.dep);
+    expect(papeis).toEqual(["planejador"]);
+    expect(rel.encerrouPor).toBe("agente-cortado");
+    expect(rel.replanejamentos).toEqual([{ tarefa: "T-001", desfecho: "planejador-caiu" }]);
+    expect(rel.etapasFalhas[0]?.erro).toContain("disabled");
   });
 
   it("tarefa que JÁ era replanejamento e esgotou de novo é bloqueada para o usuário", async () => {

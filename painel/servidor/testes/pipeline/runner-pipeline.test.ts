@@ -367,9 +367,25 @@ describe("RunnerPipeline — desfechos", () => {
     const raiz = fabricaFalsa([
       { nome: "T-001-x.md", conteudo: tarefaMd({ id: "T-001", status: "pronta", tentativas: 4 }) },
     ]);
+    const dirTarefas = join(raiz, "projetos", "app", "_gestao", "tarefas");
     const despachados: string[] = [];
     const { consulta } = sdkFalso((p) => {
-      if (p.includes("PLANEJADOR")) despachados.push("planejador");
+      if (!p.includes("PLANEJADOR")) return;
+      despachados.push("planejador");
+      // O contrato do modo replanejamento: original cancelada, substituta com linhagem.
+      writeFileSync(
+        join(dirTarefas, "T-001-x.md"),
+        tarefaMd({ id: "T-001", status: "cancelada", tentativas: 4 }),
+        "utf8",
+      );
+      writeFileSync(
+        join(dirTarefas, "T-001a-x.md"),
+        tarefaMd({ id: "T-001a", status: "backlog", deps: ["T-001"] }).replace(
+          "tentativas: 0",
+          "tentativas: 0\nreplanejada-de: T-001",
+        ),
+        "utf8",
+      );
     });
     const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
       job({ raiz, projeto: "app", modelo: "sonnet" }),
@@ -379,6 +395,43 @@ describe("RunnerPipeline — desfechos", () => {
     expect(despachados).toContain("planejador");
     expect(r.texto).toContain("Replanejadas automaticamente");
     expect(r.texto).not.toContain("PRECISA DE JULGAMENTO");
+  });
+
+  it("planejador que termina SEM replanejar não é anunciado como replanejamento", async () => {
+    const raiz = fabricaFalsa([
+      { nome: "T-001-x.md", conteudo: tarefaMd({ id: "T-001", status: "em-teste", tentativas: 4 }) },
+    ]);
+    const { consulta } = sdkFalso(() => {});
+    const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
+      job({ raiz, projeto: "app", modelo: "sonnet" }),
+      contexto().ctx,
+    );
+    expect(r.texto).not.toContain("Replanejadas automaticamente");
+    expect(r.texto).toContain("SEM EFEITO");
+    expect(readFileSync(join(raiz, "projetos/app/_gestao/tarefas/T-001-x.md"), "utf8")).toContain(
+      "status: bloqueada",
+    );
+  });
+
+  it("etapas derrubadas pela MESMA recusa da conta dizem a causa — não parecem tarefas quebradas", async () => {
+    const raiz = fabricaFalsa([
+      { nome: "T-001-x.md", conteudo: tarefaMd({ id: "T-001", status: "pronta" }) },
+      { nome: "T-002-y.md", conteudo: tarefaMd({ id: "T-002", status: "pronta" }) },
+      { nome: "T-003-z.md", conteudo: tarefaMd({ id: "T-003", status: "pronta" }) },
+    ]);
+    const recusa =
+      "Claude Code returned an error result: Your organization has disabled Claude" +
+      " subscription access for Claude Code";
+    const consulta: Consulta = () => ({
+      [Symbol.asyncIterator]: () => ({ next: () => Promise.reject(new Error(recusa)) }),
+    });
+    const r = await new RunnerPipeline(consulta, vigiaFalso()).executar(
+      job({ raiz, projeto: "app", modelo: "sonnet" }),
+      contexto().ctx,
+    );
+    expect(r.etapasFalhas).toHaveLength(3);
+    expect(r.texto).toContain("A MESMA causa derrubou todas");
+    expect(r.texto).toContain("disabled Claude subscription access");
   });
 
   it("projeto sem tarefa despachável não gasta nada", async () => {

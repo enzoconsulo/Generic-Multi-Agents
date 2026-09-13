@@ -120,6 +120,16 @@ export interface ResultadoDespacho {
    * US$ 4,11 antes de devolver nada.
    */
   limiteDeUso?: string;
+  /**
+   * Mensagem da falha, quando `concluiu: false` (13/09).
+   *
+   * Morria no log. Uma rodada do fabrica-v2 (job `670a8756`) listou T-047, T-052 e T-053 como
+   * "etapas que falharam", e isso foi lido como três tarefas quebradas: as três tinham caído
+   * na MESMA recusa da conta ("Your organization has disabled Claude subscription access for
+   * Claude Code"), antes de o agente fazer qualquer coisa. O relatório nomeava a tarefa e
+   * escondia a causa — justamente o que diz de quem é o conserto.
+   */
+  erro?: string;
   /** Chamadas de ferramenta que a etapa gastou (T-065). */
   chamadas?: number;
   /** Teto DECLARADO no prompt do papel para esta tarefa (T-065). Alvo, não alarme. */
@@ -327,8 +337,26 @@ export interface RelatorioMotor {
   marcos: { fase: string; veredicto: VeredictoMarco }[];
   /** Tarefas devolvidas para `pronta` no saneamento de abertura. */
   saneadas: string[];
-  /** Etapas que falharam (agente sem resultado). A tarefa sai da rodada; as outras seguem. */
-  etapasFalhas: { tarefa: string; agente: string }[];
+  /**
+   * Etapas que falharam (agente sem resultado). A tarefa sai da rodada; as outras seguem.
+   * `erro` é a mensagem do provedor, quando veio — ver `ResultadoDespacho.erro`.
+   */
+  etapasFalhas: { tarefa: string; agente: string; erro?: string }[];
+  /**
+   * O que o planejador DE FATO fez com cada tarefa mandada ao replanejamento (13/09).
+   *
+   * `paraReplanejar` só diz que o planejador foi chamado, e o relatório tratava isso como feito
+   * ("O planejador quebrou ou reescreveu a abordagem"). Na T-045 do fabrica-v2 ele terminou sem
+   * cancelar a tarefa nem criar substituta — a entrega estava pronta, não havia o que
+   * replanejar —, e como o gatilho (`tentativas: 4`) continuava no arquivo, a rodada seguinte o
+   * despachou de novo. O relatório disse "replanejada" as duas vezes. O desfecho agora é
+   * CONFERIDO no disco depois do planejador:
+   * - `replanejada`: há substituta com `replanejada-de`, ou a original saiu de circulação, ou
+   *   (quando a tarefa tinha esgotado os ciclos) `tentativas` voltou para dentro do teto;
+   * - `sem-efeito`: terminou e nada disso aconteceu;
+   * - `planejador-caiu`: não devolveu resultado.
+   */
+  replanejamentos: { tarefa: string; desfecho: "replanejada" | "sem-efeito" | "planejador-caiu" }[];
   /** O documentador rodou? */
   documentou: boolean;
   /** Por que o laço parou. */
@@ -402,6 +430,15 @@ const MAX_DESPACHOS_POR_TAREFA = 12;
 const MAX_FALHAS_SEGUIDAS = 3;
 
 /**
+ * Status em que a tarefa saiu de circulação — nenhum gatilho de ciclo vale mais nela.
+ *
+ * `tentativas` fica no frontmatter para sempre, e `deveBloquear` só olha o contador. Sem este
+ * filtro, uma tarefa que conclui no 4º ciclo (a T-045 do fabrica-v2, 13/09) ou que já foi
+ * bloqueada chamaria o planejador em TODA rodada, sem nada para replanejar.
+ */
+const FORA_DE_CIRCULACAO: ReadonlySet<string> = new Set(["concluida", "cancelada", "bloqueada"]);
+
+/**
  * Roda o pipeline até acabar o trabalho, o orçamento, ou algo dar errado.
  *
  * A ordem dentro de uma volta importa e não é arbitrária:
@@ -432,6 +469,7 @@ export async function rodarPipeline(
     marcos: [],
     saneadas: [],
     etapasFalhas: [],
+    replanejamentos: [],
     documentou: false,
     encerrouPor: "sem-trabalho",
     orcamento: ctx.orcamento,
@@ -575,7 +613,9 @@ export async function rodarPipeline(
     }
 
     // Esgotou os ciclos? Não é decisão do motor o que fazer — é sinal para o modelo.
+    let planejadorCaiu = false;
     for (const t of tarefas) {
+      if (FORA_DE_CIRCULACAO.has(t.status)) continue;
       if (!deveBloquear(t)) continue;
       if (rel.paraReplanejar.includes(t.id) || rel.bloqueadas.includes(t.id)) continue;
       if (deveReplanejar(t)) {
@@ -588,10 +628,12 @@ export async function rodarPipeline(
           t,
           `replanejamento de ${t.id} (esgotou ${t.tentativas} ciclos)`,
           { ctx, dep, rel, orcamento, emCircuito },
+          { esgotada: true },
         );
         orcamento = rp.orcamento;
         if (!rp.concluiu) {
           rel.encerrouPor = "agente-cortado";
+          planejadorCaiu = true;
           break;
         }
       } else {
@@ -600,6 +642,10 @@ export async function rodarPipeline(
         dep.log("erro", `${t.id} bloqueada: já era replanejamento e esgotou de novo.`);
       }
     }
+    // O `break` acima sai só do `for` das tarefas, não da volta. Sem esta linha a rodada SEGUIA:
+    // no job `670a8756` (12/09) o planejador caiu, o relatório marcou `agente-cortado` — e o
+    // laço despachou mais três construtores, que caíram na mesma recusa da conta.
+    if (planejadorCaiu) break;
 
     const { promover, travadas } = promoverProntas(tarefas);
     for (const id of promover) {
@@ -1121,7 +1167,11 @@ export async function rodarPipeline(
       // para descobrir o que a primeira mensagem já informava.
       if (r.limiteDeUso !== undefined) {
         emCircuito.add(passo.tarefa.id);
-        rel.etapasFalhas.push({ tarefa: passo.tarefa.id, agente: agente.nome });
+        rel.etapasFalhas.push({
+          tarefa: passo.tarefa.id,
+          agente: agente.nome,
+          ...(r.erro !== undefined && r.erro !== "" ? { erro: r.erro } : {}),
+        });
         rel.encerrouPor = "cota";
         rel.limiteDeUso = r.limiteDeUso;
         dep.log(
@@ -1134,7 +1184,11 @@ export async function rodarPipeline(
       }
       falhasSeguidas += 1;
       emCircuito.add(passo.tarefa.id);
-      rel.etapasFalhas.push({ tarefa: passo.tarefa.id, agente: agente.nome });
+      rel.etapasFalhas.push({
+        tarefa: passo.tarefa.id,
+        agente: agente.nome,
+        ...(r.erro !== undefined && r.erro !== "" ? { erro: r.erro } : {}),
+      });
       if (falhasSeguidas >= MAX_FALHAS_SEGUIDAS) {
         dep.log(
           "erro",
@@ -1568,13 +1622,24 @@ async function replanejar(
     orcamento: EstadoOrcamento;
     emCircuito: Set<string>;
   },
+  opcoes: {
+    /**
+     * A tarefa chegou aqui por ESGOTAR os ciclos. Só neste caminho o planejador sem efeito vira
+     * bloqueio: o gatilho (`tentativas` acima do teto) é puramente de frontmatter, então "nada
+     * mudou no disco" significa, com certeza, o mesmo despacho na rodada seguinte. Nos gatilhos
+     * de impedimento e de conformidade o sinal vive na prosa e na memória da rodada, e não há
+     * evidência de laço — ali o desfecho só é registrado.
+     */
+    esgotada?: boolean;
+  } = {},
 ): Promise<{ orcamento: EstadoOrcamento; concluiu: boolean }> {
   const { ctx, dep, rel, emCircuito } = ambiente;
+  const agente = AGENTE_GENERICO[ctx.trilha].planejador;
   rel.paraReplanejar.push(t.id);
   const rp = await dep.despachar({
     tarefa: t,
     papel: "planejador",
-    agente: AGENTE_GENERICO[ctx.trilha].planejador,
+    agente,
     modelo: null,
     promptColado: null,
     motivo,
@@ -1582,10 +1647,72 @@ async function replanejar(
   });
   rel.despachos += 1;
   emCircuito.add(t.id);
-  return {
-    orcamento: comGasto(ambiente.orcamento, ambiente.orcamento.gastoUsd + rp.custoUsd),
-    concluiu: rp.concluiu,
-  };
+  const orcamento = comGasto(ambiente.orcamento, ambiente.orcamento.gastoUsd + rp.custoUsd);
+
+  if (!rp.concluiu) {
+    rel.etapasFalhas.push({
+      tarefa: t.id,
+      agente,
+      ...(rp.erro !== undefined && rp.erro !== "" ? { erro: rp.erro } : {}),
+    });
+    rel.replanejamentos.push({ tarefa: t.id, desfecho: "planejador-caiu" });
+    return { orcamento, concluiu: false };
+  }
+
+  // CONFERIDO NO DISCO, não presumido (13/09). "O planejador terminou" não é "a tarefa foi
+  // replanejada": na T-045 do fabrica-v2 ele terminou sem cancelar nada nem criar substituta,
+  // porque a entrega estava pronta e não havia o que replanejar — e a rodada seguinte, lendo o
+  // mesmo `tentativas: 4`, pagou o mesmo planejador de novo.
+  const efeito = await houveReplanejamento(t, dep, opcoes.esgotada === true);
+  rel.replanejamentos.push({ tarefa: t.id, desfecho: efeito ? "replanejada" : "sem-efeito" });
+  if (efeito) return { orcamento, concluiu: true };
+
+  if (opcoes.esgotada === true) {
+    rel.bloqueadas.push(t.id);
+    await dep.gravarStatus(t, "bloqueada");
+    await dep.anexarNotas?.(
+      t,
+      [
+        `**Bloqueada pelo MOTOR:** esgotou os ciclos (\`tentativas: ${t.tentativas}\`) e o`,
+        "planejador, despachado para replanejar, terminou sem cancelar a tarefa nem criar",
+        "substitutas. Replanejar de novo repetiria o mesmo despacho a cada rodada, porque o",
+        "gatilho continua no frontmatter. A decisão é humana: aprovar a entrega (se ela está",
+        "pronta), reescrever a tarefa ou cancelá-la.",
+      ].join("\n"),
+    );
+    dep.log(
+      "erro",
+      `${t.id} BLOQUEADA: o planejador terminou sem cancelar a tarefa nem criar substitutas, e` +
+        ` \`tentativas: ${t.tentativas}\` continua no arquivo — a rodada seguinte pagaria o mesmo` +
+        " planejador de novo. Decisão humana: aprovar a entrega, reescrever ou cancelar.",
+    );
+  } else {
+    dep.log(
+      "erro",
+      `${t.id}: o planejador terminou sem cancelar a tarefa nem criar substitutas — ela segue` +
+        " como estava.",
+    );
+  }
+  return { orcamento, concluiu: true };
+}
+
+/**
+ * O planejador replanejou de fato? Lido do disco DEPOIS dele. Vale qualquer saída que tire a
+ * tarefa do gatilho: substituta com `replanejada-de`, original fora de circulação (cancelada é o
+ * contrato), arquivo que sumiu — e, quando a tarefa tinha esgotado os ciclos, `tentativas`
+ * reescrito para dentro do teto, porque reescrever no lugar também desarma o laço.
+ */
+async function houveReplanejamento(
+  t: TarefaResumo,
+  dep: DependenciasMotor,
+  esgotada: boolean,
+): Promise<boolean> {
+  const depois = await dep.lerTarefas();
+  if (depois.some((x) => x.replanejadaDe === t.id)) return true;
+  const relida = depois.find((x) => x.id === t.id);
+  if (relida === undefined) return true;
+  if (FORA_DE_CIRCULACAO.has(relida.status)) return true;
+  return esgotada && !deveBloquear(relida);
 }
 
 /**

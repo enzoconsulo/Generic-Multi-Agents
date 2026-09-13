@@ -465,6 +465,7 @@ export function criarDespachante(
         custoUsd: custoUsd || (estimarCusto(porModelo)?.usd ?? 0),
         concluiu: false,
         texto: textoFinal,
+        erro: mensagem,
         ...(ehLimiteDeUso(mensagem) || ultimasDoStderr.some((l) => ehLimiteDeUso(l))
           ? { limiteDeUso: horaDeReabertura(mensagem) ?? "sem hora anunciada" }
           : {}),
@@ -508,6 +509,9 @@ export function criarDespachante(
         custoUsd,
         concluiu: false,
         texto: textoFinal,
+        erro: erro
+          ? textoFinal || "o SDK devolveu resultado marcado como erro, sem mensagem"
+          : "a sessão fechou sem mensagem de resultado",
         chamadas,
         orcadoFerramentas: orcado,
         limiarDebate: limiar,
