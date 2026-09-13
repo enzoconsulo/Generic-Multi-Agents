@@ -120,6 +120,11 @@ custo discriminado volta a volta.
 > completo, com laço, ferramentas e permissões próprios. Ver T-020 e o replanejamento.
 >
 > **Marco 2: BLOQUEADO** — não há `ANTHROPIC_API_KEY` nesta máquina.
+>
+> **Marco 2: ADIADO PARA O FIM em 2026-09-13**, por decisão do Enzo: nenhuma chave de API é
+> criada agora, e o único operário suportado por ora é o `ClaudeCLI` (plano de assinatura). Os
+> critérios do marco 2 saíram da T-020 e viraram a **T-020c**, que depende da T-058 (marco da
+> v1.0). Registro em `projetos/fabrica-v2/_gestao/DECISOES.md`, D-002.
 
 #### O replanejamento de 01/09 — as três causas, e o pedido de escopo do mesmo dia
 

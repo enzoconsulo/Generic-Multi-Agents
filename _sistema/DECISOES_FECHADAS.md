@@ -103,6 +103,9 @@ As duas decisões abaixo foram fechadas pelo usuário em **2026-08-28**.
   é dimensionado e específico: transformar ~21 escritas de prefixo por rodada em 1–2. Por
   isso a **F2 ganha um marco a mais**: o prefixo do projeto é escrito uma vez e lido pelos
   despachos seguintes, provado por `cache_read_input_tokens`.
+  **Atualização 2026-09-13 (Enzo):** por ora só o `ClaudeCLI` é suportado — nenhuma chave de API
+  será criada agora, e o marco que mede a `MessagesAPI` foi para o fim do plano (T-020c, depois
+  da T-058). A fronteira com as DUAS famílias continua; muda só a ordem.
 - **Três armadilhas de cache que a v1 não tem como ver** (referência: skill `claude-api`,
   `shared/prompt-caching.md`): a **janela de 20 blocos** para trás (uma volta com centenas
   de `tool_use`/`tool_result` erra o cache em silêncio); o **mínimo cacheável por modelo**,
