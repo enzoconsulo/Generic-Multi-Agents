@@ -3,15 +3,15 @@
 
 Regras deste documento, que valem para qualquer edicao futura:
 
-  1. DUAS siglas, e so duas: E1..En para as etapas, R1..R15 para os requisitos.
+  1. DUAS siglas, e so duas: E1..En para as etapas, R1..R15 para os requisitos. Os
+     pacotes de trabalho estendem a das etapas: E3.1, E3.2 — nunca uma sigla nova.
   2. NENHUMA DATA ESCRITA A MAO. Todas vem de calendario_plano.py (modulo `cal`).
   3. MODULAR: cada etapa de desenvolvimento constroi uma parte completa do sistema e
      termina numa entrega demonstravel, que pode ser apresentada sozinha.
   4. POUCAS PALAVRAS. Na tabela das etapas: o que sera feito em frases curtas,
      separadas por ponto e virgula; a entrega em uma frase. Prosa so onde tabela nao
-     cabe. A versao anterior tinha 62 a 86 palavras por etapa.
-  5. SEM QUEBRA DE PAGINA FORCADA. Quebra forcada deixava meia pagina em branco; o
-     plano_base.py ja prende faixas e figuras ao que vem depois.
+     cabe. Hoje: 36 a 58 palavras por etapa.
+  5. SEM QUEBRA DE PAGINA FORCADA, e espaco entre blocos so com respiro().
   6. Criterio tem limite absoluto; o documento trata o trabalho como projeto que
      comeca do zero — conferir() recusa os termos de versao anterior.
   7. Secao numerada so com secao("titulo"). Teto de 10 paginas (medir_paginas.py).
@@ -19,12 +19,17 @@ Regras deste documento, que valem para qualquer edicao futura:
 Monte com `python gerar_plano.py`. Nao rode este arquivo sozinho.
 """
 import calendario_plano as cal
+import pacotes_plano as pac
 
 br = cal.br
 PLAN = cal.etapas_da_fase("plan")
 DESENV = cal.etapas_da_fase("desenv")
 VALID = cal.etapas_da_fase("valid")
 ULTIMA = cal.NUMEROS[-1]
+
+if sorted(pac.PACOTES) != cal.NUMEROS:
+    raise SystemExit("A WBS cobre as etapas %s, mas o calendario tem %s. Acerte "
+                     "pacotes_plano.py." % (sorted(pac.PACOTES), cal.NUMEROS))
 
 
 def _intervalo(ns):
@@ -61,7 +66,8 @@ caixa("O QUE SERÁ CONSTRUÍDO",
 
 figura("fig1_visao_geral.png",
        "Figura 1 — O projeto do começo ao fim: %d dias em %d etapas, sem pausa até o início das "
-       "aulas." % (cal.DIAS_TOTAIS, cal.N_ETAPAS), 17.0)
+       "aulas. As três faixas são as fases do modelo em cascata."
+       % (cal.DIAS_TOTAIS, cal.N_ETAPAS), 17.0)
 
 if cal.RECESSO:
     periodo = "De %s a %s, com recesso de %s a %s." % (
@@ -149,11 +155,26 @@ tabela(["Critério", "Como é medido", "Atingido quando"],
 
 # ================================================================ PARTE II
 parte("II", "O cronograma",
-      "As %d etapas, a validação e as apresentações ao orientador." % cal.N_ETAPAS, cor="14865D")
+      "O modelo, as %d etapas, a divisão do trabalho e a validação." % cal.N_ETAPAS,
+      cor="14865D")
 
-figura("fig2_cronograma.png",
-       "Figura 2 — As %d etapas, com o início e o fim do desenvolvimento e o prazo final."
-       % cal.N_ETAPAS, 16.6)
+secao("O modelo de desenvolvimento")
+
+p("O desenvolvimento segue o modelo em cascata: as fases acontecem em sequência, e cada uma "
+  "termina numa entrega que precisa estar pronta para a seguinte começar. Requisitos e "
+  "arquitetura são fechados na E%d, antes de programar; a construção vai %s; a validação começa "
+  "com o sistema completo. O modelo cabe aqui porque o escopo está definido desde o início e a "
+  "data de entrega é fixa." % (PLAN[-1], _intervalo(DESENV)), depois=2)
+
+figura("fig2_cascata.png",
+       "Figura 2 — O modelo em cascata: três fases em sequência, cada uma com um portão de saída.",
+       16.6)
+
+secao("As etapas")
+
+figura("fig3_cronograma.png",
+       "Figura 3 — As %d etapas, com o início e o fim do desenvolvimento e o prazo final. A cor "
+       "de cada barra é a fase." % cal.N_ETAPAS, 16.6)
 
 frase_plan = _intervalo(PLAN)
 p("Cada etapa termina numa entrega demonstrável, apresentada ao orientador; a seguinte só começa "
@@ -253,14 +274,24 @@ cronograma = tabela(["Etapa", "O que será feito", "Entrega da etapa"], linhas,
 for indice, texto, fundo, cor in destaques:
     linha_destaque(cronograma, indice, texto, fundo=fundo, cor=cor)
 
+secao("A divisão do trabalho")
+
+p("A figura abre cada etapa nos pacotes de trabalho que a compõem — a mesma decomposição da "
+  "coluna \"O que será feito\", vista em árvore. Os pacotes são numerados por etapa: E%d.1, "
+  "E%d.2, e assim por diante." % (DESENV[1], DESENV[1]), depois=2)
+
+figura("fig4_wbs.png",
+       "Figura 4 — A divisão do trabalho: o projeto, as três fases, as %d etapas e os pacotes de "
+       "cada uma." % cal.N_ETAPAS, 17.0)
+
 secao("A validação: refinar até os critérios serem atingidos")
 
 p("%s não têm lista fechada de tarefas: repetem o ciclo até os critérios serem atingidos. Cada "
   "defeito vira uma correção com a causa registrada e um teste; se a medição pedir mudança no "
   "desenho, ela entra aqui." % ("As etapas " + cal.faixa("valid")), depois=2)
 
-figura("fig3_validacao.png",
-       "Figura 3 — O ciclo da validação: para quando os critérios são atingidos, ou no início das "
+figura("fig5_validacao.png",
+       "Figura 5 — O ciclo da validação: para quando os critérios são atingidos, ou no início das "
        "aulas.", 16.4)
 
 secao("Apresentações ao orientador")
@@ -329,25 +360,37 @@ tabela(["#", "Restrição", "O mecanismo que a garante", "Etapa"],
 
 # ================================================================ PARTE IV
 parte("IV", "Como o sistema vai funcionar",
-      "As quatro camadas, o caminho de uma tarefa e o que acontece quando ela falha.",
-      cor="184F95")
+      "As quatro camadas, onde ele roda, o caminho de uma tarefa e o que acontece quando ela "
+      "falha.", cor="184F95")
 
 secao("As quatro camadas")
 
 p("Cada camada só conhece a de baixo. A tela lê o mesmo banco e os mesmos avisos do motor, então "
   "nunca mostra um estado diferente do real.", depois=2)
 
-figura("fig4_arquitetura.png",
-       "Figura 4 — As quatro camadas. As fronteiras, em roxo, permitem trocar o fornecedor do "
+figura("fig6_arquitetura.png",
+       "Figura 6 — As quatro camadas. As fronteiras, em roxo, permitem trocar o fornecedor do "
        "modelo ou a busca sem mexer no motor.", 15.0)
+
+secao("Onde o sistema roda")
+
+p("Tudo roda numa máquina só. O navegador abre o painel na porta 4000; a aplicação guarda estado, "
+  "fila e busca no banco de dados, e escreve cada projeto gerado em sua própria pasta com "
+  "controle de versão. A única saída para a internet é o fornecedor do modelo. O banco sobe por "
+  "script quando se vai trabalhar, e não como serviço permanente, para não ocupar memória fora do "
+  "uso (R9).", depois=2)
+
+figura("fig7_infra.png",
+       "Figura 7 — Onde o sistema roda. Tudo numa máquina só; a única saída para a internet é o "
+       "fornecedor do modelo.", 16.6)
 
 secao("O caminho de uma tarefa")
 
 p("A unidade de trabalho é a tarefa: pequena, com critérios de aceite que são comandos. Cada "
   "passagem de estado é feita por um agente diferente de quem construiu.", depois=2)
 
-figura("fig5_ciclo.png",
-       "Figura 5 — Os seis estados e os dois portões: funcionar e ser o que foi pedido são "
+figura("fig8_ciclo.png",
+       "Figura 8 — Os seis estados e os dois portões: funcionar e ser o que foi pedido são "
        "perguntas diferentes.", 16.0)
 
 rico([("A ferramenta que o revisor não recebe.  ", True, AZUL),

@@ -4,22 +4,30 @@
 Gera PNGs em figs_plano/. Paleta identica a dos documentos de arquitetura
 (documento7_base.py), para que os documentos pareçam da mesma familia.
 
-As datas NAO moram aqui: vem de calendario_plano.py, o mesmo arquivo que o texto
-le. Mudar prazo, etapa ou recesso e mexer so la, e as figuras de tempo se
-redesenham sozinhas.
+As datas NAO moram aqui: vem de calendario_plano.py, e os pacotes da WBS vem de
+pacotes_plano.py. Mudar prazo, etapa ou recesso e mexer so no calendario.
 
     fig1_visao_geral   linha do tempo mestra, com inicio e fim do desenvolvimento
-    fig2_cronograma    uma barra por etapa, com o prazo final
-    fig3_validacao     o ciclo testar -> medir -> corrigir da validacao
-    fig4_arquitetura   as quatro camadas do sistema
-    fig5_ciclo         os seis estados de uma tarefa e os dois portoes
+    fig2_cascata       as tres fases do modelo em cascata, com os portoes
+    fig3_cronograma    uma barra por etapa (Gantt)
+    fig4_wbs           a arvore de decomposicao: projeto, fases, etapas, pacotes
+    fig5_validacao     o ciclo testar -> medir -> corrigir
+    fig6_arquitetura   as quatro camadas do sistema (desenho logico)
+    fig7_infra         onde o sistema roda (desenho fisico)
+    fig8_ciclo         os seis estados de uma tarefa e os dois portoes
 
 O numero do arquivo e o numero da figura NO DOCUMENTO.
+
+TODAS as figuras usam figsize de 10,2 pol de largura. Nao mude isso sem motivo: o
+documento as insere com 15 a 17 cm, e e essa razao que faz o texto de todas elas
+sair impresso no mesmo tamanho. Uma figura mais estreita sai com letra maior que
+as vizinhas.
 
     python figuras_plano.py
 """
 import datetime
 import os
+import textwrap
 
 import matplotlib
 matplotlib.use("Agg")
@@ -30,6 +38,7 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 from matplotlib.ticker import FixedLocator, FuncFormatter
 
 import calendario_plano as cal
+import pacotes_plano as pac
 
 # O locale do matplotlib e o do sistema (en_US nesta maquina), entao o nome do mes
 # vem em ingles se deixado por conta do DateFormatter. Formatamos a mao.
@@ -172,7 +181,51 @@ def fig_visao_geral():
     salvar(fig, "fig1_visao_geral.png")
 
 
-# -------------------------------------------------------------- 2. cronograma
+# ---------------------------------------------------------------- 2. cascata
+def fig_cascata():
+    """As tres fases em degraus: cada uma termina numa entrega, e a seguinte so comeca
+    depois dela. E a figura que explica o modelo de desenvolvimento.
+
+    A descricao de cada fase fica sob o proprio degrau: com mais de ~50 caracteres ela
+    passa por baixo da caixa seguinte. O rotulo 'portao' fica DENTRO do vao entre dois
+    degraus, onde nao esbarra em nada."""
+    fig, ax = plt.subplots(figsize=(10.2, 2.4))
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 39)
+    ax.axis("off")
+
+    descricao = {
+        "plan": "requisitos e arquitetura, antes de programar",
+        "desenv": "uma parte completa do sistema por etapa",
+        "valid": "critérios medidos até serem atingidos",
+    }
+    xs, larguras, ys = [1, 36, 71], [29, 29, 28], [26, 14, 2]
+    fases = ["plan", "desenv", "valid"]
+
+    for i, chave in enumerate(fases):
+        x, w, y = xs[i], larguras[i], ys[i]
+        cor = COR_FASE[chave]
+        ax.add_patch(FancyBboxPatch((x, y), w, 11, boxstyle="round,pad=0.3,rounding_size=0.8",
+                                    facecolor=cor, edgecolor="none", zorder=3))
+        ax.text(x + w / 2, y + 7.0, cal.FASES[chave].upper(), ha="center", va="center",
+                color="white", fontsize=8.2, fontweight="bold", zorder=4)
+        ax.text(x + w / 2, y + 3.3, "%s · %d dias" % (cal.faixa(chave), cal.dias_da_fase(chave)),
+                ha="center", va="center", color="white", fontsize=7.2, zorder=4)
+        ax.text(x + 0.5, y - 2.4, descricao[chave], ha="left", va="center",
+                fontsize=6.9, color=CINZA)
+
+        if i:
+            xa = xs[i - 1] + larguras[i - 1]
+            ya, yb = ys[i - 1] + 5.5, y + 5.5
+            ax.plot([xa, xa + 2.6, xa + 2.6], [ya, ya, yb + 0.6], color=CINZA,
+                    linewidth=1.2, zorder=4)
+            seta(ax, (xa + 2.6, yb + 1.4), (x - 0.4, yb), CINZA, escala=10)
+            ax.text(xa + 1.1, ya + 2.0, "portão", ha="left", va="center",
+                    fontsize=6.4, color=CINZA, fontweight="bold")
+    salvar(fig, "fig2_cascata.png")
+
+
+# -------------------------------------------------------------- 3. cronograma
 def fig_cronograma():
     linhas = []
     for n in cal.NUMEROS:
@@ -253,10 +306,72 @@ def fig_cronograma():
     for lado in ("top", "right", "left"):
         ax.spines[lado].set_visible(False)
     ax.spines["bottom"].set_color("#D9D9D6")
-    salvar(fig, "fig2_cronograma.png")
+    salvar(fig, "fig3_cronograma.png")
 
 
-# ------------------------------------------------------------ 3. validacao
+# --------------------------------------------------------------------- 4. WBS
+def fig_wbs():
+    """A arvore de decomposicao: projeto -> fases -> etapas -> pacotes de trabalho.
+    Dez cartoes em duas fileiras de cinco; a fase de cada etapa esta na cor.
+
+    O xlim vai ate 101,5: a quinta coluna termina em 101 e ficava cortada em 100."""
+    fig, ax = plt.subplots(figsize=(10.2, 5.4))
+    ax.set_xlim(0, 101.5)
+    ax.set_ylim(12, 100)
+    ax.axis("off")
+
+    # nivel 1 — o projeto
+    ax.add_patch(FancyBboxPatch((32, 92), 36, 7, boxstyle="round,pad=0.3,rounding_size=0.7",
+                                facecolor=TINTA, edgecolor="none", zorder=3))
+    ax.text(50, 95.5, "FÁBRICA DE SOFTWARE MULTI-AGENTE", ha="center", va="center",
+            color="white", fontsize=8.0, fontweight="bold", zorder=4)
+
+    # nivel 2 — as fases
+    fases = [("plan", 2, 28), ("desenv", 33, 34), ("valid", 70, 28)]
+    centros = [x + w / 2 for _, x, w in fases]
+    ax.plot([50, 50], [92, 89.6], color="#C9C9C4", linewidth=1.0, zorder=1)
+    ax.plot([centros[0], centros[-1]], [89.6, 89.6], color="#C9C9C4", linewidth=1.0, zorder=1)
+    for (chave, x, w), cx in zip(fases, centros):
+        ax.plot([cx, cx], [89.6, 87], color="#C9C9C4", linewidth=1.0, zorder=1)
+        ax.add_patch(FancyBboxPatch((x, 80), w, 7, boxstyle="round,pad=0.3,rounding_size=0.7",
+                                    facecolor=COR_FASE[chave], edgecolor="none", zorder=3))
+        ax.text(cx, 84.8, cal.FASES[chave].upper(), ha="center", va="center",
+                color="white", fontsize=7.4, fontweight="bold", zorder=4)
+        ax.text(cx, 81.8, "%s · %d dias" % (cal.faixa(chave), cal.dias_da_fase(chave)),
+                ha="center", va="center", color="white", fontsize=6.6, zorder=4)
+
+    # niveis 3 e 4 — etapas e pacotes, em duas fileiras de cinco
+    col_w, folga = 18.6, 1.75
+    for i, n in enumerate(cal.NUMEROS):
+        x = 1 + (i % 5) * (col_w + folga)
+        topo = 72 if i < 5 else 40
+        cor = COR_FASE[cal.FASE[n]]
+        pacotes = pac.PACOTES[n]
+        alto = 3.0 + len(pacotes) * 3.2
+
+        ax.add_patch(FancyBboxPatch((x, topo - 7), col_w, 7,
+                                    boxstyle="round,pad=0.25,rounding_size=0.6",
+                                    facecolor=cor, edgecolor="none", zorder=3))
+        ax.text(x + 1.3, topo - 3.5, "E%d" % n, ha="left", va="center", color="white",
+                fontsize=8.0, fontweight="bold", zorder=4)
+        nome = "\n".join(textwrap.wrap(cal.NOME[n], 22)[:2])
+        ax.text(x + 5.6, topo - 3.5, nome, ha="left", va="center", color="white",
+                fontsize=6.2, zorder=4, linespacing=1.25)
+
+        ax.add_patch(FancyBboxPatch((x, topo - 7 - alto), col_w, alto,
+                                    boxstyle="round,pad=0.25,rounding_size=0.6",
+                                    facecolor="#FBFBF9", edgecolor="#E2E2DE",
+                                    linewidth=0.9, zorder=2))
+        for k, rotulo in enumerate(pacotes):
+            y = topo - 9.6 - k * 3.2
+            ax.text(x + 1.3, y, "%d.%d" % (n, k + 1), ha="left", va="center",
+                    fontsize=6.6, color=cor, fontweight="bold", zorder=4)
+            ax.text(x + 4.7, y, rotulo, ha="left", va="center", fontsize=6.7,
+                    color=CINZA, zorder=4)
+    salvar(fig, "fig4_wbs.png")
+
+
+# ------------------------------------------------------------ 5. validacao
 def fig_validacao():
     """O ciclo da fase de validacao. Ela nao tem lista fechada de tarefas: repete
     testar -> medir -> corrigir ate os criterios de desempenho serem atingidos."""
@@ -281,7 +396,7 @@ def fig_validacao():
     ax.add_patch(mpatches.Polygon([(cx - mx, cy), (cx, cy + my), (cx + mx, cy), (cx, cy - my)],
                                   closed=True, facecolor="#FDF1EA", edgecolor=LARANJA,
                                   linewidth=1.4, zorder=3))
-    ax.text(cx, cy, "satisfatório?", ha="center", va="center", fontsize=8.0,
+    ax.text(cx, cy, "atingidos?", ha="center", va="center", fontsize=8.0,
             color=LARANJA, fontweight="bold", zorder=4)
 
     bloco(76.5, 17, 22, 8, "Entregar\n%s" % cal.br(fim), VERDE, VERDE, cor_texto="white")
@@ -308,10 +423,10 @@ def fig_validacao():
     ax.text(1.5, 31.2, "%s  ·  de %s a %s  ·  do fim do semestre ao início das aulas"
             % (cal.faixa("valid"), cal.br(inicio), cal.br(fim)),
             ha="left", va="center", fontsize=8.0, color=VERDE, fontweight="bold")
-    salvar(fig, "fig3_validacao.png")
+    salvar(fig, "fig5_validacao.png")
 
 
-# ------------------------------------------------------------- 4. arquitetura
+# ------------------------------------------------------------- 6. arquitetura
 def fig_arquitetura():
     fig, ax = plt.subplots(figsize=(10.2, 5.2))
     ax.set_xlim(0, 100)
@@ -372,10 +487,69 @@ def fig_arquitetura():
             ax.add_patch(FancyArrowPatch((x, y0), (x, y1), arrowstyle="-|>",
                                          mutation_scale=8, color="#C9C9C4",
                                          linewidth=1.0, zorder=1))
-    salvar(fig, "fig4_arquitetura.png")
+    salvar(fig, "fig6_arquitetura.png")
 
 
-# ------------------------------------------------------------------- 5. ciclo
+# ---------------------------------------------------------- 7. infraestrutura
+def fig_infra():
+    """Onde o sistema roda: uma maquina so, e uma unica saida para a internet.
+
+    O rotulo da maquina e curto de proposito: com o nome completo ele chegava ao x=46,
+    onde sobe a linha tracejada da internet, e os dois se cruzavam."""
+    fig, ax = plt.subplots(figsize=(10.2, 3.2))
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 49)
+    ax.axis("off")
+
+    def bloco(x, y, w, h, titulo, linhas, cor, fundo):
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.3,rounding_size=0.8",
+                                    facecolor=fundo, edgecolor=cor, linewidth=1.3, zorder=3))
+        ax.text(x + 1.6, y + h - 3.0, titulo, fontsize=8.0, fontweight="bold",
+                color=cor, va="center", zorder=4)
+        for k, l in enumerate(linhas):
+            ax.text(x + 1.6, y + h - 6.6 - k * 3.4, l, fontsize=7.0, color=CINZA,
+                    va="center", zorder=4)
+
+    # a maquina
+    ax.add_patch(FancyBboxPatch((17, 2), 66, 34, boxstyle="round,pad=0.4,rounding_size=1.0",
+                                facecolor="#FAFAF7", edgecolor="#C9C9C4", linewidth=1.4,
+                                linestyle=(0, (6, 3)), zorder=1))
+    ax.text(18.6, 33.0, "MÁQUINA LOCAL · 8 GB, 4 NÚCLEOS", fontsize=7.2, color=MUDO,
+            fontweight="bold", va="center", zorder=2)
+
+    bloco(20, 15, 28, 14, "Aplicação Elixir",
+          ["motor: agentes, fila e portões", "painel web · porta 4000"], AZUL, "#EAF2FD")
+    bloco(52, 15, 28, 14, "PostgreSQL",
+          ["tarefas, ciclos e custos", "fila de trabalhos e busca"], LARANJA, "#FCF0EA")
+    bloco(20, 3.5, 28, 9, "Projetos gerados",
+          ["um repositório git por projeto"], VERDE, "#EAF7F1")
+    bloco(52, 3.5, 28, 9, "Cópia de segurança",
+          ["do banco de dados"], VERDE, "#EAF7F1")
+
+    # fora da maquina
+    bloco(1, 15, 14, 14, "Navegador", ["o painel"], VERDE, "#EAF7F1")
+    ax.add_patch(FancyBboxPatch((66, 40.5), 32, 7.5, boxstyle="round,pad=0.3,rounding_size=0.8",
+                                facecolor="#EFEDFA", edgecolor=ROXO, linewidth=1.3, zorder=3))
+    ax.text(82, 44.2, "Fornecedor do modelo", ha="center", va="center", fontsize=8.0,
+            color=ROXO, fontweight="bold", zorder=4)
+
+    seta(ax, (15.4, 22), (19.6, 22), CINZA)
+    ax.add_patch(FancyArrowPatch((48.4, 22), (51.6, 22), arrowstyle="<|-|>",
+                                 mutation_scale=10, color=CINZA, linewidth=1.3, zorder=5))
+    seta(ax, (34, 14.8), (34, 12.9), CINZA)
+    seta(ax, (66, 14.8), (66, 12.9), CINZA)
+
+    ax.plot([46, 46, 82], [29.4, 39, 39], color=ROXO, linewidth=1.3,
+            linestyle=(0, (5, 3)), zorder=4)
+    seta(ax, (82, 38.6), (82, 40.3), ROXO)
+    ax.text(47.6, 37.3, "HTTPS · única saída para a internet", ha="left", va="center",
+            fontsize=7.0, color=ROXO)
+    ax.text(18.6, 0.4, "O banco sobe por script quando se vai trabalhar, não como serviço "
+                       "permanente.", fontsize=6.9, color=MUDO, va="center")
+    salvar(fig, "fig7_infra.png")
+
+
+# ------------------------------------------------------------------- 8. ciclo
 def fig_ciclo():
     fig, ax = plt.subplots(figsize=(10.2, 3.05))
     ax.set_xlim(0, 100)
@@ -430,18 +604,19 @@ def fig_ciclo():
             ha="center", va="center", fontsize=7.3, color=MUDO)
     ax.text(1.5, 30.8, "os dois portões,\nduas perguntas", fontsize=8, color=TINTA,
             fontweight="bold", va="center", ha="left")
-    salvar(fig, "fig5_ciclo.png")
+    salvar(fig, "fig8_ciclo.png")
 
 
 if __name__ == "__main__":
     print("calendario: %s a %s (%d dias, %d de margem)"
           % (cal.br(cal.INICIO), cal.br(cal.PRAZO_FINAL), cal.DIAS_TOTAIS, cal.MARGEM))
-    print("  desenvolvimento: %s a %s"
-          % (cal.br(cal.INICIO_DESENVOLVIMENTO), cal.br(cal.FIM_DESENVOLVIMENTO)))
     print("gerando figuras em", SAIDA)
     fig_visao_geral()
+    fig_cascata()
     fig_cronograma()
+    fig_wbs()
     fig_validacao()
     fig_arquitetura()
+    fig_infra()
     fig_ciclo()
     print("pronto.")
