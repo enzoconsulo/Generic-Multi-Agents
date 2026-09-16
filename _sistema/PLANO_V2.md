@@ -443,6 +443,17 @@ Cada uma termina registrando em `_gestao/PROGRESSO.md` **o que foi ajustado e po
 "conferido, nada divergiu" também é registro. Um ajuste sem justificativa é indistinguível de
 um desvio do plano, e é exatamente isso que a banca vai perguntar.
 
+> **As quatro aberturas nascem FORA do confinamento do agente, e isso é estrutural** (registrado em
+> 2026-09-15). Todas mandam reler `_sistema/PLANO_V2.md`, `_sistema/MIGRACAO_V2.md` e
+> `_sistema/DECISOES_FECHADAS.md` e declaram `_sistema/v2/tarefas` como área — caminhos da raiz da
+> fábrica, que o agente confinado em `projetos/fabrica-v2/` não lê nem escreve. Somada a isso, cada
+> abertura só vale ANTES da sua versão: a T-021 e a T-035 ficaram bloqueadas porque a v0.3 e a v0.4
+> já estavam construídas quando chegou a vez delas. Consequência prática: **abertura é trabalho do
+> orquestrador, no chat, não do pipeline** — foi assim que a T-042 (10/09), a T-035 (13/09) e a
+> T-021 (15/09) foram feitas, as duas últimas já como conferência retrospectiva. A **T-049** (v1.0)
+> tem o mesmo defeito e ainda não rodou: ou ela é assumida no chat, ou é reescrita dentro do
+> confinamento antes de ser promovida.
+
 ---
 
 ## 7. Onde o planejamento fica visível, do começo ao fim
