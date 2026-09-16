@@ -330,10 +330,24 @@ por este motivo" — em vez de decidir de novo, às vezes ao contrário.
   do fonte)
 
 > **Marco:** num projeto com histórico, o agente cita a decisão anterior em vez de decidir de
-> novo. T-042 … T-048.
+> novo. T-042 … T-048, **mais T-059 a T-065** (ver abaixo).
 >
 > **A consulta SQL desta fase já foi provada rodando** nesta máquina, com dado de verdade
 > (`AMBIENTE_V2.md`, seção 4).
+
+> **Acrescentado em 2026-09-15, por medição (D-004 e D-005 do projeto):** o embedder local
+> passou a ser o **Ollama com `embeddinggemma`** — medido contra `bge-m3`, `qwen3-embedding`,
+> `nomic`, `paraphrase-multilingual` e `all-minilm` num corpus real de ~2.800 trechos, e o único
+> que supera a busca por palavra. Isso abriu sete tarefas que o plano de 28/08 não previa, porque
+> ele supunha `Embedder.Local` (Bumblebee/EXLA) — descartado pela D-001, que a plataforma Windows
+> barrou:
+>
+> | | |
+> |---|---|
+> | **T-059 · T-060 · T-061** | a dimensão do vetor deixa de ser `384` travado na migração e passa a seguir o embedder configurado, com guarda que recusa o desencontro |
+> | **T-062 · T-063** | `Embedder.Ollama`, e o contrato ganha o TIPO do texto (documento × consulta) — sem o prefixo certo, a qualidade medida não se reproduz |
+> | **T-064** | o probe contra o Ollama de verdade, e o embedder local ligado em desenvolvimento |
+> | **T-065** | a fusão RRF deixa de ser fixa: vetor puro × híbrido escolhidos por número, depois que a T-047 construir o medidor |
 
 ---
 
