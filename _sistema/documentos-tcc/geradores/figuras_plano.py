@@ -362,7 +362,7 @@ def fig_wbs():
                                     boxstyle="round,pad=0.25,rounding_size=0.6",
                                     facecolor="#FBFBF9", edgecolor="#E2E2DE",
                                     linewidth=0.9, zorder=2))
-        for k, rotulo in enumerate(pacotes):
+        for k, (rotulo, _dias) in enumerate(pacotes):
             y = topo - 9.6 - k * 3.2
             ax.text(x + 1.3, y, "%d.%d" % (n, k + 1), ha="left", va="center",
                     fontsize=6.6, color=cor, fontweight="bold", zorder=4)

@@ -282,7 +282,24 @@ p("A figura abre cada etapa nos pacotes de trabalho que a compõem — a mesma d
 
 figura("fig4_wbs.png",
        "Figura 4 — A divisão do trabalho: o projeto, as três fases, as %d etapas e os pacotes de "
-       "cada uma." % cal.N_ETAPAS, 17.0)
+       "cada uma. Cada pacote é uma tarefa, com prazo próprio." % cal.N_ETAPAS, 17.0)
+
+secao("As tarefas e o prazo de cada uma")
+
+p("Os prazos estão em dias úteis, descontados fins de semana e feriados. A soma das tarefas de "
+  "uma etapa não ocupa todos os dias dela: a folga é de propósito, porque a entrega precisa ser "
+  "verificada antes de a etapa fechar e imprevisto acontece. São %d dias úteis planejados em %d "
+  "disponíveis."
+  % (sum(pac.dias(n) for n in cal.NUMEROS), cal.UTEIS_TOTAIS), tam=9.0, cor=CINZA, depois=3)
+
+tabela(["Etapa", "Tarefas, com o prazo de cada uma em dias úteis", "Dias", "Folga"],
+       [["*E%d" % n,
+         "  ·  ".join("%d.%d %s (%d)" % (n, k + 1, rotulo, d)
+                      for k, (rotulo, d) in enumerate(pac.PACOTES[n])),
+         "%d de %d" % (pac.dias(n), cal.UTEIS[n]),
+         "%d" % pac.folga(n)]
+        for n in cal.NUMEROS],
+       [1.4, 12.4, 2.1, 1.5], tam=7.8)
 
 secao("A validação: refinar até os critérios serem atingidos")
 

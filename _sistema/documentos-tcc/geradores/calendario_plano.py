@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """O CALENDARIO do plano de desenvolvimento — fonte unica de todas as datas.
 
-As figuras (figuras_plano.py) e o texto (plano_corpo.py) leem daqui. Mudar o
-calendario e mexer SO neste arquivo.
+As figuras (figuras_plano.py), os pacotes (pacotes_plano.py) e o texto
+(plano_corpo.py) leem daqui. Mudar o calendario e mexer SO neste arquivo.
 
     python calendario_plano.py      # imprime o calendario resultante e confere o prazo
 """
@@ -22,6 +22,13 @@ ULTIMA_ETAPA_ATE_O_PRAZO = True
 # para validar e refinar o sistema.
 RECESSO_ANTES_DA_ETAPA = None
 DIAS_RECESSO = 15
+
+# Feriados dentro da janela do projeto. Entram na conta porque a validacao atravessa o
+# fim de ano, e dois dias uteis a menos ali mudam a estimativa das tarefas.
+FERIADOS = {
+    datetime.date(2026, 12, 25),
+    datetime.date(2027, 1, 1),
+}
 
 FASES = {
     "plan": "Planejamento",
@@ -66,16 +73,28 @@ def _montar():
     return datas, recesso
 
 
+def _uteis(ini, fim):
+    """Dias uteis entre duas datas: sem fim de semana e sem os feriados acima."""
+    dias, d = 0, ini
+    while d <= fim:
+        if d.weekday() < 5 and d not in FERIADOS:
+            dias += 1
+        d += UM_DIA
+    return dias
+
+
 DATAS, RECESSO = _montar()
 NUMEROS = [n for n, _, _ in ETAPAS]
 NOME = {n: nome for n, nome, _ in ETAPAS}
 FASE = {n: fase for n, _, fase in ETAPAS}
 DURACAO = {n: (fim - ini).days + 1 for n, (ini, fim) in DATAS.items()}
+UTEIS = {n: _uteis(ini, fim) for n, (ini, fim) in DATAS.items()}
 N_ETAPAS = len(ETAPAS)
 
 FIM_DA_ULTIMA_ETAPA = DATAS[NUMEROS[-1]][1]
 MARGEM = (PRAZO_FINAL - FIM_DA_ULTIMA_ETAPA).days
 DIAS_TOTAIS = (PRAZO_FINAL - INICIO).days + 1
+UTEIS_TOTAIS = sum(UTEIS.values())
 
 
 def _br(data):
@@ -126,8 +145,8 @@ if __name__ == "__main__":
         if RECESSO and n == RECESSO_ANTES_DA_ETAPA:
             print("  recesso    %s a %s" % (br(RECESSO[0]), br(RECESSO[1])))
         ini, fim = DATAS[n]
-        print("  E%-2d        %s a %s  %2d dias  %-24s %s"
-              % (n, br(ini), br(fim), DURACAO[n], FASES[FASE[n]], NOME[n]))
+        print("  E%-2d        %s a %s  %2d dias (%2d úteis)  %-24s %s"
+              % (n, br(ini), br(fim), DURACAO[n], UTEIS[n], FASES[FASE[n]], NOME[n]))
     print()
     print("  inicio do projeto          %s" % br(INICIO))
     print("  inicio do desenvolvimento  %s" % br(INICIO_DESENVOLVIMENTO))
@@ -135,4 +154,5 @@ if __name__ == "__main__":
     print("  prazo final                %s   (%d dias de margem)" % (br(PRAZO_FINAL), MARGEM))
     for fase in FASES:
         print("  %-26s %d dias (%s)" % (FASES[fase], dias_da_fase(fase), faixa(fase)))
-    print("  total                      %d dias corridos" % DIAS_TOTAIS)
+    print("  total                      %d dias corridos, %d uteis"
+          % (DIAS_TOTAIS, UTEIS_TOTAIS))
