@@ -23,6 +23,7 @@ import { rodarPipeline, type DependenciasMotor, type RelatorioMotor } from "./mo
 import { trilhaDe } from "./maquina.js";
 import { detectarEcossistema } from "../ci/ecossistemas.js";
 import { novoOrcamento } from "./orcamento.js";
+import { conferirServicos, executorReal, lerServicos, servicosNoChao } from "./pre-voo.js";
 import {
   coletarOrfaos,
   RastreadorDescendentes,
@@ -246,6 +247,14 @@ export class RunnerPipeline implements Runner {
         );
         if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });
       },
+      gravarTentativas: async (t, valor) => {
+        const r = await gravarCampoFrontmatter(
+          join(dirTarefas, t.arquivo),
+          "tentativas",
+          String(valor),
+        );
+        if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });
+      },
       anexarNotas: async (t, texto) => {
         const r = await anexarNaSecao(join(dirTarefas, t.arquivo), "Notas de execução", texto);
         if (!r.ok) ctx.emitir("log", { nivel: "erro", texto: `${t.id}: ${r.motivo}` });
@@ -314,6 +323,73 @@ export class RunnerPipeline implements Runner {
       log: (nivel, texto) =>
         ctx.emitir("log", { nivel: nivel === "erro" ? "erro" : "assistente", texto }),
     };
+
+    // ---- PRÉ-VOO DOS SERVIÇOS (21/09) ------------------------------------------------
+    // ANTES do motor, e o "antes" é o ponto inteiro: com um serviço da bateria no chão, a
+    // passada mecânica reprova toda tarefa que o toque e o diagnóstico lê isso como falha
+    // `mecanica` — "objetiva e localizada", retrabalho estreito, 25 voltas. O construtor
+    // recebe então um orçamento calibrado para consertar duas linhas de código e um problema
+    // que exige ressuscitar um banco. Seis ciclos da T-056 foram exatamente isso.
+    //
+    // Projeto que não declara `servicos` em `_gestao/ci.json` não paga nada: lista vazia,
+    // nenhum comando roda, e o caminho segue idêntico ao de antes deste bloco existir.
+    const servicos = await lerServicos(dirProjeto);
+    if (servicos.length > 0) {
+      const checagem = await conferirServicos(servicos, executorReal(p.raiz));
+      for (const s of checagem) {
+        if (s.noAr && s.religado) {
+          ctx.emitir("log", {
+            nivel: "assistente",
+            texto: `pré-voo: ${s.nome} estava no chão e foi religado — rodada segue.`,
+          });
+        }
+      }
+      const chao = servicosNoChao(checagem);
+      if (chao.length > 0) {
+        // Encerramento SEM despacho nenhum: custo zero, fila intacta. É a mesma doutrina do
+        // teto de orçamento — nunca cortar no meio, só não COMEÇAR o que não cabe.
+        for (const s of chao) {
+          ctx.emitir("log", {
+            nivel: "erro",
+            texto:
+              `pré-voo: ${s.nome} FORA DO AR e não subiu.` +
+              `${s.detalhe !== undefined && s.detalhe !== "" ? `\n${s.detalhe}` : ""}`,
+          });
+        }
+        const parado: RelatorioMotor = {
+          despachos: 0,
+          tarefasConcluidas: [],
+          promovidas: [],
+          paraReplanejar: [],
+          bloqueadas: [],
+          criteriosExecutados: 0,
+          criteriosSemComando: [],
+          criteriosQuebrados: [],
+          custoPorTarefa: [],
+          impedimentos: [],
+          tentativasIgnoradas: [],
+          estouros: [],
+          foraDeAreas: [],
+          marcos: [],
+          saneadas: [],
+          etapasFalhas: [],
+          replanejamentos: [],
+          ciclosCobrados: [],
+          documentou: false,
+          encerrouPor: "servico-fora",
+          orcamento: novoOrcamento(p.tetoUsd ?? null),
+        };
+        rastreador.parar();
+        const textoParado = montarRelatorio(p.projeto, parado);
+        ctx.emitir("log", { nivel: "resultado", texto: textoParado });
+        return {
+          ...parado,
+          projeto: p.projeto,
+          custoEstimadoUsd: 0,
+          texto: textoParado,
+        };
+      }
+    }
 
     let relatorio: RelatorioMotor;
     try {
@@ -404,6 +480,9 @@ const POR_QUE: Readonly<Record<RelatorioMotor["encerrouPor"], string>> = {
   "sem-progresso": "Um agente terminou sem gravar o próprio status; o laço parou para não repetir o despacho.",
   "teto-de-voltas": "Teto de voltas do laço atingido — isto é sintoma de bug, investigue.",
   cota: "LIMITE DA ASSINATURA batido — a rodada parou na hora, sem gastar despacho contra a parede.",
+  "servico-fora":
+    "SERVIÇO FORA DO AR — a rodada NEM COMEÇOU, e isso é a economia: com ele no chão a suíte" +
+    " reprova toda tarefa que o toque, e o portão mecânico leria isso como defeito de código.",
 };
 
 /**
@@ -435,6 +514,10 @@ const AO_REDISPARAR: Readonly<Record<RelatorioMotor["encerrouPor"], string>> = {
     "NADA DO QUE FOI FEITO SE PERDE: o estado vive nos arquivos das tarefas, não no job." +
     " Quando a cota voltar, redispare — a rodada relê o disco, mantém o que está concluído e" +
     " retoma a tarefa que estava em voo de onde ela parou.",
+  "servico-fora":
+    "NADA FOI GASTO e nada se perdeu: nenhum despacho chegou a sair. Suba o serviço e" +
+    " redispare — a fila está intacta. Se ele cair de novo sozinho, quem persiste é o vigia" +
+    " (`manter-postgres.ps1`), não a rodada.",
 };
 
 function montarRelatorio(projeto: string, r: RelatorioMotor): string {
@@ -553,6 +636,15 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
         `CONTRATO VIOLADO — o ${t.papel} escreveu \`tentativas: ${t.escrito}\` em ${t.tarefa}` +
           ` (era ${t.mantido}); campo do construtor, valor ignorado. O número do ciclo se` +
           " escreve no texto, não no frontmatter.",
+      );
+    }
+  }
+  if (r.ciclosCobrados.length > 0) {
+    for (const c of r.ciclosCobrados) {
+      linhas.push(
+        `CICLO COBRADO pelo motor em ${c.tarefa} (\`tentativas\` ${c.de} → ${c.para}): o` +
+          " construtor foi cortado sem gravar o campo, e o ciclo já estava pago. Sem isto a" +
+          " tarefa repetiria para sempre — o teto de 3 ciclos depende deste número.",
       );
     }
   }

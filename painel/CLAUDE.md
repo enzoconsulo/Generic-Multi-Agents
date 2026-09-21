@@ -665,3 +665,26 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   do `motivo`. Hoje a linha diz `frontend@executor`. É a mesma família do item sobre motivo de
   roteamento, do lado da execução: **quando um mecanismo tem um nome interno e um efeito
   observável, o log mostra o efeito.**
+- **Lista de sinais com um buraco no meio classifica a MÁQUINA como defeito da TAREFA.**
+  `SINAIS_DE_AMBIENTE` em `pipeline/criterios.ts` tinha `ECONNRESET` desde sempre e não tinha
+  `ECONNREFUSED` — o caso comum, e o único que importa nesta máquina, onde o Postgres não é
+  serviço do Windows. Como o alias `test:` do fabrica-v2 roda `ecto.create` antes de qualquer
+  teste, banco no chão fazia até uma suíte **100% pura** sair não-zero; a saída caía em classe
+  `falha` (a única que devolve a tarefa ao construtor) e o diagnóstico a lia como `mecanica` —
+  "objetiva e localizada", retrabalho estreito, **25 voltas**. O construtor recebia então um
+  orçamento calibrado para consertar duas linhas e um problema que exige ressuscitar um banco:
+  estourava `maxTurns`, morria sem gravar `tentativas`, e como o campo é escrito pelo AGENTE o
+  teto de 3 ciclos nunca chegava. A T-056 ficou com `tentativas: 2` no frontmatter e **seis
+  ciclos** escritos nas Notas, com o artefato correto desde o primeiro commit (`c3eea89`);
+  três rodadas de 21/09 fecharam com 6 despachos, 0 tarefas e US$ 12,10. Consertos: o padrão
+  na lista (`/i` obrigatório — o Elixir imprime o átomo `:econnrefused` minúsculo), o pré-voo
+  declarativo de `pre-voo.ts` (serviço no chão = a rodada **nem começa**, custo zero) e a
+  cobrança do ciclo do construtor cortado em `motor.ts`. Três lições que valem além deste bug:
+  **(a)** ao escrever lista de assinaturas, enumere os irmãos do que você acabou de pôr —
+  `ECONNRESET` sem `ECONNREFUSED` é o buraco típico, e ninguém revisa uma lista procurando o
+  que não está lá; **(b)** classificar errado é pior que não classificar, porque a política
+  derivada é confiante e barata justamente onde deveria ser cara; **(c)** todo campo que o
+  AGENTE escreve e a MÁQUINA usa para decidir precisa de um caminho de escrita do motor para
+  quando o agente morre antes de escrever — senão o limite que depende dele nunca chega. É
+  *sensor sem atuador* na forma mais cara: o motor VIU o despacho sair e VIU o agente não
+  voltar, e isso não movia nada.

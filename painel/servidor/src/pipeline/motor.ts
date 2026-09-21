@@ -196,6 +196,13 @@ export interface DependenciasMotor {
    */
   gravarUltimaReprovacao?(tarefa: TarefaResumo, portao: PortaoQueReprovou | null): Promise<void>;
   /**
+   * Escreve `tentativas` no frontmatter da tarefa. É a EXCEÇÃO descrita em
+   * `cobrarCicloDoConstrutorCortado` — o motor só usa isto quando o construtor foi cortado
+   * sem registrar o ciclo que já gastou. Opcional: sem ela, volta o comportamento antigo
+   * (ciclo grátis, e a tarefa podendo repetir para sempre).
+   */
+  gravarTentativas?(tarefa: TarefaResumo, valor: number): Promise<void>;
+  /**
    * Hash do HEAD do repositório do projeto. Comparado ANTES e DEPOIS de uma etapa, diz se o
    * agente commitou — o sinal mais forte de "houve trabalho", e o mais comum na prática:
    * commitar está bem treinado no prompt dos construtores, mexer no frontmatter nem tanto.
@@ -357,6 +364,12 @@ export interface RelatorioMotor {
    * - `planejador-caiu`: não devolveu resultado.
    */
   replanejamentos: { tarefa: string; desfecho: "replanejada" | "sem-efeito" | "planejador-caiu" }[];
+  /**
+   * Ciclos cobrados pelo motor porque o construtor foi cortado sem gravar `tentativas`
+   * (21/09). Ver `cobrarCicloDoConstrutorCortado` — vai ao relatório porque escrever num
+   * campo que é contrato do agente precisa ser dito em voz alta, nunca feito em silêncio.
+   */
+  ciclosCobrados: { tarefa: string; de: number; para: number }[];
   /** O documentador rodou? */
   documentou: boolean;
   /** Por que o laço parou. */
@@ -367,7 +380,15 @@ export interface RelatorioMotor {
     | "sem-progresso"
     | "teto-de-voltas"
     /** Limite da assinatura batido (T-064): só o relógio reabre, insistir é desperdício. */
-    | "cota";
+    | "cota"
+    /**
+     * Serviço declarado em `_gestao/ci.json` está no chão e não subiu no pré-voo (21/09).
+     *
+     * A rodada NEM COMEÇA. Com o banco fora do ar a suíte reprova toda tarefa que o toque, e
+     * o portão mecânico não tem como distinguir isso de defeito de código — foi assim que a
+     * T-056 queimou seis ciclos sobre um artefato correto. Ver `pre-voo.ts`.
+     */
+    | "servico-fora";
   /**
    * Hora de reabertura anunciada pelo provedor, quando `encerrouPor === "cota"` (16/08).
    *
@@ -470,6 +491,7 @@ export async function rodarPipeline(
     saneadas: [],
     etapasFalhas: [],
     replanejamentos: [],
+    ciclosCobrados: [],
     documentou: false,
     encerrouPor: "sem-trabalho",
     orcamento: ctx.orcamento,
@@ -1045,6 +1067,12 @@ export async function rodarPipeline(
     // que `lerTarefas()` devolve, e aí comparar depois leria o valor já mudado — a guarda
     // de progresso passaria a acusar travamento em toda rodada saudável.
     const statusAntes = passo.tarefa.status;
+    // Pelo mesmo motivo do `statusAntes` logo acima, e a cobrança do ciclo do construtor
+    // cortado depende inteiramente disto: ela pergunta "o agente escreveu `tentativas`?",
+    // e ler `passo.tarefa.tentativas` DEPOIS do despacho responderia sempre "sim" quando a
+    // referência é compartilhada — cobrando em cima do valor que o próprio agente acabou
+    // de escrever, e encurtando a vida da tarefa pela metade.
+    const tentativasAntes = passo.tarefa.tentativas;
     // Marco do repositório ANTES da etapa: se HEAD andar, o agente commitou. Só é lido para
     // o construtor — é o único papel que entrega artefato — e custa um `git rev-parse`.
     const headAntes =
@@ -1184,6 +1212,7 @@ export async function rodarPipeline(
       }
       falhasSeguidas += 1;
       emCircuito.add(passo.tarefa.id);
+      await cobrarCicloDoConstrutorCortado(passo, tentativasAntes, dep, tentativasConfiaveis, rel);
       rel.etapasFalhas.push({
         tarefa: passo.tarefa.id,
         agente: agente.nome,
@@ -1506,6 +1535,73 @@ async function fecharCicloDoPortao(
 ): Promise<void> {
   retornos.delete(tarefa.id);
   if (tarefa.ultimaReprovacao !== null) await dep.gravarUltimaReprovacao?.(tarefa, null);
+}
+
+/**
+ * CONSTRUTOR CORTADO GASTOU UM CICLO — e até 21/09 ele saía de graça.
+ *
+ * `tentativas` é escrito pelo AGENTE: é o contrato dele, e é o campo que decide as três
+ * coisas caras (limite de 3 ciclos, escalonamento de modelo, autocorreção). Mas um agente
+ * cortado — estourou `maxTurns`, morreu no meio — não chega a escrever nada. O ciclo foi
+ * pago e não foi contado, e o motor relia a tarefa no mesmo estado na rodada seguinte.
+ *
+ * É o padrão do CLAUDE.md na sua forma mais cara: **sensor sem atuador**. O sinal existia
+ * inteiro (o motor VIU o despacho sair e VIU o agente não voltar) e não movia nada.
+ *
+ * Medido na T-056 do fabrica-v2: `tentativas: 2` no frontmatter com SEIS ciclos escritos nas
+ * Notas. O teto de 3 nunca disparou, então nunca houve bloqueio nem autocorreção — a tarefa
+ * voltava a `pronta` e era redespachada indefinidamente. Três rodadas de 21/09 fecharam com
+ * 6 despachos, 0 tarefas e US$ 12,10.
+ *
+ * DUAS TRAVAS, e as duas importam:
+ *
+ * 1. **Só o construtor.** `tentativas` conta ciclos de CONSTRUÇÃO; verificador e revisor
+ *    cortados não gastam ficha da tarefa (é o mesmo princípio que `tentativasConfiaveis`
+ *    guarda quando um papel alheio escreve o campo).
+ * 2. **Só quando o agente não escreveu.** Se ele incrementou antes de morrer — o contrato
+ *    manda incrementar AO COMEÇAR —, o ciclo já está contado e somar de novo cobraria duas
+ *    fichas por um despacho. Por isso a comparação é contra o valor no momento do despacho.
+ *
+ * Não vale para corte por COTA, e a exclusão é deliberada: ali quem interrompeu foi a parede
+ * da assinatura, não a tarefa. A doutrina dessa parada é "nada do que foi feito se perde,
+ * redispare" — cobrar ficha por ela puniria a tarefa pelo relógio do provedor. Por isso a
+ * chamada fica no ramo geral de corte, depois do `return` da cota.
+ */
+async function cobrarCicloDoConstrutorCortado(
+  passo: Passo,
+  /** `tentativas` lido ANTES do despacho — ver a captura no laço, e por que não pode ser depois. */
+  noDespacho: number,
+  dep: DependenciasMotor,
+  tentativasConfiaveis: Map<string, number>,
+  rel: RelatorioMotor,
+): Promise<void> {
+  if (passo.papel !== "construtor") return;
+  if (dep.gravarTentativas === undefined) return;
+
+  const atual = (await dep.lerTarefas()).find((t) => t.id === passo.tarefa.id);
+  // Agente escreveu (ou a tarefa sumiu do disco): nada a cobrar.
+  if (atual === undefined || atual.tentativas !== noDespacho) {
+    if (atual !== undefined) tentativasConfiaveis.set(passo.tarefa.id, atual.tentativas);
+    return;
+  }
+
+  const novo = noDespacho + 1;
+  try {
+    await dep.gravarTentativas(passo.tarefa, novo);
+  } catch (e) {
+    dep.log("erro", `${passo.tarefa.id}: não consegui cobrar o ciclo do construtor cortado — ${(e as Error).message}`);
+    return;
+  }
+  // A decisão desta rodada passa a ver o número novo — senão o escalonamento de modelo
+  // continuaria apostando no mesmo calibre que acabou de ser cortado.
+  tentativasConfiaveis.set(passo.tarefa.id, novo);
+  rel.ciclosCobrados.push({ tarefa: passo.tarefa.id, de: noDespacho, para: novo });
+  dep.log(
+    "erro",
+    `${passo.tarefa.id}: o construtor foi cortado sem gravar \`tentativas\` — o ciclo foi` +
+      ` pago e agora está contado (${noDespacho} → ${novo}). Sem isto a tarefa repetiria` +
+      " indefinidamente, porque o teto de 3 ciclos depende deste campo.",
+  );
 }
 
 async function recuperarTrabalhoNaoRegistrado(

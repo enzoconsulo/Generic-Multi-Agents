@@ -386,6 +386,53 @@ describe("classificarFalha — separar 'a entrega falhou' de 'não deu para medi
     }
   });
 
+  /**
+   * O ponto cego que custou SEIS ciclos na T-056 do fabrica-v2 (21/09).
+   *
+   * `ECONNRESET` estava na lista desde sempre; `ECONNREFUSED`, que é o caso comum, não —
+   * e o Postgres desta máquina não é serviço do Windows, então ele está fora do ar com
+   * frequência. Como o alias `test:` do projeto roda `ecto.create` antes de qualquer
+   * teste, até uma suíte PURA saía não-zero e a tarefa era devolvida ao construtor, que
+   * não tem como consertar um banco de dentro das `areas` dele.
+   *
+   * A saída REAL é minúscula (átomo do Elixir), e é por isso que o padrão é `/i`: um
+   * `\bECONNREFUSED\b` sem ele passaria ao largo justamente do caso que motivou a entrada.
+   */
+  it("banco de dados fora do ar é ambiente, não defeito da tarefa", () => {
+    expect(
+      classificarFalha({
+        ...base,
+        code: 1,
+        saida:
+          "** (DBConnection.ConnectionError) tcp connect (127.0.0.1:5432):" +
+          " connection refused - :econnrefused",
+      }),
+    ).toBe("ambiente");
+  });
+
+  it("pool que não atende (postmaster travado) é ambiente", () => {
+    expect(
+      classificarFalha({
+        ...base,
+        code: 1,
+        saida:
+          "** (Mix) The database for Fabrica.Repo couldn't be created: connection not" +
+          " available and request was dropped from queue after 4000ms",
+      }),
+    ).toBe("ambiente");
+  });
+
+  /** A trava do conserto: teste que falha DE VERDADE continua reprovando a tarefa. */
+  it("suíte vermelha por assert continua sendo `falha`, com banco no ar", () => {
+    expect(
+      classificarFalha({
+        ...base,
+        code: 1,
+        saida: "1 test, 1 failure\n** (ExUnit.AssertionError) esperado :ok, veio :error",
+      }),
+    ).toBe("falha");
+  });
+
   it("binário ausente é ferramenta — o critério aponta para o que não existe", () => {
     expect(classificarFalha({ ...base, code: "ENOENT" })).toBe("ferramenta");
     expect(classificarFalha({ ...base, code: 127, saida: "pytest: command not found" })).toBe(

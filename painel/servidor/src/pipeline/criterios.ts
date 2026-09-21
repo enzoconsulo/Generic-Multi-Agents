@@ -232,6 +232,27 @@ const SINAIS_DE_AMBIENTE: readonly RegExp[] = [
   /JavaScript heap out of memory/i,
   /runtime: out of memory/i, // Go
   /\bMemoryError\b/, // Python
+  // ---- BANCO DE DADOS FORA DO AR (21/09) -------------------------------------------
+  // O ponto cego mais caro que esta lista já teve. `ECONNRESET` estava aqui desde sempre;
+  // `ECONNREFUSED`, que é o de longe mais comum, não — e nesta máquina o Postgres NÃO é
+  // serviço do Windows (sobe à mão, por `_sistema/ferramentas/banco-v2.ps1`), então ele
+  // está fora do ar com frequência. Some-se a isso o alias `test:` do projeto fabrica-v2,
+  // que roda `ecto.create` antes de qualquer teste: com o banco no chão, até uma suíte
+  // 100% PURA sai não-zero.
+  //
+  // O que isso produzia: classe `falha` (o único veredito que devolve a tarefa ao
+  // construtor) para uma causa que NENHUM construtor conserta. A T-056 pagou SEIS ciclos
+  // por isso — código correto e provado desde o 1º commit, reprovado seis vezes porque o
+  // banco estava no chão na hora da passada. Classificada como `ambiente`, a mesma saída
+  // vira `inconclusivo`: nunca aprova, nunca reprova, ganha uma reexecução (T-055) e segue
+  // para julgamento.
+  //
+  // Minúsculas obrigatórias no primeiro padrão: o Elixir imprime o átomo `:econnrefused`,
+  // e um `\bECONNREFUSED\b` sem `/i` passaria ao largo justamente do caso que motivou isto.
+  /\bECONNREFUSED\b/i,
+  // Postmaster de pé mas sem atender (socket órfão de processo morto, ou pool esgotado).
+  // Assinatura do DBConnection; foi a 2ª metade das reprovações falsas da T-056.
+  /connection not available and request was dropped from queue/i,
 ];
 
 /** O binário não existe. Mensagem do shell, não do programa — vale para qualquer stack. */
