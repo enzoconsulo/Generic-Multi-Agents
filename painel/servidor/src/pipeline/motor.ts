@@ -197,7 +197,7 @@ export interface DependenciasMotor {
   gravarUltimaReprovacao?(tarefa: TarefaResumo, portao: PortaoQueReprovou | null): Promise<void>;
   /**
    * Escreve `tentativas` no frontmatter da tarefa. É a EXCEÇÃO descrita em
-   * `cobrarCicloDoConstrutorCortado` — o motor só usa isto quando o construtor foi cortado
+   * `cobrarCicloSemResultado` — o motor só usa isto quando o construtor foi cortado
    * sem registrar o ciclo que já gastou. Opcional: sem ela, volta o comportamento antigo
    * (ciclo grátis, e a tarefa podendo repetir para sempre).
    */
@@ -366,7 +366,7 @@ export interface RelatorioMotor {
   replanejamentos: { tarefa: string; desfecho: "replanejada" | "sem-efeito" | "planejador-caiu" }[];
   /**
    * Ciclos cobrados pelo motor porque o construtor foi cortado sem gravar `tentativas`
-   * (21/09). Ver `cobrarCicloDoConstrutorCortado` — vai ao relatório porque escrever num
+   * (21/09). Ver `cobrarCicloSemResultado` — vai ao relatório porque escrever num
    * campo que é contrato do agente precisa ser dito em voz alta, nunca feito em silêncio.
    */
   ciclosCobrados: { tarefa: string; de: number; para: number }[];
@@ -1212,7 +1212,7 @@ export async function rodarPipeline(
       }
       falhasSeguidas += 1;
       emCircuito.add(passo.tarefa.id);
-      await cobrarCicloDoConstrutorCortado(passo, tentativasAntes, dep, tentativasConfiaveis, rel);
+      await cobrarCicloSemResultado(passo, tentativasAntes, dep, tentativasConfiaveis, rel, "cortado");
       rel.etapasFalhas.push({
         tarefa: passo.tarefa.id,
         agente: agente.nome,
@@ -1401,6 +1401,28 @@ export async function rodarPipeline(
         await fecharCicloDoPortao(dep, passo.tarefa, retornos);
         continue;
       }
+      // O CICLO FOI PAGO E NÃO PRODUZIU NADA (21/09, 2ª metade do conserto).
+      //
+      // A guarda acima para a RODADA, e isso resolvia o vaivém dentro de um job. Não resolvia
+      // o laço entre jobs: `tentativas` continuava parado, então o teto de 3 ciclos nunca
+      // chegava, a tarefa voltava a `pronta` e o job seguinte a redespachava igual. Medido na
+      // T-056 do fabrica-v2: rodadas às 06:56, 07:29 e 12:45 UTC, todas fechando em
+      // `sem-progresso` com o MESMO construtor, o mesmo diagnóstico e a mesma nota — US$ 3,09
+      // a US$ 3,29 por rodada, indefinidamente.
+      //
+      // Aqui o construtor TERMINOU normalmente (`concluiu: true`) e mesmo assim não moveu o
+      // status nem deixou trabalho recuperável na árvore. Isso é um ciclo de construção
+      // gasto sem resultado, e contá-lo é o que dá à tarefa um fim: ao passar do teto ela
+      // BLOQUEIA ou vai para replanejamento — que é exatamente o tratamento certo para uma
+      // tarefa em que três construtores seguidos não souberam o que fazer.
+      await cobrarCicloSemResultado(
+        passo,
+        tentativasAntes,
+        dep,
+        tentativasConfiaveis,
+        rel,
+        "sem-status",
+      );
       if (vezes >= 2) {
         dep.log(
           "erro",
@@ -1567,13 +1589,15 @@ async function fecharCicloDoPortao(
  * redispare" — cobrar ficha por ela puniria a tarefa pelo relógio do provedor. Por isso a
  * chamada fica no ramo geral de corte, depois do `return` da cota.
  */
-async function cobrarCicloDoConstrutorCortado(
+async function cobrarCicloSemResultado(
   passo: Passo,
   /** `tentativas` lido ANTES do despacho — ver a captura no laço, e por que não pode ser depois. */
   noDespacho: number,
   dep: DependenciasMotor,
   tentativasConfiaveis: Map<string, number>,
   rel: RelatorioMotor,
+  /** Como o ciclo se perdeu — vai para o log e para o relatório. */
+  motivo: "cortado" | "sem-status",
 ): Promise<void> {
   if (passo.papel !== "construtor") return;
   if (dep.gravarTentativas === undefined) return;
@@ -1598,9 +1622,9 @@ async function cobrarCicloDoConstrutorCortado(
   rel.ciclosCobrados.push({ tarefa: passo.tarefa.id, de: noDespacho, para: novo });
   dep.log(
     "erro",
-    `${passo.tarefa.id}: o construtor foi cortado sem gravar \`tentativas\` — o ciclo foi` +
-      ` pago e agora está contado (${noDespacho} → ${novo}). Sem isto a tarefa repetiria` +
-      " indefinidamente, porque o teto de 3 ciclos depende deste campo.",
+    `${passo.tarefa.id}: o construtor ${motivo === "cortado" ? "foi cortado" : "terminou sem mover o status"}` +
+      ` e não gravou \`tentativas\` — o ciclo foi pago e agora está contado (${noDespacho} → ${novo}).` +
+      " Sem isto a tarefa repetiria indefinidamente, porque o teto de 3 ciclos depende deste campo.",
   );
 }
 

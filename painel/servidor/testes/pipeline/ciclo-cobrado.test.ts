@@ -56,7 +56,12 @@ const ctxBase: ContextoMotor = {
 
 interface Opcoes {
   /** Papel cujo despacho é cortado (não devolve resultado). */
-  cortarEm: "construtor" | "verificador" | "revisor";
+  cortarEm?: "construtor" | "verificador" | "revisor";
+  /**
+   * O construtor TERMINA normalmente e não move o status — o caso da T-056 em 21/09. É um
+   * caminho diferente do corte: `concluiu: true`, e mesmo assim zero resultado.
+   */
+  construtorMudo?: boolean;
   /** O agente cortado alcançou escrever `tentativas` antes de morrer. */
   escreveuAntesDeMorrer?: boolean;
   /** Corte por COTA — parede da assinatura, não falha da tarefa. */
@@ -93,6 +98,11 @@ function mundo(iniciais: TarefaResumo[], opcoes: Opcoes) {
       const atual = tarefas.get(pedido.tarefa.id);
       if (atual === undefined) return { custoUsd: 0.5, concluiu: true };
 
+      if (pedido.papel === "construtor" && opcoes.construtorMudo === true) {
+        // Escreve nas Notas (como o agente real faz) mas NÃO toca no status.
+        if (opcoes.escreveuAntesDeMorrer === true) atual.tentativas += 1;
+        return { custoUsd: 0.5, concluiu: true };
+      }
       if (pedido.papel === opcoes.cortarEm) {
         // O agente morreu. Pode ou não ter alcançado escrever o campo antes disso.
         if (opcoes.escreveuAntesDeMorrer === true) atual.tentativas += 1;
@@ -204,10 +214,37 @@ describe("ciclo cobrado do construtor cortado", () => {
     expect(m.tarefas.get("T-001")?.tentativas).toBe(3);
   });
 
+  /**
+   * A SEGUNDA METADE DO CONSERTO (21/09). A guarda de progresso já parava a RODADA, mas
+   * `tentativas` ficava parado — então o teto de 3 ciclos nunca chegava, a tarefa voltava a
+   * `pronta` e o job seguinte a redespachava igual. A T-056 repetiu isso às 06:56, 07:29 e
+   * 12:45 UTC, ~US$ 3 por rodada, sem fim à vista.
+   */
+  it("construtor que TERMINA sem mover o status também gasta ciclo", async () => {
+    const m = mundo([tarefa({ id: "T-001", tentativas: 0 })], { construtorMudo: true });
+    const rel = await rodarPipeline(ctxBase, m.dep);
+
+    expect(rel.ciclosCobrados.length).toBeGreaterThan(0);
+    expect(m.tarefas.get("T-001")?.tentativas).toBeGreaterThan(0);
+    expect(rel.encerrouPor).toBe("sem-progresso");
+  });
+
+  it("construtor mudo que JÁ gravou tentativas não é cobrado de novo", async () => {
+    const m = mundo([tarefa({ id: "T-001", tentativas: 0 })], {
+      construtorMudo: true,
+      escreveuAntesDeMorrer: true,
+    });
+    await rodarPipeline(ctxBase, m.dep);
+
+    expect(m.gravacoes).toEqual([]);
+  });
+
   it("diz em voz alta que escreveu num campo que é contrato do agente", async () => {
     const m = mundo([tarefa({ id: "T-001", tentativas: 0 })], { cortarEm: "construtor" });
     await rodarPipeline(ctxBase, m.dep);
 
-    expect(m.logs.some((l) => l.includes("cortado sem gravar") && l.includes("0 → 1"))).toBe(true);
+    expect(
+      m.logs.some((l) => l.includes("foi cortado") && l.includes("0 → 1")),
+    ).toBe(true);
   });
 });
