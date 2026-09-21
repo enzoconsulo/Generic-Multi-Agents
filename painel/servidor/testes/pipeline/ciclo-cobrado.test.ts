@@ -66,6 +66,8 @@ interface Opcoes {
   escreveuAntesDeMorrer?: boolean;
   /** Corte por COTA — parede da assinatura, não falha da tarefa. */
   porCota?: boolean;
+  /** Corte por INFRAESTRUTURA (rede/TLS/DNS) — o agente nem chegou a trabalhar. */
+  erroDoCorte?: string;
   /** Driver sem a dependência opcional de escrita. */
   semGravarTentativas?: boolean;
 }
@@ -109,7 +111,7 @@ function mundo(iniciais: TarefaResumo[], opcoes: Opcoes) {
         return {
           custoUsd: 0.5,
           concluiu: false,
-          erro: "Reached maximum number of turns (25)",
+          erro: opcoes.erroDoCorte ?? "Reached maximum number of turns (25)",
           ...(opcoes.porCota === true ? { limiteDeUso: "3:50am" } : {}),
         };
       }
@@ -237,6 +239,39 @@ describe("ciclo cobrado do construtor cortado", () => {
     await rodarPipeline(ctxBase, m.dep);
 
     expect(m.gravacoes).toEqual([]);
+  });
+
+  /**
+   * O defeito que uma rodada real de 21/09 revelou no PRÓPRIO conserto: três despachos caíram
+   * em `SSL certificate is not yet valid` (relógio fora de sincronia) e T-059/T-060 foram de
+   * 0 a 2 tentativas em duas rodadas, sem nenhum agente ter trabalhado. Na terceira seriam
+   * bloqueadas sem terem tido chance. Mesma doutrina da cota: parede externa não gasta ficha.
+   */
+  it("corte por INFRAESTRUTURA não gasta ficha da tarefa", async () => {
+    for (const erro of [
+      "API Error: Unable to connect to API: SSL certificate is not yet valid",
+      "getaddrinfo ENOTFOUND api.anthropic.com",
+      "socket hang up",
+    ]) {
+      const m = mundo([tarefa({ id: "T-001", tentativas: 0 })], {
+        cortarEm: "construtor",
+        erroDoCorte: erro,
+      });
+      const rel = await rodarPipeline(ctxBase, m.dep);
+      expect(m.gravacoes, erro).toEqual([]);
+      expect(rel.ciclosCobrados, erro).toEqual([]);
+    }
+  });
+
+  /** A trava do lado oposto: estouro de voltas É falha do agente e continua cobrando. */
+  it("estouro de voltas continua gastando ficha — o agente recebeu o orçamento e o gastou", async () => {
+    const m = mundo([tarefa({ id: "T-001", tentativas: 0 })], {
+      cortarEm: "construtor",
+      erroDoCorte: "Reached maximum number of turns (25)",
+    });
+    const rel = await rodarPipeline(ctxBase, m.dep);
+
+    expect(rel.ciclosCobrados).toEqual([{ tarefa: "T-001", de: 0, para: 1 }]);
   });
 
   it("diz em voz alta que escreveu num campo que é contrato do agente", async () => {

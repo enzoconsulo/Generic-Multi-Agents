@@ -216,6 +216,37 @@ export function ehLimiteDeUso(texto: string): boolean {
 }
 
 /**
+ * INFRAESTRUTURA DERRUBOU O AGENTE — a máquina ou a rede, não o trabalho dele (21/09).
+ *
+ * Irmão de `ehLimiteDeUso`, e existe pela mesma razão: distinguir a parede externa do
+ * fracasso da tarefa. A diferença entre as duas famílias de corte decide se a tarefa gasta
+ * uma das suas 3 fichas — e gastar ficha por queda de rede bloquearia tarefas saudáveis
+ * justamente durante uma indisponibilidade, que é quando ninguém está olhando.
+ *
+ * O caso que obrigou isto: numa rodada real de 21/09 os três despachos caíram com
+ * `SSL certificate is not yet valid` (relógio da máquina fora de sincronia). Nenhum agente
+ * chegou a trabalhar, e mesmo assim T-059 e T-060 foram de `tentativas` 0 → 1 → 2 em duas
+ * rodadas. Na terceira seriam BLOQUEADAS sem nunca terem tido uma chance.
+ *
+ * O contraste é o ponto: `Reached maximum number of turns` é falha DO AGENTE — ele recebeu o
+ * orçamento e o gastou —, e essa cobra ficha. Aqui ele não recebeu nada.
+ */
+const PADROES_INFRA: readonly RegExp[] = [
+  /SSL certificate/i,
+  /unable to connect to (?:the )?api/i,
+  /\bECONNREFUSED\b|\bECONNRESET\b|\bENOTFOUND\b|\bETIMEDOUT\b|\bEAI_AGAIN\b/i,
+  /network (?:error|is unreachable)/i,
+  /socket hang up/i,
+  /certificate has expired/i,
+  /getaddrinfo/i,
+];
+
+/** O texto indica queda de infraestrutura (rede, TLS, DNS), e não falha do agente? */
+export function ehFalhaDeInfra(texto: string): boolean {
+  return PADROES_INFRA.some((re) => re.test(texto));
+}
+
+/**
  * Hora de reabertura anunciada na mensagem ("resets 2:40pm"), para a UI dizer QUANDO
  * voltar em vez de só "falhou". Devolve o trecho como veio — normalizar fuso a partir de
  * um texto do provedor daria falsa precisão.

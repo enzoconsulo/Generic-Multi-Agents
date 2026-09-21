@@ -23,6 +23,7 @@ import {
   type ResultadoCriterio,
 } from "./criterios.js";
 import { fasesProntasParaMarco, lerVeredicto, type VeredictoMarco } from "./marco.js";
+import { ehFalhaDeInfra } from "../jobs/claude/runner-claude.js";
 import {
   blocoDeFoco,
   classificar,
@@ -1212,7 +1213,7 @@ export async function rodarPipeline(
       }
       falhasSeguidas += 1;
       emCircuito.add(passo.tarefa.id);
-      await cobrarCicloSemResultado(passo, tentativasAntes, dep, tentativasConfiaveis, rel, "cortado");
+      await cobrarCicloSemResultado(passo, tentativasAntes, dep, tentativasConfiaveis, rel, "cortado", r.erro ?? "");
       rel.etapasFalhas.push({
         tarefa: passo.tarefa.id,
         agente: agente.nome,
@@ -1422,6 +1423,7 @@ export async function rodarPipeline(
         tentativasConfiaveis,
         rel,
         "sem-status",
+        "",
       );
       if (vezes >= 2) {
         dep.log(
@@ -1598,9 +1600,24 @@ async function cobrarCicloSemResultado(
   rel: RelatorioMotor,
   /** Como o ciclo se perdeu — vai para o log e para o relatório. */
   motivo: "cortado" | "sem-status",
+  /** Mensagem do provedor, quando houve corte. Decide se a ficha é da tarefa ou do ambiente. */
+  erro: string,
 ): Promise<void> {
   if (passo.papel !== "construtor") return;
   if (dep.gravarTentativas === undefined) return;
+  // INFRAESTRUTURA NÃO GASTA FICHA DA TAREFA — mesma doutrina da cota, logo acima: quem
+  // interrompeu foi a rede/TLS/DNS, e o agente não chegou a receber o orçamento que
+  // deveria gastar. Medido em 21/09: três despachos caídos em `SSL certificate is not yet
+  // valid` levaram T-059 e T-060 de 0 a 2 tentativas em duas rodadas, sem nenhum agente
+  // ter trabalhado; na terceira seriam bloqueadas sem terem tido uma chance.
+  if (motivo === "cortado" && erro !== "" && ehFalhaDeInfra(erro)) {
+    dep.log(
+      "info",
+      `${passo.tarefa.id}: construtor cortado por INFRAESTRUTURA — ficha não cobrada` +
+        " (a tarefa não teve chance; o conserto é do ambiente, não dela).",
+    );
+    return;
+  }
 
   const atual = (await dep.lerTarefas()).find((t) => t.id === passo.tarefa.id);
   // Agente escreveu (ou a tarefa sumiu do disco): nada a cobrar.
