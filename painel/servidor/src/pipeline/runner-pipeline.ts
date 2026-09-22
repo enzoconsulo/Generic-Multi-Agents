@@ -643,8 +643,9 @@ function montarRelatorio(projeto: string, r: RelatorioMotor): string {
     for (const c of r.ciclosCobrados) {
       linhas.push(
         `CICLO COBRADO pelo motor em ${c.tarefa} (\`tentativas\` ${c.de} → ${c.para}): o` +
-          " construtor foi cortado sem gravar o campo, e o ciclo já estava pago. Sem isto a" +
-          " tarefa repetiria para sempre — o teto de 3 ciclos depende deste número.",
+          `${c.motivo === "cortado" ? " construtor foi cortado" : " construtor terminou sem mover o status"}` +
+          " e não gravou o campo, e o ciclo já estava pago. Sem isto a tarefa repetiria para" +
+          " sempre — o teto de 3 ciclos depende deste número.",
       );
     }
   }

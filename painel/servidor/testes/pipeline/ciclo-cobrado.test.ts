@@ -135,7 +135,9 @@ describe("ciclo cobrado do construtor cortado", () => {
 
     expect(m.gravacoes).toEqual([{ id: "T-001", valor: 1 }]);
     expect(m.tarefas.get("T-001")?.tentativas).toBe(1);
-    expect(rel.ciclosCobrados).toEqual([{ tarefa: "T-001", de: 0, para: 1 }]);
+    expect(rel.ciclosCobrados).toEqual([
+      { tarefa: "T-001", de: 0, para: 1, motivo: "cortado" },
+    ]);
   });
 
   /**
@@ -271,7 +273,9 @@ describe("ciclo cobrado do construtor cortado", () => {
     });
     const rel = await rodarPipeline(ctxBase, m.dep);
 
-    expect(rel.ciclosCobrados).toEqual([{ tarefa: "T-001", de: 0, para: 1 }]);
+    expect(rel.ciclosCobrados).toEqual([
+      { tarefa: "T-001", de: 0, para: 1, motivo: "cortado" },
+    ]);
   });
 
   it("diz em voz alta que escreveu num campo que é contrato do agente", async () => {

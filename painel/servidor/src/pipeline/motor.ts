@@ -370,7 +370,7 @@ export interface RelatorioMotor {
    * (21/09). Ver `cobrarCicloSemResultado` — vai ao relatório porque escrever num
    * campo que é contrato do agente precisa ser dito em voz alta, nunca feito em silêncio.
    */
-  ciclosCobrados: { tarefa: string; de: number; para: number }[];
+  ciclosCobrados: { tarefa: string; de: number; para: number; motivo: "cortado" | "sem-status" }[];
   /** O documentador rodou? */
   documentou: boolean;
   /** Por que o laço parou. */
@@ -1636,7 +1636,7 @@ async function cobrarCicloSemResultado(
   // A decisão desta rodada passa a ver o número novo — senão o escalonamento de modelo
   // continuaria apostando no mesmo calibre que acabou de ser cortado.
   tentativasConfiaveis.set(passo.tarefa.id, novo);
-  rel.ciclosCobrados.push({ tarefa: passo.tarefa.id, de: noDespacho, para: novo });
+  rel.ciclosCobrados.push({ tarefa: passo.tarefa.id, de: noDespacho, para: novo, motivo });
   dep.log(
     "erro",
     `${passo.tarefa.id}: o construtor ${motivo === "cortado" ? "foi cortado" : "terminou sem mover o status"}` +
