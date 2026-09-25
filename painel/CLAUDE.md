@@ -688,3 +688,17 @@ Coisas que JÁ causaram problema aqui — cada uma custou uma sessão para desco
   quando o agente morre antes de escrever — senão o limite que depende dele nunca chega. É
   *sensor sem atuador* na forma mais cara: o motor VIU o despacho sair e VIU o agente não
   voltar, e isso não movia nada.
+- **Lista de padrões do provedor nunca fica completa — meça a CONSEQUÊNCIA.** A cobrança de
+  ficha por construtor cortado (`motor.ts`) isentou primeiro a **cota**, depois
+  `SSL certificate is not yet valid`, e aí apareceu
+  `Failed to authenticate: OAuth session expired` — que nenhuma das duas pegava: três
+  despachos morreram sem trabalhar numa rodada de **US$ 0,00** e T-062, T-069 e T-070 foram
+  todas de `tentativas` 0 → 1, a caminho de bloquear tarefas saudáveis durante uma queda de
+  ambiente. Três variantes da MESMA classe, três remendos, cada um cobrindo só o modo de
+  falha que já tinha acontecido. O gate virou **`custoUsd <= 0`**: despacho que não custou
+  nada nunca começou, e isso cobre a classe inteira, inclusive o que ainda não vimos. O
+  contraste que torna o gate seguro é que `maxTurns` — a única razão legítima de cobrar um
+  corte — SEMPRE custa, porque o agente gastou 25 ou 40 voltas para chegar lá. Lição geral,
+  irmã do `despachosEmVoo`: **quando você se pegar acrescentando o terceiro padrão a uma
+  lista de strings, procure o sinal físico que a lista está tentando aproximar** — aqui era
+  "o agente chegou a trabalhar?", e a resposta estava na contabilidade que o job já mantinha.

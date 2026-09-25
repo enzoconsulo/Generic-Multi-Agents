@@ -68,6 +68,8 @@ interface Opcoes {
   porCota?: boolean;
   /** Corte por INFRAESTRUTURA (rede/TLS/DNS) — o agente nem chegou a trabalhar. */
   erroDoCorte?: string;
+  /** Custo do despacho cortado. Zero = o agente nunca começou (gate principal). */
+  custoDoCorte?: number;
   /** Driver sem a dependência opcional de escrita. */
   semGravarTentativas?: boolean;
 }
@@ -109,7 +111,7 @@ function mundo(iniciais: TarefaResumo[], opcoes: Opcoes) {
         // O agente morreu. Pode ou não ter alcançado escrever o campo antes disso.
         if (opcoes.escreveuAntesDeMorrer === true) atual.tentativas += 1;
         return {
-          custoUsd: 0.5,
+          custoUsd: opcoes.custoDoCorte ?? 0.5,
           concluiu: false,
           erro: opcoes.erroDoCorte ?? "Reached maximum number of turns (25)",
           ...(opcoes.porCota === true ? { limiteDeUso: "3:50am" } : {}),
@@ -270,6 +272,45 @@ describe("ciclo cobrado do construtor cortado", () => {
     const m = mundo([tarefa({ id: "T-001", tentativas: 0 })], {
       cortarEm: "construtor",
       erroDoCorte: "Reached maximum number of turns (25)",
+    });
+    const rel = await rodarPipeline(ctxBase, m.dep);
+
+    expect(rel.ciclosCobrados).toEqual([
+      { tarefa: "T-001", de: 0, para: 1, motivo: "cortado" },
+    ]);
+  });
+
+  /**
+   * O GATE PRINCIPAL (24/09), e a razão de ele existir em vez de mais um padrão na lista.
+   *
+   * Cota foi isentada primeiro, TLS depois, e aí veio `OAuth session expired` — que nenhuma
+   * das duas pegava. Três despachos morreram sem trabalhar e T-062, T-069 e T-070 foram de
+   * 0 para 1 numa rodada de US$ 0,00. Terceira variante da mesma classe, terceiro remendo.
+   * Custo zero cobre a classe inteira, inclusive o que ainda não aconteceu.
+   */
+  it("corte que não custou NADA não gasta ficha, qualquer que seja a causa", async () => {
+    for (const erro of [
+      "Failed to authenticate: OAuth session expired and could not be refreshed",
+      "algo que nenhuma lista de padrões previu",
+      "",
+    ]) {
+      const m = mundo([tarefa({ id: "T-001", tentativas: 0 })], {
+        cortarEm: "construtor",
+        erroDoCorte: erro,
+        custoDoCorte: 0,
+      });
+      const rel = await rodarPipeline(ctxBase, m.dep);
+      expect(m.gravacoes, erro).toEqual([]);
+      expect(rel.ciclosCobrados, erro).toEqual([]);
+    }
+  });
+
+  /** A trava do outro lado: corte que CUSTOU é trabalho queimado, e cobra. */
+  it("corte que custou gasta ficha — o agente recebeu o orçamento e o queimou", async () => {
+    const m = mundo([tarefa({ id: "T-001", tentativas: 0 })], {
+      cortarEm: "construtor",
+      erroDoCorte: "Reached maximum number of turns (25)",
+      custoDoCorte: 1.8,
     });
     const rel = await rodarPipeline(ctxBase, m.dep);
 

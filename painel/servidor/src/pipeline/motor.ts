@@ -1213,7 +1213,7 @@ export async function rodarPipeline(
       }
       falhasSeguidas += 1;
       emCircuito.add(passo.tarefa.id);
-      await cobrarCicloSemResultado(passo, tentativasAntes, dep, tentativasConfiaveis, rel, "cortado", r.erro ?? "");
+      await cobrarCicloSemResultado(passo, tentativasAntes, dep, tentativasConfiaveis, rel, "cortado", r.erro ?? "", r.custoUsd ?? 0);
       rel.etapasFalhas.push({
         tarefa: passo.tarefa.id,
         agente: agente.nome,
@@ -1424,6 +1424,9 @@ export async function rodarPipeline(
         rel,
         "sem-status",
         "",
+        // `sem-status` não passa pelo gate de custo: ali o agente TERMINOU normalmente, e o
+        // que faltou foi mover o status — trabalho houve, a ficha é devida.
+        Number.POSITIVE_INFINITY,
       );
       if (vezes >= 2) {
         dep.log(
@@ -1602,14 +1605,41 @@ async function cobrarCicloSemResultado(
   motivo: "cortado" | "sem-status",
   /** Mensagem do provedor, quando houve corte. Decide se a ficha é da tarefa ou do ambiente. */
   erro: string,
+  /** Custo REAL do despacho. Zero = o agente nunca chegou a trabalhar. Ver o gate abaixo. */
+  custoUsd: number,
 ): Promise<void> {
   if (passo.papel !== "construtor") return;
   if (dep.gravarTentativas === undefined) return;
-  // INFRAESTRUTURA NÃO GASTA FICHA DA TAREFA — mesma doutrina da cota, logo acima: quem
-  // interrompeu foi a rede/TLS/DNS, e o agente não chegou a receber o orçamento que
-  // deveria gastar. Medido em 21/09: três despachos caídos em `SSL certificate is not yet
-  // valid` levaram T-059 e T-060 de 0 a 2 tentativas em duas rodadas, sem nenhum agente
-  // ter trabalhado; na terceira seriam bloqueadas sem terem tido uma chance.
+  // ---- O AGENTE CHEGOU A TRABALHAR? ------------------------------------------------
+  //
+  // ESTE É O GATE PRINCIPAL, e ele é sobre CONSEQUÊNCIA MEDIDA, não sobre reconhecer a
+  // frase do provedor. Ficha de tarefa se gasta quando um construtor recebeu o orçamento e
+  // o queimou; despacho que custou ZERO nunca chegou a começar, e cobrá-lo pune a tarefa por
+  // um problema do ambiente.
+  //
+  // Por que ele existe (24/09): a lista de assinaturas estava virando um remendo por
+  // incidente. Cota foi isentada primeiro, `SSL certificate is not yet valid` depois — e aí
+  // apareceu `Failed to authenticate: OAuth session expired`, que nenhuma das duas pegava:
+  // três despachos morreram sem trabalhar e T-062, T-069 e T-070 foram todas de 0 para 1.
+  // Terceira variante da MESMA classe, terceiro remendo. Uma lista de strings do provedor
+  // nunca vai estar completa — ela só cobre os modos de falha que já aconteceram.
+  //
+  // O custo cobre a classe inteira, inclusive as variantes que ainda não vimos, e é o
+  // sinal que o próprio `CLAUDE.md` do painel manda preferir: **medir a consequência, não a
+  // intenção**. Note que `maxTurns` — a única razão legítima de cobrar um corte — SEMPRE
+  // custa: o agente gastou 25 ou 40 voltas para chegar lá.
+  //
+  // `ehFalhaDeInfra` fica abaixo como rede de segurança, para o caso de a contabilidade do
+  // despacho não ter chegado (custo ausente num corte que de fato trabalhou).
+  if (motivo === "cortado" && custoUsd <= 0) {
+    dep.log(
+      "info",
+      `${passo.tarefa.id}: construtor cortado sem gastar nada (US$ 0,00) — ficha não cobrada.` +
+        " O agente não chegou a trabalhar; o conserto é do ambiente, não da tarefa." +
+        `${erro !== "" ? ` Causa: ${erro.slice(0, 120)}` : ""}`,
+    );
+    return;
+  }
   if (motivo === "cortado" && erro !== "" && ehFalhaDeInfra(erro)) {
     dep.log(
       "info",

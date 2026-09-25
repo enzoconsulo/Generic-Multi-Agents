@@ -383,9 +383,37 @@ export function classificarFalha(ctx: ContextoDeFalha): ClasseFalha {
 }
 
 /** Corta a saída para caber num relatório sem virar parede de texto. */
+/**
+ * Corta a saída para caber num relatório sem virar parede de texto — **tirando o MEIO, nunca
+ * o FIM** (22/09).
+ *
+ * A primeira versão guardava só o começo, e isso destruía exatamente a informação pela qual
+ * o corte existe. Ferramenta de linha de comando — compilador, runner de teste, linter,
+ * analisador de tipos — imprime preâmbulo primeiro e **veredito por último**: o construtor
+ * precisa do fim.
+ *
+ * O caso que obrigou a mudança: a T-066 do fabrica-v2 reprovou três ciclos em
+ * `verificar: mix fabrica.ci`, que falha no estágio de tipos com `Total errors: 12`. O
+ * Dialyzer gasta os primeiros ~2.000 caracteres listando as 48 aplicações do PLT e os
+ * caminhos dos `.beam`, então o construtor recebia essa lista e a frase "saída cortada" —
+ * e NENHUM dos 12 erros. Três construtores foram mandados consertar um defeito que ninguém
+ * lhes disse qual era; o terceiro esgotou as tentativas da tarefa.
+ *
+ * É a mesma lição que o `CLAUDE.md` deste projeto já registrava para o log dos jobs ("o
+ * corte por teto tira o MEIO, nunca o fim, que é onde o fluxo quebra") — num arquivo que
+ * não recebeu a correção. Ao cortar saída de ferramenta, preserve as duas pontas.
+ */
 function cortar(texto: string, max = 2000): string {
   const t = (texto ?? "").trim();
-  return t.length > max ? `${t.slice(0, max)}\n… (saída cortada)` : t;
+  if (t.length <= max) return t;
+  // Dois terços para o FIM: ali estão o veredito e os achados. O terço do começo preserva o
+  // comando, o cabeçalho e um erro que tenha estourado logo na largada.
+  const fim = Math.floor((max * 2) / 3);
+  const inicio = max - fim;
+  const omitidos = t.length - max;
+  return (
+    `${t.slice(0, inicio)}\n… (${omitidos} caracteres omitidos do meio) …\n${t.slice(-fim)}`
+  );
 }
 
 /**
