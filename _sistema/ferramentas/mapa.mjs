@@ -71,6 +71,54 @@ const LIMITE_ARQUIVO = 2_000_000; // não tenta extrair de arquivo gigante gerad
 // Varredura
 // ---------------------------------------------------------------------------
 
+/**
+ * Os arquivos do projeto. Num repositório git, o que o GIT considera do projeto: rastreados +
+ * novos não ignorados (`ls-files -co --exclude-standard`), ou seja, respeitando o `.gitignore`.
+ *
+ * Medido em 2026-10-01 no fabrica-v2 (Elixir): `deps/` e `_build/` NÃO estão em
+ * `PASTAS_IGNORADAS` — a lista é por ecossistema e sempre fica para trás de algum —, e ocupavam
+ * ~400 de ~760 linhas do MAPA, relidas por todo agente a cada volta. O `.gitignore` do projeto
+ * já sabe o que é gerado; a lista fixa continua valendo por cima (e é o caminho sem git).
+ */
+function listar(raiz) {
+  let saida;
+  try {
+    saida = execFileSync(
+      "git",
+      ["-C", raiz, "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024 },
+    );
+  } catch {
+    return varrer(raiz); // sem git (ou fora de um repositório): varredura do disco
+  }
+  const vistos = new Set();
+  const arquivos = [];
+  for (const rel of saida.split("\0")) {
+    if (!rel || vistos.has(rel)) continue; // `--cached` + `--others` repete o que está em conflito
+    vistos.add(rel);
+    const segmentos = rel.split("/");
+    const nome = segmentos[segmentos.length - 1];
+    if (segmentos.slice(0, -1).some((s) => s.startsWith(".") || PASTAS_IGNORADAS.has(s))) continue;
+    if (nome.startsWith(".") && nome !== ".gitignore") continue;
+    try {
+      if (!statSync(join(raiz, rel)).isFile()) continue; // apagado e ainda não commitado
+    } catch {
+      continue;
+    }
+    arquivos.push(rel);
+  }
+  // A mesma ordem da varredura do disco: pasta a pasta, nomes por `localeCompare`.
+  return arquivos.sort((a, b) => {
+    const pa = a.split("/");
+    const pb = b.split("/");
+    for (let i = 0; i < Math.min(pa.length, pb.length); i++) {
+      const c = pa[i].localeCompare(pb[i]);
+      if (c !== 0) return c;
+    }
+    return pa.length - pb.length;
+  });
+}
+
 /** Lista recursiva de arquivos do projeto, já sem o que `PASTAS_IGNORADAS` exclui. */
 function varrer(raiz, dir = raiz, saida = []) {
   let entradas;
@@ -311,7 +359,7 @@ function hashDoGit(raiz) {
 }
 
 function gerar(raiz) {
-  const arquivos = varrer(raiz);
+  const arquivos = listar(raiz);
   const analisados = [];
   let bytesFonte = 0;
 
