@@ -166,7 +166,9 @@ ALTERADOS neste mesmo ciclo pelo construtor (confira com `git show --stat <hash>
    contrária no ponto exato que a tarefa mudou.
 2. Rode a prova. **Ela precisa FALHAR, e falhar pelo motivo certo.**
 3. Desfaça a mutação (`git checkout -- <arquivo>`) e confirme que a árvore voltou ao estado
-   commitado antes de seguir.
+   commitado antes de seguir. Para provar o "antes" de um commit, `git stash` ou
+   `git worktree` — nunca `git checkout <commit>`: solta o HEAD, e o próximo commit de
+   qualquer agente cai fora do branch (T-078 do fabrica-v2).
 
 Se a prova continuar passando com a correção quebrada, ela não prova nada: **reprove por
 "teste que não distingue"** e diga qual mutação sobreviveu. É reprovação legítima e não
