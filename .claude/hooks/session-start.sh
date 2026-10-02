@@ -12,6 +12,9 @@
 #   3. PostgreSQL 18 + pgvector em 127.0.0.1:5432, usuário postgres/postgres — o mesmo de
 #      config/dev.exs e config/test.exs do projeto. 18 porque é o de casa (C:/pgsql/18).
 #   4. deps do projeto (mix deps.get) — o estado do contêiner é cacheado depois do hook.
+#   5. bubblewrap + socat: o sandbox do `claude` no Linux depende dos dois, e é ele que
+#      confina o Bash do agente real da v2 (sonda de 02/10, D-016 do fabrica-v2). Sem eles,
+#      com `failIfUnavailable`, o agente RECUSA iniciar — lado seguro, mas o piloto para.
 #
 # Idempotente: cada passo confere antes de agir. Falha de um passo NÃO derruba a sessão
 # (o clone, por exemplo, só funciona se o repositório estiver anexado à sessão) — avisa
@@ -141,10 +144,18 @@ baixar_deps() {
   (cd "$PROJETO_V2" && mix deps.get >/dev/null 2>&1) || { avisar "mix deps.get falhou"; return 1; }
 }
 
+instalar_sandbox() {
+  command -v bwrap >/dev/null 2>&1 && command -v socat >/dev/null 2>&1 && return 0
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -q bubblewrap socat >/dev/null 2>&1 ||
+    { apt-get update -q >/dev/null 2>&1 &&
+      DEBIAN_FRONTEND=noninteractive apt-get install -y -q bubblewrap socat >/dev/null 2>&1; }
+}
+
 instalar_otp || avisar "falhou instalar Erlang/OTP"
 instalar_elixir || avisar "falhou instalar Elixir"
 ligar_binarios
 clonar_projeto
 subir_postgres || avisar "falhou subir o Postgres"
 baixar_deps
+instalar_sandbox || avisar "falhou instalar bubblewrap/socat (sandbox do Bash do agente real)"
 exit 0
