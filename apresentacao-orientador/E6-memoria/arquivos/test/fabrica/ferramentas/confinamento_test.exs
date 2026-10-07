@@ -29,8 +29,31 @@ defmodule Fabrica.Ferramentas.ConfinamentoTest do
     File.write!(Path.join(raiz, "dentro.txt"), "dentro")
     File.write!(Path.join(fora, "segredo.txt"), "segredo")
 
-    on_exit(fn -> File.rm_rf(base) end)
+    on_exit(fn -> remover_arvore(base) end)
     {:ok, raiz: raiz, fora: fora, base: base}
+  end
+
+  # `File.rm_rf/1` nao reconhece junçao do Windows como link: ao tentar listar o destino como
+  # se fosse a propria pasta, e o destino ja ter sido removido antes na mesma varredura (ordem
+  # alfabetica: "fora" some antes de "projeto/atalho" ser visitado), a limpeza trava com
+  # `{:error, :eexist, _}` e deixa o resto da arvore no disco — PARA SEMPRE, porque o proximo
+  # `mix test` reinicia `System.unique_integer/1` do zero e um numero baixo (`conf-227`, por
+  # exemplo) colide com o lixo de uma rodada antiga. O `mklink` do teste novo acha o caminho
+  # ja ocupado e falha com "ja existe" — e e ISSO que os testes de link liam como falha de
+  # permissao (`:sem_link`), intermitente, sem relacao com privilegio nenhum. Medido: centenas
+  # de `_build/test/tmp/conf-*` acumulados desde 16/09 (T-099).
+  #
+  # `rmdir /s /q` do proprio Windows remove a junçao como o que ela e — um PONTO, nao uma
+  # pasta — sem seguir o destino: testado nesta tarefa que preserva um diretorio externo
+  # apontado por junçao enquanto apaga a arvore que a contem.
+  defp remover_arvore(caminho) do
+    if match?({:win32, _}, :os.type()) do
+      System.cmd("cmd", ["/c", "rmdir", "/s", "/q", String.replace(caminho, "/", "\\")],
+        stderr_to_stdout: true
+      )
+    else
+      File.rm_rf(caminho)
+    end
   end
 
   describe "o que passa" do

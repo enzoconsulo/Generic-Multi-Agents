@@ -347,7 +347,7 @@
   {
    "id": "T-092",
    "titulo": "O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento",
-   "status": "backlog",
+   "status": "pronta",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/operario.ex",
@@ -363,7 +363,7 @@
   {
    "id": "T-093",
    "titulo": "Fallback por texto da parede de cota lê só result/errors/stderr, não o stdout inteiro",
-   "status": "backlog",
+   "status": "pronta",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/operario/claude_cli.ex",
@@ -379,23 +379,23 @@
   {
    "id": "T-094",
    "titulo": "Piloto dormindo pela cota acorda no REARME da Cota, sem laço quente entre `reabre_em` e a folga",
-   "status": "backlog",
+   "status": "pronta",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/piloto/servidor.ex",
     "test/fabrica/piloto/servidor_test.exs"
    ],
    "objetivo": "Depois de uma parede de cota, o piloto fica parado de verdade até a Cota rearmar — acorda pelo rearme (ou por um piso de espera), e nunca reavalia em laço sem pausa enquanto a cota segue batida.",
-   "commits": 0,
-   "ultimo_commit": null,
-   "concluida_em": null,
-   "custo_usd": 0,
-   "despachos": 0
+   "commits": 4,
+   "ultimo_commit": "7dc3391",
+   "concluida_em": "2026-10-07",
+   "custo_usd": 7.04,
+   "despachos": 4
   },
   {
    "id": "T-095",
    "titulo": "Despacho que não rodou (parede de cota, sem sandbox) não é JULGADO em nenhum papel — nem avança a tarefa, nem gasta ciclo, nem aprova por omissão",
-   "status": "backlog",
+   "status": "pronta",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/fila/trabalho.ex",
@@ -405,8 +405,8 @@
    "commits": 0,
    "ultimo_commit": null,
    "concluida_em": null,
-   "custo_usd": 0,
-   "despachos": 0
+   "custo_usd": 2.07,
+   "despachos": 1
   },
   {
    "id": "T-096",
@@ -427,7 +427,7 @@
   {
    "id": "T-097",
    "titulo": "Busca filtrada por projeto não perde trecho para tuplas mortas do índice HNSW (busca_test.exs:242)",
-   "status": "backlog",
+   "status": "pronta",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/memoria/busca.ex",
@@ -443,7 +443,7 @@
   {
    "id": "T-098",
    "titulo": "classe_falha_test.exs:315 (prazo estourado reexecuta UMA vez) deixa de depender do relógio",
-   "status": "backlog",
+   "status": "pronta",
    "tentativas": 0,
    "areas": [
     "test/fabrica/criterios/classe_falha_test.exs",
@@ -490,7 +490,7 @@
   }
  ],
  "fechamento": [
-  "4555395bf9eebea4ef8eb0116a18f0454602bed8",
+  "ced37e9d7878f6858e22fc8104c8f4a0775299b1",
   "2026-10-07"
  ],
  "arquivos": [
@@ -546,11 +546,11 @@
  ],
  "n_tarefas": 29,
  "n_concluidas": 20,
- "commits": 78,
- "testes": 446,
- "linhas_lib": 6812,
- "custo_usd": 157.9,
- "despachos": 89,
+ "commits": 82,
+ "testes": 453,
+ "linhas_lib": 6870,
+ "custo_usd": 167.01,
+ "despachos": 94,
  "primeira": 12,
  "tent_media": 1.45,
  "marco_status": "bloqueada"

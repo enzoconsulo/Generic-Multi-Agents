@@ -21,6 +21,19 @@ defmodule Fabrica.Agente.Laco do
      ele devolve `{:erro, {:com_consumo, motivo, consumo}}` e a conta entra antes de o laco
      encerrar com `:erro` (T-089). Erro sem consumo medido segue nu, e conta 0,0.
 
+  ## A parede de cota vira estado do sistema (T-091)
+
+  O `Laco` e o UNICO consumidor do `{:erro, {:cota, reabre_em}}` que `ClaudeCLI` e
+  `MessagesAPI` devolvem — entao e aqui que o sinal vira `Fabrica.Cota.parede/2`, que pausa as
+  filas e guarda o horario de reabertura. Sem isso o sinal morria num log: o piloto via so
+  `desfecho: :erro`, a cota nunca aparecia batida, e `Piloto.Decisao` parava por falha em vez
+  de dormir. O desfecho da rodada continua `:erro` de proposito: a regra 2 da `Decisao` (cota
+  batida -> dormir) e checada antes da 6 (falha), e nenhum consumidor de `desfecho` muda.
+
+  O servidor de cota e a opcao `:cota` de `rodar/1` (padrao `Fabrica.Cota`, o da arvore da
+  aplicacao; `nil` desliga o aviso). Servidor que nao esta de pe NAO derruba o laco: a parede
+  fica so no log, como antes — perder a rodada por causa do aviso seria pior que nao avisar.
+
   ## Por que GenServer
 
   Porque o laco precisa ser **matavel de fora sem deixar sujeira** (T-053) e supervisionavel
@@ -33,6 +46,7 @@ defmodule Fabrica.Agente.Laco do
   require Logger
 
   alias Fabrica.Agente.Estado
+  alias Fabrica.Cota
   alias Fabrica.Custo.Precos
   alias Fabrica.Operario
   alias Fabrica.Operario.Consumo
@@ -48,6 +62,9 @@ defmodule Fabrica.Agente.Laco do
   O `timeout` do `GenServer.call` e generoso de proposito: quem impoe o limite de verdade
   sao os tetos do estado, e nao o relogio de quem chamou. Um timeout curto aqui mataria o
   laco no meio sem que nada tivesse estourado — perdendo o registro do que ja foi gasto.
+
+  `opcoes` sao as de `Fabrica.Agente.Estado.novo/1`, mais `:cota`: o servidor de
+  `Fabrica.Cota` que recebe a parede (padrao `Fabrica.Cota`; `nil` desliga) — ver @moduledoc.
   """
   @spec rodar(keyword()) :: {:ok, map()}
   def rodar(opcoes) do
@@ -56,24 +73,35 @@ defmodule Fabrica.Agente.Laco do
   end
 
   @impl GenServer
+  # `:cota` sai das opcoes ANTES de `Estado.novo/1` (que e `struct!/2` e recusaria a chave):
+  # e dado do processo, nao do historico da conversa, e viaja ao lado do estado.
   def init(opcoes) do
-    {:ok, Estado.novo(opcoes)}
+    {cota, opcoes} = Keyword.pop(opcoes, :cota, Cota)
+    {:ok, {Estado.novo(opcoes), cota}}
   end
 
   @impl GenServer
-  def handle_call(:rodar, _de, estado) do
-    final = laco(estado)
-    {:stop, :normal, {:ok, Estado.resumo(final)}, final}
+  def handle_call(:rodar, _de, {estado, cota}) do
+    final = laco(estado, cota)
+    {:stop, :normal, {:ok, Estado.resumo(final)}, {final, cota}}
   end
 
   # O laco em si. Recursivo sobre o estado, que carrega tudo: historico, voltas, gasto.
-  defp laco(estado) do
+  defp laco(estado, cota) do
     modulo = estado.operario || Operario.configurado()
     familia = Operario.familia(modulo)
 
     case modulo.conversar(requisicao(estado, familia), agulha: estado.agulha, raiz: estado.raiz) do
       {:ok, resposta} ->
-        tratar_resposta(familia, estado, resposta)
+        tratar_resposta(familia, estado, resposta, cota)
+
+      # A parede de cota (T-091): vira estado do sistema ANTES de o laco encerrar — ver
+      # @moduledoc. Parede NAO usa o envelope `:com_consumo` (D-015, adendo 6), por isso este
+      # ramo casa o sinal nu, antes do `{:erro, motivo}` generico abaixo.
+      {:erro, {:cota, _reabre_em}} = sinal ->
+        Logger.warning("laco encerrado por parede de cota: #{inspect(sinal)}")
+        :ok = avisar_parede(cota, sinal)
+        %{estado | desfecho: :erro}
 
       # O erro de uma sessao que JA GASTOU (T-089): o operario entrega o consumo medido, e ele
       # entra na conta ANTES de o laco encerrar — e a regra 4 valendo tambem no erro. O desfecho
@@ -96,7 +124,7 @@ defmodule Fabrica.Agente.Laco do
   # familia :agente_completo: o operario JA executou o que tinha para executar. Blocos de
   # :uso_de_ferramenta na resposta sao REGISTRO do que ele fez, e nao pedido para o laco.
   # Uma volta, um desfecho: contabiliza e encerra, sem anexar turno novo.
-  defp tratar_resposta(:agente_completo, estado, %Resposta{} = resposta) do
+  defp tratar_resposta(:agente_completo, estado, %Resposta{} = resposta, _cota) do
     estado
     |> contabilizar(resposta)
     |> Map.put(:desfecho, resposta.motivo_parada)
@@ -106,24 +134,48 @@ defmodule Fabrica.Agente.Laco do
   defp tratar_resposta(
          :endpoint_de_modelo,
          estado,
-         %Resposta{motivo_parada: :uso_de_ferramenta} = resposta
+         %Resposta{motivo_parada: :uso_de_ferramenta} = resposta,
+         cota
        ) do
     estado
     |> aplicar(resposta)
-    |> continuar_ou_parar()
+    |> continuar_ou_parar(cota)
   end
 
-  defp tratar_resposta(:endpoint_de_modelo, estado, %Resposta{motivo_parada: motivo} = resposta) do
+  defp tratar_resposta(
+         :endpoint_de_modelo,
+         estado,
+         %Resposta{motivo_parada: motivo} = resposta,
+         _cota
+       ) do
     estado
     |> contabilizar(resposta)
     |> Map.put(:desfecho, motivo)
   end
 
-  defp continuar_ou_parar(estado) do
+  defp continuar_ou_parar(estado, cota) do
     case Estado.pode_continuar(estado) do
-      :ok -> laco(estado)
+      :ok -> laco(estado, cota)
       {:parar, desfecho} -> %{estado | desfecho: desfecho}
     end
+  end
+
+  # Avisar a parede e melhor esforco: sem servidor de cota de pe (`nil`, nome nao registrado,
+  # processo que morreu no meio da chamada) o laco encerra como antes da T-091, so com o log.
+  # `catch :exit` cobre os tres — `GenServer.call/2` sai com `:noproc` ou `:timeout`, nunca
+  # levanta excecao comum.
+  defp avisar_parede(nil, _sinal), do: :ok
+
+  defp avisar_parede(cota, sinal) do
+    Cota.parede(cota, sinal)
+  catch
+    :exit, motivo ->
+      Logger.warning(
+        "parede de cota sem servidor de cota para registrar (#{inspect(cota)}): " <>
+          "#{inspect(motivo)}; a parede fica so no log"
+      )
+
+      :ok
   end
 
   # A ordem aqui e a regra 4: contabiliza ANTES de anexar e de decidir. Se o processo morrer

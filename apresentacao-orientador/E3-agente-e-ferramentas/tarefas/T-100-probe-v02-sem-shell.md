@@ -3,7 +3,7 @@ id: T-100
 titulo: "O probe do marco da v0.2 volta a rodar no Windows: a tarefa do probe não precisa de shell, então o agente sobe sem Bash"
 projeto: fabrica-v2
 versao: v0.2
-status: backlog
+status: pronta
 prioridade: alta
 dependencias: [T-099]
 areas: [priv/probes/marco_v02_agente.exs, lib/fabrica/operario/claude_cli.ex, test/fabrica/operario/claude_cli_test.exs]

@@ -3,7 +3,7 @@ id: T-101
 titulo: "O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto"
 projeto: fabrica-v2
 versao: v0.5
-status: backlog
+status: pronta
 prioridade: alta
 dependencias: [T-099]
 areas: [lib/fabrica/despacho.ex, test/fabrica/despacho_test.exs]

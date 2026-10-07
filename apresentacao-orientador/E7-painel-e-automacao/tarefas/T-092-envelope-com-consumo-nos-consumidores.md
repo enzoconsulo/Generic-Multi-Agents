@@ -3,7 +3,7 @@ id: T-092
 titulo: "O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento"
 projeto: fabrica-v2
 versao: v1.0
-status: backlog
+status: pronta
 prioridade: media
 dependencias: [T-089, T-090, T-099]
 areas: [lib/fabrica/operario.ex, priv/probes/confinamento_cli.exs]

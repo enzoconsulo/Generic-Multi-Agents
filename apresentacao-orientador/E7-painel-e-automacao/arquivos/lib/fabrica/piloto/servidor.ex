@@ -43,6 +43,19 @@ defmodule Fabrica.Piloto.Servidor do
   `rodada_concluida/2` e a mesma porta de entrada, publica, para quem preferir informar o
   desfecho diretamente (testes, ou um futuro chamador que saiba mais que o evento cru).
 
+  ## Acordar da parede de cota, sem laco quente (T-094)
+
+  Dormindo por cota batida (`{:dormir, reabre_em}`, vindo de `Decisao`), o piloto tem DOIS
+  jeitos de acordar: o evento `[:fabrica, :cota, :rearme]` que `Fabrica.Cota` emite ao
+  rearmar (o caminho normal, quase instantaneo), e um `:acordar` agendado em
+  `reabre_em - agora` como rede de seguranca (caso o evento nao chegue). O problema que isto
+  fecha: `Fabrica.Cota` so rearma de verdade em `reabre_em + folga/0` (tolerancia a relogio
+  dessincronizado) — entao, so com o `:acordar` agendado, o piloto acordava ENTRE `reabre_em`
+  e a folga, via `Decisao` ainda achava a cota batida, e reagendava para `max(0, ja_passou)`
+  = 0ms: um laco sem pausa nenhuma, so limitado pela latencia do `Repo.all` de cada volta.
+  `atraso_para_acordar/2` fecha isso: nunca agenda atraso `<= 0`, caindo no piso
+  (`@piso_reacordar_padrao`) quando o horario ja passou.
+
   ## Por que `{:global, ...}` e nao um `Registry` supervisionado
 
   Um piloto por projeto precisa ser encontravel de novo entre um mount de LiveView e outro,
@@ -77,6 +90,11 @@ defmodule Fabrica.Piloto.Servidor do
   @estados_em_espera [:pronta, :em_teste, :em_revisao]
   @espera_mutex_ms :timer.seconds(5)
   @espera_sem_horario_ms :timer.minutes(1)
+  # Rede de seguranca contra o laco quente (T-094): entre `reabre_em` e `Fabrica.Cota.folga/0`
+  # o piloto acordaria, veria a cota AINDA batida e reagendaria para daqui a 0ms — de novo, sem
+  # pausa. O caminho principal e acordar pelo evento `[:fabrica, :cota, :rearme]` (abaixo); este
+  # piso so entra quando esse evento, por algum motivo, nao chegar.
+  @piso_reacordar_padrao :timer.seconds(30)
 
   @typedoc "O que a tela precisa mostrar: os dois tetos, o consumido, e o rearme quando dormindo."
   @type estado_publico :: %{
@@ -92,6 +110,7 @@ defmodule Fabrica.Piloto.Servidor do
 
   defstruct projeto_id: nil,
             diretorio: nil,
+            piso_reacordar_ms: @piso_reacordar_padrao,
             ligado?: false,
             teto_de_gasto: nil,
             maximo_de_rodadas: nil,
@@ -100,7 +119,8 @@ defmodule Fabrica.Piloto.Servidor do
             rodadas_seguidas_sem_concluir: 0,
             dormindo_ate: nil,
             motivo_parada: nil,
-            tarefa_em_voo_id: nil
+            tarefa_em_voo_id: nil,
+            tentativas_na_parede: 0
 
   ## API publica
 
@@ -110,7 +130,9 @@ defmodule Fabrica.Piloto.Servidor do
 
   @doc """
   Sobe o piloto de um projeto. `opcoes` exige `:projeto_id`; aceita `:nome` (`nil` para um
-  processo sem registro, util em teste) e `:diretorio` (persistencia, padrao `diretorio/0`).
+  processo sem registro, util em teste), `:diretorio` (persistencia, padrao `diretorio/0`) e
+  `:piso_reacordar_ms` (rede de seguranca do laco quente — T-094 — padrao #{@piso_reacordar_padrao}ms,
+  util em teste para nao esperar o piso de producao).
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opcoes) do
@@ -191,6 +213,7 @@ defmodule Fabrica.Piloto.Servidor do
   def init(opcoes) do
     projeto_id = Keyword.fetch!(opcoes, :projeto_id)
     diretorio = Keyword.get(opcoes, :diretorio, diretorio())
+    piso_reacordar_ms = Keyword.get(opcoes, :piso_reacordar_ms, @piso_reacordar_padrao)
 
     # `{:error, {:already_registered, pid()}}` descartado de proposito: `init/1` roda uma
     # unica vez por processo, entao a falha so acontece em situacao que ja seria um bug em
@@ -198,7 +221,11 @@ defmodule Fabrica.Piloto.Servidor do
     _ = Eventos.assinar()
 
     estado =
-      %__MODULE__{projeto_id: projeto_id, diretorio: diretorio}
+      %__MODULE__{
+        projeto_id: projeto_id,
+        diretorio: diretorio,
+        piso_reacordar_ms: piso_reacordar_ms
+      }
       |> carregar_persistido()
 
     {:ok, estado, {:continue, :retomar}}
@@ -279,6 +306,17 @@ defmodule Fabrica.Piloto.Servidor do
     else
       {:noreply, estado}
     end
+  end
+
+  # O caminho principal de acordar da parede (T-094): a Cota emite isto ao rearmar
+  # (`Fabrica.Cota.rearmar/1`), e o piloto so reage se ESTIVER dormindo — ligado e desligado
+  # nao tem rodada pendurada em `dormindo_ate`, entao caem no catch-all abaixo sem reavaliar a toa.
+  def handle_info(
+        {:fabrica, [:fabrica, :cota, :rearme], _medidas, _metadados},
+        %{ligado?: true, dormindo_ate: horario} = estado
+      )
+      when not is_nil(horario) do
+    {:noreply, avaliar_e_agir(%{estado | dormindo_ate: nil})}
   end
 
   def handle_info({:fabrica, _nome, _medidas, _metadados}, estado), do: {:noreply, estado}
@@ -362,8 +400,14 @@ defmodule Fabrica.Piloto.Servidor do
   end
 
   defp dormir(estado, horario) do
-    agendar_acordar(horario)
-    persistir(%{estado | dormindo_ate: horario})
+    agendar_acordar(estado, horario)
+
+    # Zera quando ESTA e a primeira vez que dorme nesta parede (`dormindo_ate` ainda nil);
+    # conta reavaliacoes consecutivas sem ter acordado de verdade entre elas — o sintoma do
+    # laco quente que esta tarefa fecha, e o que os testes de T-094 medem via `:sys.get_state`.
+    tentativas = if is_nil(estado.dormindo_ate), do: 1, else: estado.tentativas_na_parede + 1
+
+    persistir(%{estado | dormindo_ate: horario, tentativas_na_parede: tentativas})
   end
 
   defp parar(estado, motivo) do
@@ -376,11 +420,25 @@ defmodule Fabrica.Piloto.Servidor do
     })
   end
 
-  defp agendar_acordar(nil), do: Process.send_after(self(), :acordar, @espera_sem_horario_ms)
+  defp agendar_acordar(_estado, nil),
+    do: Process.send_after(self(), :acordar, @espera_sem_horario_ms)
 
-  defp agendar_acordar(horario) do
-    atraso = horario |> DateTime.diff(DateTime.utc_now(), :millisecond) |> max(0)
+  defp agendar_acordar(estado, horario) do
+    atraso = atraso_para_acordar(horario, estado.piso_reacordar_ms)
     Process.send_after(self(), :acordar, atraso)
+  end
+
+  @doc """
+  O atraso (ms) ate o proximo `:acordar`, dado o horario de reabertura anunciado — ver
+  `@piso_reacordar_padrao` (T-094). Nunca devolve atraso `<= 0`: se `horario` ja passou (ou e
+  agora mesmo), usa `piso` no lugar, em vez de reagendar para "ja", que e o proprio laco quente.
+  """
+  @spec atraso_para_acordar(DateTime.t(), pos_integer()) :: pos_integer()
+  def atraso_para_acordar(horario, piso) do
+    case DateTime.diff(horario, DateTime.utc_now(), :millisecond) do
+      atraso when atraso > 0 -> atraso
+      _ja_passou_ou_agora -> piso
+    end
   end
 
   defp publico(estado) do

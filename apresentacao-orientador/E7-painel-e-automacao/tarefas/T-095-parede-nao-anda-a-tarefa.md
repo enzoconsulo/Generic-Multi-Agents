@@ -3,7 +3,7 @@ id: T-095
 titulo: "Despacho que não rodou (parede de cota, sem sandbox) não é JULGADO em nenhum papel — nem avança a tarefa, nem gasta ciclo, nem aprova por omissão"
 projeto: fabrica-v2
 versao: v1.0
-status: backlog
+status: pronta
 prioridade: alta
 dependencias: [T-091, T-099]
 areas: [lib/fabrica/fila/trabalho.ex, test/fabrica/fila/trabalho_test.exs]

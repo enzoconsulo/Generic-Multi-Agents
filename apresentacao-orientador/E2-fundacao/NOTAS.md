@@ -2,7 +2,7 @@
 
 **Plano:** 19/09 – 03/10/2026 · fase Desenvolvimento · no repositório: versão `v0.1`
 **Entrega combinada no plano:** Os testes rodam sem internet e sem consumir o serviço do modelo.
-**Situação hoje (07/10/2026 07:42):** Concluída — entrega aprovada
+**Situação hoje (07/10/2026 11:22):** Concluída — entrega aprovada
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.

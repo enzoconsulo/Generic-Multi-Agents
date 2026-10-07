@@ -88,7 +88,7 @@
   {
    "id": "T-101",
    "titulo": "O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto",
-   "status": "backlog",
+   "status": "pronta",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/despacho.ex",
@@ -257,7 +257,7 @@
   }
  ],
  "fechamento": [
-  "4555395bf9eebea4ef8eb0116a18f0454602bed8",
+  "ced37e9d7878f6858e22fc8104c8f4a0775299b1",
   "2026-10-07"
  ],
  "arquivos": [

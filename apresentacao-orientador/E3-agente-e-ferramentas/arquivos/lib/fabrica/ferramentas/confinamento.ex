@@ -233,6 +233,16 @@ defmodule Fabrica.Ferramentas.Confinamento do
         {partida, do_destino} = partir_destino(prefixo, List.to_string(destino))
         andar(partida, do_destino ++ resto, saltos + 1)
 
+      {:error, :emlink} ->
+        # O Windows nao resolve a junçao salto a salto como o POSIX resolve link simbolico:
+        # ao encontrar um ciclo entre junçoes (`a -> b -> a`), o proprio SO esgota os reparse
+        # points e `read_link_all` devolve EMLINK direto, sem nunca chegar a um `{:ok, _}`
+        # que o contador de `saltos` pudesse interceptar. Cair no `{:error, _}` generico
+        # trataria o ciclo como "nao e link" e andaria por cima dele como diretorio literal —
+        # a mesma fuga que o teto de `saltos` existe para fechar no Linux, so que por um
+        # sinal diferente (medido: `mklink /J` mutuo) (T-099).
+        throw(:ciclo_de_links)
+
       {:error, _} ->
         andar(candidato, resto, saltos)
     end

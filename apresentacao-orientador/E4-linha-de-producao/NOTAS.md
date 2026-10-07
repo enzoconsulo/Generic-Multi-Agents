@@ -2,7 +2,7 @@
 
 **Plano:** 19/10 – 02/11/2026 · fase Desenvolvimento · no repositório: versão `v0.3`
 **Entrega combinada no plano:** Uma tarefa percorre os seis estados, é reprovada de propósito, é refeita e conclui.
-**Situação hoje (07/10/2026 07:42):** Construída e provada (adiantada em relação ao calendário)
+**Situação hoje (07/10/2026 11:22):** Construída e provada (adiantada em relação ao calendário)
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.

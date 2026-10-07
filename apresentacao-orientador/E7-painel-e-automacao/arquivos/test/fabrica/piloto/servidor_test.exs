@@ -354,6 +354,109 @@ defmodule Fabrica.Piloto.ServidorTest do
     end
   end
 
+  describe "atraso_para_acordar/2 — nunca agenda com atraso <= 0 (T-094)" do
+    test "horario no futuro: o atraso e a diferenca real ate ele" do
+      horario = DateTime.add(DateTime.utc_now(), 10, :second)
+
+      assert_in_delta Servidor.atraso_para_acordar(horario, 1_000), 10_000, 50
+    end
+
+    test "horario ja passado: usa o piso, nunca atraso <= 0" do
+      horario = DateTime.add(DateTime.utc_now(), -5, :second)
+
+      assert Servidor.atraso_para_acordar(horario, 1_000) == 1_000
+    end
+
+    test "horario e agora mesmo: tambem usa o piso" do
+      assert Servidor.atraso_para_acordar(DateTime.utc_now(), 2_000) == 2_000
+    end
+  end
+
+  describe "cota batida com reabre_em no passado: sem laco quente (T-094)" do
+    test "o piloto dorme com o piso configurado, em vez de reavaliar sem pausa", %{
+      projeto: projeto,
+      diretorio: diretorio
+    } do
+      tarefa!(projeto, %{status: :pronta, codigo: "T-500"})
+      reabre_em_passado = DateTime.add(DateTime.utc_now(), -5, :second)
+
+      :ok = Cota.parede(Fabrica.Cota, reabre_em_passado)
+      on_exit(fn -> if Cota.batida?(Fabrica.Cota), do: :ok = Cota.rearmar(Fabrica.Cota) end)
+
+      pid = piloto!(projeto, diretorio, piso_reacordar_ms: 80)
+      {:ok, publico} = Servidor.ligar(pid, 50.0, 10)
+
+      assert publico.ligado?
+      assert publico.dormindo_ate == reabre_em_passado
+
+      Process.sleep(110)
+
+      # com piso de 80ms numa janela de 110ms, no maximo uma reavaliacao extra acontece depois
+      # da primeira (a do proprio `ligar`). Sem o piso (atraso 0 enquanto reabre_em segue no
+      # passado) esse numero sobe para dezenas em 110ms, porque cada reavaliacao bate no banco.
+      tentativas = :sys.get_state(pid).tentativas_na_parede
+
+      assert tentativas <= 2,
+             "piloto reavaliou #{tentativas} vezes em 110ms dormindo - laco quente"
+    end
+  end
+
+  describe "o evento [:fabrica, :cota, :rearme] acorda o piloto dormindo (T-094)" do
+    test "ligado e dormindo: o rearme da Cota acorda o piloto e ele volta a decidir, despachando a proxima tarefa pronta",
+         %{projeto: projeto, diretorio: diretorio} do
+      tarefa = tarefa!(projeto, %{status: :pronta, codigo: "T-510"})
+      reabre_em = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      :ok = Cota.parede(Fabrica.Cota, reabre_em)
+      on_exit(fn -> if Cota.batida?(Fabrica.Cota), do: :ok = Cota.rearmar(Fabrica.Cota) end)
+
+      pid = piloto!(projeto, diretorio)
+      {:ok, publico} = Servidor.ligar(pid, 50.0, 10)
+
+      assert publico.ligado?
+      assert publico.dormindo_ate == reabre_em
+      assert Repo.get!(Tarefa, tarefa.id).status == :pronta
+
+      :ok = Cota.rearmar(Fabrica.Cota)
+      :sys.get_state(pid)
+
+      depois = Servidor.estado(pid)
+      assert depois.ligado?
+      refute depois.dormindo_ate
+      assert Repo.get!(Tarefa, tarefa.id).status == :em_execucao
+    end
+
+    test "desligado: o evento de rearme nao faz o piloto reagir", %{
+      projeto: projeto,
+      diretorio: diretorio
+    } do
+      tarefa!(projeto, %{status: :pronta, codigo: "T-520"})
+      pid = piloto!(projeto, diretorio)
+
+      Fabrica.Eventos.cota_rearme()
+      :sys.get_state(pid)
+
+      refute Servidor.estado(pid).ligado?
+    end
+
+    test "ligado mas NAO dormindo: o evento de rearme nao reavalia a toa", %{
+      projeto: projeto,
+      diretorio: diretorio
+    } do
+      tarefa!(projeto, %{status: :pronta, codigo: "T-530"})
+      pid = piloto!(projeto, diretorio)
+
+      {:ok, publico} = Servidor.ligar(pid, 50.0, 10)
+      assert publico.ligado?
+      refute publico.dormindo_ate
+
+      Fabrica.Eventos.cota_rearme()
+      :sys.get_state(pid)
+
+      assert Servidor.estado(pid) == publico
+    end
+  end
+
   describe "Fabrica.Cota na arvore de supervisao da aplicacao (T-091)" do
     test "sobe com o nome Fabrica.Cota, filho de Fabrica.Supervisor" do
       pid = Process.whereis(Fabrica.Cota)

@@ -3,8 +3,8 @@ id: T-097
 titulo: "Busca filtrada por projeto não perde trecho para tuplas mortas do índice HNSW (busca_test.exs:242)"
 projeto: fabrica-v2
 versao: v1.0
-status: backlog
-prioridade: media
+status: pronta
+prioridade: alta
 dependencias: [T-099]
 areas: [lib/fabrica/memoria/busca.ex, test/fabrica/memoria/busca_test.exs]
 tentativas: 0
@@ -49,7 +49,15 @@ Não é desta tarefa mexer no esquema/migração do índice; se a única saída 
       `verificar: mix fabrica.ci`
 
 ## Notas de execução
+- 2026-10-07 (orquestrador): prioridade media → alta. `busca_test.exs:242` custou um ciclo inteiro à T-099 e à T-094 hoje (reprovação mecânica por falha fora da área delas); consertá-la primeiro barateia todas as outras.
 - 2026-10-07 (orquestrador): passa a depender da T-099 — no Windows a suíte cai em 2 testes de link do confinamento, e toda verificação desta tarefa reprovaria por isso (reprovação falsa). Volta a `pronta` sozinha quando a T-099 concluir.
+- 2026-10-07 (planejador, replanejamento da T-094): prioridade sobe de `media` para `alta`. Custo
+  medido subindo desde a criação desta tarefa (02/10): `busca_test.exs:242` já derrubou
+  mecanicamente T-070, T-075, T-076 (histórico, antes desta tarefa existir) e agora 4 ciclos
+  inteiros da T-094 (02–07/10), sempre fora da área de quem foi reprovado. T-094 já teve o
+  critério acoplado à suíte global removido (não vai mais disparar por esta flakiness), mas
+  qualquer outra tarefa que toque `mix test`/`mix fabrica.ci` continua exposta até esta fechar.
+  Dependência (T-099) já concluída — nada bloqueia o despacho.
 
 
 ## Verificação

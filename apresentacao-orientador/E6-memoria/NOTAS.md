@@ -2,7 +2,7 @@
 
 **Plano:** 18/11 – 02/12/2026 · fase Desenvolvimento · no repositório: versão `v0.5`
 **Entrega combinada no plano:** O agente cita a decisão anterior, com a fonte certa, em vez de decidir de novo.
-**Situação hoje (07/10/2026 07:42):** Peças construídas — marco bloqueado
+**Situação hoje (07/10/2026 11:22):** Peças construídas — marco bloqueado
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.
@@ -15,7 +15,7 @@
 | `NOTAS.md` | este arquivo: o que está feito, o que falta e a próxima rodada |
 | `dados.json` | os números desta etapa, extraídos do repositório |
 | `tarefas/` | cópia dos arquivos de tarefa desta etapa (objetivo, critérios, verificação, revisão) |
-| `arquivos/` | os 29 arquivos de código/teste desta etapa, no estado do commit `4555395` |
+| `arquivos/` | os 29 arquivos de código/teste desta etapa, no estado do commit `ced37e9` |
 
 ## O combinado × o feito
 
@@ -24,7 +24,7 @@
 | 6.1 Medição da busca | medir memória e tempo antes de escolher onde a busca roda | T-042 | T-042 concluída |
 | 6.2 Histórico | guardar o histórico a cada commit | T-043 | T-043 concluída |
 | 6.3 Busca híbrida | por significado e por termo exato, escolhida por medição | T-044, T-065 | T-044 concluída; T-065 concluída |
-| 6.4 Contexto com fonte | o bloco recuperado com a fonte citada | T-046, T-101 | T-046 concluída; T-101 backlog |
+| 6.4 Contexto com fonte | o bloco recuperado com a fonte citada | T-046, T-101 | T-046 concluída; T-101 pronta |
 | 6.5 Avaliação | recall e MRR do conjunto de avaliação | T-047 | T-047 concluída |
 | Busca local Modelo de embedding | embedding local (Ollama) com dimensão conferida | T-045, T-059, T-060, T-061, T-062, T-063, T-064 | T-045 concluída; T-059 concluída; T-060 concluída; T-061 concluída; T-062 concluída; T-063 concluída; T-064 concluída |
 | Entrega Marco da etapa | o agente cita a decisão anterior | T-048 | T-048 bloqueada |
@@ -44,7 +44,7 @@
 | T-044 | Busca hibrida com fusao reciproca de postos | concluída | 1 | 2026-09-10 | US$ 4,78 |
 | T-065 | A fusao deixa de ser fixa — vetor puro x hibrido, escolhido por numero | concluída | 3 | 2026-09-26 | US$ 26,55 |
 | T-046 | O bloco de contexto recuperado, com a fonte citada | concluída | 2 | 2026-09-12 | US$ 6,80 |
-| T-101 | O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto | backlog | 1 | — | — |
+| T-101 | O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto | pronta | 1 | — | — |
 | T-047 | Avaliacao da qualidade da recuperacao | concluída | 2 | 2026-09-25 | US$ 20,96 |
 | T-045 | Embedder.Servico e Embedder.Local | concluída | 4 | 2026-09-12 | US$ 24,64 |
 | T-059 | A dimensao do indice vira um fato conferivel (Fabrica.Memoria.Dimensao) | concluída | 2 | 2026-09-22 | US$ 4,44 |

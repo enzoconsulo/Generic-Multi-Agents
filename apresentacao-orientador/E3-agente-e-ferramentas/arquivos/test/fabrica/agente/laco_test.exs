@@ -608,3 +608,132 @@ defmodule Fabrica.Agente.LacoTest do
     end
   end
 end
+
+defmodule Fabrica.Agente.LacoCotaTest do
+  @moduledoc """
+  T-091: a parede de cota que o operario devolve vira ESTADO DO SISTEMA. O `Laco` e o unico
+  consumidor de `{:erro, {:cota, reabre_em}}`, entao e ele quem chama `Fabrica.Cota.parede/2` —
+  antes so logava, e o piloto via a parede como falha comum e parava.
+
+  Modulo separado e `async: false` DE PROPOSITO, no mesmo arquivo: `Fabrica.Cota` emite
+  `[:fabrica, :cota, :parede]` no barramento GLOBAL, e `eventos_test.exs` (async) faz
+  `refute_receive` exatamente desse evento. Modulo sincrono so roda depois de todos os
+  assincronos, entao a parede daqui nunca cai no meio daquele teste. Cada teste usa a PROPRIA
+  instancia de `Fabrica.Cota` (nome unico, `pausar`/`retomar` dublados): o `Fabrica.Cota`
+  global da aplicacao, e as filas do Oban, nao sao tocados.
+  """
+
+  use ExUnit.Case, async: false
+
+  @moduletag :capture_log
+
+  import ExUnit.CaptureLog
+
+  alias Fabrica.Agente.Laco
+  alias Fabrica.Cota
+  alias Fabrica.Operario.Falso
+
+  # O operario dublE da parede: devolve o sinal EXATO que `ClaudeCLI`/`MessagesAPI` devolvem,
+  # com o `reabre_em` que o teste passou na agulha.
+  defmodule OperarioDeParede do
+    @moduledoc false
+    @behaviour Fabrica.Operario
+
+    @impl Fabrica.Operario
+    def conversar(_requisicao, opcoes), do: {:erro, {:cota, Keyword.fetch!(opcoes, :agulha)}}
+  end
+
+  defp cota_propria! do
+    nome = :"cota-laco-#{System.unique_integer([:positive])}"
+    teste = self()
+
+    start_supervised!(
+      {Cota,
+       name: nome,
+       pausar: fn -> send(teste, :pausou) end,
+       retomar: fn -> send(teste, :retomou) end}
+    )
+
+    nome
+  end
+
+  defp rodar_parede(reabre_em, cota) do
+    Laco.rodar(
+      operario: OperarioDeParede,
+      agulha: reabre_em,
+      cota: cota,
+      modelo: "haiku-4.5",
+      raiz: ".",
+      ferramentas: %{}
+    )
+  end
+
+  defp daqui_a_uma_hora,
+    do: DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+
+  describe "a parede de cota do operario vira estado do sistema (T-091)" do
+    test "o Laco chama Cota.parede/2 com o sinal: o servidor fica batido, ate o horario do sinal" do
+      cota = cota_propria!()
+      reabre_em = daqui_a_uma_hora()
+
+      refute Cota.batida?(cota)
+
+      assert {:ok, resumo} = rodar_parede(reabre_em, cota)
+
+      # O desfecho da rodada NAO muda: a regra 2 de `Piloto.Decisao` (cota batida -> dormir)
+      # e checada ANTES da regra 6 (falha), entao `:erro` continua servindo — e nenhum
+      # consumidor de `desfecho` precisou mudar.
+      assert resumo.desfecho == :erro
+      assert resumo.gasto_usd == 0.0
+
+      assert %{batida?: true, reabre_em: ^reabre_em} = Cota.estado(cota)
+      # A parede pausou as filas — pela closure injetada, nunca pelo Oban global.
+      assert_received :pausou
+    end
+
+    test "parede sem horario legivel (reabre_em nil) tambem bate: a Cota cai no recuo" do
+      cota = cota_propria!()
+
+      assert {:ok, %{desfecho: :erro}} = rodar_parede(nil, cota)
+
+      assert %{batida?: true, reabre_em: nil, proxima_tentativa_em: recuo} = Cota.estado(cota)
+      assert is_integer(recuo) and recuo > 0
+    end
+
+    test "erro do operario que NAO e parede nao toca a Cota" do
+      cota = cota_propria!()
+      # Roteiro vazio: o `Falso` devolve `{:erro, :roteiro_esgotado}` na primeira volta.
+      {:ok, agulha} = Falso.iniciar(roteiro: [])
+
+      assert {:ok, %{desfecho: :erro}} =
+               Laco.rodar(
+                 agulha: agulha,
+                 cota: cota,
+                 modelo: "haiku-4.5",
+                 raiz: ".",
+                 ferramentas: %{}
+               )
+
+      refute Cota.batida?(cota)
+      refute_received :pausou
+    end
+
+    test "sem servidor de cota de pe, o Laco encerra como antes, sem excecao" do
+      inexistente = :"cota-que-nao-subiu-#{System.unique_integer([:positive])}"
+      refute Process.whereis(inexistente)
+
+      log =
+        capture_log(fn ->
+          assert {:ok, resumo} = rodar_parede(daqui_a_uma_hora(), inexistente)
+          assert resumo.desfecho == :erro
+          assert resumo.voltas == 0
+        end)
+
+      assert log =~ "sem servidor de cota para registrar"
+    end
+
+    test "cota: nil desliga o aviso: so o log, como antes da T-091" do
+      assert {:ok, %{desfecho: :erro}} = rodar_parede(daqui_a_uma_hora(), nil)
+    end
+  end
+end

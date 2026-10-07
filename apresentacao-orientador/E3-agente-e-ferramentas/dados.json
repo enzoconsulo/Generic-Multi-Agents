@@ -250,18 +250,18 @@
   {
    "id": "T-099",
    "titulo": "Windows: os dois testes de link do confinamento caem na máquina de origem — diagnosticar (fuga real ou teste frágil) e consertar",
-   "status": "pronta",
-   "tentativas": 0,
+   "status": "concluida",
+   "tentativas": 2,
    "areas": [
     "test/fabrica/ferramentas/confinamento_test.exs",
     "lib/fabrica/ferramentas/confinamento.ex"
    ],
    "objetivo": "A suíte volta a passar no Windows (a máquina de origem, onde o painel roda o pipeline) sem afrouxar nenhuma garantia do confinamento: os testes de link provam o que dizem provar, ou o código é consertado se a falha for uma fuga real.",
-   "commits": 0,
-   "ultimo_commit": null,
-   "concluida_em": null,
-   "custo_usd": 0,
-   "despachos": 0
+   "commits": 4,
+   "ultimo_commit": "172e15f",
+   "concluida_em": "2026-10-07",
+   "custo_usd": 5.24,
+   "despachos": 4
   },
   {
    "id": "T-015",
@@ -520,7 +520,7 @@
   {
    "id": "T-100",
    "titulo": "O probe do marco da v0.2 volta a rodar no Windows: a tarefa do probe não precisa de shell, então o agente sobe sem Bash",
-   "status": "backlog",
+   "status": "pronta",
    "tentativas": 0,
    "areas": [
     "priv/probes/marco_v02_agente.exs",
@@ -552,8 +552,8 @@
   }
  ],
  "fechamento": [
-  "12bca128802f710e9dcd47b2a957b8107fd44561",
-  "2026-10-02"
+  "172e15f3174fe6c91ed6bae6b4506bac0ff07b1c",
+  "2026-10-07"
  ],
  "arquivos": [
   ".gitignore",
@@ -594,13 +594,13 @@
   "test/fabrica/prompt/prefixo_test.exs"
  ],
  "n_tarefas": 33,
- "n_concluidas": 30,
- "commits": 78,
- "testes": 408,
- "linhas_lib": 4087,
- "custo_usd": 67.07,
- "despachos": 42,
+ "n_concluidas": 31,
+ "commits": 82,
+ "testes": 413,
+ "linhas_lib": 4149,
+ "custo_usd": 72.31,
+ "despachos": 46,
  "primeira": 25,
- "tent_media": 1.17,
+ "tent_media": 1.19,
  "marco_status": "concluida"
 }

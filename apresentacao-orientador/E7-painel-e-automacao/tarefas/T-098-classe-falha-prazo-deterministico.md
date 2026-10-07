@@ -3,7 +3,7 @@ id: T-098
 titulo: "classe_falha_test.exs:315 (prazo estourado reexecuta UMA vez) deixa de depender do relógio"
 projeto: fabrica-v2
 versao: v1.0
-status: backlog
+status: pronta
 prioridade: media
 dependencias: [T-099]
 areas: [test/fabrica/criterios/classe_falha_test.exs, lib/fabrica/criterios.ex]

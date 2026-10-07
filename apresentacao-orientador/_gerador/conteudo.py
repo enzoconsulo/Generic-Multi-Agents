@@ -135,7 +135,7 @@ ETAPAS = [
             ("Adiado", "Marco 2 (cache)", ["T-020c"], "medir o cache com a API por token — depende de chave de acesso"),
         ],
         "requisitos": [
-            ("R11", "ok", "Confinamento recusa absoluto, `..`, link, UNC e dispositivo; fuzz de 7.500 consultas no Linux: 0 fugas. No Windows, 2 testes de link em correção (T-099)"),
+            ("R11", "ok", "Confinamento recusa absoluto, `..`, link, UNC e dispositivo; fuzz de 7.500 consultas no Linux: 0 fugas. No Windows: fuga por ciclo de junções achada e fechada em 07/10 (T-099)"),
             ("R15", "ok", "dois adaptadores (`ClaudeCLI`, `MessagesAPI`) atrás de `Fabrica.Operario`; núcleo intocado"),
         ],
         "destaques": [
@@ -144,10 +144,10 @@ ETAPAS = [
             "Medido antes de decidir (risco previsto no plano): o CLI do fornecedor é um agente completo, não só um modelo — virou um desenho novo, a 'família do operário'.",
             "O marco reprovou 3 vezes antes de aprovar, cada vez por um defeito real — um deles com 26 testes verdes: o processo de verificação funcionou.",
             "Confinamento endurecido depois da portabilidade para Linux: link relativo, UNC com barras mistas e o shell do agente em sandbox.",
+            "07/10: a primeira bateria no Windows achou uma fuga REAL — um ciclo de junções era aceito como pasta dentro do projeto. A fábrica diagnosticou, corrigiu e provou com mutação no mesmo dia (T-099).",
         ],
         "pendente": [
             "A demonstração do marco NÃO roda hoje nesta máquina: rodada em 07/10, o agente recusou subir porque o shell exige sandbox e o Windows não o oferece (fail-closed, nada gasto — a governança funcionando). Corretiva T-100 na fila: o agente do probe sobe sem shell, que a tarefa dele não precisa.",
-            "Primeira bateria no Windows após o endurecimento do confinamento (07/10): 2 testes de link (junção) caem — corretiva T-099 aberta e na fila da fábrica.",
             "Marco 2 (cache medido com a API por token) adiado por decisão: não há chave de acesso nesta máquina (fica para depois do marco final).",
         ],
         "proxima": [

@@ -3,7 +3,7 @@ id: T-093
 titulo: "Fallback por texto da parede de cota lê só result/errors/stderr, não o stdout inteiro"
 projeto: fabrica-v2
 versao: v1.0
-status: backlog
+status: pronta
 prioridade: media
 dependencias: [T-090, T-099]
 areas: [lib/fabrica/operario/claude_cli.ex, test/fabrica/operario/claude_cli_test.exs]
