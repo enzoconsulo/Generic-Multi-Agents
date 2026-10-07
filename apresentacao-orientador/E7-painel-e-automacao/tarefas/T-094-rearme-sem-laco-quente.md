@@ -3,13 +3,13 @@ id: T-094
 titulo: "Piloto dormindo pela cota acorda no REARME da Cota, sem laço quente entre `reabre_em` e a folga"
 projeto: fabrica-v2
 versao: v1.0
-status: pronta
+status: backlog
 prioridade: alta
-dependencias: [T-091]
+dependencias: [T-091, T-099]
 areas: [lib/fabrica/piloto/servidor.ex, test/fabrica/piloto/servidor_test.exs]
 tentativas: 0
 criada: 2026-10-02
-atualizada: 2026-10-02
+atualizada: 2026-10-07
 ---
 
 ## Objetivo
@@ -45,6 +45,7 @@ segurança, nunca agendar `:acordar` com atraso abaixo de um piso quando o horá
       `verificar: mix fabrica.ci`
 
 ## Notas de execução
+- 2026-10-07 (orquestrador): passa a depender da T-099 — no Windows a suíte cai em 2 testes de link do confinamento, e toda verificação desta tarefa reprovaria por isso (reprovação falsa). Volta a `pronta` sozinha quando a T-099 concluir.
 
 
 ## Verificação
@@ -54,4 +55,5 @@ segurança, nunca agendar `:acordar` com atraso abaixo de um piso quando o horá
 
 
 ## Revisão
+
 

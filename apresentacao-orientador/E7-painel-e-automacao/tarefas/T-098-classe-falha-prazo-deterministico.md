@@ -3,13 +3,13 @@ id: T-098
 titulo: "classe_falha_test.exs:315 (prazo estourado reexecuta UMA vez) deixa de depender do relógio"
 projeto: fabrica-v2
 versao: v1.0
-status: pronta
+status: backlog
 prioridade: media
-dependencias: []
+dependencias: [T-099]
 areas: [test/fabrica/criterios/classe_falha_test.exs, lib/fabrica/criterios.ex]
 tentativas: 0
 criada: 2026-10-02
-atualizada: 2026-10-02
+atualizada: 2026-10-07
 ---
 
 ## Objetivo
@@ -39,6 +39,7 @@ termina a tempo), o conserto vai em `lib/fabrica/criterios.ex` — registre qual
       `verificar: mix fabrica.ci`
 
 ## Notas de execução
+- 2026-10-07 (orquestrador): passa a depender da T-099 — no Windows a suíte cai em 2 testes de link do confinamento, e toda verificação desta tarefa reprovaria por isso (reprovação falsa). Volta a `pronta` sozinha quando a T-099 concluir.
 
 
 ## Verificação
@@ -48,4 +49,5 @@ termina a tempo), o conserto vai em `lib/fabrica/criterios.ex` — registre qual
 
 
 ## Revisão
+
 

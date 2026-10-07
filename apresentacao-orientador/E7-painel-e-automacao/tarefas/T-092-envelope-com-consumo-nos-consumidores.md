@@ -3,13 +3,13 @@ id: T-092
 titulo: "O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento"
 projeto: fabrica-v2
 versao: v1.0
-status: pronta
+status: backlog
 prioridade: media
-dependencias: [T-089, T-090]
+dependencias: [T-089, T-090, T-099]
 areas: [lib/fabrica/operario.ex, priv/probes/confinamento_cli.exs]
 tentativas: 0
 criada: 2026-10-02
-atualizada: 2026-10-02
+atualizada: 2026-10-07
 ---
 
 ## Objetivo
@@ -47,6 +47,7 @@ A sonda CONSOME COTA (chama o `claude` real); esta tarefa NÃO a roda.
       `verificar: mix fabrica.ci`
 
 ## Notas de execução
+- 2026-10-07 (orquestrador): passa a depender da T-099 — no Windows a suíte cai em 2 testes de link do confinamento, e toda verificação desta tarefa reprovaria por isso (reprovação falsa). Volta a `pronta` sozinha quando a T-099 concluir.
 
 
 ## Verificação
@@ -56,4 +57,5 @@ A sonda CONSOME COTA (chama o `claude` real); esta tarefa NÃO a roda.
 
 
 ## Revisão
+
 

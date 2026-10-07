@@ -266,7 +266,7 @@ padding:1.2vh 2vw;color:var(--ink3);font-size:13px;background:linear-gradient(tr
 .timeline .t-warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
 .timeline .t-bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
 .timeline .agora{outline:3px solid var(--acc);outline-offset:2px}
-img.tela{width:100%;border-radius:10px;border:1px solid var(--line)}
+img.tela{max-width:100%;max-height:68vh;object-fit:contain;align-self:flex-start;border-radius:10px;border:1px solid var(--line)}
 svg text{fill:var(--ink2);font-size:13px}svg .val{fill:var(--ink);font-weight:600}
 .muted{color:var(--ink3)}
 @media (max-width:800px){.g2,.g3,.g4{grid-template-columns:1fr}.slide{padding:4vh 16px 10vh}}
@@ -286,6 +286,11 @@ if(e.key==='t'){const r=document.documentElement;r.dataset.theme=r.dataset.theme
 document.getElementById('ant').onclick=()=>ir(i-1);document.getElementById('prox').onclick=()=>ir(i+1);
 ir(parseInt(location.hash.slice(1)||'1')-1);
 """
+
+
+NOMES_IMG = {"T-051-quadro.png": "Quadro de tarefas por estado, ao vivo",
+             "T-052-console.png": "Console do agente ao vivo, com o custo da rodada",
+             "T-055-piloto-tela.png": "Piloto automático: tetos e estado na tela"}
 
 
 def pagina(titulo, slides):
@@ -421,7 +426,7 @@ Commit de fechamento: <code>{esc((et['fechamento'] or ('',))[0][:7])}</code>.</p
     # 6. imagens
     for img in e.get("imagens", []):
         sl.append(f"""<section class="slide"><div class="kicker">E{n} · evidência visual</div>
-<h2>{esc(img.replace('.png', ''))}</h2><img class="tela" src="{prefixo_img}evidencias/{esc(img)}" alt="{esc(img)}"></section>""")
+<h2>{esc(NOMES_IMG.get(img, img))}</h2><img class="tela" src="{prefixo_img}evidencias/{esc(img)}" alt="{esc(img)}"></section>""")
     # 7. pendente e próxima
     pend = "".join(f"<li>{md_inline(p)}</li>" for p in e["pendente"]) or "<li>Nada pendente.</li>"
     prox = "".join(f"<li>{md_inline(p)}</li>" for p in e["proxima"])

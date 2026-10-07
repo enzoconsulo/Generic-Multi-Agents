@@ -86,6 +86,22 @@
    "despachos": 6
   },
   {
+   "id": "T-101",
+   "titulo": "O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto",
+   "status": "backlog",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/despacho.ex",
+    "test/fabrica/despacho_test.exs"
+   ],
+   "objetivo": "Todo despacho de agente montado por `Fabrica.Despacho.montar/4` leva, quando existir, o bloco de contexto recuperado do histórico do projeto (`Fabrica.Memoria.Contexto`), com as fontes citadas — e nada muda quando não há o que recuperar. É a peça que falta para o marco da v0.5 (T-048, requisito R7: \"consultar o histórico do projeto antes de decidir, citando a fonte\").",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
    "id": "T-047",
    "titulo": "Avaliacao da qualidade da recuperacao",
    "status": "concluida",
@@ -241,11 +257,12 @@
   }
  ],
  "fechamento": [
-  "88c92aa816f9ecbdf5c6a7a19c0e3d2a9ac17a3d",
+  "4555395bf9eebea4ef8eb0116a18f0454602bed8",
   "2026-10-07"
  ],
  "arquivos": [
   "config/dev.exs",
+  "lib/fabrica/despacho.ex",
   "lib/fabrica/embedder.ex",
   "lib/fabrica/embedder/falso.ex",
   "lib/fabrica/embedder/local.ex",
@@ -261,6 +278,7 @@
   "priv/probes/ollama_real.exs",
   "priv/repo/migrations/20260909070000_criar_trechos.exs",
   "priv/repo/migrations/20260915120000_dimensao_do_embedding.exs",
+  "test/fabrica/despacho_test.exs",
   "test/fabrica/embedder/falso_test.exs",
   "test/fabrica/embedder/ollama_test.exs",
   "test/fabrica/embedder/servico_test.exs",
@@ -273,11 +291,11 @@
   "test/fabrica/memoria/dimensao_test.exs",
   "test/fabrica/memoria/ingestao_test.exs"
  ],
- "n_tarefas": 14,
+ "n_tarefas": 15,
  "n_concluidas": 13,
  "commits": 48,
- "testes": 172,
- "linhas_lib": 1372,
+ "testes": 181,
+ "linhas_lib": 1511,
  "custo_usd": 155.95,
  "despachos": 87,
  "primeira": 7,

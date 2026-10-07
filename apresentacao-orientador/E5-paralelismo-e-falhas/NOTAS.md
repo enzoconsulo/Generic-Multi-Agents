@@ -2,7 +2,7 @@
 
 **Plano:** 03/11 – 17/11/2026 · fase Desenvolvimento · no repositório: versão `v0.4`
 **Entrega combinada no plano:** Três tarefas em paralelo; encerrar uma no meio não afeta as outras, e ela volta à fila.
-**Situação hoje (07/10/2026 07:34):** Construída e provada (adiantada em relação ao calendário)
+**Situação hoje (07/10/2026 07:42):** Construída e provada (adiantada em relação ao calendário)
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.

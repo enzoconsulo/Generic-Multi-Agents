@@ -3,9 +3,9 @@ id: T-100
 titulo: "O probe do marco da v0.2 volta a rodar no Windows: a tarefa do probe não precisa de shell, então o agente sobe sem Bash"
 projeto: fabrica-v2
 versao: v0.2
-status: pronta
+status: backlog
 prioridade: alta
-dependencias: []
+dependencias: [T-099]
 areas: [priv/probes/marco_v02_agente.exs, lib/fabrica/operario/claude_cli.ex, test/fabrica/operario/claude_cli_test.exs]
 tentativas: 0
 criada: 2026-10-07
@@ -49,6 +49,7 @@ explícito (com teste), sem criar chave nenhuma que desligue o sandbox para quem
       `verificar: mix fabrica.ci`
 
 ## Notas de execução
+- 2026-10-07 (orquestrador): passa a depender da T-099 — no Windows a suíte cai em 2 testes de link do confinamento, e toda verificação desta tarefa reprovaria por isso (reprovação falsa). Volta a `pronta` sozinha quando a T-099 concluir.
 
 
 ## Verificação
@@ -58,3 +59,4 @@ explícito (com teste), sem criar chave nenhuma que desligue o sandbox para quem
 
 
 ## Revisão
+

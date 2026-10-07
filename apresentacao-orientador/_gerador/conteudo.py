@@ -231,7 +231,7 @@ ETAPAS = [
             ("6.1", "Medição da busca", ["T-042"], "medir memória e tempo antes de escolher onde a busca roda"),
             ("6.2", "Histórico", ["T-043"], "guardar o histórico a cada commit"),
             ("6.3", "Busca híbrida", ["T-044", "T-065"], "por significado e por termo exato, escolhida por medição"),
-            ("6.4", "Contexto com fonte", ["T-046"], "o bloco recuperado com a fonte citada"),
+            ("6.4", "Contexto com fonte", ["T-046", "T-101"], "o bloco recuperado com a fonte citada"),
             ("6.5", "Avaliação", ["T-047"], "recall e MRR do conjunto de avaliação"),
             ("Busca local", "Modelo de embedding", ["T-045", "T-059", "T-060", "T-061", "T-062", "T-063", "T-064"],
              "embedding local (Ollama) com dimensão conferida"),
@@ -247,10 +247,10 @@ ETAPAS = [
             "Cada commit do projeto vira histórico consultável, e o bloco recuperado traz a fonte citada.",
         ],
         "pendente": [
-            "Marco bloqueado: o bloco recuperado ainda não é injetado no prompt do agente (falta a peça que liga a memória ao despacho).",
+            "Marco bloqueado: o bloco recuperado ainda não é injetado no prompt do agente — a peça que falta virou a T-101.",
         ],
         "proxima": [
-            "Criar a tarefa que liga `Fabrica.Memoria.Contexto` ao despacho do agente.",
+            "T-101 (criada em 07/10, na fila da fábrica): liga `Fabrica.Memoria.Contexto` ao despacho do agente.",
             "Rodar o marco: agente real cita uma decisão anterior com a fonte certa.",
         ],
         "demo": None,

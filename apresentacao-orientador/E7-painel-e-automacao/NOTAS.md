@@ -2,7 +2,7 @@
 
 **Plano:** 03/12 – 17/12/2026 · fase Desenvolvimento · no repositório: versão `v1.0`
 **Entrega combinada no plano:** Um projeto inteiro acompanhado na tela, do pedido à entrega, com o custo em tempo real.
-**Situação hoje (07/10/2026 07:34):** Telas e automação construídas — marco final em andamento
+**Situação hoje (07/10/2026 07:42):** Telas e automação construídas — marco final em andamento
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.
@@ -15,7 +15,7 @@
 | `NOTAS.md` | este arquivo: o que está feito, o que falta e a próxima rodada |
 | `dados.json` | os números desta etapa, extraídos do repositório |
 | `tarefas/` | cópia dos arquivos de tarefa desta etapa (objetivo, critérios, verificação, revisão) |
-| `arquivos/` | os 49 arquivos de código/teste desta etapa, no estado do commit `88c92aa` |
+| `arquivos/` | os 49 arquivos de código/teste desta etapa, no estado do commit `4555395` |
 | `evidencias/` | capturas de tela das telas desta etapa |
 
 ## O combinado × o feito
@@ -29,7 +29,7 @@
 | 7.x Entregas não-código | trilha genérica e escada de prova | T-056 | T-056 concluída |
 | 7.5 Segredos | varredura de segredos antes de publicar | T-057 | T-057 concluída |
 | Integração Agente real de ponta a ponta | a fila sobe o agente real; custo real bate com o fornecedor | T-066, T-067, T-070, T-071, T-072, T-073, T-074, T-084, T-085, T-086, T-088, T-089 | T-066 concluída; T-067 concluída; T-070 concluída; T-071 concluída; T-072 concluída; T-073 concluída; T-074 concluída; T-084 concluída; T-085 concluída; T-086 concluída; T-088 concluída; T-089 concluída |
-| Abertas Corretivas (rodando hoje) | prontas para o motor | T-092, T-093, T-094, T-095, T-096, T-097, T-098 | T-092 pronta; T-093 pronta; T-094 pronta; T-095 pronta; T-096 backlog; T-097 pronta; T-098 pronta |
+| Abertas Corretivas (rodando hoje) | prontas para o motor | T-092, T-093, T-094, T-095, T-096, T-097, T-098 | T-092 backlog; T-093 backlog; T-094 backlog; T-095 backlog; T-096 backlog; T-097 backlog; T-098 backlog |
 | Abertura Conferir o plano | o que a tela precisa mostrar e a medição final | T-049 | T-049 backlog |
 | Entrega Marco final | um projeto inteiro, sem intervenção | T-058 | T-058 bloqueada |
 
@@ -63,13 +63,13 @@
 | T-086 | O custo de um despacho real conta a escrita de cache — o teto de gasto do piloto passa a frear de verdade | concluída | 1 | 2026-10-01 | — |
 | T-088 | O Bash que o despacho real anuncia passa a ser APROVADO — o agente consegue rodar teste | concluída | 2 | 2026-10-01 | — |
 | T-089 | Despacho que termina em erro ainda conta o que gastou — o consumo já medido não é descartado | concluída | 1 | 2026-10-01 | — |
-| T-092 | O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento | pronta | 1 | — | — |
-| T-093 | Fallback por texto da parede de cota lê só result/errors/stderr, não o stdout inteiro | pronta | 1 | — | — |
-| T-094 | Piloto dormindo pela cota acorda no REARME da Cota, sem laço quente entre `reabre_em` e a folga | pronta | 1 | — | — |
-| T-095 | Despacho que não rodou (parede de cota, sem sandbox) não é JULGADO em nenhum papel — nem avança a tarefa, nem gasta ciclo, nem aprova por omissão | pronta | 1 | — | — |
+| T-092 | O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento | backlog | 1 | — | — |
+| T-093 | Fallback por texto da parede de cota lê só result/errors/stderr, não o stdout inteiro | backlog | 1 | — | — |
+| T-094 | Piloto dormindo pela cota acorda no REARME da Cota, sem laço quente entre `reabre_em` e a folga | backlog | 1 | — | — |
+| T-095 | Despacho que não rodou (parede de cota, sem sandbox) não é JULGADO em nenhum papel — nem avança a tarefa, nem gasta ciclo, nem aprova por omissão | backlog | 1 | — | — |
 | T-096 | Parede de cota não conta como rodada sem concluir, e o piloto religado respeita o sono salvo | backlog | 1 | — | — |
-| T-097 | Busca filtrada por projeto não perde trecho para tuplas mortas do índice HNSW (busca_test.exs:242) | pronta | 1 | — | — |
-| T-098 | classe_falha_test.exs:315 (prazo estourado reexecuta UMA vez) deixa de depender do relógio | pronta | 1 | — | — |
+| T-097 | Busca filtrada por projeto não perde trecho para tuplas mortas do índice HNSW (busca_test.exs:242) | backlog | 1 | — | — |
+| T-098 | classe_falha_test.exs:315 (prazo estourado reexecuta UMA vez) deixa de depender do relógio | backlog | 1 | — | — |
 | T-049 | ABERTURA da v1.0: o que a tela precisa mostrar, e a medicao final | backlog | 1 | — | — |
 | T-058 | MARCO da v1.0: um projeto inteiro, sem intervencao | bloqueada | 1 | 2026-09-21 | US$ 7,44 |
 

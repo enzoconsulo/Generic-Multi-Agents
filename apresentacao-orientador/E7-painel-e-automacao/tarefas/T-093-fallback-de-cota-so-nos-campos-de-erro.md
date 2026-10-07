@@ -3,13 +3,13 @@ id: T-093
 titulo: "Fallback por texto da parede de cota lê só result/errors/stderr, não o stdout inteiro"
 projeto: fabrica-v2
 versao: v1.0
-status: pronta
+status: backlog
 prioridade: media
-dependencias: [T-090]
+dependencias: [T-090, T-099]
 areas: [lib/fabrica/operario/claude_cli.ex, test/fabrica/operario/claude_cli_test.exs]
 tentativas: 0
 criada: 2026-10-02
-atualizada: 2026-10-02
+atualizada: 2026-10-07
 ---
 
 ## Objetivo
@@ -46,6 +46,7 @@ parede): confira na Revisão da T-087 que formas de parede real existem, e não 
       `verificar: mix fabrica.ci`
 
 ## Notas de execução
+- 2026-10-07 (orquestrador): passa a depender da T-099 — no Windows a suíte cai em 2 testes de link do confinamento, e toda verificação desta tarefa reprovaria por isso (reprovação falsa). Volta a `pronta` sozinha quando a T-099 concluir.
 
 
 ## Verificação
@@ -55,4 +56,5 @@ parede): confira na Revisão da T-087 que formas de parede real existem, e não 
 
 
 ## Revisão
+
 

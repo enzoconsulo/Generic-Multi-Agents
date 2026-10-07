@@ -3,13 +3,13 @@ id: T-095
 titulo: "Despacho que não rodou (parede de cota, sem sandbox) não é JULGADO em nenhum papel — nem avança a tarefa, nem gasta ciclo, nem aprova por omissão"
 projeto: fabrica-v2
 versao: v1.0
-status: pronta
+status: backlog
 prioridade: alta
-dependencias: [T-091]
+dependencias: [T-091, T-099]
 areas: [lib/fabrica/fila/trabalho.ex, test/fabrica/fila/trabalho_test.exs]
 tentativas: 0
 criada: 2026-10-02
-atualizada: 2026-10-02
+atualizada: 2026-10-07
 ---
 
 ## Objetivo
@@ -58,6 +58,7 @@ de voltas) seguem como hoje.
       `verificar: mix fabrica.ci`
 
 ## Notas de execução
+- 2026-10-07 (orquestrador): passa a depender da T-099 — no Windows a suíte cai em 2 testes de link do confinamento, e toda verificação desta tarefa reprovaria por isso (reprovação falsa). Volta a `pronta` sozinha quando a T-099 concluir.
 
 
 ## Verificação
@@ -67,4 +68,5 @@ de voltas) seguem como hoje.
 
 
 ## Revisão
+
 

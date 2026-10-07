@@ -347,7 +347,7 @@
   {
    "id": "T-092",
    "titulo": "O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento",
-   "status": "pronta",
+   "status": "backlog",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/operario.ex",
@@ -363,7 +363,7 @@
   {
    "id": "T-093",
    "titulo": "Fallback por texto da parede de cota lê só result/errors/stderr, não o stdout inteiro",
-   "status": "pronta",
+   "status": "backlog",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/operario/claude_cli.ex",
@@ -379,7 +379,7 @@
   {
    "id": "T-094",
    "titulo": "Piloto dormindo pela cota acorda no REARME da Cota, sem laço quente entre `reabre_em` e a folga",
-   "status": "pronta",
+   "status": "backlog",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/piloto/servidor.ex",
@@ -395,7 +395,7 @@
   {
    "id": "T-095",
    "titulo": "Despacho que não rodou (parede de cota, sem sandbox) não é JULGADO em nenhum papel — nem avança a tarefa, nem gasta ciclo, nem aprova por omissão",
-   "status": "pronta",
+   "status": "backlog",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/fila/trabalho.ex",
@@ -427,7 +427,7 @@
   {
    "id": "T-097",
    "titulo": "Busca filtrada por projeto não perde trecho para tuplas mortas do índice HNSW (busca_test.exs:242)",
-   "status": "pronta",
+   "status": "backlog",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/memoria/busca.ex",
@@ -443,7 +443,7 @@
   {
    "id": "T-098",
    "titulo": "classe_falha_test.exs:315 (prazo estourado reexecuta UMA vez) deixa de depender do relógio",
-   "status": "pronta",
+   "status": "backlog",
    "tentativas": 0,
    "areas": [
     "test/fabrica/criterios/classe_falha_test.exs",
@@ -490,7 +490,7 @@
   }
  ],
  "fechamento": [
-  "88c92aa816f9ecbdf5c6a7a19c0e3d2a9ac17a3d",
+  "4555395bf9eebea4ef8eb0116a18f0454602bed8",
   "2026-10-07"
  ],
  "arquivos": [

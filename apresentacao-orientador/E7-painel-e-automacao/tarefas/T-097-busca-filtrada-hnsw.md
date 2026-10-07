@@ -3,13 +3,13 @@ id: T-097
 titulo: "Busca filtrada por projeto não perde trecho para tuplas mortas do índice HNSW (busca_test.exs:242)"
 projeto: fabrica-v2
 versao: v1.0
-status: pronta
+status: backlog
 prioridade: media
-dependencias: []
+dependencias: [T-099]
 areas: [lib/fabrica/memoria/busca.ex, test/fabrica/memoria/busca_test.exs]
 tentativas: 0
 criada: 2026-10-02
-atualizada: 2026-10-02
+atualizada: 2026-10-07
 ---
 
 ## Objetivo
@@ -49,6 +49,7 @@ Não é desta tarefa mexer no esquema/migração do índice; se a única saída 
       `verificar: mix fabrica.ci`
 
 ## Notas de execução
+- 2026-10-07 (orquestrador): passa a depender da T-099 — no Windows a suíte cai em 2 testes de link do confinamento, e toda verificação desta tarefa reprovaria por isso (reprovação falsa). Volta a `pronta` sozinha quando a T-099 concluir.
 
 
 ## Verificação
@@ -58,4 +59,5 @@ Não é desta tarefa mexer no esquema/migração do índice; se a única saída 
 
 
 ## Revisão
+
 
