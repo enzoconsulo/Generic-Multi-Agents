@@ -1,0 +1,402 @@
+{
+ "tarefas": [
+  {
+   "id": "T-021",
+   "titulo": "ABERTURA da v0.3: conferir o plano contra o codigo que existe",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "_gestao/PROGRESSO.md",
+    "_sistema/v2/tarefas"
+   ],
+   "objetivo": "Antes de implementar a v0.3, confrontar o planejamento com o codigo que a v0.1 e a v0.2 realmente produziram, e ajustar as tarefas desta versao onde a realidade divergiu do plano. Nenhum codigo de producao e escrito nesta tarefa.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-022",
+   "titulo": "Os seis estados e a transicao transacional",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/tarefas/maquina.ex",
+    "lib/fabrica/tarefas/transicao.ex",
+    "test/fabrica/tarefas/transicao_test.exs",
+    "test/fabrica/tarefas/maquina_test.exs",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "A maquina de estados da tarefa: quais transicoes existem, e a garantia de que cada uma grava estado, relatorio e custo NA MESMA TRANSACAO — ou nao grava nada.",
+   "commits": 1,
+   "ultimo_commit": "a4c62d0",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-022a",
+   "titulo": "A bateria completa esta vermelha desde a T-019 — os 8 erros do Dialyzer",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/ferramentas/comando.ex",
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs",
+    "mix.exs",
+    ".dialyzer_ignore.exs",
+    "_gestao/ci.json",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Devolver `mix fabrica.ci` ao verde, e fechar a brecha de processo que deixou a bateria vermelha por uma tarefa inteira sem ninguem notar.",
+   "commits": 1,
+   "ultimo_commit": "7fec577",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-023",
+   "titulo": "Promocao por dependencias e ordenacao da fila",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/tarefas/fila.ex",
+    "test/fabrica/tarefas/fila_test.exs",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Decidir, deterministicamente, quais tarefas passam de `backlog` para `pronta` e em que ordem despachar as prontas.",
+   "commits": 1,
+   "ultimo_commit": "6bb0974",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-024",
+   "titulo": "Equipe sob demanda: especialistas versionados e resolucao do construtor",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/equipe.ex",
+    "lib/fabrica/equipe/resolucao.ex",
+    "test/fabrica/equipe/resolucao_test.exs",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Os especialistas do projeto como dado versionado no banco, e a resolucao deterministica de QUEM executa cada tarefa.",
+   "commits": 1,
+   "ultimo_commit": "d863825",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-025",
+   "titulo": "Criterios executaveis: leitura, allowlist e passada mecanica",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/criterios.ex",
+    "lib/fabrica/criterios/allowlist.ex",
+    "test/fabrica/criterios_test.exs",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Rodar de graca, antes de despachar qualquer verificador, todo criterio que tem comando — e recusar comando inseguro por allowlist, nunca por lista de proibicoes.",
+   "commits": 1,
+   "ultimo_commit": "cacec4e",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-026",
+   "titulo": "Classe de falha: o comando quebrou, ou a entrega falhou?",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/criterios/classe_falha.ex",
+    "test/fabrica/criterios/classe_falha_test.exs",
+    "lib/fabrica/criterios.ex",
+    "test/fabrica/criterios_test.exs",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Distinguir, quando um criterio nao passa, se o problema e o COMANDO (mal escrito, dependencia ausente, ambiente) ou a ENTREGA. Sao consequencias opostas.",
+   "commits": 1,
+   "ultimo_commit": "cf3b6f2",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-027",
+   "titulo": "O criterio implicito da suite e a deteccao de ecossistema",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/criterios/suite.ex",
+    "lib/fabrica/ecossistemas.ex",
+    "test/fabrica/criterios/suite_test.exs",
+    "lib/fabrica/criterios.ex",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Rodar a suite do projeto em TODA verificacao, sem que ela esteja escrita em tarefa nenhuma — e descobrir sozinho qual e o comando, pelo ecossistema do projeto.",
+   "commits": 1,
+   "ultimo_commit": "a83f9f1",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-028",
+   "titulo": "Os dois portoes, e a ausencia da ferramenta de corrigir",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/portoes/verificador.ex",
+    "lib/fabrica/portoes/revisor.ex",
+    "test/fabrica/portoes_test.exs",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Os dois julgamentos independentes: o verificador responde \"funciona?\" executando os criterios; o revisor responde \"e o que foi pedido, e esta correto?\". Nenhum dos dois tem a ferramenta de escrever.",
+   "commits": 1,
+   "ultimo_commit": "2ba9739",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-075",
+   "titulo": "Portoes.Revisor ganha ler_conformidade/1 — hoje o revisor NUNCA reprova por conformidade",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/portoes/revisor.ex",
+    "lib/fabrica/fila/trabalho.ex",
+    "test/fabrica/portoes/revisor_test.exs"
+   ],
+   "objetivo": "`Fabrica.Portoes.Revisor` (`@moduledoc`) faz DUAS perguntas separadas — conformidade (\"é o que foi pedido?\") e revisão (\"está correto?\") — e o próprio módulo já avisa que a primeira \"é a que costuma ser esquecida\". Hoje ela FOI esquecida na fiação real: `Fabrica.Fila.Trabalho.julgar/3` (papel `revisor`) chama `Revisor.julgar(:conforme, ...)` com o primeiro argumento FIXO. Existe `Revisor.ler_achados/1` (parseia `[gravidade] arquivo:linha — problema` do relato), mas não existe o equivalente para conformidade. Resultado medido: **o papel revisor desta fábrica nunca reprova por conformidade** — só reprova se houver achado explícito no formato certo.",
+   "commits": 9,
+   "ultimo_commit": "2851cf2",
+   "concluida_em": "2026-09-27",
+   "custo_usd": 15.77,
+   "despachos": 10
+  },
+  {
+   "id": "T-077",
+   "titulo": "Doutrina do revisor ensina o formato `[conformidade] ...` que ler_conformidade/1 procura",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "priv/doutrina/revisor.md"
+   ],
+   "objetivo": "`Fabrica.Portoes.Revisor.ler_conformidade/1` (T-075) extrai o veredito de conformidade de uma linha no formato `[conformidade] conforme` / `[conformidade] nao-conforme — motivo`, dentro do relato que o agente revisor escreve via `registrar_resultado`. `priv/doutrina/revisor.md` (quem instrui o agente real) ainda não sabe disso: pede só \"em `resumo`, diga claramente se a entrega é conforme ou não (e por quê)\" — prosa livre. Sem o formato explícito, o agente nunca escreve a linha que `ler_conformidade/1` procura, a extração cai sempre no fallback tolerante (`:conforme` por ausência) e o caminho de reprovação por conformidade que a T-075 construiu nunca é exercitado na prática — só em teste.",
+   "commits": 3,
+   "ultimo_commit": "ccdcfa4",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0.0,
+   "despachos": 1
+  },
+  {
+   "id": "T-078",
+   "titulo": "O portão do revisor lê os achados também do `registrar_resultado` — onde a doutrina manda escrevê-los",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/fila/trabalho.ex",
+    "test/fabrica/fila/trabalho_test.exs"
+   ],
+   "objetivo": "Fazer `Trabalho.julgar(:revisor, …)` enxergar os achados que o agente revisor escreve no `registrar_resultado` (campo `resumo`), além dos que escreve no texto das mensagens. Hoje um achado `[critico] arquivo:linha — problema` escrito SÓ no `resumo` nunca chega a `Revisor.ler_achados/1`: o portão vê zero achados e aprova em silêncio.",
+   "commits": 3,
+   "ultimo_commit": "8cba027",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-029",
+   "titulo": "Diagnostico de reprovacao: decidir COMO refazer, nao so que refazer",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/retrabalho/diagnostico.ex",
+    "lib/fabrica/retrabalho/politica.ex",
+    "test/fabrica/retrabalho/diagnostico_test.exs",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Ler a reprovacao, classificar a natureza da falha e derivar a POLITICA do proximo despacho: qual modelo, quantas voltas, que escopo, e com que foco.",
+   "commits": 1,
+   "ultimo_commit": "22f9a3b",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-030",
+   "titulo": "A escada de resposta ao fracasso, e o limite de 3 ciclos",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/retrabalho/escada.ex",
+    "test/fabrica/retrabalho/escada_test.exs",
+    "test/support/fonte.ex",
+    "test/fabrica/tarefas/transicao_test.exs",
+    "test/fabrica/marco_v01_test.exs",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Os quatro degraus: sobe de modelo, troca de especialista, replaneja, bloqueia. Cada um so e usado depois que o anterior falhou de verdade.",
+   "commits": 1,
+   "ultimo_commit": "b44fdef",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-031",
+   "titulo": "Orcamento com parada limpa: teto por rodada e por tarefa",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/orcamento.ex",
+    "test/fabrica/orcamento_test.exs"
+   ],
+   "objetivo": "Impedir que a rodada COMECE trabalho que nao cabe no orcamento — e nunca cortar agente em voo.",
+   "commits": 2,
+   "ultimo_commit": "388bbea",
+   "concluida_em": "2026-09-04",
+   "custo_usd": 4.41,
+   "despachos": 4
+  },
+  {
+   "id": "T-032",
+   "titulo": "Geracao do markdown a partir do banco, e o commit da tarefa",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/publicacao/markdown.ex",
+    "lib/fabrica/publicacao/git.ex",
+    "test/fabrica/publicacao/markdown_test.exs",
+    "test/fabrica/publicacao/git_test.exs"
+   ],
+   "objetivo": "Gerar o arquivo markdown da tarefa a partir do banco e commita-lo junto com o trabalho — para o git do projeto continuar legivel por humano.",
+   "commits": 2,
+   "ultimo_commit": "9057085",
+   "concluida_em": "2026-09-02",
+   "custo_usd": 10.74,
+   "despachos": 5
+  },
+  {
+   "id": "T-068",
+   "titulo": "Fabrica.Planejador: traduz um pedido em linguagem natural num grafo de tarefas",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "priv/doutrina/planejador.md",
+    "lib/fabrica/planejador.ex",
+    "test/fabrica/planejador_test.exs"
+   ],
+   "objetivo": "Dado um pedido em linguagem natural e um projeto (novo ou existente), despachar um agente real no papel `planejador` que decide um grafo de 8 a 12 tarefas — com dependências, `areas` (sempre arquivo, nunca pasta) e critérios de aceite — e gravar isso no banco (`Fabrica.Projetos.Projeto` + `Fabrica.Tarefas.Tarefa` + critérios), numa transação.",
+   "commits": 3,
+   "ultimo_commit": "2234c84",
+   "concluida_em": "2026-09-22",
+   "custo_usd": 11.62,
+   "despachos": 5
+  },
+  {
+   "id": "T-069",
+   "titulo": "mix fabrica.planejar: a única intervenção humana que o marco da v1.0 exige",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/mix/tasks/fabrica.planejar.ex",
+    "test/mix/planejar_test.exs"
+   ],
+   "objetivo": "Uma mix task — `mix fabrica.planejar \"<pedido>\" --projeto <nome>` — que cria o projeto e chama `Fabrica.Planejador.planejar/2` (T-068) com um operário real. É o ÚNICO ponto de entrada humano que o critério 1 da T-058 exige: depois dela, o piloto (T-054/T-055) assume.",
+   "commits": 3,
+   "ultimo_commit": "4619f6b",
+   "concluida_em": "2026-09-25",
+   "custo_usd": 4.84,
+   "despachos": 4
+  },
+  {
+   "id": "T-034",
+   "titulo": "MARCO da v0.3: uma tarefa percorre os seis estados e conclui",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "_gestao/PROGRESSO.md",
+    "test/fabrica/marco_v03_test.exs"
+   ],
+   "objetivo": "Verificar o marco: uma tarefa percorre os seis estados, reprova DE PROPOSITO, e retrabalhada e conclui — com tudo registrado em transacao.",
+   "commits": 4,
+   "ultimo_commit": "286da1c",
+   "concluida_em": "2026-09-08",
+   "custo_usd": 11.71,
+   "despachos": 7
+  }
+ ],
+ "fechamento": [
+  "8cba027dc9343a727a48413fb47f12dc138b14c0",
+  "2026-10-01"
+ ],
+ "arquivos": [
+  ".dialyzer_ignore.exs",
+  "lib/fabrica/criterios.ex",
+  "lib/fabrica/criterios/allowlist.ex",
+  "lib/fabrica/criterios/classe_falha.ex",
+  "lib/fabrica/criterios/suite.ex",
+  "lib/fabrica/ecossistemas.ex",
+  "lib/fabrica/equipe.ex",
+  "lib/fabrica/equipe/resolucao.ex",
+  "lib/fabrica/ferramentas/comando.ex",
+  "lib/fabrica/fila/trabalho.ex",
+  "lib/fabrica/operario/claude_cli.ex",
+  "lib/fabrica/orcamento.ex",
+  "lib/fabrica/planejador.ex",
+  "lib/fabrica/portoes/revisor.ex",
+  "lib/fabrica/portoes/verificador.ex",
+  "lib/fabrica/publicacao/git.ex",
+  "lib/fabrica/publicacao/markdown.ex",
+  "lib/fabrica/retrabalho/diagnostico.ex",
+  "lib/fabrica/retrabalho/escada.ex",
+  "lib/fabrica/retrabalho/politica.ex",
+  "lib/fabrica/tarefas/fila.ex",
+  "lib/fabrica/tarefas/maquina.ex",
+  "lib/fabrica/tarefas/transicao.ex",
+  "lib/mix/tasks/fabrica.planejar.ex",
+  "mix.exs",
+  "priv/doutrina/planejador.md",
+  "priv/doutrina/revisor.md",
+  "test/fabrica/criterios/classe_falha_test.exs",
+  "test/fabrica/criterios/suite_test.exs",
+  "test/fabrica/criterios_test.exs",
+  "test/fabrica/equipe/resolucao_test.exs",
+  "test/fabrica/fila/trabalho_test.exs",
+  "test/fabrica/marco_v01_test.exs",
+  "test/fabrica/marco_v03_test.exs",
+  "test/fabrica/operario/claude_cli_test.exs",
+  "test/fabrica/orcamento_test.exs",
+  "test/fabrica/planejador_test.exs",
+  "test/fabrica/portoes/revisor_test.exs",
+  "test/fabrica/portoes_test.exs",
+  "test/fabrica/publicacao/git_test.exs",
+  "test/fabrica/publicacao/markdown_test.exs",
+  "test/fabrica/retrabalho/diagnostico_test.exs",
+  "test/fabrica/retrabalho/escada_test.exs",
+  "test/fabrica/tarefas/fila_test.exs",
+  "test/fabrica/tarefas/maquina_test.exs",
+  "test/fabrica/tarefas/transicao_test.exs",
+  "test/mix/planejar_test.exs",
+  "test/support/fonte.ex"
+ ],
+ "n_tarefas": 19,
+ "n_concluidas": 19,
+ "commits": 39,
+ "testes": 454,
+ "linhas_lib": 5282,
+ "custo_usd": 59.09,
+ "despachos": 36,
+ "primeira": 19,
+ "tent_media": 1.0,
+ "marco_status": "concluida"
+}

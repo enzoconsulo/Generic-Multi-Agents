@@ -1,0 +1,80 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>E1 Planejamento e arquitetura</title>
+<style>
+:root{--bg:#f6f5f2;--card:#ffffff;--ink:#16161a;--ink2:#4e4d4a;--ink3:#86847f;--line:#e3e1dc;
+--acc:#2a78d6;--acc-soft:#e6effa;--ok:#0f7b3f;--ok-soft:#e3f3e8;--warn:#a86200;--warn-soft:#fbf0dc;
+--bad:#b42323;--bad-soft:#f9e3e3;--bar:#2a78d6;--code:#f0efeb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121214;--card:#1c1c1f;
+--ink:#f2f1ec;--ink2:#c3c2b7;--ink3:#8d8b84;--line:#2e2e32;--acc:#5b9cf0;--acc-soft:#1b2a3d;
+--ok:#4cc27b;--ok-soft:#16301f;--warn:#e0a03a;--warn-soft:#33270f;--bad:#ef6b6b;--bad-soft:#3a1717;
+--bar:#3987e5;--code:#26262a}}
+:root[data-theme="dark"]{--bg:#121214;--card:#1c1c1f;--ink:#f2f1ec;--ink2:#c3c2b7;--ink3:#8d8b84;
+--line:#2e2e32;--acc:#5b9cf0;--acc-soft:#1b2a3d;--ok:#4cc27b;--ok-soft:#16301f;--warn:#e0a03a;
+--warn-soft:#33270f;--bad:#ef6b6b;--bad-soft:#3a1717;--bar:#3987e5;--code:#26262a}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+.slide{display:none;min-height:100vh;padding:5vh 6vw 9vh;flex-direction:column;gap:2.2vh}
+.slide.ativo{display:flex}
+h1{font-size:clamp(28px,4.6vw,64px);margin:0;line-height:1.08;letter-spacing:-.02em}
+h2{font-size:clamp(22px,2.9vw,40px);margin:0;letter-spacing:-.01em}
+h3{font-size:clamp(15px,1.4vw,20px);margin:0 0 .6em;color:var(--ink2);font-weight:600}
+p,li{font-size:clamp(14px,1.45vw,21px);line-height:1.45}
+.kicker{font-size:clamp(12px,1.1vw,16px);text-transform:uppercase;letter-spacing:.12em;color:var(--acc);font-weight:700}
+.sub{color:var(--ink2);font-size:clamp(16px,1.8vw,26px);margin:0}
+.grid{display:grid;gap:1.6vw}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.6vw 1.8vw}
+.kpi .v{font-size:clamp(26px,3.6vw,54px);font-weight:700;letter-spacing:-.02em;line-height:1}
+.kpi .l{color:var(--ink2);font-size:clamp(12px,1.1vw,16px);margin-top:.5em}
+.pill{display:inline-flex;align-items:center;gap:.4em;padding:.25em .8em;border-radius:99px;font-weight:600;
+font-size:clamp(12px,1.1vw,16px);white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)}.warn{background:var(--warn-soft);color:var(--warn)}
+.bad{background:var(--bad-soft);color:var(--bad)}.neutro{background:var(--acc-soft);color:var(--acc)}
+table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:.55em .7em;border-bottom:1px solid var(--line);
+font-size:clamp(12px,1.15vw,17px);vertical-align:top}th{color:var(--ink3);font-weight:600}
+code{font-family:Consolas,"Cascadia Mono",monospace;background:var(--code);padding:.08em .35em;border-radius:5px;font-size:.92em}
+pre{background:var(--code);border-radius:10px;padding:1em 1.2em;overflow:auto;font-size:clamp(12px,1.1vw,16px);margin:0;
+white-space:pre-wrap;word-break:break-word}
+ul{margin:.2em 0;padding-left:1.2em}li{margin:.25em 0}
+.ids{color:var(--ink3);font-size:.85em}
+.rodape{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;
+padding:1.2vh 2vw;color:var(--ink3);font-size:13px;background:linear-gradient(transparent,var(--bg) 40%)}
+.rodape button{background:var(--card);border:1px solid var(--line);color:var(--ink2);border-radius:8px;padding:.35em .8em;cursor:pointer;font:inherit}
+.prog{position:fixed;top:0;left:0;height:3px;background:var(--acc);transition:width .2s}
+.timeline{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:1vh}
+.timeline div{padding:.6em .3em;border-radius:8px;text-align:center;font-size:clamp(11px,1vw,15px);font-weight:600;background:var(--card);border:1px solid var(--line);color:var(--ink3)}
+.timeline .t-ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.timeline .t-warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.timeline .t-bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.timeline .agora{outline:3px solid var(--acc);outline-offset:2px}
+img.tela{width:100%;border-radius:10px;border:1px solid var(--line)}
+svg text{fill:var(--ink2);font-size:13px}svg .val{fill:var(--ink);font-weight:600}
+.muted{color:var(--ink3)}
+@media (max-width:800px){.g2,.g3,.g4{grid-template-columns:1fr}.slide{padding:4vh 16px 10vh}}
+@media print{.slide{display:flex!important;page-break-after:always;min-height:auto}.rodape,.prog{display:none}}
+</style></head><body><div class="prog"></div>
+<section class="slide"><div class="kicker">Etapa E1 · Planejamento · 04/09 – 18/09/2026</div>
+<h1>E1 — Planejamento e arquitetura</h1><p class="sub">Entrega combinada: <b>Requisitos, arquitetura, tarefas, critérios e projetos de teste aprovados.</b></p>
+<div><span class="pill warn">◐ Entregue — falta definir os 5 projetos de teste</span></div><div class="timeline"><div class="t-warn agora">E1</div><div class="t-ok">E2</div><div class="t-ok">E3</div><div class="t-ok">E4</div><div class="t-ok">E5</div><div class="t-bad">E6</div><div class="t-warn">E7</div><div class="">E8</div><div class="">E9</div><div class="">E10</div></div>
+<p class="muted">Verde: entrega aprovada · amarelo: construída com pendência · vermelho: entrega bloqueada · contorno: esta etapa</p></section><section class="slide"><div class="kicker">E1 · o combinado × o feito</div>
+<h2>Os pacotes do plano, e o que existe no código</h2>
+<div class="card"><table><tr><th>Pacote</th><th>O que é</th><th>Situação</th><th>Tarefas</th></tr><tr><td><b>1.1</b></td><td>Requisitos<div class='ids'>R1–R15 escritos no plano, cada um com etapa e forma de verificar</div></td><td><span class="pill ok">✓ feito</span></td><td class='ids'></td></tr><tr><td><b>1.2</b></td><td>Estado da arte<div class='ids'>estudo de estado da arte e relatório de originalidade (documentos/)</div></td><td><span class="pill ok">✓ feito</span></td><td class='ids'></td></tr><tr><td><b>1.3</b></td><td>Arquitetura<div class='ids'>documento de arquitetura: 4 camadas, 6 estados, 2 portões, escada de falha</div></td><td><span class="pill ok">✓ feito</span></td><td class='ids'></td></tr><tr><td><b>1.4</b></td><td>Tarefas e critérios<div class='ids'>tarefas escritas no repositório + os 8 critérios de desempenho</div></td><td><span class="pill ok">✓ feito</span></td><td class='ids'></td></tr></table></div></section><section class="slide"><div class="kicker">E1 · destaques</div><h2>O que vale contar</h2>
+<div class="card"><ul><li>Ideia central fechada: as regras de governança moram na estrutura do programa, não no texto do pedido.</li><li>15 requisitos (R1–R15), cada um amarrado a uma etapa e a uma forma de verificação.</li><li>Arquitetura em 4 camadas e a escolha do Elixir/OTP justificada (processos isolados e supervisionados).</li><li>8 critérios de desempenho com limite numérico — a régua da validação (E8–E10).</li><li>O trabalho decomposto em tarefas pequenas, cada uma com critérios de aceite que são comandos.</li></ul></div></section><section class="slide"><div class="kicker">E1 · o que falta</div><h2>Pendências e próxima rodada</h2>
+<div class="grid g2"><div class="card"><h3>Pendente nesta etapa</h3><ul><li>Os 5 projetos de teste ainda NÃO estão escritos — o plano promete defini-los na E1.</li><li>Os 8 critérios existem só no documento; falta registrá-los no repositório como medição.</li></ul></div>
+<div class="card"><h3>Próxima rodada</h3><ul><li>Escolher e escrever os 5 projetos de teste (pedido em linguagem natural + o que conta como pronto).</li><li>Registrar os 8 critérios no repositório, com o comando/consulta que mede cada um.</li></ul></div></div></section>
+<div class="rodape"><span>Fábrica de Software Multi-Agente · Enzo Consulo</span>
+<span>← → navega · F tela cheia · T tema</span>
+<span><button id="ant">‹</button> <span id="cont"></span> <button id="prox">›</button></span></div>
+<script>
+const S=[...document.querySelectorAll('.slide')];let i=0;
+function ir(n){i=Math.max(0,Math.min(S.length-1,n));S.forEach((s,k)=>s.classList.toggle('ativo',k===i));
+document.getElementById('cont').textContent=(i+1)+' / '+S.length;
+document.querySelector('.prog').style.width=((i+1)/S.length*100)+'%';
+try{history.replaceState(null,'','#'+(i+1))}catch(e){}}
+document.addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();ir(i+1)}
+if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();ir(i-1)}if(e.key==='Home')ir(0);if(e.key==='End')ir(S.length-1);
+if(e.key==='f')document.documentElement.requestFullscreen?.();
+if(e.key==='t'){const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'}});
+document.getElementById('ant').onclick=()=>ir(i-1);document.getElementById('prox').onclick=()=>ir(i+1);
+ir(parseInt(location.hash.slice(1)||'1')-1);
+</script></body></html>

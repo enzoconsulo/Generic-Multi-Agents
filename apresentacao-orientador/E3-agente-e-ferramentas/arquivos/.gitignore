@@ -1,0 +1,57 @@
+# The directory Mix will write compiled artifacts to.
+/_build/
+
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+
+# Where 3rd-party dependencies like ExDoc output generated docs.
+/doc/
+
+# Ignore .fetch files in case you like to edit your project deps locally.
+/.fetch
+
+# If the VM crashes, it generates a dump, let's ignore it too.
+erl_crash.dump
+
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
+
+# Temporary files, for example, from tests.
+/tmp/
+
+# Ignore package tarball (built via "mix hex.build").
+fabrica-*.tar
+
+# Ignore assets that are produced by build tools.
+/priv/static/assets/
+
+# Ignore digested assets cache.
+/priv/static/cache_manifest.json
+
+# In case you use Node.js/npm, you want to ignore these.
+npm-debug.log
+/assets/node_modules/
+
+
+# Dumps do banco. Dump nao se versiona: e grande, e binario, e o que ele guarda ja esta
+# no git como codigo ou no proprio banco como estado. Ver `Fabrica.Backup`.
+/priv/backups/
+
+# Saida transitoria de rodadas manuais de probe (nao e artefato do probe em si, e o que
+# sobra quando alguem redireciona `mix run priv/probes/*.exs > arquivo.txt` na mao).
+/priv/probes/_ultima_saida.txt
+/priv/probes/_scratch/
+
+# Estado de execucao do piloto (`Fabrica.Piloto.Servidor`, um arquivo por rodada). Mesma
+# categoria de /priv/backups/: saida de RUNTIME, nao fonte.
+#
+# Por que isto precisou ser dito (21/09): sem a linha, os arquivos ficavam `??` para sempre, e
+# `alteracoesForaDasAreas` — que compara a arvore com o git — os reportava como MUTEX FURADO em
+# TODA rodada, contra qualquer tarefa que estivesse em voo. Sete rodadas seguidas acusaram o
+# executor de mexer em `priv/piloto/` sem ele ter encostado ali, e a T-056 carrega seis copias
+# do aviso nas Notas. Alarme que toca sempre nao carrega informacao — e este ainda acusava o
+# agente errado.
+/priv/piloto/

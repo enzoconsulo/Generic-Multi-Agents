@@ -1,0 +1,606 @@
+{
+ "tarefas": [
+  {
+   "id": "T-010",
+   "titulo": "Gerador do indice denso do projeto (mix fabrica.mapa)",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/indice/mapa.ex",
+    "lib/mix/tasks/fabrica.mapa.ex",
+    "test/fabrica/indice/mapa_test.exs"
+   ],
+   "objetivo": "Porte do `mapa.mjs` da v1: um gerador DETERMINISTICO, sem modelo, que produz a arvore de arquivos do projeto com a assinatura e o proposito de cada simbolo publico. E ele que vai inteiro no prefixo do despacho.",
+   "commits": 1,
+   "ultimo_commit": "783d13f",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-011",
+   "titulo": "Montador do prefixo estavel, com pontos de cache",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/prompt/prefixo.ex",
+    "lib/fabrica/prompt/bloco.ex",
+    "test/fabrica/prompt/prefixo_test.exs"
+   ],
+   "objetivo": "Montar a parte estavel da requisicao — ferramentas, doutrina do papel e indice do projeto — em blocos ordenados do mais estavel para o mais volatil, com no maximo quatro pontos de cache marcados. E a alavanca de custo numero um da v2.",
+   "commits": 1,
+   "ultimo_commit": "2a3368a",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-012",
+   "titulo": "Ferramentas de arquivo com confinamento",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/ferramentas/arquivo.ex",
+    "lib/fabrica/ferramentas/confinamento.ex",
+    "test/fabrica/ferramentas/confinamento_test.exs"
+   ],
+   "objetivo": "As ferramentas `ler`, `escrever`, `editar`, `listar` e `buscar`, todas confinadas ao diretorio do projeto — e o confinamento como propriedade do codigo, nunca como frase no prompt.",
+   "commits": 1,
+   "ultimo_commit": "e25748d",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-013",
+   "titulo": "Ferramenta de comando, com prazo e morte da ARVORE de processos",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/ferramentas/comando.ex",
+    "lib/fabrica/ferramentas/arvore_processos.ex",
+    "test/fabrica/ferramentas/comando_test.exs"
+   ],
+   "objetivo": "Executar um comando externo no diretorio do projeto, com prazo, captura de saida e — o ponto dificil — encerramento da ARVORE de processos, nao so do processo lancado.",
+   "commits": 1,
+   "ultimo_commit": "85ba5f0",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-013a",
+   "titulo": "O Comando sabe alimentar stdin a partir de um arquivo, sem interpolar nada",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/ferramentas/comando.ex",
+    "test/fabrica/ferramentas/comando_test.exs"
+   ],
+   "objetivo": "Dar a `Comando.rodar_separado/3` a opcao de alimentar o `stdin` do processo a partir de um arquivo, preservando o padrao atual (entrada vinda do vazio) para todo comando que nao pedir nada.",
+   "commits": 3,
+   "ultimo_commit": "1c4d4f8",
+   "concluida_em": "2026-09-03",
+   "custo_usd": 5.67,
+   "despachos": 4
+  },
+  {
+   "id": "T-013b",
+   "titulo": "A saida do comando some quando o exit_status chega antes do ultimo dado",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/ferramentas/comando.ex",
+    "test/fabrica/ferramentas/comando_test.exs"
+   ],
+   "objetivo": "`Fabrica.Ferramentas.Comando` perde a saida do processo quando o `{:exit_status, _}` chega antes do ultimo `{:data, _}`. Fazer o coletor DRENAR o que ficou na caixa antes de montar o resultado, e travar isso com teste.",
+   "commits": 2,
+   "ultimo_commit": "764eed2",
+   "concluida_em": "2026-09-09",
+   "custo_usd": 4.39,
+   "despachos": 3
+  },
+  {
+   "id": "T-016",
+   "titulo": "A ferramenta registrar_resultado, e a ausencia da de mudar estado",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/ferramentas/registrar_resultado.ex",
+    "test/fabrica/ferramentas/registrar_resultado_test.exs"
+   ],
+   "objetivo": "A unica forma de um agente reportar o que fez: uma chamada estruturada que o sistema grava na transacao. E a garantia, testada, de que nao existe ferramenta de mudar status para agente nenhum.",
+   "commits": 1,
+   "ultimo_commit": "6b104c3",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-012a",
+   "titulo": "O confinamento do agente completo e PROVADO, e nao presumido",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs",
+    "priv/probes/confinamento_cli.exs"
+   ],
+   "objetivo": "Repor, para a familia `:agente_completo`, a garantia que a T-012 deu a familia de endpoint: o agente nao escreve fora da raiz do projeto. Provado contra o `claude` real, e detectado pelo mesmo `Confinamento.resolver/2` quando a prevencao nao alcancar.",
+   "commits": 3,
+   "ultimo_commit": "3e3be97",
+   "concluida_em": "2026-09-03",
+   "custo_usd": 6.75,
+   "despachos": 3
+  },
+  {
+   "id": "T-014",
+   "titulo": "Guarda de processos e guarda de ferramental",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/ferramentas/guardas.ex",
+    "test/fabrica/ferramentas/guardas_test.exs"
+   ],
+   "objetivo": "Duas guardas que avaliam um comando ANTES de ele rodar: o agente nao pode matar a propria fabrica, e nao pode reinventar uma ferramenta que a fabrica ja tem.",
+   "commits": 1,
+   "ultimo_commit": "f337961",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-079",
+   "titulo": "Portabilidade Linux (A): `Comando` roda o script temporário sem depender do bit de execução",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/ferramentas/comando.ex",
+    "test/fabrica/ferramentas/comando_test.exs"
+   ],
+   "objetivo": "Fazer o ramo unix de `Fabrica.Ferramentas.Comando` executar de verdade: hoje TODO comando que a fábrica roda no Linux sai com exit 126 (`Permission denied`) antes de chegar ao programa. Ao fim, `test/fabrica/ferramentas/comando_test.exs` passa inteiro no Linux, e os 2 testes T-018d de `claude_cli_test.exs` que dependem do `Comando` também.",
+   "commits": 4,
+   "ultimo_commit": "cf667cf",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-080",
+   "titulo": "Portabilidade Linux (B): `Confinamento.real/1` preserva a raiz `/` — arquivo novo em diretório novo deixa de ser julgado fora",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/ferramentas/confinamento.ex",
+    "test/fabrica/ferramentas/confinamento_test.exs"
+   ],
+   "objetivo": "No Linux, `Confinamento.resolver/2` aceita um caminho DENTRO da raiz cujo diretório pai ainda não existe (o caso normal de `escrever` criando arquivo em pasta nova). Hoje ele devolve `{:erro, :fora_do_confinamento}` — o agente não consegue criar arquivo nenhum fora de diretório já existente.",
+   "commits": 3,
+   "ultimo_commit": "8d9ab88",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-081",
+   "titulo": "Portabilidade Linux (C): barra invertida é separador em toda plataforma; caixa segue o SO — e os testes dizem isso",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/ferramentas/confinamento.ex",
+    "test/fabrica/ferramentas/confinamento_test.exs",
+    "test/fabrica/fila/exclusao_test.exs",
+    "test/fabrica/agente/ferramentas_test.exs"
+   ],
+   "objetivo": "Definir e provar a semântica de caminho do confinamento no Linux, que até hoje só foi escrita para o Windows: **barra invertida é separador em QUALQUER plataforma** (contrato de entrada do agente) e **a comparação ignora caixa SÓ no Windows** (é propriedade do sistema de arquivos). Os 4 testes que hoje falham no Linux passam a afirmar a regra da plataforma em que rodam — sem pular nenhum.",
+   "commits": 3,
+   "ultimo_commit": "0223b78",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-082",
+   "titulo": "Confinamento: destino RELATIVO de link é resolvido contra o diretório REAL, não contra o texto",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/ferramentas/confinamento.ex",
+    "test/fabrica/ferramentas/confinamento_test.exs"
+   ],
+   "objetivo": "Fechar uma fuga do confinamento que existe nas duas plataformas: quando um diretório do MEIO do caminho já é link e o link seguinte tem destino RELATIVO, `Confinamento.real/1` resolve esse destino contra o diretório TEXTUAL, e não contra o diretório real. Por isso julga \"dentro\" um caminho que o sistema operacional abre fora da raiz.",
+   "commits": 4,
+   "ultimo_commit": "f29633e",
+   "concluida_em": "2026-10-02",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-083",
+   "titulo": "Confinamento: UNC com barras MISTAS (`\\\\/servidor`, `/\\\\servidor`) é recusado antes de qualquer acesso ao disco",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/ferramentas/confinamento.ex",
+    "test/fabrica/ferramentas/confinamento_test.exs"
+   ],
+   "objetivo": "`Confinamento.resolver/2` recusa com `{:erro, :caminho_unc}` todo caminho de rede, inclusive os escritos com as duas barras misturadas no prefixo, ANTES de qualquer chamada ao sistema de arquivos.",
+   "commits": 4,
+   "ultimo_commit": "2b1d4fb",
+   "concluida_em": "2026-10-02",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-090",
+   "titulo": "O Bash do agente real roda CONFINADO — sandbox do próprio `claude` no despacho, e sem sandbox o agente não sobe",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs"
+   ],
+   "objetivo": "Num despacho real (`Operario.ClaudeCLI`), todo papel que tem `Bash` aprovado roda o shell DENTRO do sandbox do próprio `claude`: um comando que tenta gravar fora da raiz do projeto é negado pelo sistema operacional, e o que roda dentro da raiz continua funcionando. Onde o sandbox não existe, o agente com Bash NÃO sobe — e o operário diz isso com um erro nomeado, em vez de rodar sem confinamento.",
+   "commits": 9,
+   "ultimo_commit": "12bca12",
+   "concluida_em": "2026-10-02",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-099",
+   "titulo": "Windows: os dois testes de link do confinamento caem na máquina de origem — diagnosticar (fuga real ou teste frágil) e consertar",
+   "status": "pronta",
+   "tentativas": 0,
+   "areas": [
+    "test/fabrica/ferramentas/confinamento_test.exs",
+    "lib/fabrica/ferramentas/confinamento.ex"
+   ],
+   "objetivo": "A suíte volta a passar no Windows (a máquina de origem, onde o painel roda o pipeline) sem afrouxar nenhuma garantia do confinamento: os testes de link provam o que dizem provar, ou o código é consertado se a falha for uma fuga real.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-015",
+   "titulo": "O laco de tool use como processo supervisionado",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/agente/laco.ex",
+    "lib/fabrica/agente/estado.ex",
+    "test/fabrica/agente/laco_test.exs"
+   ],
+   "objetivo": "O nucleo do sistema: um `GenServer` que monta a requisicao, chama o operario, executa as ferramentas pedidas e repete ate o modelo dizer que terminou — ou ate bater num teto imposto de fora.",
+   "commits": 1,
+   "ultimo_commit": "fafda3b",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-017",
+   "titulo": "Teto de chamadas de ferramenta por papel",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/agente/orcamento_ferramentas.ex",
+    "test/fabrica/agente/orcamento_ferramentas_test.exs"
+   ],
+   "objetivo": "Um teto de chamadas de ferramenta por papel, medido e nao chutado, que MEDE o estouro e o registra — sem cortar o despacho no meio.",
+   "commits": 1,
+   "ultimo_commit": "59a3120",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-017a",
+   "titulo": "O teto de voltas do agente completo e imposto pelo CLI, e nao pedido no prompt",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs",
+    "priv/probes/cli_real.exs"
+   ],
+   "objetivo": "Fazer o `teto_de_voltas` da requisicao virar limite imposto ao `claude` pela linha de comando, de modo que a regra *\"o teto nao vai no prompt\"* continue valendo quando quem roda o laco e o CLI.",
+   "commits": 2,
+   "ultimo_commit": "0f0c2e3",
+   "concluida_em": "2026-09-03",
+   "custo_usd": 4.96,
+   "despachos": 4
+  },
+  {
+   "id": "T-017b",
+   "titulo": "O orcamento de ferramentas conta as chamadas que o agente completo fez",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/agente/estado.ex",
+    "lib/fabrica/agente/laco.ex",
+    "test/fabrica/agente/laco_test.exs"
+   ],
+   "objetivo": "Fazer o laco contar as chamadas de ferramenta das DUAS familias de operario — as que ele mesmo executa e as que o CLI executou sozinho — e expor o total no resumo, para que o `OrcamentoFerramentas` continue tendo o que medir.",
+   "commits": 2,
+   "ultimo_commit": "b69b0cc",
+   "concluida_em": "2026-09-25",
+   "custo_usd": 3.77,
+   "despachos": 3
+  },
+  {
+   "id": "T-020a",
+   "titulo": "O Laco nao repassa a raiz do projeto ao operario",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/agente/laco.ex",
+    "lib/fabrica/operario/falso.ex",
+    "test/fabrica/agente/laco_test.exs",
+    "test/fabrica/operario/falso_test.exs"
+   ],
+   "objetivo": "Fazer o `Agente.Laco` repassar a raiz do projeto ao operario em toda volta, para que o agente rode DENTRO do projeto que lhe foi dado e nao no diretorio de quem o chamou.",
+   "commits": 1,
+   "ultimo_commit": "991c95d",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-003a",
+   "titulo": "A fronteira do operario declara a FAMILIA, e o laco para de executar ferramenta que nao e dele",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/operario.ex",
+    "lib/fabrica/agente/laco.ex",
+    "test/fabrica/agente/laco_test.exs"
+   ],
+   "objetivo": "Fazer o contrato `Fabrica.Operario` distinguir as duas familias de operario — **agente completo** (roda o proprio laco de ferramentas) e **endpoint de modelo** (a fabrica roda o laco) — e o `Agente.Laco` respeitar essa distincao, em vez de tentar executar ferramenta que o operario ja executou.",
+   "commits": 3,
+   "ultimo_commit": "b049bae",
+   "concluida_em": "2026-09-03",
+   "custo_usd": 4.13,
+   "despachos": 3
+  },
+  {
+   "id": "T-018",
+   "titulo": "Operario.ClaudeCLI — o adaptador padrao de operacao",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs"
+   ],
+   "objetivo": "O adaptador que conversa com o Claude Code CLI. E o PADRAO de operacao: roda na assinatura, sem chave de API e sem converter cota em fatura.",
+   "commits": 1,
+   "ultimo_commit": "5da4c76",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-018a",
+   "titulo": "O ClaudeCLI nunca foi exercitado contra o CLI real",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs",
+    "lib/fabrica/ferramentas/comando.ex",
+    "priv/probes/cli_real.exs",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Fazer o `Operario.ClaudeCLI` funcionar contra o `claude` de verdade, e corrigir as quatro divergencias entre o que ele espera e o que o CLI realmente emite.",
+   "commits": 1,
+   "ultimo_commit": "c871896",
+   "concluida_em": "2026-08-31",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-018b",
+   "titulo": "Medir a superficie de governanca do `claude --print` real",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "priv/probes/cli_governanca.exs",
+    "priv/probes/amostras/sessao-com-ferramenta.jsonl",
+    ".gitignore",
+    "_gestao/PROGRESSO.md"
+   ],
+   "objetivo": "Descobrir, medindo contra o `claude` instalado nesta maquina, o que a linha de comando dele oferece de governanca: modo de permissao, restricao de ferramentas, confinamento de diretorio, teto de turnos, prompt por `stdin` e a forma exata do stream numa sessao que usa ferramenta. Nenhum codigo de producao e escrito nesta tarefa.",
+   "commits": 3,
+   "ultimo_commit": "3cdbc18",
+   "concluida_em": "2026-09-02",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-018c",
+   "titulo": "O ClaudeCLI opera em modo headless governado — permissao e vocabulario por papel",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs",
+    "priv/probes/cli_real.exs"
+   ],
+   "objetivo": "Fazer o `Operario.ClaudeCLI` conseguir escrever arquivo em modo headless — hoje toda escrita e negada — e, no mesmo movimento, restringir o vocabulario de ferramentas do CLI ao que o `Ferramentas.Catalogo` permite para o papel da requisicao.",
+   "commits": 3,
+   "ultimo_commit": "5838e29",
+   "concluida_em": "2026-09-03",
+   "custo_usd": 5.77,
+   "despachos": 4
+  },
+  {
+   "id": "T-018d",
+   "titulo": "O prompt do ClaudeCLI sai da linha de comando",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs",
+    "priv/probes/cli_real.exs"
+   ],
+   "objetivo": "Fazer o texto da conversa viajar ate o `claude` por `stdin`, a partir de um arquivo, em vez de ser interpolado na linha de comando — para que um prompt de tarefa real, com quebras de linha e pontuacao de shell, chegue integro.",
+   "commits": 6,
+   "ultimo_commit": "e7c2060",
+   "concluida_em": "2026-09-03",
+   "custo_usd": 11.45,
+   "despachos": 5
+  },
+  {
+   "id": "T-018e",
+   "titulo": "O motivo de parada do ClaudeCLI sai do evento terminal, e nao do stream inteiro",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs"
+   ],
+   "objetivo": "Fazer `ClaudeCLI.montar/1` derivar o `motivo_parada` do evento que ENCERRA a sessao, e nunca de um bloco `tool_use` que o proprio CLI ja resolveu no meio do caminho.",
+   "commits": 4,
+   "ultimo_commit": "18aaaa4",
+   "concluida_em": "2026-09-03",
+   "custo_usd": 6.46,
+   "despachos": 5
+  },
+  {
+   "id": "T-019",
+   "titulo": "Operario.MessagesAPI — Req, com controle de cache",
+   "status": "concluida",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/operario/messages_api.ex",
+    "test/fabrica/operario/messages_api_test.exs"
+   ],
+   "objetivo": "O adaptador que fala HTTP direto com a Messages API usando Req, com controle byte a byte do prefixo, dos pontos de cache e do TTL. E ele que persegue os ~50% da conta que a escrita de cache carrega.",
+   "commits": 1,
+   "ultimo_commit": "205075f",
+   "concluida_em": "2026-08-28",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-020",
+   "titulo": "MARCO da v0.2: uma tarefa resolvida, e o prefixo escrito uma vez",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "_gestao/PROGRESSO.md",
+    "priv/probes/marco_v02_agente.exs"
+   ],
+   "objetivo": "Verificar os DOIS marcos da v0.2: um agente resolve uma tarefa real de ponta a ponta com custo por volta gravado; e o prefixo do projeto e escrito uma vez e lido pelos despachos seguintes.",
+   "commits": 4,
+   "ultimo_commit": "8f847c8",
+   "concluida_em": "2026-09-26",
+   "custo_usd": 3.67,
+   "despachos": 3
+  },
+  {
+   "id": "T-020b",
+   "titulo": "O probe do marco 1 roda verde de ponta a ponta, com prompt de tarefa real",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "priv/probes/marco_v02_agente.exs",
+    "_gestao/PROGRESSO.md",
+    "_gestao/GUIA.md"
+   ],
+   "objetivo": "Ajustar o probe do marco 1 ao desenho das duas familias de operario, roda-lo verde contra o `claude` real com um prompt de tarefa REAL, e registrar o desenho novo no `PROGRESSO.md` e no `GUIA.md`.",
+   "commits": 4,
+   "ultimo_commit": "9b0879a",
+   "concluida_em": "2026-09-26",
+   "custo_usd": 10.05,
+   "despachos": 5
+  },
+  {
+   "id": "T-100",
+   "titulo": "O probe do marco da v0.2 volta a rodar no Windows: a tarefa do probe não precisa de shell, então o agente sobe sem Bash",
+   "status": "pronta",
+   "tentativas": 0,
+   "areas": [
+    "priv/probes/marco_v02_agente.exs",
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs"
+   ],
+   "objetivo": "`mix run priv/probes/marco_v02_agente.exs` volta a dar `PROBE OK` na máquina Windows de origem, sem desligar nem afrouxar o sandbox de quem tem shell: o agente do probe sobe com um vocabulário que NÃO contém Bash (a tarefa dele é só escrever um arquivo), e por isso não precisa do sandbox.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-020c",
+   "titulo": "MARCO 2 da v0.2, adiado para o fim: o prefixo escrito uma vez, medido com a Messages API",
+   "status": "backlog",
+   "tentativas": 0,
+   "areas": [
+    "_gestao/PROGRESSO.md",
+    "priv/probes/marco_v02_agente.exs"
+   ],
+   "objetivo": "Medir o marco 2 da v0.2 — o prefixo do projeto e escrito UMA vez e LIDO pelos despachos seguintes — com o `Operario.MessagesAPI`, e decidir com o numero se a Messages API se justifica.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  }
+ ],
+ "fechamento": [
+  "12bca128802f710e9dcd47b2a957b8107fd44561",
+  "2026-10-02"
+ ],
+ "arquivos": [
+  ".gitignore",
+  "lib/fabrica/agente/estado.ex",
+  "lib/fabrica/agente/laco.ex",
+  "lib/fabrica/agente/orcamento_ferramentas.ex",
+  "lib/fabrica/ferramentas/arquivo.ex",
+  "lib/fabrica/ferramentas/arvore_processos.ex",
+  "lib/fabrica/ferramentas/comando.ex",
+  "lib/fabrica/ferramentas/confinamento.ex",
+  "lib/fabrica/ferramentas/guardas.ex",
+  "lib/fabrica/ferramentas/registrar_resultado.ex",
+  "lib/fabrica/indice/mapa.ex",
+  "lib/fabrica/operario.ex",
+  "lib/fabrica/operario/claude_cli.ex",
+  "lib/fabrica/operario/falso.ex",
+  "lib/fabrica/operario/messages_api.ex",
+  "lib/fabrica/prompt/bloco.ex",
+  "lib/fabrica/prompt/prefixo.ex",
+  "lib/mix/tasks/fabrica.mapa.ex",
+  "priv/probes/amostras/sessao-com-ferramenta.jsonl",
+  "priv/probes/cli_governanca.exs",
+  "priv/probes/cli_real.exs",
+  "priv/probes/confinamento_cli.exs",
+  "priv/probes/marco_v02_agente.exs",
+  "test/fabrica/agente/ferramentas_test.exs",
+  "test/fabrica/agente/laco_test.exs",
+  "test/fabrica/agente/orcamento_ferramentas_test.exs",
+  "test/fabrica/ferramentas/comando_test.exs",
+  "test/fabrica/ferramentas/confinamento_test.exs",
+  "test/fabrica/ferramentas/guardas_test.exs",
+  "test/fabrica/ferramentas/registrar_resultado_test.exs",
+  "test/fabrica/fila/exclusao_test.exs",
+  "test/fabrica/indice/mapa_test.exs",
+  "test/fabrica/operario/claude_cli_test.exs",
+  "test/fabrica/operario/falso_test.exs",
+  "test/fabrica/operario/messages_api_test.exs",
+  "test/fabrica/prompt/prefixo_test.exs"
+ ],
+ "n_tarefas": 33,
+ "n_concluidas": 30,
+ "commits": 78,
+ "testes": 408,
+ "linhas_lib": 4087,
+ "custo_usd": 67.07,
+ "despachos": 42,
+ "primeira": 25,
+ "tent_media": 1.17,
+ "marco_status": "concluida"
+}

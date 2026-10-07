@@ -1,0 +1,10 @@
+Running ExUnit with seed: 733844, max_cases: 16
+Excluding tags: [:precisa_pg_dump]
+
+..
+Finished in 3.8 seconds (0.00s async, 3.8s sync)
+2 tests, 0 failures
+
+real	0m8.066s
+user	0m0.015s
+sys	0m0.276s

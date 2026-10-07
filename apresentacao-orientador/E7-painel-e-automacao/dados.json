@@ -1,0 +1,557 @@
+{
+ "tarefas": [
+  {
+   "id": "T-050",
+   "titulo": "Barramento de eventos e telemetria por despacho",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "lib/fabrica/eventos.ex",
+    "lib/fabrica/telemetria.ex",
+    "test/fabrica/eventos_test.exs"
+   ],
+   "objetivo": "Cada despacho emite eventos — inicio, fim, modelo, voltas, tokens escritos e lidos, custo e desfecho — num barramento que a tela assina.",
+   "commits": 6,
+   "ultimo_commit": "f68379c",
+   "concluida_em": "2026-09-07",
+   "custo_usd": 12.28,
+   "despachos": 7
+  },
+  {
+   "id": "T-051",
+   "titulo": "Painel: quadro de tarefas por estado, ao vivo",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "lib/fabrica_web/live/quadro_live.ex",
+    "test/fabrica_web/live/quadro_live_test.exs",
+    "lib/fabrica_web/router.ex"
+   ],
+   "objetivo": "A tela principal: as tarefas do projeto agrupadas pelos seis estados, atualizando sozinha conforme o motor trabalha.",
+   "commits": 4,
+   "ultimo_commit": "769cc46",
+   "concluida_em": "2026-09-08",
+   "custo_usd": 10.78,
+   "despachos": 7
+  },
+  {
+   "id": "T-052",
+   "titulo": "Painel: console ao vivo do agente e custo da rodada",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica_web/live/console_live.ex",
+    "test/fabrica_web/live/console_live_test.exs",
+    "lib/fabrica_web/router.ex"
+   ],
+   "objetivo": "Ver o que o agente esta fazendo agora, volta a volta, e quanto a rodada ja gastou — enquanto acontece, nao depois.",
+   "commits": 2,
+   "ultimo_commit": "77cfdee",
+   "concluida_em": "2026-09-16",
+   "custo_usd": 6.64,
+   "despachos": 4
+  },
+  {
+   "id": "T-053",
+   "titulo": "Parar e retomar: um botao que encerra um processo supervisionado",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica_web/live/componentes/controles.ex",
+    "test/fabrica_web/controles_test.exs"
+   ],
+   "objetivo": "Cortar um agente pela tela — e o supervisor devolve a tarefa a fila, sem deixar trabalho pela metade nem arquivo editado sem dono.",
+   "commits": 2,
+   "ultimo_commit": "fc1149e",
+   "concluida_em": "2026-09-16",
+   "custo_usd": 7.48,
+   "despachos": 5
+  },
+  {
+   "id": "T-054",
+   "titulo": "Piloto automatico: a decisao (funcao pura)",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/piloto/decisao.ex",
+    "test/fabrica/piloto/decisao_test.exs"
+   ],
+   "objetivo": "A tabela de decisao que diz se o piloto continua, dorme ou para — pura, testavel, e com a ORDEM dos ramos sendo a propria regra.",
+   "commits": 2,
+   "ultimo_commit": "970a39b",
+   "concluida_em": "2026-09-16",
+   "custo_usd": 4.37,
+   "despachos": 3
+  },
+  {
+   "id": "T-055",
+   "titulo": "Piloto automatico: a mecanica e a tela",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "lib/fabrica/piloto/servidor.ex",
+    "lib/fabrica_web/live/componentes/piloto.ex",
+    "test/fabrica/piloto/servidor_test.exs"
+   ],
+   "objetivo": "O processo que escuta o fim de uma rodada, consulta a decisao e dispara a proxima — mais o controle na tela.",
+   "commits": 6,
+   "ultimo_commit": "f92f099",
+   "concluida_em": "2026-09-16",
+   "custo_usd": 16.63,
+   "despachos": 7
+  },
+  {
+   "id": "T-056",
+   "titulo": "A trilha generica e a escada de prova com rotulo obrigatorio",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/trilhas.ex",
+    "lib/fabrica/criterios/grau.ex",
+    "test/fabrica/trilhas_test.exs"
+   ],
+   "objetivo": "Rotear o pipeline inteiro pelo `dominio` do projeto, e obrigar o verificador a declarar em que degrau cada criterio foi provado.",
+   "commits": 6,
+   "ultimo_commit": "6c37012",
+   "concluida_em": "2026-09-21",
+   "custo_usd": 13.63,
+   "despachos": 10
+  },
+  {
+   "id": "T-057",
+   "titulo": "Varredura de segredos antes de publicar",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "lib/fabrica/seguranca.ex",
+    "test/fabrica/seguranca_test.exs",
+    "test/fabrica/ferramentas/confinamento_test.exs"
+   ],
+   "objetivo": "Varrer o repositorio por segredos antes de qualquer publicacao, e recusar quando encontrar.",
+   "commits": 4,
+   "ultimo_commit": "7f63aa2",
+   "concluida_em": "2026-09-21",
+   "custo_usd": 7.98,
+   "despachos": 6
+  },
+  {
+   "id": "T-066",
+   "titulo": "Fabrica.Despacho: monta a mensagem inicial de um agente, a partir da tarefa e do papel",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "lib/fabrica/despacho.ex",
+    "test/fabrica/despacho_test.exs"
+   ],
+   "objetivo": "Compor, a partir de uma `Fabrica.Tarefas.Tarefa` e um papel (`construtor`/`verificador`/ `revisor`/`planejador`), a mensagem inicial pronta para `Fabrica.Agente.Estado.novo/1` — as quatro faixas do prefixo, na ordem que `Fabrica.Prompt.Prefixo` exige, com as ferramentas do papel já resolvidas.",
+   "commits": 5,
+   "ultimo_commit": "f8bb109",
+   "concluida_em": "2026-09-22",
+   "custo_usd": 10.55,
+   "despachos": 7
+  },
+  {
+   "id": "T-067",
+   "titulo": "A doutrina de construtor, testador e revisor, escrita para o agente real desta fábrica",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "priv/doutrina/construtor.md",
+    "priv/doutrina/testador.md",
+    "priv/doutrina/revisor.md"
+   ],
+   "objetivo": "Escrever o texto de doutrina dos três papéis de construção (`construtor`, `testador`, `revisor`) que `Fabrica.Despacho` (T-066) usa como `texto_do_papel` — hoje esse texto não existe em lugar nenhum dentro do confinamento deste projeto.",
+   "commits": 4,
+   "ultimo_commit": "6acc29e",
+   "concluida_em": "2026-09-22",
+   "custo_usd": 6.75,
+   "despachos": 4
+  },
+  {
+   "id": "T-070",
+   "titulo": "A cola: Fila.Trabalho.perform/1 sobe o agente real e fecha o laço com o Piloto",
+   "status": "concluida",
+   "tentativas": 3,
+   "areas": [
+    "lib/fabrica/fila/trabalho.ex",
+    "test/fabrica/fila/trabalho_test.exs"
+   ],
+   "objetivo": "`Fabrica.Fila.Trabalho.perform/1` hoje só loga (\"pronta para ser atendida\") — ligá-lo ao `Fabrica.Agente.Supervisor.iniciar/4`, para que ligar o piloto (T-055) de fato suba um agente real, e ao terminar aplique o veredito e avise o `Piloto.Servidor` para continuar.",
+   "commits": 4,
+   "ultimo_commit": "31ce8b0",
+   "concluida_em": "2026-09-25",
+   "custo_usd": 25.98,
+   "despachos": 13
+  },
+  {
+   "id": "T-071",
+   "titulo": "A bateria voltou a ficar VERMELHA no Dialyzer: zerar os 12 erros acumulados",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/cota.ex",
+    "lib/fabrica/fila/resgate.ex",
+    "lib/fabrica/fila/trabalho.ex",
+    "lib/fabrica/piloto/servidor.ex",
+    "lib/fabrica_web/live/console_live.ex",
+    "lib/fabrica_web/live/quadro_live.ex",
+    "lib/mix/tasks/fabrica.importar.ex"
+   ],
+   "objetivo": "Zerar os 12 erros de Dialyzer que hoje deixam `mix fabrica.ci` (bateria COMPLETA) vermelho, e com isso devolver a satisfatibilidade a **sete tarefas** que declaram esse comando em `verificar:`.",
+   "commits": 4,
+   "ultimo_commit": "779de61",
+   "concluida_em": "2026-09-22",
+   "custo_usd": 5.74,
+   "despachos": 3
+  },
+  {
+   "id": "T-072",
+   "titulo": "pg_restore ao vivo (backup_test) corrompe a suite concorrente — isolar num estagio proprio",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "test/test_helper.exs",
+    "mix.exs",
+    "_gestao/ci.json",
+    "test/mix/ci_test.exs"
+   ],
+   "objetivo": "`mix test`/`mix verificar` param de rodar o ciclo de backup/restore (`test/mix/backup_test.exs`, tag `:precisa_pg_dump`) misturado ao resto da suite. Ele passa a rodar sozinho, num estagio proprio, sem nenhum outro teste concorrente batendo no mesmo banco ao mesmo tempo. A cobertura do ciclo de backup NAO diminui — so deixa de correr ao lado de tudo mais.",
+   "commits": 5,
+   "ultimo_commit": "507c011",
+   "concluida_em": "2026-10-02",
+   "custo_usd": 6.07,
+   "despachos": 2
+  },
+  {
+   "id": "T-073",
+   "titulo": "Ferramentas REAIS do agente: ler/listar/buscar/escrever/editar/rodar, confinadas a raiz+areas",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/agente/ferramentas.ex",
+    "lib/fabrica/fila/trabalho.ex",
+    "test/fabrica/agente/ferramentas_test.exs"
+   ],
+   "objetivo": "Hoje `Fabrica.Fila.Trabalho.rodar_agente/2` chama `Fabrica.Agente.Laco.rodar/1` **sem passar `ferramentas:`** — `Agente.Estado` cai no padrão `%{}`. Ligar o piloto agora sobe um agente real (processo supervisionado, confirmável por `Agente.Supervisor.listar/0`) que não tem NENHUMA ferramenta: ele só produz prosa até o teto de voltas, sem ler nem editar um arquivo sequer — gastando dinheiro de verdade sem fazer o trabalho.",
+   "commits": 2,
+   "ultimo_commit": "2133b64",
+   "concluida_em": "2026-09-26",
+   "custo_usd": 7.05,
+   "despachos": 3
+  },
+  {
+   "id": "T-074",
+   "titulo": "registrar_resultado chamavel de verdade NO MEIO do laco, antes do ciclo_id existir",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/ferramentas/registrar_resultado.ex",
+    "lib/fabrica/agente/ferramentas.ex",
+    "lib/fabrica/fila/trabalho.ex",
+    "test/fabrica/agente/ferramentas_test.exs",
+    "test/fabrica/fila/trabalho_test.exs"
+   ],
+   "objetivo": "`Fabrica.Ferramentas.RegistrarResultado.registrar/2` exige um `ciclo_id` (`pos_integer()`) para gravar. Mas a linha de `ciclos` só nasce DENTRO do `Multi` de `Fabrica.Tarefas.Transicao.aplicar/3` (`talvez_ciclo/2`), ao FIM do despacho — e `registrar_resultado` é a única ferramenta de relato que a doutrina manda o agente chamar **NO MEIO** do laço (`priv/doutrina/testador.md`, `revisor.md`). Hoje não há como esta ferramenta ser oferecida ao agente de verdade: não existe `ciclo_id` no momento em que ela precisaria ser chamada.",
+   "commits": 3,
+   "ultimo_commit": "3e8575b",
+   "concluida_em": "2026-09-26",
+   "custo_usd": 8.53,
+   "despachos": 4
+  },
+  {
+   "id": "T-084",
+   "titulo": "O nome interno do modelo vira o ID que o `claude` de hoje aceita — no `--model` e na tabela de preços",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs",
+    "lib/fabrica/custo/precos.ex",
+    "test/fabrica/custo/precos_test.exs"
+   ],
+   "objetivo": "Todo despacho real (`Operario.ClaudeCLI`) passa ao `claude` um `--model` que o CLI instalado ACEITA, e o custo que volta do CLI é precificado — hoje as duas pontas falham e a T-058 (marco da v1.0) não tem como rodar: o primeiro despacho do piloto morreria antes de qualquer trabalho.",
+   "commits": 4,
+   "ultimo_commit": "4e93b8e",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-085",
+   "titulo": "O agente real não herda o CLAUDE.md dos diretórios-pai — o prefixo da fábrica é o único contexto",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs"
+   ],
+   "objetivo": "O `claude` que `Operario.ClaudeCLI` sobe para um despacho deixa de carregar, por conta própria, os `CLAUDE.md` que encontrar subindo a árvore a partir da raiz do projeto. O contexto do agente passa a ser só o que a fábrica monta (`Despacho`/`Prompt.Prefixo`).",
+   "commits": 3,
+   "ultimo_commit": "b31e1ca",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-086",
+   "titulo": "O custo de um despacho real conta a escrita de cache — o teto de gasto do piloto passa a frear de verdade",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs",
+    "lib/fabrica/custo/precos.ex",
+    "test/fabrica/custo/precos_test.exs"
+   ],
+   "objetivo": "O `gasto_usd` de um despacho real (`Operario.ClaudeCLI` → `Consumo` → `Custo.Precos`) bate com o custo que o próprio `claude` reporta (`total_cost_usd`). Hoje ele sai de 10× a 22× ABAIXO, e é esse número que o `Piloto.Servidor` soma contra o teto de gasto: o \"US$ 60\" da T-058 só frearia depois de algo entre US$ 600 e US$ 1.200 de consumo real.",
+   "commits": 3,
+   "ultimo_commit": "4a24806",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-088",
+   "titulo": "O Bash que o despacho real anuncia passa a ser APROVADO — o agente consegue rodar teste",
+   "status": "concluida",
+   "tentativas": 2,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs"
+   ],
+   "objetivo": "Num despacho real (`Operario.ClaudeCLI`), o papel que tem `Bash` no vocabulário (`--tools`) consegue de fato EXECUTAR comando de shell — rodar a suíte, um critério, um `git status`. Hoje todo comando é negado e o agente trabalha às cegas.",
+   "commits": 4,
+   "ultimo_commit": "0a61627",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-089",
+   "titulo": "Despacho que termina em erro ainda conta o que gastou — o consumo já medido não é descartado",
+   "status": "concluida",
+   "tentativas": 1,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs",
+    "lib/fabrica/agente/laco.ex",
+    "test/fabrica/agente/laco_test.exs"
+   ],
+   "objetivo": "Um despacho real que termina em erro (`{:erro, _}` do operário) entrega ao `Agente.Laco` — e daí ao evento `[:fabrica, :despacho, :fim]` que o `Piloto.Servidor` soma contra o teto — o custo que de fato gastou, sempre que esse custo foi medido. Hoje ele chega como US$ 0,00.",
+   "commits": 3,
+   "ultimo_commit": "0bda248",
+   "concluida_em": "2026-10-01",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-092",
+   "titulo": "O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento",
+   "status": "pronta",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/operario.ex",
+    "priv/probes/confinamento_cli.exs"
+   ],
+   "objetivo": "Quem lê o contrato de `Fabrica.Operario` sabe que um erro pode vir embrulhado com o consumo já medido, e a sonda `priv/probes/confinamento_cli.exs` classifica certo as saídas que o `ClaudeCLI` de hoje devolve — em vez de reprovar um caso correto.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-093",
+   "titulo": "Fallback por texto da parede de cota lê só result/errors/stderr, não o stdout inteiro",
+   "status": "pronta",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/operario/claude_cli.ex",
+    "test/fabrica/operario/claude_cli_test.exs"
+   ],
+   "objetivo": "Uma resposta ATENDIDA em que o agente apenas escreve (ou lê de um arquivo, ou recebe de um comando) a frase de limite — \"You've hit your weekly limit\", \"rate limit exceeded\" — não vira parede de cota. Só vira parede o texto que o próprio CLI escreve onde ele reporta erro.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-094",
+   "titulo": "Piloto dormindo pela cota acorda no REARME da Cota, sem laço quente entre `reabre_em` e a folga",
+   "status": "pronta",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/piloto/servidor.ex",
+    "test/fabrica/piloto/servidor_test.exs"
+   ],
+   "objetivo": "Depois de uma parede de cota, o piloto fica parado de verdade até a Cota rearmar — acorda pelo rearme (ou por um piso de espera), e nunca reavalia em laço sem pausa enquanto a cota segue batida.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-095",
+   "titulo": "Despacho que não rodou (parede de cota, sem sandbox) não é JULGADO em nenhum papel — nem avança a tarefa, nem gasta ciclo, nem aprova por omissão",
+   "status": "pronta",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/fila/trabalho.ex",
+    "test/fabrica/fila/trabalho_test.exs"
+   ],
+   "objetivo": "Quando o despacho de QUALQUER papel (construtor, verificador, revisor) é interrompido por algo que NÃO é o trabalho — parede de cota, sandbox indisponível —, o portão não julga: a tarefa fica onde estava para ser retomada depois, em vez de seguir no pipeline como se o turno tivesse terminado.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-096",
+   "titulo": "Parede de cota não conta como rodada sem concluir, e o piloto religado respeita o sono salvo",
+   "status": "backlog",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/piloto/servidor.ex",
+    "test/fabrica/piloto/servidor_test.exs"
+   ],
+   "objetivo": "Uma parede de cota não empurra o piloto para `{:parar, :estagnado}`, e um piloto que volta (reinício da aplicação) enquanto dormia pela cota continua dormindo até a hora salva, em vez de despachar contra a parede.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-097",
+   "titulo": "Busca filtrada por projeto não perde trecho para tuplas mortas do índice HNSW (busca_test.exs:242)",
+   "status": "pronta",
+   "tentativas": 0,
+   "areas": [
+    "lib/fabrica/memoria/busca.ex",
+    "test/fabrica/memoria/busca_test.exs"
+   ],
+   "objetivo": "`Busca.buscar/3` devolve todos os candidatos que cabem no limite, mesmo com o índice HNSW de `trechos` cheio de entradas de outros projetos ou de linhas mortas — e o teste `busca_test.exs:242` deixa de falhar intermitentemente.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-098",
+   "titulo": "classe_falha_test.exs:315 (prazo estourado reexecuta UMA vez) deixa de depender do relógio",
+   "status": "pronta",
+   "tentativas": 0,
+   "areas": [
+    "test/fabrica/criterios/classe_falha_test.exs",
+    "lib/fabrica/criterios.ex"
+   ],
+   "objetivo": "O teste \"prazo estourado reexecuta UMA vez, e a reexecucao e contada\" passa sempre que o comportamento está certo e falha sempre que não está — sem depender da velocidade da máquina.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-049",
+   "titulo": "ABERTURA da v1.0: o que a tela precisa mostrar, e a medicao final",
+   "status": "backlog",
+   "tentativas": 0,
+   "areas": [
+    "_gestao/PROGRESSO.md",
+    "_sistema/v2/tarefas"
+   ],
+   "objetivo": "Antes de construir o painel e a trilha generica, decidir o que a tela precisa mostrar a partir do que o sistema REALMENTE grava — e preparar a comparacao final com a linha de base. Nenhum codigo de producao.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-058",
+   "titulo": "MARCO da v1.0: um projeto inteiro, sem intervencao",
+   "status": "bloqueada",
+   "tentativas": 0,
+   "areas": [
+    "_gestao/PROGRESSO.md",
+    "_gestao/ENTREGA.md"
+   ],
+   "objetivo": "Verificar o marco final: um projeto inteiro e planejado, construido e entregue sem intervencao, com o custo acompanhado na tela. E fechar a comparacao com a linha de base.",
+   "commits": 2,
+   "ultimo_commit": "2cb20b4",
+   "concluida_em": "2026-09-21",
+   "custo_usd": 7.44,
+   "despachos": 4
+  }
+ ],
+ "fechamento": [
+  "88c92aa816f9ecbdf5c6a7a19c0e3d2a9ac17a3d",
+  "2026-10-07"
+ ],
+ "arquivos": [
+  "lib/fabrica/agente/ferramentas.ex",
+  "lib/fabrica/agente/laco.ex",
+  "lib/fabrica/cota.ex",
+  "lib/fabrica/criterios.ex",
+  "lib/fabrica/criterios/grau.ex",
+  "lib/fabrica/custo/precos.ex",
+  "lib/fabrica/despacho.ex",
+  "lib/fabrica/eventos.ex",
+  "lib/fabrica/ferramentas/registrar_resultado.ex",
+  "lib/fabrica/fila/resgate.ex",
+  "lib/fabrica/fila/trabalho.ex",
+  "lib/fabrica/memoria/busca.ex",
+  "lib/fabrica/operario.ex",
+  "lib/fabrica/operario/claude_cli.ex",
+  "lib/fabrica/piloto/decisao.ex",
+  "lib/fabrica/piloto/servidor.ex",
+  "lib/fabrica/seguranca.ex",
+  "lib/fabrica/telemetria.ex",
+  "lib/fabrica/trilhas.ex",
+  "lib/fabrica_web/live/componentes/controles.ex",
+  "lib/fabrica_web/live/componentes/piloto.ex",
+  "lib/fabrica_web/live/console_live.ex",
+  "lib/fabrica_web/live/quadro_live.ex",
+  "lib/fabrica_web/router.ex",
+  "lib/mix/tasks/fabrica.importar.ex",
+  "mix.exs",
+  "priv/doutrina/construtor.md",
+  "priv/doutrina/revisor.md",
+  "priv/doutrina/testador.md",
+  "priv/probes/confinamento_cli.exs",
+  "test/fabrica/agente/ferramentas_test.exs",
+  "test/fabrica/agente/laco_test.exs",
+  "test/fabrica/criterios/classe_falha_test.exs",
+  "test/fabrica/custo/precos_test.exs",
+  "test/fabrica/despacho_test.exs",
+  "test/fabrica/eventos_test.exs",
+  "test/fabrica/ferramentas/confinamento_test.exs",
+  "test/fabrica/fila/trabalho_test.exs",
+  "test/fabrica/memoria/busca_test.exs",
+  "test/fabrica/operario/claude_cli_test.exs",
+  "test/fabrica/piloto/decisao_test.exs",
+  "test/fabrica/piloto/servidor_test.exs",
+  "test/fabrica/seguranca_test.exs",
+  "test/fabrica/trilhas_test.exs",
+  "test/fabrica_web/controles_test.exs",
+  "test/fabrica_web/live/console_live_test.exs",
+  "test/fabrica_web/live/quadro_live_test.exs",
+  "test/mix/ci_test.exs",
+  "test/test_helper.exs"
+ ],
+ "n_tarefas": 29,
+ "n_concluidas": 20,
+ "commits": 78,
+ "testes": 446,
+ "linhas_lib": 6812,
+ "custo_usd": 157.9,
+ "despachos": 89,
+ "primeira": 12,
+ "tent_media": 1.45,
+ "marco_status": "bloqueada"
+}
