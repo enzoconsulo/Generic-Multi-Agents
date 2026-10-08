@@ -135,6 +135,19 @@ defmodule FabricaWeb.ConsoleLiveTest do
   end
 
   describe "parede de cota" do
+    # O LiveView le o `Fabrica.Cota` GLOBAL no mount (`cota_agora/0`, sem nome injetavel) —
+    # este teste nao bate a parede nele (usa `Eventos.cota_parede/cota_rearme` direto no
+    # barramento), mas a primeira asserção, abaixo, reflete o estado AMBIENTE desse processo.
+    # Rearma ANTES de montar para nao depender de outro teste ter deixado a parede batida
+    # (T-102; memoria de sessao `parede-cota-vaza-cota-global-na-suite`).
+    setup do
+      if pid = Process.whereis(Fabrica.Cota) do
+        if Fabrica.Cota.batida?(pid), do: :ok = Fabrica.Cota.rearmar(pid)
+      end
+
+      :ok
+    end
+
     test "aparece com o horario de reabertura quando ativa, e some ao rearmar", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/console")
 

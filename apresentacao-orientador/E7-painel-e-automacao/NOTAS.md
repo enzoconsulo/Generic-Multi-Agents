@@ -2,7 +2,7 @@
 
 **Plano:** 03/12 – 17/12/2026 · fase Desenvolvimento · no repositório: versão `v1.0`
 **Entrega combinada no plano:** Um projeto inteiro acompanhado na tela, do pedido à entrega, com o custo em tempo real.
-**Situação hoje (07/10/2026 21:24):** Telas e automação construídas — marco final em andamento
+**Situação hoje (08/10/2026 06:28):** Telas e automação construídas — marco final em andamento
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.
@@ -15,7 +15,7 @@
 | `NOTAS.md` | este arquivo: o que está feito, o que falta e a próxima rodada |
 | `dados.json` | os números desta etapa, extraídos do repositório |
 | `tarefas/` | cópia dos arquivos de tarefa desta etapa (objetivo, critérios, verificação, revisão) |
-| `arquivos/` | os 49 arquivos de código/teste desta etapa, no estado do commit `d68f2f3` |
+| `arquivos/` | os 51 arquivos de código/teste desta etapa, no estado do commit `12d0ce7` |
 | `evidencias/` | capturas de tela das telas desta etapa |
 
 ## O combinado × o feito
@@ -29,14 +29,14 @@
 | 7.x Entregas não-código | trilha genérica e escada de prova | T-056 | T-056 concluída |
 | 7.5 Segredos | varredura de segredos antes de publicar | T-057 | T-057 concluída |
 | Integração Agente real de ponta a ponta | a fila sobe o agente real; custo real bate com o fornecedor | T-066, T-067, T-070, T-071, T-072, T-073, T-074, T-084, T-085, T-086, T-088, T-089 | T-066 concluída; T-067 concluída; T-070 concluída; T-071 concluída; T-072 concluída; T-073 concluída; T-074 concluída; T-084 concluída; T-085 concluída; T-086 concluída; T-088 concluída; T-089 concluída |
-| Abertas Corretivas (rodando hoje) | prontas para o motor | T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-102 | T-092 pronta; T-093 pronta; T-094 concluída; T-095 concluída; T-096 concluída; T-097 concluída; T-098 pronta; T-102 pronta |
+| Corretivas Endurecimento para o marco final | prontas para o motor | T-092, T-093, T-094, T-095, T-096, T-097, T-098, T-102, T-103 | T-092 em execução; T-093 pronta; T-094 concluída; T-095 concluída; T-096 concluída; T-097 concluída; T-098 pronta; T-102 em execução; T-103 em execução |
 | Abertura Conferir o plano | o que a tela precisa mostrar e a medição final | T-049 | T-049 backlog |
 | Entrega Marco final | um projeto inteiro, sem intervenção | T-058 | T-058 bloqueada |
 
 ## Números (do repositório)
 
-- tarefas: **24/30 concluídas**; aprovadas de primeira: 14; execuções por tarefa (média): 1.5
-- commits das tarefas: 98 · testes nos arquivos da etapa: 471 · linhas em `lib/`: 7105
+- tarefas: **24/31 concluídas**; aprovadas de primeira: 14; execuções por tarefa (média): 1.5
+- commits das tarefas: 105 · testes nos arquivos da etapa: 476 · linhas em `lib/`: 7164
 - custo medido nas rodadas do painel: US$ 195,96 em 111 despachos (dólar-equivalente de cota; tarefas feitas no chat não entram)
 
 ## Tarefas
@@ -63,14 +63,15 @@
 | T-086 | O custo de um despacho real conta a escrita de cache — o teto de gasto do piloto passa a frear de verdade | concluída | 1 | 2026-10-01 | — |
 | T-088 | O Bash que o despacho real anuncia passa a ser APROVADO — o agente consegue rodar teste | concluída | 2 | 2026-10-01 | — |
 | T-089 | Despacho que termina em erro ainda conta o que gastou — o consumo já medido não é descartado | concluída | 1 | 2026-10-01 | — |
-| T-092 | O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento | pronta | 1 | — | — |
+| T-092 | O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento | em execução | 1 | 2026-10-07 | — |
 | T-093 | Fallback por texto da parede de cota lê só result/errors/stderr, não o stdout inteiro | pronta | 1 | — | — |
 | T-094 | Piloto dormindo pela cota acorda no REARME da Cota, sem laço quente entre `reabre_em` e a folga | concluída | 1 | 2026-10-07 | US$ 13,60 |
 | T-095 | Despacho que não rodou (parede de cota, sem sandbox) não é JULGADO em nenhum papel — nem avança a tarefa, nem gasta ciclo, nem aprova por omissão | concluída | 3 | 2026-10-07 | US$ 13,40 |
 | T-096 | Parede de cota não conta como rodada sem concluir, e o piloto religado respeita o sono salvo | concluída | 1 | 2026-10-07 | US$ 3,77 |
 | T-097 | Busca filtrada por projeto não perde trecho para tuplas mortas do índice HNSW (busca_test.exs:242) | concluída | 2 | 2026-10-07 | US$ 7,29 |
 | T-098 | classe_falha_test.exs:315 (prazo estourado reexecuta UMA vez) deixa de depender do relógio | pronta | 1 | — | — |
-| T-102 | console_live_test.exs:138 (parede de cota no console) deixa de depender do estado global da Cota compartilhado com outros testes | pronta | 1 | — | — |
+| T-102 | console_live_test.exs:138 (parede de cota no console) deixa de depender do estado global da Cota compartilhado com outros testes | em execução | 1 | 2026-10-07 | — |
+| T-103 | `mix fabrica.sintaxe <arquivo>` confere sintaxe Elixir sem executar o arquivo | em execução | 2 | 2026-10-07 | — |
 | T-049 | ABERTURA da v1.0: o que a tela precisa mostrar, e a medicao final | backlog | 1 | — | — |
 | T-058 | MARCO da v1.0: um projeto inteiro, sem intervencao | bloqueada | 1 | 2026-09-21 | US$ 7,44 |
 
@@ -96,5 +97,5 @@
 
 **Próxima rodada:**
 
-- A fábrica roda hoje as corretivas prontas.
+- Fechar as corretivas abertas (T-092, T-093, T-098, T-102, T-103).
 - Depois: abertura da E7 e o marco final com teto de gasto autorizado.

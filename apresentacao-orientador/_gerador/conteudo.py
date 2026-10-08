@@ -237,7 +237,7 @@ ETAPAS = [
             ("Entrega", "Marco da etapa", ["T-048"], "o agente cita a decisão anterior"),
         ],
         "requisitos": [
-            ("R7", "pendente", "busca e bloco com fonte existem, mas o bloco ainda não chega ao prompt do agente"),
+            ("R7", "pendente", "busca, bloco com fonte e ligação no despacho existem (T-101); falta a fila entregar o bloco ao agente real"),
             ("R9", "parcial", "busca escolhida por medição; o pico com 3 em paralelo ainda não foi medido"),
         ],
         "destaques": [
@@ -246,10 +246,10 @@ ETAPAS = [
             "Cada commit do projeto vira histórico consultável, e o bloco recuperado traz a fonte citada.",
         ],
         "pendente": [
-            "Marco bloqueado: o bloco recuperado ainda não é injetado no prompt do agente — a peça que falta virou a T-101.",
+            "Marco bloqueado: a T-101 (07/10) liga a memória ao montador do despacho, mas a revisão achou que a fila ainda monta a mensagem do agente sem o bloco — falta 1 linha em `Fila.Trabalho` para a memória chegar ao agente real.",
         ],
         "proxima": [
-            "T-101 (criada em 07/10, na fila da fábrica): liga `Fabrica.Memoria.Contexto` ao despacho do agente.",
+            "Tarefa corretiva de 1 linha: `Fila.Trabalho` passa a enviar o prompt com o bloco de memória (achado da revisão da T-101).",
             "Rodar o marco: agente real cita uma decisão anterior com a fonte certa.",
         ],
         "demo": None,
@@ -270,7 +270,7 @@ ETAPAS = [
             ("Integração", "Agente real de ponta a ponta",
              ["T-066", "T-067", "T-070", "T-071", "T-072", "T-073", "T-074", "T-084", "T-085", "T-086", "T-088", "T-089"],
              "a fila sobe o agente real; custo real bate com o fornecedor"),
-            ("Abertas", "Corretivas (rodando hoje)", ["T-092", "T-093", "T-094", "T-095", "T-096", "T-097", "T-098", "T-102"],
+            ("Corretivas", "Endurecimento para o marco final", ["T-092", "T-093", "T-094", "T-095", "T-096", "T-097", "T-098", "T-102", "T-103"],
              "prontas para o motor"),
             ("Abertura", "Conferir o plano", ["T-049"], "o que a tela precisa mostrar e a medição final"),
             ("Entrega", "Marco final", ["T-058"], "um projeto inteiro, sem intervenção"),
@@ -289,7 +289,7 @@ ETAPAS = [
             "Abertura da etapa (conferir o plano contra o código) ainda não feita.",
         ],
         "proxima": [
-            "A fábrica roda hoje as corretivas prontas.",
+            "Fechar as corretivas abertas (T-092, T-093, T-098, T-102, T-103).",
             "Depois: abertura da E7 e o marco final com teto de gasto autorizado.",
         ],
         "demo": None,

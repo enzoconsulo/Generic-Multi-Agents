@@ -2,7 +2,7 @@
 
 **Plano:** 18/11 – 02/12/2026 · fase Desenvolvimento · no repositório: versão `v0.5`
 **Entrega combinada no plano:** O agente cita a decisão anterior, com a fonte certa, em vez de decidir de novo.
-**Situação hoje (07/10/2026 21:24):** Peças construídas — marco bloqueado
+**Situação hoje (08/10/2026 06:28):** Peças construídas — marco bloqueado
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.
@@ -15,7 +15,7 @@
 | `NOTAS.md` | este arquivo: o que está feito, o que falta e a próxima rodada |
 | `dados.json` | os números desta etapa, extraídos do repositório |
 | `tarefas/` | cópia dos arquivos de tarefa desta etapa (objetivo, critérios, verificação, revisão) |
-| `arquivos/` | os 29 arquivos de código/teste desta etapa, no estado do commit `d68f2f3` |
+| `arquivos/` | os 29 arquivos de código/teste desta etapa, no estado do commit `12d0ce7` |
 
 ## O combinado × o feito
 
@@ -24,14 +24,14 @@
 | 6.1 Medição da busca | medir memória e tempo antes de escolher onde a busca roda | T-042 | T-042 concluída |
 | 6.2 Histórico | guardar o histórico a cada commit | T-043 | T-043 concluída |
 | 6.3 Busca híbrida | por significado e por termo exato, escolhida por medição | T-044, T-065 | T-044 concluída; T-065 concluída |
-| 6.4 Contexto com fonte | o bloco recuperado com a fonte citada | T-046, T-101 | T-046 concluída; T-101 em revisão |
+| 6.4 Contexto com fonte | o bloco recuperado com a fonte citada | T-046, T-101 | T-046 concluída; T-101 concluída |
 | 6.5 Avaliação | recall e MRR do conjunto de avaliação | T-047 | T-047 concluída |
 | Busca local Modelo de embedding | embedding local (Ollama) com dimensão conferida | T-045, T-059, T-060, T-061, T-062, T-063, T-064 | T-045 concluída; T-059 concluída; T-060 concluída; T-061 concluída; T-062 concluída; T-063 concluída; T-064 concluída |
 | Entrega Marco da etapa | o agente cita a decisão anterior | T-048 | T-048 bloqueada |
 
 ## Números (do repositório)
 
-- tarefas: **13/15 concluídas**; aprovadas de primeira: 7; execuções por tarefa (média): 1.69
+- tarefas: **14/15 concluídas**; aprovadas de primeira: 8; execuções por tarefa (média): 1.64
 - commits das tarefas: 50 · testes nos arquivos da etapa: 186 · linhas em `lib/`: 1583
 - custo medido nas rodadas do painel: US$ 159,85 em 90 despachos (dólar-equivalente de cota; tarefas feitas no chat não entram)
 
@@ -44,7 +44,7 @@
 | T-044 | Busca hibrida com fusao reciproca de postos | concluída | 1 | 2026-09-10 | US$ 4,78 |
 | T-065 | A fusao deixa de ser fixa — vetor puro x hibrido, escolhido por numero | concluída | 3 | 2026-09-26 | US$ 26,55 |
 | T-046 | O bloco de contexto recuperado, com a fonte citada | concluída | 2 | 2026-09-12 | US$ 6,80 |
-| T-101 | O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto | em revisão | 1 | 2026-10-07 | US$ 3,90 |
+| T-101 | O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto | concluída | 1 | 2026-10-07 | US$ 3,90 |
 | T-047 | Avaliacao da qualidade da recuperacao | concluída | 2 | 2026-09-25 | US$ 20,96 |
 | T-045 | Embedder.Servico e Embedder.Local | concluída | 4 | 2026-09-12 | US$ 24,64 |
 | T-059 | A dimensao do indice vira um fato conferivel (Fabrica.Memoria.Dimensao) | concluída | 2 | 2026-09-22 | US$ 4,44 |
@@ -59,7 +59,7 @@
 
 | req | requisito | situação | como se prova |
 |---|---|---|---|
-| R7 | Consultar o histórico do projeto antes de decidir, citando a fonte | pendente | busca e bloco com fonte existem, mas o bloco ainda não chega ao prompt do agente |
+| R7 | Consultar o histórico do projeto antes de decidir, citando a fonte | pendente | busca, bloco com fonte e ligação no despacho existem (T-101); falta a fila entregar o bloco ao agente real |
 | R9 | Rodar em 8 GB de memória e 4 núcleos | parcial | busca escolhida por medição; o pico com 3 em paralelo ainda não foi medido |
 
 ## Destaques (o que vale contar)
@@ -72,9 +72,9 @@
 
 **Pendente nesta etapa:**
 
-- Marco bloqueado: o bloco recuperado ainda não é injetado no prompt do agente — a peça que falta virou a T-101.
+- Marco bloqueado: a T-101 (07/10) liga a memória ao montador do despacho, mas a revisão achou que a fila ainda monta a mensagem do agente sem o bloco — falta 1 linha em `Fila.Trabalho` para a memória chegar ao agente real.
 
 **Próxima rodada:**
 
-- T-101 (criada em 07/10, na fila da fábrica): liga `Fabrica.Memoria.Contexto` ao despacho do agente.
+- Tarefa corretiva de 1 linha: `Fila.Trabalho` passa a enviar o prompt com o bloco de memória (achado da revisão da T-101).
 - Rodar o marco: agente real cita uma decisão anterior com a fonte certa.

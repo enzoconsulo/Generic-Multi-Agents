@@ -3,7 +3,7 @@ id: T-101
 titulo: "O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto"
 projeto: fabrica-v2
 versao: v0.5
-status: em-revisao
+status: concluida
 prioridade: alta
 dependencias: [T-099]
 areas: [lib/fabrica/despacho.ex, test/fabrica/despacho_test.exs]
@@ -134,5 +134,52 @@ Graus de prova: 3 executado(s), 0 para julgamento (de 3).
 
 ## Conformidade
 
+Conformidade: cumpre-parcial
+
+- Critério 1 (bloco com fonte citada; byte a byte igual sem trechos) → `lib/fabrica/despacho.ex:110-117`
+  (`com_memoria/3`, `termo_de_busca/1`) + testes `describe "o bloco de memoria recuperado (T-101)"`
+  em `test/fabrica/despacho_test.exs`, confirmados verdes pelo testador (Ciclo 2, `13 tests, 0
+  failures`).
+- Critério 2 (bloco fora da faixa estável) → `lib/fabrica/despacho.ex:113` troca só `prefixo.texto`
+  (`%{prefixo | texto: ...}`), nunca `prefixo.blocos`; teste "o bloco fica fora da faixa estavel"
+  confirma a mesma faixa entre duas tarefas diferentes.
+- Critério 3 (bateria completa verde) → confirmado pelo testador, `mix fabrica.ci` → `6 estagio(s)
+  ok, 0 pulado(s)`.
+- **Objetivo, no espírito: só parcialmente atendido.** O título da própria tarefa é "o bloco de
+  memória recuperado **chega ao prompt do agente**", e é exatamente aí que a entrega para no meio
+  do caminho. Conferi o código, não só a nota do executor: `Fabrica.Fila.Trabalho.mensagem_inicial/2`
+  (lib/fabrica/fila/trabalho.ex:335-337, FORA de `areas` desta tarefa) monta a mensagem que de fato
+  vai para o agente real reconstruindo o texto a partir de `prefixo.blocos`
+  (`Enum.map_join(prefixo.blocos, "\n\n", & &1.texto)`) e **nunca lê `prefixo.texto`** — o único
+  lugar onde esta tarefa injeta o bloco de memória (`Fabrica.Despacho.com_memoria/3`). Resultado: o
+  bloco de memória recuperado **não chega ao agente real** enquanto esse ponto não for ajustado. A
+  afirmação do Contexto desta tarefa — "ligar no Despacho cobre todo caminho de agente de uma vez,
+  sem tocar a fila" — está, pelo código lido, incorreta.
+- O executor já tinha achado e registrado isto com honestidade nas Notas de execução, sem tentar
+  corrigir fora de `areas` (certo: o guarda de commit recusaria, e seria o mesmo laço descrito em
+  `commit-guard-out-of-area-loop`).
+- **Decido aprovar mesmo com a lacuna**, porque: (a) os três critérios de aceite, escritos e
+  escopados a `Fabrica.Despacho.montar/4`, estão plenamente cumpridos e testados; (b) `areas` desta
+  tarefa excluem `trabalho.ex` de propósito — forçar o executor a tocá-lo fora de área reproduziria
+  o laço já documentado; (c) o que falta é uma peça separada e pequena (1 linha em
+  `mensagem_inicial/2`), já apontada com precisão pelo próprio executor, e não um defeito do que foi
+  efetivamente escopado aqui.
+- **Pendência explícita para o orquestrador:** abrir tarefa nova para
+  `Fabrica.Fila.Trabalho.mensagem_inicial/2` usar `prefixo.texto` em vez de reconstruir a partir de
+  `prefixo.blocos`. Sem essa tarefa, o requisito R7 do marco v0.5 continua não resolvido NA PRÁTICA,
+  apesar de T-101 estar `concluida`.
 
 ## Revisão
+
+Aprovado sem ressalvas — nenhum achado `critica`/`importante` no diff em `lib/fabrica/despacho.ex`
+ou `test/fabrica/despacho_test.exs`.
+
+Verificado: `com_memoria/3` só reescreve `prefixo.texto`, nunca `prefixo.blocos` — preserva a faixa
+cacheada por desenho, consistente com o `@moduledoc` de `Fabrica.Memoria.Contexto`; `termo_de_busca/1`
+trata título/objetivo `nil` (`texto(nil) -> ""`, já existente, reaproveitado); `Contexto.anexar/2` já
+tratava bloco `nil` devolvendo o prefixo intocado, sem alteração nesta tarefa. Os quatro testes novos
+cobrem os ângulos certos (bloco com fonte citada, igualdade byte a byte sem trecho, `memoria: false`
+desligando mesmo com trecho relevante presente, faixa estável idêntica entre tarefas). O helper de
+teste `inserir_trecho!/3` segue o mesmo caminho de `Ingestao.definir_embedding/2` e não introduz
+risco de injeção (literal de vetor formatado a partir de dados do próprio teste, não de entrada de
+usuário).

@@ -2,7 +2,7 @@
 
 **Plano:** 04/10 – 18/10/2026 · fase Desenvolvimento · no repositório: versão `v0.2`
 **Entrega combinada no plano:** Um agente resolve uma tarefa real com o custo gravado, e trocar de fornecedor não mexe no núcleo.
-**Situação hoje (07/10/2026 21:24):** Concluída — entrega aprovada (etapa atual do calendário)
+**Situação hoje (08/10/2026 06:28):** Concluída — entrega aprovada (etapa atual do calendário)
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.

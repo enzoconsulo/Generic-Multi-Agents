@@ -2,7 +2,7 @@
 
 **Plano:** 04/09 – 18/09/2026 · fase Planejamento
 **Entrega combinada no plano:** Requisitos, arquitetura, tarefas, critérios e projetos de teste aprovados.
-**Situação hoje (07/10/2026 21:24):** Entregue — falta definir os 5 projetos de teste
+**Situação hoje (08/10/2026 06:28):** Entregue — falta definir os 5 projetos de teste
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.

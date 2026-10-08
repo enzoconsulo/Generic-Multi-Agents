@@ -88,7 +88,7 @@
   {
    "id": "T-101",
    "titulo": "O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto",
-   "status": "em-revisao",
+   "status": "concluida",
    "tentativas": 1,
    "areas": [
     "lib/fabrica/despacho.ex",
@@ -257,8 +257,8 @@
   }
  ],
  "fechamento": [
-  "d68f2f35bc97ccd748cf317c10f1b9a66c45c180",
-  "2026-10-07"
+  "12d0ce78e8b6128249f57da57631888a0b25bd4e",
+  "2026-10-08"
  ],
  "arquivos": [
   "config/dev.exs",
@@ -292,13 +292,13 @@
   "test/fabrica/memoria/ingestao_test.exs"
  ],
  "n_tarefas": 15,
- "n_concluidas": 13,
+ "n_concluidas": 14,
  "commits": 50,
  "testes": 186,
  "linhas_lib": 1583,
  "custo_usd": 159.85,
  "despachos": 90,
- "primeira": 7,
- "tent_media": 1.69,
+ "primeira": 8,
+ "tent_media": 1.64,
  "marco_status": "bloqueada"
 }

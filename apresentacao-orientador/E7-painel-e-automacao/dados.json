@@ -347,16 +347,16 @@
   {
    "id": "T-092",
    "titulo": "O envelope `{:com_consumo, ...}` da T-089 chega ao contrato do Operario e à sonda do confinamento",
-   "status": "pronta",
+   "status": "em-execucao",
    "tentativas": 0,
    "areas": [
     "lib/fabrica/operario.ex",
     "priv/probes/confinamento_cli.exs"
    ],
    "objetivo": "Quem lê o contrato de `Fabrica.Operario` sabe que um erro pode vir embrulhado com o consumo já medido, e a sonda `priv/probes/confinamento_cli.exs` classifica certo as saídas que o `ClaudeCLI` de hoje devolve — em vez de reprovar um caso correto.",
-   "commits": 0,
-   "ultimo_commit": null,
-   "concluida_em": null,
+   "commits": 3,
+   "ultimo_commit": "336d683",
+   "concluida_em": "2026-10-07",
    "custo_usd": 0,
    "despachos": 0
   },
@@ -460,15 +460,31 @@
   {
    "id": "T-102",
    "titulo": "console_live_test.exs:138 (parede de cota no console) deixa de depender do estado global da Cota compartilhado com outros testes",
-   "status": "pronta",
+   "status": "em-execucao",
    "tentativas": 0,
    "areas": [
     "test/fabrica_web/live/console_live_test.exs"
    ],
    "objetivo": "O teste \"parede de cota aparece com o horario de reabertura quando ativa, e some ao rearmar\" (`test/fabrica_web/live/console_live_test.exs:138`) passa sempre que o console está certo e falha sempre que não está — independente da ordem e da concorrência da suíte.",
-   "commits": 0,
-   "ultimo_commit": null,
-   "concluida_em": null,
+   "commits": 2,
+   "ultimo_commit": "e47fd99",
+   "concluida_em": "2026-10-07",
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-103",
+   "titulo": "`mix fabrica.sintaxe <arquivo>` confere sintaxe Elixir sem executar o arquivo",
+   "status": "em-execucao",
+   "tentativas": 2,
+   "areas": [
+    "lib/mix/tasks/fabrica.sintaxe.ex",
+    "test/mix/sintaxe_test.exs"
+   ],
+   "objetivo": "Existe um comando mix que confere se um arquivo `.ex`/`.exs` é sintaticamente válido **sem executar seu conteúdo** — para que um `verificar:` possa checar scripts que consomem rede ou cota real (as sondas em `priv/probes/`) sem rodá-los.",
+   "commits": 2,
+   "ultimo_commit": "a84f68f",
+   "concluida_em": "2026-10-07",
    "custo_usd": 0,
    "despachos": 0
   },
@@ -506,8 +522,8 @@
   }
  ],
  "fechamento": [
-  "d68f2f35bc97ccd748cf317c10f1b9a66c45c180",
-  "2026-10-07"
+  "12d0ce78e8b6128249f57da57631888a0b25bd4e",
+  "2026-10-08"
  ],
  "arquivos": [
   "lib/fabrica/agente/ferramentas.ex",
@@ -535,6 +551,7 @@
   "lib/fabrica_web/live/quadro_live.ex",
   "lib/fabrica_web/router.ex",
   "lib/mix/tasks/fabrica.importar.ex",
+  "lib/mix/tasks/fabrica.sintaxe.ex",
   "mix.exs",
   "priv/doutrina/construtor.md",
   "priv/doutrina/revisor.md",
@@ -558,13 +575,14 @@
   "test/fabrica_web/live/console_live_test.exs",
   "test/fabrica_web/live/quadro_live_test.exs",
   "test/mix/ci_test.exs",
+  "test/mix/sintaxe_test.exs",
   "test/test_helper.exs"
  ],
- "n_tarefas": 30,
+ "n_tarefas": 31,
  "n_concluidas": 24,
- "commits": 98,
- "testes": 471,
- "linhas_lib": 7105,
+ "commits": 105,
+ "testes": 476,
+ "linhas_lib": 7164,
  "custo_usd": 195.96,
  "despachos": 111,
  "primeira": 14,

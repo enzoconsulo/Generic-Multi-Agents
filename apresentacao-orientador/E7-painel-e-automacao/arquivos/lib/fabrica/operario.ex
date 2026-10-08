@@ -27,9 +27,23 @@ defmodule Fabrica.Operario do
   Devolve `{:erro, termo}` em vez de levantar. Erro de operario e informacao de
   governanca — o laco precisa distinguir cota de recusa de falha de rede, e excecao
   perderia essa distincao no caminho.
+
+  ## O envelope `{:erro, {:com_consumo, motivo, %Consumo{}}}` (T-089)
+
+  Quando a sessao JA GASTOU antes de dar erro (ex.: `:prazo` ou `:fora_do_confinamento`
+  depois de voltas reais de modelo), o adaptador embrulha o motivo com o consumo que
+  conseguiu medir. O `Laco` casa esse envelope e contabiliza o consumo ANTES de encerrar
+  com `:erro` — e a conta deixa de zerar um erro que custou tokens de verdade. Tupla de 2
+  dentro do envelope (`{motivo, consumo}`, nao 3 soltos) de proposito: quem ainda casa
+  `{:erro, motivo}` cru continua funcionando, so sem o consumo.
+
+  A parede de cota (`{:erro, {:cota, reabre_em}}`) NAO usa este envelope — ela chega nua,
+  e o `Laco` a casa num ramo separado antes deste (D-015, adendo 6).
   """
   @callback conversar(requisicao :: Requisicao.t(), opcoes :: keyword()) ::
-              {:ok, Resposta.t()} | {:erro, term()}
+              {:ok, Resposta.t()}
+              | {:erro, {:com_consumo, motivo :: term(), Consumo.t()}}
+              | {:erro, term()}
 
   @doc """
   A familia do adaptador — a decisao que separa quem RODA o proprio laco de ferramentas de

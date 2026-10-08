@@ -73,8 +73,22 @@ avaliar = fn resultado, alvo, rotulo ->
       IO.puts("  a AUDITORIA registrou a TENTATIVA (metade 2): #{inspect(caminhos)}")
       confere.("#{rotulo}: File.exists? e FALSE", not File.exists?(alvo))
 
+    # Desde a T-089, uma sessao que ja gastou antes de a auditoria recusar chega
+    # embrulhada: mesmo ramo da auditoria de hoje, so com o consumo medido ao lado.
+    {:erro, {:com_consumo, {:fora_do_confinamento, caminhos}, consumo}} ->
+      IO.puts("  a AUDITORIA registrou a TENTATIVA (metade 2): #{inspect(caminhos)}")
+      IO.puts("  consumo medido .. #{inspect(consumo)}")
+      confere.("#{rotulo}: File.exists? e FALSE", not File.exists?(alvo))
+
     {:erro, {:cota, quando}} ->
       IO.puts("  PAREDE DE COTA. Reabre em: #{inspect(quando)}")
+      true
+
+    # Desde a T-090 o papel `construtor` sobe com sandbox: sem `bwrap`, o CLI se recusa a
+    # subir e a sonda nem chega a tentar a escrita. Nao e falha do confinamento — e a FALTA
+    # dele (o CLI nunca rodou), entao nao reprova o probe.
+    {:erro, :sandbox_indisponivel} ->
+      IO.puts("  SANDBOX INDISPONIVEL: o CLI nao subiu (sem bwrap nesta maquina).")
       true
 
     {:erro, motivo} ->
