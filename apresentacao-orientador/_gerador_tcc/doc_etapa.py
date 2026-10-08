@@ -61,6 +61,9 @@ def tabela(doc, cab, linhas, larguras=None, cores=None):
         if cores and cores[k]:
             sombrear(cel[cores[k][0]], cores[k][1])
     if larguras:
+        t.autofit = False
+        for i, w in enumerate(larguras):
+            t.columns[i].width = Cm(w)
         for row in t.rows:
             for i, w in enumerate(larguras):
                 row.cells[i].width = Cm(w)
@@ -201,13 +204,10 @@ def gerar(n, saida):
 
     if cod and cod["commits"]:
         titulo(doc, "Commits da etapa", 2)
-        for h, s in cod["commits"]:
+        for _, s in cod["commits"]:
             p = doc.add_paragraph(style="List Bullet")
-            r = p.add_run(h + "  ")
-            r.font.name = "Consolas"
-            r.font.size = Pt(8.5)
-            r2 = p.add_run(s)
-            r2.font.size = Pt(9)
+            r = p.add_run(s)
+            r.font.size = Pt(9)
 
     os.makedirs(os.path.dirname(os.path.abspath(saida)), exist_ok=True)
     doc.save(saida)

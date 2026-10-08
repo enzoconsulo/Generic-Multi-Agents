@@ -53,7 +53,7 @@ def codigo(n):
     commits = git("log", "--format=%h\t%s", f"{anterior}..{b}").splitlines() if existe(anterior) else []
     return {"arquivos_lib": len(lib), "linhas_lib": linhas, "arquivos_teste": len(testes),
             "testes": n_testes, "modulos": modulos,
-            "commits": [c.split("\t", 1) for c in reversed(commits)]}
+            "commits": [c.split("\t", 1) for c in reversed(commits) if not c.endswith("stage report")]}
 
 
 def processo():

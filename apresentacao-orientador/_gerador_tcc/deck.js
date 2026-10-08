@@ -72,7 +72,7 @@ function pill(s, x, y, w, st, rotulo) {
 }
 function stat(s, x, y, w, valor, rotulo) {
   card(s, x, y, w, 1.05, "stat-" + rotulo);
-  txt(s, String(valor), { x: x + 0.15, y: y + 0.1, w: w - 0.3, h: 0.55, fontSize: 30, bold: true, color: C.text2, fontFace: THEME.headFontFace });
+  txt(s, String(valor), { x: x + 0.15, y: y + 0.1, w: w - 0.3, h: 0.55, fontSize: String(valor).length > 5 ? 22 : 30, bold: true, color: C.text2, fontFace: THEME.headFontFace });
   txt(s, rotulo, { x: x + 0.15, y: y + 0.66, w: w - 0.3, h: 0.3, fontSize: 11, color: C.accent5 });
 }
 const fmt = (n) => Number(n).toLocaleString("pt-BR");

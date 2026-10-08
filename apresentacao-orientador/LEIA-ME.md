@@ -1,97 +1,66 @@
-# Apresentação ao orientador — Fábrica de Software Multi-Agente
+# Apresentação ao orientador
 
-O projeto dividido **por etapa do plano de desenvolvimento** (E1–E10), até onde está
-desenvolvido. Cada pasta é uma etapa completa: o que foi combinado, o que existe no código,
-os números reais, a prova, o que falta e a próxima rodada.
-
-## Como abrir
-
-- **Deck completo:** `apresentacao.html` (duplo clique → abre no navegador).
-  `←` `→` ou espaço navegam · `F` tela cheia · `T` troca claro/escuro · `Ctrl+P` exporta PDF.
-- **Uma etapa só:** `E<n>-.../slides.html`.
-- **Para estudar antes:** `E<n>-.../NOTAS.md` — o texto completo de cada etapa.
-
-## O mapa das pastas
-
-| pasta | etapa do plano | situação |
-|---|---|---|
-| `E1-planejamento/` | E1 · Planejamento e arquitetura | entregue · **falta: os 5 projetos de teste** |
-| `E2-fundacao/` | E2 · Fundação do sistema | concluída · entrega aprovada |
-| `E3-agente-e-ferramentas/` | E3 · O agente e as ferramentas — **etapa atual do calendário** | concluída · entrega aprovada |
-| `E4-linha-de-producao/` | E4 · Linha de produção de tarefas | construída e provada |
-| `E5-paralelismo-e-falhas/` | E5 · Paralelismo e tolerância a falhas | construída e provada |
-| `E6-memoria/` | E6 · Memória do projeto | peças prontas · **entrega bloqueada** |
-| `E7-painel-e-automacao/` | E7 · Painel e automação | telas prontas · **marco final em andamento** |
-
-Dentro de cada pasta de etapa:
-
-| item | o que é |
+| O quê | Onde |
 |---|---|
-| `slides.html` | a apresentação da etapa |
-| `NOTAS.md` | combinado × feito, números, tarefas, requisitos, pendências, próxima rodada, como demonstrar |
-| `dados.json` | os números da etapa (para quem quiser conferir) |
-| `tarefas/` | os arquivos de tarefa da etapa — objetivo, critérios de aceite, verificação e revisão de cada uma |
-| `arquivos/` | **o código e os testes da etapa**, copiados no estado do commit que fechou a etapa |
-| `evidencia-marco.txt` | saída real do teste do marco, rodado nesta máquina (E2, E4, E5) |
-| `evidencias/` | capturas de tela (E7) |
-| `documentos/` | os documentos do planejamento (E1) |
+| **Apresentação principal** (18 slides, com notas do apresentador) | `apresentacao-principal.pptx` |
+| **Relatório de cada etapa** (Word, 2–3 páginas) | `relatorios-por-etapa/E1…E7.docx` — os mesmos que estão em `docs/etapas/` de cada branch |
+| **Repositório do TCC** (código em inglês, uma branch por etapa) | `projetos/fabrica-tcc/` |
 
-> **O código de verdade continua em `projetos/fabrica-v2/`.** As pastas aqui são CÓPIAS
-> organizadas por etapa — mover os arquivos do projeto quebraria a compilação e a fábrica,
-> que está trabalhando nele. As cópias são regeradas a qualquer momento (abaixo).
+## O repositório `projetos/fabrica-tcc`
 
-## Roteiro sugerido (≈ 10 min, foco na etapa atual)
+```
+main ── etapa/e1-planejamento ── etapa/e2-fundacao ── etapa/e3-agente ── etapa/e4-linha-de-producao
+        ── etapa/e5-paralelismo ── etapa/e6-memoria ── etapa/e7-painel
+```
 
-O plano marca a próxima apresentação para **18/10, fim da E3**: *"um agente resolvendo uma
-tarefa real, com o custo gravado"*.
+- Cada branch nasce da anterior e tem um commit (ou poucos) por tarefa, em inglês, com a chave da
+  tarefa no fim: `feat(tools): confine every file and command path to the project root (FAB-302)`.
+- Cada branch fecha com a verificação completa verde (`mix factory.ci`, 6 estágios).
+- **No dia da apresentação de uma etapa:** `git checkout main && git merge --no-ff etapa/eN-...`.
+  Como as branches são encadeadas, cada merge traz só o que a etapa acrescentou.
+- Ainda não tem remoto. Para publicar: crie o repositório vazio no GitHub e rode
+  `git remote add origin <url>` e `git push origin main etapa/e1-planejamento` (as demais branches
+  quando quiser — elas aparecem no GitHub como branches à parte).
 
-| tempo | slides | o que dizer |
+| Branch | Commits na etapa | Tarefas | Situação da entrega |
+|---|---|---|---|
+| `etapa/e1-planejamento` | 6 | FAB-101…105 | entregue; projetos de teste a validar |
+| `etapa/e2-fundacao` | 11 | FAB-201…205 | entregue |
+| `etapa/e3-agente` | 14 | FAB-301…306 | entregue |
+| `etapa/e4-linha-de-producao` | 17 | FAB-401…408 | entregue |
+| `etapa/e5-paralelismo` | 11 | FAB-501…506 | entregue |
+| `etapa/e6-memoria` | 10 | FAB-601…606 | **marco bloqueado** |
+| `etapa/e7-painel` | 15 | FAB-701…708 | **marco em andamento** |
+
+Dentro do repositório:
+
+- `docs/planejamento/` — requisitos, arquitetura (com diagramas), critérios, projetos de teste, plano, estado da arte.
+- `docs/tasks/pt/` e `docs/tasks/en/` — as tarefas no estilo Jira, uma página curta cada, com status.
+- `docs/etapas/` — o relatório Word da etapa (cada branch tem os das etapas até ela).
+
+## Roteiro sugerido (≈ 10 min)
+
+| Tempo | Slides | O que mostrar |
 |---|---|---|
-| 1 min | abertura (1–4) | a tese, e onde estamos: calendário na E3; código com E2–E5 provadas |
-| 1 min | E1 | requisitos, arquitetura e critérios entregues; **assumir a pendência dos 5 projetos de teste** |
-| 2 min | E2 | a suíte roda sem internet e sem cota — e um teste falha se isso mudar; demo de 1 s |
-| 4 min | E3 | o agente real resolvendo uma tarefa; custo por volta no banco; dois fornecedores atrás da mesma fronteira; o marco reprovou 3× por defeitos reais antes de aprovar |
-| 1 min | E4–E7 | rápido: o que já está pronto à frente do calendário, e o que está bloqueado (E6) |
-| 1 min | fechamento | próxima rodada (E8) e os 8 critérios que serão medidos |
+| 1 min | 1–3 | a tese (a regra mora na estrutura) e a régua de 8 critérios |
+| 1 min | 4–6 | o plano em cascata, as branches e o panorama |
+| 5 min | 7–13 | uma etapa por slide — foco na etapa do dia |
+| 2 min | 14–16 | crescimento, retrabalho/custo e os requisitos |
+| 1 min | 17–18 | o que não está pronto e o próximo passo |
 
-Versão longa (≈ 25 min): o deck inteiro, na ordem.
+Demonstrações (na pasta do repositório, com o Postgres de pé):
 
-### Demonstrações ao vivo (na pasta `projetos/fabrica-v2`, com o Postgres de pé)
-
-```bash
-mix test test/fabrica/marco_v01_test.exs   # E2 — 1 s, sem rede e sem cota
-mix run priv/probes/marco_v02_agente.exs   # E3 — agente REAL, ~27 mil tokens da cota
-mix test test/fabrica/marco_v03_test.exs   # E4 — seis estados, reprova, refaz, conclui
-mix test test/fabrica/marco_v04_test.exs   # E5 — três em paralelo, matar um
-mix fabrica.ci                             # a verificação inteira, 6 estágios
+```
+mix test test/factory/milestone_e2_test.exs     # E2 — sem rede e sem cota
+mix run priv/probes/milestone_e3_agent.exs      # E3 — agente real (~17 mil tokens da cota)
+mix test test/factory/milestone_e4_test.exs     # E4 — reprovada, refeita, concluída
+mix test test/factory/milestone_e5_test.exs     # E5 — três em paralelo, matar um
+mix factory.ci                                  # tudo
 ```
 
-Para subir o banco: `powershell -File _sistema/ferramentas/banco-v2.ps1 subir` (na raiz da fábrica).
+## Regerar
 
-## De onde vêm os números
-
-Nada é digitado à mão. `_gerador/gerar.py` lê:
-
-- os arquivos de tarefa (`projetos/fabrica-v2/_gestao/tarefas/`) — status, execuções, áreas;
-- o `git log` do projeto — commits por tarefa e o commit que fechou cada etapa;
-- os jobs do painel (`painel/dados/jobs/`) — o custo medido das rodadas (dólar-equivalente da
-  cota da assinatura, não fatura; tarefas feitas no chat não entram nessa soma);
-- as saídas reais dos testes em `_evidencias-brutas/` (rodados nesta máquina na geração).
-
-O texto (destaques, pendências, próxima rodada, ligação pacote → tarefas) está em
-`_gerador/conteudo.py`.
-
-## Regerar (depois de a fábrica rodar mais)
-
-```bash
-python apresentacao-orientador/_gerador/gerar.py
-```
-
-Para atualizar também a evidência dos testes, rode os testes de marco e copie a saída para
-`_evidencias-brutas/marco_v01.txt`, `marco_v03.txt`, `marco_v04.txt` e `suite.txt`.
-
-## Fora da apresentação
-
-Seguindo o mapa `_editar-plano-tcc/ETAPAS-x-PLANO-ORIGINAL.md`, quatro tarefas do repositório
-não aparecem nos slides (tratam de importação de dados de outro sistema, que o plano não
-menciona): T-008, T-033, T-034b, T-076.
+`_gerador_tcc/` guarda o catálogo de tarefas, os textos de cada etapa e os geradores
+(Word, apresentação, quadro de tarefas). O plano e o estado da execução estão em `PLANO-REPO-TCC.md`.
+O material anterior (deck em HTML e notas longas por etapa) foi retirado desta pasta e continua no
+histórico do git (commit `cc664b7`).

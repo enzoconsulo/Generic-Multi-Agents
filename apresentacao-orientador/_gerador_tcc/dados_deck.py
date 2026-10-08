@@ -46,7 +46,7 @@ def main(saida):
             status = "bloqueada"
         else:
             status = "andamento"
-        cod = M.codigo(n)
+        cod = M.codigo(n) if n >= 2 else None
         reais = [proc[t["key"]] for t in tarefas if t["key"] in proc]
         sub = sum(x["subtarefas"] for x in reais) or 1
         etapas.append({
