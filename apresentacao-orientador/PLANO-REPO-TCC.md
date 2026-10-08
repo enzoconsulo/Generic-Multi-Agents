@@ -36,4 +36,10 @@ Um documento Word por etapa; uma apresentação principal com toda a análise.
 
 - [x] Checkpoint `checkpoint-2026-10-08` nos dois repositórios; piloto parado.
 - [x] `_tcc-alvo` criado; vocabulário extraído (`_traducao/vocab.json`), dependências (`deps.json`), etapa por arquivo (`stage.json`).
-- [ ] Fase 1 · [ ] Fase 2 · [ ] Fase 3 · [ ] Fase 4 · [ ] Fase 5 · [ ] Fase 6 · [ ] Fase 7
+- [x] Fase 1 glossário · [x] Fase 2 tradução (6 lotes) · [x] Fase 3 integração (`010cd2a` no _tcc-alvo: 1295 testes + 41 doctests, 0 falhas, 6/6)
+- [x] Fase 4 catálogo FAB (44 tarefas) + `stage_plan.json`
+- [ ] Fase 5 branches: [x] main + E1 (`criar_e1.sh`) · [ ] E2 (agente rodando) · [ ] E3 · [ ] E4 · [ ] E5 · [ ] E6 · [ ] E7
+- [ ] Fase 6 docs (Word por etapa, apresentação principal) · [ ] Fase 7 conferência
+
+## Incidente (08/10)
+Um `rm` falhou (cwd dentro da pasta) e a sequência seguiu no repositório da fábrica: commit e branch `etapa/e1-planejamento` criados por engano na raiz. Desfeito (`reset --soft`, branch apagada, commit refeito como `ba2aab0`). Nada da fábrica foi alterado. Daí o `criar_e1.sh` com `set -euo pipefail` e checagem do toplevel.
