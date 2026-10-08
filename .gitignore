@@ -30,3 +30,4 @@ _sistema/documentos-tcc/geradores/plano.py
 # E camada de operacao, nao fonte da verdade — os geradores ficam versionados em
 # _sistema/documentos-tcc/geradores/. A pasta e descartavel e reconstruivel.
 /_editar-plano-tcc/
+__pycache__/
