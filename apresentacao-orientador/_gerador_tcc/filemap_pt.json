@@ -1,0 +1,1202 @@
+{
+ ".dialyzer_ignore.exs": {
+  "fab": "FAB-401",
+  "stage": 4,
+  "later_fabs": []
+ },
+ ".formatter.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ ".gitattributes": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ ".gitignore": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-204",
+   "FAB-305",
+   "FAB-705"
+  ]
+ },
+ "README.md": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "assets/css/app.css": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "assets/js/app.js": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "assets/tsconfig.json": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "assets/vendor/heroicons.js": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "assets/vendor/topbar.js": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "config/config.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-204",
+   "FAB-502",
+   "FAB-503"
+  ]
+ },
+ "config/dev.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-601"
+  ]
+ },
+ "config/prod.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "config/runtime.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "config/test.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-305",
+   "FAB-502"
+  ]
+ },
+ "lib/fabrica.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/agente/estado.ex": {
+  "fab": "FAB-304",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-305",
+   "FAB-306",
+   "FAB-504"
+  ]
+ },
+ "lib/fabrica/agente/ferramentas.ex": {
+  "fab": "FAB-707",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "lib/fabrica/agente/laco.ex": {
+  "fab": "FAB-304",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-305",
+   "FAB-306",
+   "FAB-504"
+  ]
+ },
+ "lib/fabrica/agente/orcamento_ferramentas.ex": {
+  "fab": "FAB-304",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/fabrica/agente/supervisor.ex": {
+  "fab": "FAB-501",
+  "stage": 5,
+  "later_fabs": []
+ },
+ "lib/fabrica/application.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-501",
+   "FAB-502",
+   "FAB-504",
+   "FAB-701"
+  ]
+ },
+ "lib/fabrica/backup.ex": {
+  "fab": "FAB-204",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-205"
+  ]
+ },
+ "lib/fabrica/ci.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/cota.ex": {
+  "fab": "FAB-504",
+  "stage": 5,
+  "later_fabs": [
+   "FAB-504"
+  ]
+ },
+ "lib/fabrica/criterios.ex": {
+  "fab": "FAB-403",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/criterios/allowlist.ex": {
+  "fab": "FAB-403",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/criterios/classe_falha.ex": {
+  "fab": "FAB-403",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/criterios/grau.ex": {
+  "fab": "FAB-705",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "lib/fabrica/criterios/suite.ex": {
+  "fab": "FAB-403",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/custo/consumo.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/custo/precos.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-305"
+  ]
+ },
+ "lib/fabrica/despacho.ex": {
+  "fab": "FAB-707",
+  "stage": 7,
+  "later_fabs": [
+   "FAB-707"
+  ]
+ },
+ "lib/fabrica/ecossistemas.ex": {
+  "fab": "FAB-403",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/embedder.ex": {
+  "fab": "FAB-203",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-601"
+  ]
+ },
+ "lib/fabrica/embedder/falso.ex": {
+  "fab": "FAB-203",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-601"
+  ]
+ },
+ "lib/fabrica/embedder/local.ex": {
+  "fab": "FAB-601",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "lib/fabrica/embedder/ollama.ex": {
+  "fab": "FAB-601",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "lib/fabrica/embedder/servico.ex": {
+  "fab": "FAB-601",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "lib/fabrica/equipe.ex": {
+  "fab": "FAB-402",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/equipe/resolucao.ex": {
+  "fab": "FAB-402",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/eventos.ex": {
+  "fab": "FAB-701",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "lib/fabrica/ferramentas/arquivo.ex": {
+  "fab": "FAB-301",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-503"
+  ]
+ },
+ "lib/fabrica/ferramentas/arvore_processos.ex": {
+  "fab": "FAB-301",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/fabrica/ferramentas/catalogo.ex": {
+  "fab": "FAB-301",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/fabrica/ferramentas/comando.ex": {
+  "fab": "FAB-301",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-302",
+   "FAB-305",
+   "FAB-401"
+  ]
+ },
+ "lib/fabrica/ferramentas/confinamento.ex": {
+  "fab": "FAB-302",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-302"
+  ]
+ },
+ "lib/fabrica/ferramentas/guardas.ex": {
+  "fab": "FAB-302",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/fabrica/ferramentas/registrar_resultado.ex": {
+  "fab": "FAB-301",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/fabrica/fila/exclusao.ex": {
+  "fab": "FAB-503",
+  "stage": 5,
+  "later_fabs": []
+ },
+ "lib/fabrica/fila/resgate.ex": {
+  "fab": "FAB-502",
+  "stage": 5,
+  "later_fabs": [
+   "FAB-502"
+  ]
+ },
+ "lib/fabrica/fila/trabalho.ex": {
+  "fab": "FAB-502",
+  "stage": 5,
+  "later_fabs": [
+   "FAB-301",
+   "FAB-404",
+   "FAB-502",
+   "FAB-504"
+  ]
+ },
+ "lib/fabrica/indice/mapa.ex": {
+  "fab": "FAB-303",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/fabrica/memoria/busca.ex": {
+  "fab": "FAB-603",
+  "stage": 6,
+  "later_fabs": [
+   "FAB-603"
+  ]
+ },
+ "lib/fabrica/memoria/contexto.ex": {
+  "fab": "FAB-604",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "lib/fabrica/memoria/dimensao.ex": {
+  "fab": "FAB-601",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "lib/fabrica/memoria/ingestao.ex": {
+  "fab": "FAB-602",
+  "stage": 6,
+  "later_fabs": [
+   "FAB-602"
+  ]
+ },
+ "lib/fabrica/memoria/trecho.ex": {
+  "fab": "FAB-602",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "lib/fabrica/operario.ex": {
+  "fab": "FAB-203",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-305",
+   "FAB-306"
+  ]
+ },
+ "lib/fabrica/operario/claude_cli.ex": {
+  "fab": "FAB-305",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-304",
+   "FAB-305",
+   "FAB-306",
+   "FAB-401",
+   "FAB-504"
+  ]
+ },
+ "lib/fabrica/operario/falso.ex": {
+  "fab": "FAB-203",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-304"
+  ]
+ },
+ "lib/fabrica/operario/messages_api.ex": {
+  "fab": "FAB-305",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/fabrica/orcamento.ex": {
+  "fab": "FAB-406",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/piloto/decisao.ex": {
+  "fab": "FAB-704",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "lib/fabrica/piloto/servidor.ex": {
+  "fab": "FAB-704",
+  "stage": 7,
+  "later_fabs": [
+   "FAB-504",
+   "FAB-704"
+  ]
+ },
+ "lib/fabrica/planejador.ex": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/portoes/revisor.ex": {
+  "fab": "FAB-404",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/portoes/verificador.ex": {
+  "fab": "FAB-404",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/projetos/especialista.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/projetos/fase.ex": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/projetos/marco.ex": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/projetos/projeto.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/prompt/bloco.ex": {
+  "fab": "FAB-303",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/fabrica/prompt/prefixo.ex": {
+  "fab": "FAB-303",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/fabrica/publicacao/git.ex": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/publicacao/markdown.ex": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/recuperacao.ex": {
+  "fab": "FAB-505",
+  "stage": 5,
+  "later_fabs": []
+ },
+ "lib/fabrica/repo.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/retrabalho/diagnostico.ex": {
+  "fab": "FAB-405",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/retrabalho/escada.ex": {
+  "fab": "FAB-405",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/retrabalho/politica.ex": {
+  "fab": "FAB-405",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/seguranca.ex": {
+  "fab": "FAB-706",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "lib/fabrica/tarefas/area.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/tarefas/ciclo.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/tarefas/consumo.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/tarefas/criterio.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/tarefas/dependencia.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/tarefas/despacho.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/tarefas/fila.ex": {
+  "fab": "FAB-402",
+  "stage": 4,
+  "later_fabs": [
+   "FAB-503"
+  ]
+ },
+ "lib/fabrica/tarefas/maquina.ex": {
+  "fab": "FAB-401",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/tarefas/tarefa.ex": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica/tarefas/transicao.ex": {
+  "fab": "FAB-401",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/fabrica/telemetria.ex": {
+  "fab": "FAB-701",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "lib/fabrica/trilhas.ex": {
+  "fab": "FAB-705",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "lib/fabrica_web.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/components/core_components.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/components/layouts.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/components/layouts/root.html.heex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/controllers/error_html.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/controllers/error_json.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/controllers/page_controller.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/controllers/page_html.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/controllers/page_html/home.html.heex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/endpoint.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/live/componentes/controles.ex": {
+  "fab": "FAB-703",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/live/componentes/piloto.ex": {
+  "fab": "FAB-704",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "lib/fabrica_web/live/console_live.ex": {
+  "fab": "FAB-702",
+  "stage": 7,
+  "later_fabs": [
+   "FAB-702"
+  ]
+ },
+ "lib/fabrica_web/live/quadro_live.ex": {
+  "fab": "FAB-702",
+  "stage": 7,
+  "later_fabs": [
+   "FAB-702"
+  ]
+ },
+ "lib/fabrica_web/router.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-702"
+  ]
+ },
+ "lib/fabrica_web/telemetry.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/mix/tasks/fabrica.backup.ex": {
+  "fab": "FAB-204",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/mix/tasks/fabrica.ci.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/mix/tasks/fabrica.mapa.ex": {
+  "fab": "FAB-303",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "lib/mix/tasks/fabrica.planejar.ex": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "lib/mix/tasks/fabrica.restaurar.ex": {
+  "fab": "FAB-204",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "lib/mix/tasks/fabrica.sintaxe.ex": {
+  "fab": "FAB-707",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "mix.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-204",
+   "FAB-305",
+   "FAB-401",
+   "FAB-502",
+   "FAB-601"
+  ]
+ },
+ "mix.lock": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-305",
+   "FAB-502"
+  ]
+ },
+ "priv/avaliacao/perguntas.exs": {
+  "fab": "FAB-605",
+  "stage": 6,
+  "later_fabs": [
+   "FAB-605"
+  ]
+ },
+ "priv/doutrina/construtor.md": {
+  "fab": "FAB-707",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "priv/doutrina/planejador.md": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "priv/doutrina/revisor.md": {
+  "fab": "FAB-707",
+  "stage": 7,
+  "later_fabs": [
+   "FAB-707"
+  ]
+ },
+ "priv/doutrina/testador.md": {
+  "fab": "FAB-707",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "priv/probes/amostras/sessao-com-ferramenta.jsonl": {
+  "fab": "FAB-305",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "priv/probes/cli_governanca.exs": {
+  "fab": "FAB-305",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "priv/probes/cli_real.exs": {
+  "fab": "FAB-305",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-305"
+  ]
+ },
+ "priv/probes/confinamento_cli.exs": {
+  "fab": "FAB-302",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-305"
+  ]
+ },
+ "priv/probes/marco_v02_agente.exs": {
+  "fab": "FAB-306",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "priv/probes/ollama_real.exs": {
+  "fab": "FAB-601",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "priv/repo/migrations/.formatter.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "priv/repo/migrations/20260828120001_criar_extensoes.exs": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "priv/repo/migrations/20260828120002_criar_projetos.exs": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "priv/repo/migrations/20260828120003_criar_tarefas.exs": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "priv/repo/migrations/20260828120004_criar_execucao.exs": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "priv/repo/migrations/20260904070237_adicionar_oban.exs": {
+  "fab": "FAB-502",
+  "stage": 5,
+  "later_fabs": []
+ },
+ "priv/repo/migrations/20260908120000_criar_fases.exs": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": [
+   "FAB-502"
+  ]
+ },
+ "priv/repo/migrations/20260909070000_criar_trechos.exs": {
+  "fab": "FAB-602",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "priv/repo/migrations/20260915120000_dimensao_do_embedding.exs": {
+  "fab": "FAB-601",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "priv/repo/seeds.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "priv/static/favicon.ico": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "priv/static/images/logo.svg": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "priv/static/robots.txt": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "test/fabrica/agente/ferramentas_test.exs": {
+  "fab": "FAB-707",
+  "stage": 7,
+  "later_fabs": [
+   "FAB-302"
+  ]
+ },
+ "test/fabrica/agente/laco_test.exs": {
+  "fab": "FAB-304",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-305",
+   "FAB-504"
+  ]
+ },
+ "test/fabrica/agente/orcamento_ferramentas_test.exs": {
+  "fab": "FAB-304",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "test/fabrica/agente/supervisor_test.exs": {
+  "fab": "FAB-501",
+  "stage": 5,
+  "later_fabs": []
+ },
+ "test/fabrica/cota_test.exs": {
+  "fab": "FAB-504",
+  "stage": 5,
+  "later_fabs": []
+ },
+ "test/fabrica/criterios/classe_falha_test.exs": {
+  "fab": "FAB-403",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/criterios/suite_test.exs": {
+  "fab": "FAB-403",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/criterios_test.exs": {
+  "fab": "FAB-403",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/custo/precos_test.exs": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-305"
+  ]
+ },
+ "test/fabrica/despacho_test.exs": {
+  "fab": "FAB-707",
+  "stage": 7,
+  "later_fabs": [
+   "FAB-707"
+  ]
+ },
+ "test/fabrica/embedder/falso_test.exs": {
+  "fab": "FAB-203",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-601"
+  ]
+ },
+ "test/fabrica/embedder/ollama_test.exs": {
+  "fab": "FAB-601",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "test/fabrica/embedder/servico_test.exs": {
+  "fab": "FAB-601",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "test/fabrica/embedder_test.exs": {
+  "fab": "FAB-203",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "test/fabrica/equipe/resolucao_test.exs": {
+  "fab": "FAB-402",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/esquema_test.exs": {
+  "fab": "FAB-202",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "test/fabrica/eventos_test.exs": {
+  "fab": "FAB-701",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "test/fabrica/ferramentas/arquivo_test.exs": {
+  "fab": "FAB-301",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-503"
+  ]
+ },
+ "test/fabrica/ferramentas/comando_test.exs": {
+  "fab": "FAB-301",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-302"
+  ]
+ },
+ "test/fabrica/ferramentas/confinamento_test.exs": {
+  "fab": "FAB-302",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-302"
+  ]
+ },
+ "test/fabrica/ferramentas/guardas_test.exs": {
+  "fab": "FAB-302",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "test/fabrica/ferramentas/registrar_resultado_test.exs": {
+  "fab": "FAB-301",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "test/fabrica/fila/exclusao_test.exs": {
+  "fab": "FAB-503",
+  "stage": 5,
+  "later_fabs": [
+   "FAB-503"
+  ]
+ },
+ "test/fabrica/fila/trabalho_test.exs": {
+  "fab": "FAB-502",
+  "stage": 5,
+  "later_fabs": [
+   "FAB-404",
+   "FAB-502",
+   "FAB-503",
+   "FAB-504"
+  ]
+ },
+ "test/fabrica/indice/mapa_test.exs": {
+  "fab": "FAB-303",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "test/fabrica/marco_v01_test.exs": {
+  "fab": "FAB-205",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "test/fabrica/marco_v03_test.exs": {
+  "fab": "FAB-408",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/marco_v04_test.exs": {
+  "fab": "FAB-506",
+  "stage": 5,
+  "later_fabs": []
+ },
+ "test/fabrica/memoria/avaliacao_test.exs": {
+  "fab": "FAB-603",
+  "stage": 6,
+  "later_fabs": [
+   "FAB-605"
+  ]
+ },
+ "test/fabrica/memoria/busca_test.exs": {
+  "fab": "FAB-603",
+  "stage": 6,
+  "later_fabs": [
+   "FAB-603"
+  ]
+ },
+ "test/fabrica/memoria/contexto_test.exs": {
+  "fab": "FAB-604",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "test/fabrica/memoria/dimensao_test.exs": {
+  "fab": "FAB-601",
+  "stage": 6,
+  "later_fabs": []
+ },
+ "test/fabrica/memoria/ingestao_test.exs": {
+  "fab": "FAB-602",
+  "stage": 6,
+  "later_fabs": [
+   "FAB-602"
+  ]
+ },
+ "test/fabrica/operario/claude_cli_test.exs": {
+  "fab": "FAB-305",
+  "stage": 3,
+  "later_fabs": [
+   "FAB-304",
+   "FAB-305",
+   "FAB-306",
+   "FAB-401",
+   "FAB-504"
+  ]
+ },
+ "test/fabrica/operario/falso_test.exs": {
+  "fab": "FAB-203",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-304",
+   "FAB-305"
+  ]
+ },
+ "test/fabrica/operario/messages_api_test.exs": {
+  "fab": "FAB-305",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "test/fabrica/orcamento_test.exs": {
+  "fab": "FAB-406",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/piloto/decisao_test.exs": {
+  "fab": "FAB-704",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "test/fabrica/piloto/servidor_test.exs": {
+  "fab": "FAB-704",
+  "stage": 7,
+  "later_fabs": [
+   "FAB-704"
+  ]
+ },
+ "test/fabrica/planejador_test.exs": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/portoes/revisor_test.exs": {
+  "fab": "FAB-404",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/portoes_test.exs": {
+  "fab": "FAB-404",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/prompt/prefixo_test.exs": {
+  "fab": "FAB-303",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "test/fabrica/publicacao/git_test.exs": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/publicacao/markdown_test.exs": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/recuperacao_test.exs": {
+  "fab": "FAB-505",
+  "stage": 5,
+  "later_fabs": []
+ },
+ "test/fabrica/retrabalho/diagnostico_test.exs": {
+  "fab": "FAB-405",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/retrabalho/escada_test.exs": {
+  "fab": "FAB-405",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/seguranca_test.exs": {
+  "fab": "FAB-706",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "test/fabrica/tarefas/fila_test.exs": {
+  "fab": "FAB-402",
+  "stage": 4,
+  "later_fabs": [
+   "FAB-503"
+  ]
+ },
+ "test/fabrica/tarefas/maquina_test.exs": {
+  "fab": "FAB-401",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/fabrica/tarefas/transicao_test.exs": {
+  "fab": "FAB-401",
+  "stage": 4,
+  "later_fabs": [
+   "FAB-405",
+   "FAB-505"
+  ]
+ },
+ "test/fabrica/trilhas_test.exs": {
+  "fab": "FAB-705",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "test/fabrica_web/controles_test.exs": {
+  "fab": "FAB-703",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "test/fabrica_web/controllers/error_html_test.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "test/fabrica_web/controllers/error_json_test.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "test/fabrica_web/controllers/page_controller_test.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "test/fabrica_web/live/console_live_test.exs": {
+  "fab": "FAB-702",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "test/fabrica_web/live/quadro_live_test.exs": {
+  "fab": "FAB-702",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "test/mix/backup_test.exs": {
+  "fab": "FAB-204",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-205"
+  ]
+ },
+ "test/mix/ci_test.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-204"
+  ]
+ },
+ "test/mix/planejar_test.exs": {
+  "fab": "FAB-407",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/mix/sintaxe_test.exs": {
+  "fab": "FAB-707",
+  "stage": 7,
+  "later_fabs": []
+ },
+ "test/support/conn_case.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "test/support/data_case.ex": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": []
+ },
+ "test/support/fonte.ex": {
+  "fab": "FAB-405",
+  "stage": 4,
+  "later_fabs": []
+ },
+ "test/support/sem_rede.ex": {
+  "fab": "FAB-305",
+  "stage": 3,
+  "later_fabs": []
+ },
+ "test/test_helper.exs": {
+  "fab": "FAB-201",
+  "stage": 2,
+  "later_fabs": [
+   "FAB-204"
+  ]
+ }
+}
