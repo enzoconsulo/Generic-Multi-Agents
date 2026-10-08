@@ -12,7 +12,10 @@ defmodule Fabrica.DespachoTest do
 
   import ExUnit.CaptureLog
 
+  alias Ecto.Adapters.SQL
   alias Fabrica.Despacho
+  alias Fabrica.Embedder.Falso
+  alias Fabrica.Memoria.Trecho
   alias Fabrica.Projetos.Especialista
   alias Fabrica.Projetos.Projeto
   alias Fabrica.Tarefas.Area
@@ -76,6 +79,28 @@ defmodule Fabrica.DespachoTest do
     %Especialista{}
     |> Especialista.changeset(Map.put(atributos, :projeto_id, projeto.id))
     |> Repo.insert!()
+  end
+
+  # Mesmo caminho de `Fabrica.Memoria.Ingestao.definir_embedding/2`: o Postgrex nao tem
+  # extensao para o tipo `vector`, entao o literal entra colado no SQL. O vetor vem do
+  # proprio `corpo` (determinístico, `Falso.vetor/1`) so para existir uma linha no projeto —
+  # a busca hibrida devolve todo candidato do projeto (CTE filtrada por `projeto_id`,
+  # T-097), nao precisa de proximidade semantica real para aparecer num projeto com um so
+  # trecho.
+  defp inserir_trecho!(projeto_id, fonte, corpo) do
+    literal = "[" <> Enum.map_join(Falso.vetor(corpo), ",", &Float.to_string/1) <> "]"
+    hash = Trecho.hash(corpo)
+
+    SQL.query!(
+      Repo,
+      """
+      INSERT INTO trechos (projeto_id, fonte, corpo, hash, embedding, inserted_at, updated_at)
+      VALUES ($1, $2, $3, $4, '#{literal}'::vector, NOW(), NOW())
+      """,
+      [projeto_id, fonte, corpo, hash]
+    )
+
+    :ok
   end
 
   # Os prefixos montados em teste sao curtos de proposito (a tarefa e minuscula), e por
@@ -218,6 +243,67 @@ defmodule Fabrica.DespachoTest do
         end)
 
       assert registro =~ "especialista inexistente"
+    end
+  end
+
+  describe "o bloco de memoria recuperado (T-101)" do
+    test "com trechos ingeridos no projeto, o prompt leva o bloco com a fonte citada", %{
+      projeto: projeto
+    } do
+      tarefa = tarefa!(projeto) |> recarregar()
+      inserir_trecho!(projeto.id, "_gestao/DECISOES.md#3", "decidimos usar Postgres para tudo.")
+
+      assert {:ok, prefixo} = montar!(tarefa, :construtor, "papel")
+
+      assert prefixo.texto =~ "_gestao/DECISOES.md#3"
+      assert prefixo.texto =~ "decidimos usar Postgres para tudo."
+    end
+
+    test "sem trechos no projeto, o prompt e byte a byte igual ao despacho sem memoria", %{
+      projeto: projeto
+    } do
+      tarefa = tarefa!(projeto) |> recarregar()
+
+      assert {:ok, com_memoria} = montar!(tarefa, :construtor, "papel")
+      assert {:ok, sem_memoria} = montar!(tarefa, :construtor, "papel", memoria: false)
+
+      assert com_memoria.texto == sem_memoria.texto
+    end
+
+    test "memoria: false desliga a recuperacao mesmo havendo trecho relevante", %{
+      projeto: projeto
+    } do
+      tarefa = tarefa!(projeto) |> recarregar()
+
+      inserir_trecho!(
+        projeto.id,
+        "fonte-qualquer",
+        "um trecho que entraria no bloco se a memoria estivesse ligada."
+      )
+
+      assert {:ok, prefixo} = montar!(tarefa, :construtor, "papel", memoria: false)
+
+      refute prefixo.texto =~ "fonte-qualquer"
+    end
+
+    test "o bloco fica fora da faixa estavel: duas tarefas diferentes compartilham a mesma faixa",
+         %{projeto: projeto} do
+      tarefa_a = tarefa!(projeto, %{titulo: "tarefa A", objetivo: "objetivo A"}) |> recarregar()
+      tarefa_b = tarefa!(projeto, %{titulo: "tarefa B", objetivo: "objetivo B"}) |> recarregar()
+
+      inserir_trecho!(projeto.id, "fonte-a", "o trecho recuperado so para a tarefa A.")
+
+      assert {:ok, prefixo_a} = montar!(tarefa_a, :construtor, "papel")
+      assert {:ok, prefixo_b} = montar!(tarefa_b, :construtor, "papel")
+
+      faixa_estavel = fn prefixo ->
+        prefixo.blocos
+        |> Enum.filter(&(&1.especie in [:ferramentas, :doutrina, :indice]))
+        |> Enum.map_join("\n\n", & &1.texto)
+      end
+
+      assert faixa_estavel.(prefixo_a) == faixa_estavel.(prefixo_b)
+      assert prefixo_a.texto != prefixo_b.texto
     end
   end
 end

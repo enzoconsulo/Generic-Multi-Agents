@@ -22,6 +22,7 @@ defmodule Fabrica.Agente.Estado do
           raiz: Path.t(),
           modelo: String.t(),
           papel: String.t(),
+          vocabulario: [String.t()] | nil,
           operario: module() | nil,
           mensagens: [map()],
           voltas: non_neg_integer(),
@@ -30,6 +31,7 @@ defmodule Fabrica.Agente.Estado do
           teto_de_gasto_usd: float() | nil,
           consumos: [Consumo.t()],
           desfecho: desfecho(),
+          motivo_do_erro: term(),
           agulha: pid() | nil,
           ferramentas: map(),
           chamadas_de_ferramenta: non_neg_integer()
@@ -38,6 +40,7 @@ defmodule Fabrica.Agente.Estado do
   defstruct raiz: ".",
             modelo: "haiku-4.5",
             papel: "construtor",
+            vocabulario: nil,
             operario: nil,
             mensagens: [],
             voltas: 0,
@@ -46,6 +49,7 @@ defmodule Fabrica.Agente.Estado do
             teto_de_gasto_usd: nil,
             consumos: [],
             desfecho: nil,
+            motivo_do_erro: nil,
             agulha: nil,
             ferramentas: %{},
             chamadas_de_ferramenta: 0
@@ -108,11 +112,20 @@ defmodule Fabrica.Agente.Estado do
   defp estourou_gasto?(%{teto_de_gasto_usd: nil}), do: false
   defp estourou_gasto?(estado), do: estado.gasto_usd >= estado.teto_de_gasto_usd
 
-  @doc "O resumo do laco, para quem despachou."
+  @doc """
+  O resumo do laco, para quem despachou.
+
+  `motivo_do_erro` so carrega algo quando `desfecho == :erro`: o termo bruto que o operario
+  devolveu (`{:cota, reabre_em}`, `:sandbox_indisponivel`, `:prazo`, etc.) — T-095 precisa
+  dele para distinguir uma PAREDE (cota, sandbox indisponivel) de um erro que E do trabalho,
+  sem mudar o que `desfecho` ja significa para quem le so ele (ver @moduledoc de
+  `Fabrica.Agente.Laco`).
+  """
   @spec resumo(t()) :: map()
   def resumo(estado) do
     %{
       desfecho: estado.desfecho,
+      motivo_do_erro: estado.motivo_do_erro,
       voltas: estado.voltas,
       gasto_usd: Float.round(estado.gasto_usd, 6),
       consumos: estado.consumos,

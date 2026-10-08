@@ -30,11 +30,22 @@ defmodule Fabrica.Despacho do
   monta a tarefa para despacho, nao deste modulo. Um especialista pre-carregado que nao
   esta mais ativo cai no generico e registra o defeito, exatamente como
   `Fabrica.Equipe.Resolucao.resolver/3` ja faz.
+
+  ## O bloco de memoria entra DEPOIS do prefixo, nunca dentro dele (T-101)
+
+  `Fabrica.Memoria.Contexto.montar/3` busca, pelo titulo+objetivo da tarefa, os trechos da
+  historia do projeto mais relevantes, e `anexar/2` so CONCATENA o bloco formatado ao final
+  do `texto` ja montado pelo `Fabrica.Prompt.Prefixo` — nunca reescreve nem entra como um
+  bloco novo na faixa cacheada. Sem trecho recuperado (`nil`), `anexar/2` devolve o texto do
+  prefixo intocado: o despacho sem memoria e byte a byte o de sempre. `opcoes[:memoria]:
+  false` desliga a recuperacao por completo (util em teste, e para quando uma politica de
+  qualidade decidir que a recuperacao esta abaixo da linha de base).
   """
 
   alias Fabrica.Equipe.Resolucao
   alias Fabrica.Ferramentas.Catalogo
   alias Fabrica.Indice.Mapa
+  alias Fabrica.Memoria.Contexto
   alias Fabrica.Prompt.Prefixo
   alias Fabrica.Tarefas.Tarefa
 
@@ -54,6 +65,10 @@ defmodule Fabrica.Despacho do
 
   Papel desconhecido devolve `{:erro, :papel_desconhecido}`, nunca ferramentas vazias em
   silencio (mesma doutrina de `Fabrica.Ferramentas.Catalogo.do_papel/1`).
+
+  `opcoes[:memoria]` (padrao `true`) liga a recuperacao do histórico do projeto
+  (`Fabrica.Memoria.Contexto`), anexada DEPOIS do prefixo — ver o `@moduledoc`. `false`
+  desliga, devolvendo o prefixo intocado.
   """
   @spec montar(Tarefa.t(), atom(), String.t(), keyword()) ::
           {:ok, Prefixo.t()} | {:erro, :papel_desconhecido}
@@ -73,7 +88,7 @@ defmodule Fabrica.Despacho do
             tarefa: faixa_da_tarefa(tarefa)
           )
 
-        {:ok, prefixo}
+        {:ok, com_memoria(prefixo, tarefa, opcoes)}
     end
   end
 
@@ -90,6 +105,22 @@ defmodule Fabrica.Despacho do
     [raiz: tarefa.projeto.caminho]
     |> Mapa.extrair()
     |> Mapa.render()
+  end
+
+  defp com_memoria(prefixo, tarefa, opcoes) do
+    if Keyword.get(opcoes, :memoria, true) do
+      bloco = Contexto.montar(tarefa.projeto_id, termo_de_busca(tarefa))
+      %{prefixo | texto: Contexto.anexar(prefixo, bloco)}
+    else
+      prefixo
+    end
+  end
+
+  defp termo_de_busca(tarefa) do
+    [tarefa.titulo, tarefa.objetivo]
+    |> Enum.map(&texto/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.join(" ")
   end
 
   defp faixa_da_tarefa(tarefa) do

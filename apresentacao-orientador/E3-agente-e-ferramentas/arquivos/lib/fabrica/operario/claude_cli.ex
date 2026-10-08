@@ -74,6 +74,13 @@ defmodule Fabrica.Operario.ClaudeCLI do
   `--disallowedTools` nunca entra na linha; `--allowedTools` entra so como APROVACAO do Bash,
   por cima do `--tools` e nunca no lugar dele (secao seguinte).
 
+  **`Requisicao.vocabulario` escolhe um vocabulario MENOR que o do papel (T-100).** O papel
+  e um pacote fixo (construtor leva `rodar`, goste ou nao a tarefa dele); uma tarefa cujo
+  trabalho real nao precisa de Bash pode pedir so o que precisa
+  (`ferramentas_cli_do_vocabulario/1`), e assim nao sobe o bloco de sandbox (secao abaixo) nem
+  depende dele estar disponivel na maquina. O vocabulario explicito SUBSTITUI o do papel, nunca
+  soma a ele — `linha/1` usa um ou outro, nunca os dois.
+
   ## Comando de shell aprovado — `--allowedTools "Bash"` (T-088)
 
   **O que ele aprova.** Em `--print` nao ha quem responda pedido de permissao, e `acceptEdits`
@@ -291,16 +298,27 @@ defmodule Fabrica.Operario.ClaudeCLI do
   @spec ferramentas_cli(String.t()) :: [String.t()]
   def ferramentas_cli(papel) do
     case Catalogo.do_papel(papel) do
-      {:ok, ferramentas} ->
-        ferramentas
-        |> Map.keys()
-        |> Enum.map(&Map.get(@vocabulario_cli, &1))
-        |> Enum.reject(&is_nil/1)
-        |> Enum.sort()
-
-      {:erro, _} ->
-        []
+      {:ok, ferramentas} -> ferramentas |> Map.keys() |> ferramentas_cli_do_vocabulario()
+      {:erro, _} -> []
     end
+  end
+
+  @doc """
+  A MESMA traducao de `ferramentas_cli/1`, direto de uma lista de nomes internos do
+  catalogo — sem passar pelo `Catalogo.do_papel/1` (T-100).
+
+  Existe para `Requisicao.vocabulario`: a tarefa cujo trabalho real nao precisa de `rodar`
+  (Bash) pode pedir um vocabulario MENOR do que o papel inteiro teria, sem que a fabrica
+  precise inventar um papel novo no catalogo so para isso. Nome desconhecido e descartado,
+  a mesma regra de `ferramentas_cli/1` (`registrar_resultado`, sem equivalente no CLI).
+  """
+  @spec ferramentas_cli_do_vocabulario([String.t()]) :: [String.t()]
+  def ferramentas_cli_do_vocabulario(nomes) do
+    nomes
+    |> Enum.map(&Map.get(@vocabulario_cli, &1))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.sort()
   end
 
   @doc """
@@ -543,11 +561,17 @@ defmodule Fabrica.Operario.ClaudeCLI do
   a escrita do shell a raiz, e o que faz o `claude` recusar subir onde nao ha sandbox
   (`{:erro, :sandbox_indisponivel}`) — ver o `@moduledoc`, "O shell roda no sandbox". O JSON
   vai inline, entre aspas duplas com `\\"` (citacao em `sandbox_do_shell/1`).
+
+  `requisicao.vocabulario`, quando presente, SUBSTITUI o vocabulario do `papel` (T-100): o
+  `--tools` montado vem dele, e nao do catalogo. `aprovacao_do_shell/1` e `sandbox_do_shell/1`
+  leem o resultado JA TRADUZIDO — nao o papel nem o vocabulario cru — entao a regra "Bash no
+  `--tools` implica `--allowedTools` e o bloco de sandbox" continua valendo IGUAL para os dois
+  caminhos, sem caminho novo que a furasse.
   """
   @spec linha(Requisicao.t()) :: {:ok, String.t()} | {:erro, {:modelo_sem_traducao, term()}}
   def linha(%Requisicao{} = requisicao) do
     with {:ok, modelo} <- modelo_cli(requisicao.modelo) do
-      ferramentas = ferramentas_cli(requisicao.papel)
+      ferramentas = ferramentas_da_requisicao(requisicao)
 
       {:ok,
        ~s(#{executavel()} --print --verbose --output-format stream-json ) <>
@@ -559,6 +583,16 @@ defmodule Fabrica.Operario.ClaudeCLI do
          ~s(--model #{modelo})}
     end
   end
+
+  # O vocabulario EXPLICITO (T-100), quando presente, substitui o do papel por inteiro —
+  # nunca os dois juntos: um vocabulario pedido para ser MENOR nao pode voltar maior porque o
+  # papel default tambem contribuiu.
+  defp ferramentas_da_requisicao(%Requisicao{vocabulario: vocabulario})
+       when is_list(vocabulario) do
+    ferramentas_cli_do_vocabulario(vocabulario)
+  end
+
+  defp ferramentas_da_requisicao(%Requisicao{papel: papel}), do: ferramentas_cli(papel)
 
   # A aprovacao segue o VOCABULARIO, nunca o contrario: o nome vem da mesma traducao de
   # `ferramentas_cli/1`, e so aparece se o `--tools` do papel ja tem o shell (T-088).

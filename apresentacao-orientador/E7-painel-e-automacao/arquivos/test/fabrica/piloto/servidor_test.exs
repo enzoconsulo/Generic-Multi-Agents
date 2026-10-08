@@ -273,6 +273,57 @@ defmodule Fabrica.Piloto.ServidorTest do
     end
   end
 
+  describe "parede de cota nao conta como rodada sem concluir (T-096)" do
+    test "parede + rodada sem concluir + parede nao leva a {:parar, :estagnado}", %{
+      projeto: projeto,
+      diretorio: diretorio
+    } do
+      tarefa!(projeto, %{status: :pronta, codigo: "T-540"})
+      tarefa!(projeto, %{status: :pronta, codigo: "T-541"})
+      tarefa!(projeto, %{status: :pronta, codigo: "T-542"})
+
+      pid = piloto!(projeto, diretorio)
+      {:ok, publico_inicial} = Servidor.ligar(pid, 50.0, 10)
+      assert publico_inicial.ligado?
+
+      depois_da_parede_1 = Servidor.rodada_concluida(pid, %{parede?: true})
+      assert depois_da_parede_1.ligado?
+      assert depois_da_parede_1.rodadas_seguidas_sem_concluir == 0
+
+      depois_da_falha = Servidor.rodada_concluida(pid, %{concluiu?: false})
+      assert depois_da_falha.ligado?
+      assert depois_da_falha.rodadas_seguidas_sem_concluir == 1
+
+      depois_da_parede_2 = Servidor.rodada_concluida(pid, %{parede?: true})
+
+      assert depois_da_parede_2.ligado?
+      refute depois_da_parede_2.motivo_parada
+      assert depois_da_parede_2.rodadas_seguidas_sem_concluir == 1
+    end
+
+    test "o evento [:fabrica, :despacho, :fim] com desfecho {:parede, motivo} tambem nao incrementa",
+         %{projeto: projeto, diretorio: diretorio} do
+      primeira = tarefa!(projeto, %{status: :pronta, codigo: "T-545"})
+      tarefa!(projeto, %{status: :pronta, codigo: "T-546"})
+
+      pid = piloto!(projeto, diretorio)
+      {:ok, _} = Servidor.ligar(pid, 50.0, 10)
+      assert Repo.get!(Tarefa, primeira.id).status == :em_execucao
+
+      Fabrica.Eventos.despacho_fim(%{
+        tarefa_id: primeira.id,
+        desfecho: {:parede, {:cota, DateTime.add(DateTime.utc_now(), 3600, :second)}},
+        voltas: 0,
+        gasto_usd: 0.0
+      })
+
+      :sys.get_state(pid)
+
+      publico = Servidor.estado(pid)
+      assert publico.rodadas_seguidas_sem_concluir == 0
+    end
+  end
+
   describe "desligar nao corta a rodada em voo" do
     test "desligar so muda ligado?; o fim da rodada em voo ainda encontra ligado?: false", %{
       projeto: projeto,
@@ -351,6 +402,55 @@ defmodule Fabrica.Piloto.ServidorTest do
 
       assert depois.ligado?
       assert Repo.get!(Tarefa, segunda.id).status == :em_execucao
+    end
+
+    defp escrever_estado_persistido(diretorio, projeto, dormindo_ate) do
+      File.mkdir_p!(diretorio)
+
+      conteudo =
+        Jason.encode!(%{
+          "ligado?" => true,
+          "teto_de_gasto" => 50.0,
+          "maximo_de_rodadas" => 10,
+          "gasto_acumulado" => 0,
+          "rodadas_feitas" => 0,
+          "rodadas_seguidas_sem_concluir" => 0,
+          "dormindo_ate" => dormindo_ate && DateTime.to_iso8601(dormindo_ate),
+          "motivo_parada" => nil,
+          "tarefa_em_voo_id" => nil
+        })
+
+      File.write!(Path.join(diretorio, "#{projeto.id}.json"), conteudo)
+    end
+
+    test "dormindo_ate persistido no FUTURO: o religado continua dormindo, sem despachar (T-096)",
+         %{projeto: projeto, diretorio: diretorio} do
+      tarefa = tarefa!(projeto, %{status: :pronta, codigo: "T-551"})
+      futuro = DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second)
+
+      escrever_estado_persistido(diretorio, projeto, futuro)
+
+      pid = piloto!(projeto, diretorio)
+      depois = Servidor.estado(pid)
+
+      assert depois.ligado?
+      assert depois.dormindo_ate == futuro
+      assert Repo.get!(Tarefa, tarefa.id).status == :pronta
+    end
+
+    test "dormindo_ate persistido no PASSADO: o religado segue o caminho normal e despacha (T-096)",
+         %{projeto: projeto, diretorio: diretorio} do
+      tarefa = tarefa!(projeto, %{status: :pronta, codigo: "T-552"})
+      passado = DateTime.utc_now() |> DateTime.add(-10, :second) |> DateTime.truncate(:second)
+
+      escrever_estado_persistido(diretorio, projeto, passado)
+
+      pid = piloto!(projeto, diretorio)
+      depois = Servidor.estado(pid)
+
+      refute depois.dormindo_ate
+      assert depois.ligado?
+      assert Repo.get!(Tarefa, tarefa.id).status == :em_execucao
     end
   end
 
@@ -513,8 +613,12 @@ defmodule Fabrica.Piloto.ServidorTest do
       assert Repo.get!(Tarefa, tarefa.id).status == :em_execucao
 
       # O job que o piloto acabou de enfileirar, rodado como o Oban o rodaria (`perform/1`).
-      assert :ok =
+      # T-095: parede nao e julgada — `perform/1` devolve `{:snooze, segundos}` (o Oban
+      # reagenda o MESMO job), nao mais `:ok`.
+      assert {:snooze, segundos} =
                perform_job(Fabrica.Fila.Trabalho, %{tarefa_id: tarefa.id, papel: "construtor"})
+
+      assert is_integer(segundos) and segundos > 0
 
       # O evento de fim chega por mensagem — espera ele ser processado antes de conferir.
       :sys.get_state(pid)

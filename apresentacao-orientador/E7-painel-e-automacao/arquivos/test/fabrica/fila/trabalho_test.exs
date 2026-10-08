@@ -27,6 +27,7 @@ defmodule Fabrica.Fila.TrabalhoTest do
   use Oban.Testing, repo: Fabrica.Repo
 
   alias Fabrica.Agente.Supervisor, as: SupervisorDeAgentes
+  alias Fabrica.Cota
   alias Fabrica.Eventos
   alias Fabrica.Ferramentas.RegistrarResultado
   alias Fabrica.Fila.Trabalho
@@ -64,6 +65,14 @@ defmodule Fabrica.Fila.TrabalhoTest do
           case Application.get_env(:fabrica, :modo_do_teste, :responder) do
             :travar -> Process.sleep(:infinity)
             :responder -> {:ok, Falso.resposta()}
+            # T-095: os dois sinais de PAREDE (nenhum e erro do trabalho) que o Laco traduz
+            # em `motivo_do_erro`, sem passar por `Falso` — o laco nunca contabiliza consumo
+            # nos dois.
+            :parede_cota -> {:erro, {:cota, Application.get_env(:fabrica, :reabre_em_do_teste)}}
+            :sandbox_indisponivel -> {:erro, :sandbox_indisponivel}
+            # Contraprova de T-095: um erro que E do trabalho, para provar que ele NAO vira
+            # parede e segue julgado como hoje.
+            :prazo -> {:erro, :prazo}
           end
 
         # T-073: quando o teste precisa que o modelo PEÇA uma ferramenta (para provar que
@@ -127,6 +136,14 @@ defmodule Fabrica.Fila.TrabalhoTest do
       Application.put_env(:fabrica, :controle_do_teste, self())
 
       on_exit(fn ->
+        # T-095: os modos de parede de cota deste bloco fazem o `Laco` marcar o `Fabrica.Cota`
+        # GLOBAL como batida e PAUSAR as filas do Oban (via a `:cota` padrao de `rodar_agente/2`).
+        # Sem rearmar aqui, essa parede vaza para os arquivos seguintes da suite — `servidor_test`
+        # (o piloto ve a cota batida e DORME em vez de despachar) e `console_live_test` (#cota-parede
+        # aparece). Mesmo `on_exit` do bloco de parede de `servidor_test.exs`; `rearmar/1` e no-op
+        # quando a cota nao esta batida.
+        if Process.whereis(Fabrica.Cota), do: :ok = Cota.rearmar(Fabrica.Cota)
+
         case operario_antes do
           nil -> Application.delete_env(:fabrica, :operario)
           modulo -> Application.put_env(:fabrica, :operario, modulo)
@@ -136,6 +153,7 @@ defmodule Fabrica.Fila.TrabalhoTest do
         Application.delete_env(:fabrica, :modo_do_teste)
         Application.delete_env(:fabrica, :agulha_do_teste)
         Application.delete_env(:fabrica, :travar_apos_agulha)
+        Application.delete_env(:fabrica, :reabre_em_do_teste)
       end)
 
       :ok
@@ -480,6 +498,101 @@ defmodule Fabrica.Fila.TrabalhoTest do
       # metade na contabilidade.
       assert Repo.get!(Tarefa, tarefa.id).status == :bloqueada
       assert contar_consumos(tarefa.id) == 0
+    end
+
+    test "CONSTRUTOR cujo operario bate parede de cota: nao vai a em_teste, tentativas nao sobe de novo, e e redespachavel (T-095)",
+         %{projeto: projeto} do
+      reabre_em = DateTime.add(DateTime.utc_now(), 120, :second)
+      Application.put_env(:fabrica, :modo_do_teste, :parede_cota)
+      Application.put_env(:fabrica, :reabre_em_do_teste, reabre_em)
+      :ok = Eventos.assinar()
+      tarefa = tarefa!(projeto, %{status: :pronta})
+
+      assert {:parede, segundos} = Trabalho.executar(tarefa.id, :construtor)
+      assert is_integer(segundos) and segundos > 0
+
+      # `garantir_em_execucao/2` ja tinha marcado pronta -> em_execucao (e gasto a tentativa)
+      # ANTES de subir o agente — isso e do despacho, nao do julgamento. O que a parede
+      # IMPEDE e a tentativa SEGUINTE: nenhuma transicao nova, nenhum incremento novo.
+      tarefa_depois = Repo.get!(Tarefa, tarefa.id)
+      assert tarefa_depois.status == :em_execucao
+      assert tarefa_depois.tentativas == 1
+      assert Fila.papel_por_status()[tarefa_depois.status] == :construtor
+
+      # O fim foi emitido com o gasto (zero, aqui: a parede bateu na primeira chamada, antes
+      # de qualquer consumo) — nao pode sumir da telemetria.
+      assert_receive {:fabrica, [:fabrica, :despacho, :fim], _medidas, meta}, 2_000
+      assert meta.tarefa_id == tarefa.id
+      assert match?({:parede, {:cota, _}}, meta.desfecho)
+      assert meta.gasto_usd == 0.0
+
+      # Nao julgou: nenhum ciclo gravado, nenhum consumo.
+      assert Repo.all(from(c in Ciclo, where: c.tarefa_id == ^tarefa.id)) == []
+      assert contar_consumos(tarefa.id) == 0
+    end
+
+    test "VERIFICADOR cujo despacho bate parede de cota: nao vai a em_revisao nem volta reprovado (T-095)",
+         %{projeto: projeto} do
+      Application.put_env(:fabrica, :modo_do_teste, :parede_cota)
+      Application.put_env(:fabrica, :reabre_em_do_teste, nil)
+      tarefa = tarefa!(projeto, %{status: :em_teste, tentativas: 1})
+
+      assert {:parede, segundos} = Trabalho.executar(tarefa.id, :verificador)
+      assert is_integer(segundos) and segundos > 0
+
+      tarefa_depois = Repo.get!(Tarefa, tarefa.id)
+      assert tarefa_depois.status == :em_teste
+      assert tarefa_depois.tentativas == 1
+      assert Repo.all(from(c in Ciclo, where: c.tarefa_id == ^tarefa.id)) == []
+    end
+
+    test "REVISOR cujo despacho bate parede de cota: nao vai a concluida nem volta a em_execucao (T-095)",
+         %{projeto: projeto} do
+      Application.put_env(:fabrica, :modo_do_teste, :parede_cota)
+      Application.put_env(:fabrica, :reabre_em_do_teste, nil)
+      tarefa = tarefa!(projeto, %{status: :em_revisao, tentativas: 1})
+
+      assert {:parede, segundos} = Trabalho.executar(tarefa.id, :revisor)
+      assert is_integer(segundos) and segundos > 0
+
+      tarefa_depois = Repo.get!(Tarefa, tarefa.id)
+      assert tarefa_depois.status == :em_revisao
+      assert tarefa_depois.tentativas == 1
+      assert Repo.all(from(c in Ciclo, where: c.tarefa_id == ^tarefa.id)) == []
+    end
+
+    for {papel, status_antes, status_esperado_depois} <- [
+          {:construtor, :pronta, :em_execucao},
+          {:verificador, :em_teste, :em_teste},
+          {:revisor, :em_revisao, :em_revisao}
+        ] do
+      @papel papel
+      @status_antes status_antes
+      @status_esperado_depois status_esperado_depois
+
+      test "#{papel}: sandbox indisponivel se comporta como parede, sem julgar (T-095)",
+           %{projeto: projeto} do
+        Application.put_env(:fabrica, :modo_do_teste, :sandbox_indisponivel)
+        tarefa = tarefa!(projeto, %{status: @status_antes})
+
+        assert {:parede, segundos} = Trabalho.executar(tarefa.id, @papel)
+        assert is_integer(segundos) and segundos > 0
+
+        tarefa_depois = Repo.get!(Tarefa, tarefa.id)
+        assert tarefa_depois.status == @status_esperado_depois
+        assert Repo.all(from(c in Ciclo, where: c.tarefa_id == ^tarefa.id)) == []
+      end
+    end
+
+    test "erro que E do trabalho (:prazo) NAO vira parede: segue julgado como hoje (T-095)",
+         %{projeto: projeto} do
+      Application.put_env(:fabrica, :modo_do_teste, :prazo)
+      tarefa = tarefa!(projeto, %{status: :em_revisao, tentativas: 1})
+
+      assert :ok = Trabalho.executar(tarefa.id, :revisor)
+
+      # Diferente da parede: o portao julgou de verdade e gravou um ciclo.
+      assert [_ciclo] = Repo.all(from(c in Ciclo, where: c.tarefa_id == ^tarefa.id))
     end
   end
 

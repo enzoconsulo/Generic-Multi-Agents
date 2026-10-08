@@ -379,66 +379,67 @@
   {
    "id": "T-094",
    "titulo": "Piloto dormindo pela cota acorda no REARME da Cota, sem laço quente entre `reabre_em` e a folga",
-   "status": "pronta",
-   "tentativas": 0,
+   "status": "concluida",
+   "tentativas": 1,
    "areas": [
     "lib/fabrica/piloto/servidor.ex",
     "test/fabrica/piloto/servidor_test.exs"
    ],
    "objetivo": "Depois de uma parede de cota, o piloto fica parado de verdade até a Cota rearmar — acorda pelo rearme (ou por um piso de espera), e nunca reavalia em laço sem pausa enquanto a cota segue batida.",
-   "commits": 4,
-   "ultimo_commit": "7dc3391",
+   "commits": 10,
+   "ultimo_commit": "9b50521",
    "concluida_em": "2026-10-07",
-   "custo_usd": 7.04,
-   "despachos": 4
+   "custo_usd": 13.6,
+   "despachos": 10
   },
   {
    "id": "T-095",
    "titulo": "Despacho que não rodou (parede de cota, sem sandbox) não é JULGADO em nenhum papel — nem avança a tarefa, nem gasta ciclo, nem aprova por omissão",
-   "status": "pronta",
-   "tentativas": 0,
+   "status": "concluida",
+   "tentativas": 3,
    "areas": [
     "lib/fabrica/fila/trabalho.ex",
-    "test/fabrica/fila/trabalho_test.exs"
+    "test/fabrica/fila/trabalho_test.exs",
+    "test/fabrica/piloto/servidor_test.exs"
    ],
    "objetivo": "Quando o despacho de QUALQUER papel (construtor, verificador, revisor) é interrompido por algo que NÃO é o trabalho — parede de cota, sandbox indisponível —, o portão não julga: a tarefa fica onde estava para ser retomada depois, em vez de seguir no pipeline como se o turno tivesse terminado.",
-   "commits": 0,
-   "ultimo_commit": null,
-   "concluida_em": null,
-   "custo_usd": 2.07,
-   "despachos": 1
+   "commits": 5,
+   "ultimo_commit": "32ccabf",
+   "concluida_em": "2026-10-07",
+   "custo_usd": 13.4,
+   "despachos": 6
   },
   {
    "id": "T-096",
    "titulo": "Parede de cota não conta como rodada sem concluir, e o piloto religado respeita o sono salvo",
-   "status": "backlog",
-   "tentativas": 0,
+   "status": "concluida",
+   "tentativas": 1,
    "areas": [
     "lib/fabrica/piloto/servidor.ex",
     "test/fabrica/piloto/servidor_test.exs"
    ],
    "objetivo": "Uma parede de cota não empurra o piloto para `{:parar, :estagnado}`, e um piloto que volta (reinício da aplicação) enquanto dormia pela cota continua dormindo até a hora salva, em vez de despachar contra a parede.",
-   "commits": 0,
-   "ultimo_commit": null,
-   "concluida_em": null,
-   "custo_usd": 0,
-   "despachos": 0
+   "commits": 3,
+   "ultimo_commit": "3d68eea",
+   "concluida_em": "2026-10-07",
+   "custo_usd": 3.77,
+   "despachos": 3
   },
   {
    "id": "T-097",
    "titulo": "Busca filtrada por projeto não perde trecho para tuplas mortas do índice HNSW (busca_test.exs:242)",
-   "status": "pronta",
-   "tentativas": 0,
+   "status": "concluida",
+   "tentativas": 2,
    "areas": [
     "lib/fabrica/memoria/busca.ex",
     "test/fabrica/memoria/busca_test.exs"
    ],
    "objetivo": "`Busca.buscar/3` devolve todos os candidatos que cabem no limite, mesmo com o índice HNSW de `trechos` cheio de entradas de outros projetos ou de linhas mortas — e o teste `busca_test.exs:242` deixa de falhar intermitentemente.",
-   "commits": 0,
-   "ultimo_commit": null,
-   "concluida_em": null,
-   "custo_usd": 0,
-   "despachos": 0
+   "commits": 2,
+   "ultimo_commit": "479c13c",
+   "concluida_em": "2026-10-07",
+   "custo_usd": 7.29,
+   "despachos": 3
   },
   {
    "id": "T-098",
@@ -450,6 +451,21 @@
     "lib/fabrica/criterios.ex"
    ],
    "objetivo": "O teste \"prazo estourado reexecuta UMA vez, e a reexecucao e contada\" passa sempre que o comportamento está certo e falha sempre que não está — sem depender da velocidade da máquina.",
+   "commits": 0,
+   "ultimo_commit": null,
+   "concluida_em": null,
+   "custo_usd": 0,
+   "despachos": 0
+  },
+  {
+   "id": "T-102",
+   "titulo": "console_live_test.exs:138 (parede de cota no console) deixa de depender do estado global da Cota compartilhado com outros testes",
+   "status": "pronta",
+   "tentativas": 0,
+   "areas": [
+    "test/fabrica_web/live/console_live_test.exs"
+   ],
+   "objetivo": "O teste \"parede de cota aparece com o horario de reabertura quando ativa, e some ao rearmar\" (`test/fabrica_web/live/console_live_test.exs:138`) passa sempre que o console está certo e falha sempre que não está — independente da ordem e da concorrência da suíte.",
    "commits": 0,
    "ultimo_commit": null,
    "concluida_em": null,
@@ -490,7 +506,7 @@
   }
  ],
  "fechamento": [
-  "ced37e9d7878f6858e22fc8104c8f4a0775299b1",
+  "d68f2f35bc97ccd748cf317c10f1b9a66c45c180",
   "2026-10-07"
  ],
  "arquivos": [
@@ -544,14 +560,14 @@
   "test/mix/ci_test.exs",
   "test/test_helper.exs"
  ],
- "n_tarefas": 29,
- "n_concluidas": 20,
- "commits": 82,
- "testes": 453,
- "linhas_lib": 6870,
- "custo_usd": 167.01,
- "despachos": 94,
- "primeira": 12,
- "tent_media": 1.45,
+ "n_tarefas": 30,
+ "n_concluidas": 24,
+ "commits": 98,
+ "testes": 471,
+ "linhas_lib": 7105,
+ "custo_usd": 195.96,
+ "despachos": 111,
+ "primeira": 14,
+ "tent_media": 1.5,
  "marco_status": "bloqueada"
 }

@@ -6,6 +6,14 @@
 #
 # CONSOME COTA DA ASSINATURA. Nao gera fatura.
 #
+# O agente sobe com `vocabulario: ["escrever"]` (T-100), e NAO com o papel default
+# ("construtor", que leva `rodar` -> Bash -> o bloco de sandbox do proprio `claude`, T-090).
+# A tarefa dele e so escrever um arquivo: escrita e auditada pelo `Confinamento`
+# (`ClaudeCLI.interpretar/2`) e nao depende do sandbox existir na maquina. Pedir o papel
+# inteiro aqui faria o probe reprovar em qualquer maquina sem `bwrap`/`socat` (ou, no
+# Windows nativo, em qualquer maquina) — o erro CERTO (D-016: fail-closed), mas pela tarefa
+# errada: este probe nao precisa de Bash para nada.
+#
 # Ate onde se sabe NAO existe funcao que ligue o `Laco` a `Transicao` — este probe faz essa
 # ligacao explicitamente, criando um projeto e uma tarefa de mentira so para a medicao.
 #
@@ -107,6 +115,7 @@ IO.puts("\n=== chamando o claude de verdade via o Laco (consome cota) ===\n")
   Laco.rodar(
     raiz: raiz,
     modelo: "haiku",
+    vocabulario: ["escrever"],
     teto_de_voltas: 10,
     mensagens: [%{papel: :usuario, conteudo: prompt}],
     ferramentas: %{}

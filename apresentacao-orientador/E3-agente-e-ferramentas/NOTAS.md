@@ -2,7 +2,7 @@
 
 **Plano:** 04/10 – 18/10/2026 · fase Desenvolvimento · no repositório: versão `v0.2`
 **Entrega combinada no plano:** Um agente resolve uma tarefa real com o custo gravado, e trocar de fornecedor não mexe no núcleo.
-**Situação hoje (07/10/2026 11:22):** Concluída — entrega aprovada (etapa atual do calendário)
+**Situação hoje (07/10/2026 21:24):** Concluída — entrega aprovada (etapa atual do calendário)
 
 > Arquivo gerado por `_gerador/gerar.py` a partir do repositório real. Não edite à mão:
 > edite `_gerador/conteudo.py` (texto) e rode o gerador de novo.
@@ -15,7 +15,7 @@
 | `NOTAS.md` | este arquivo: o que está feito, o que falta e a próxima rodada |
 | `dados.json` | os números desta etapa, extraídos do repositório |
 | `tarefas/` | cópia dos arquivos de tarefa desta etapa (objetivo, critérios, verificação, revisão) |
-| `arquivos/` | os 36 arquivos de código/teste desta etapa, no estado do commit `172e15f` |
+| `arquivos/` | os 36 arquivos de código/teste desta etapa, no estado do commit `09dd7b6` |
 | `evidencia-marco.txt` | saída real do teste do marco, rodado nesta máquina na geração |
 
 ## O combinado × o feito
@@ -26,14 +26,14 @@
 | 3.2 Confinamento | a ferramenta recusa caminho fora do projeto; o shell do agente roda em sandbox | T-012a, T-014, T-079, T-080, T-081, T-082, T-083, T-090, T-099 | T-012a concluída; T-014 concluída; T-079 concluída; T-080 concluída; T-081 concluída; T-082 concluída; T-083 concluída; T-090 concluída; T-099 concluída |
 | 3.3 Agente supervisionado | o agente como processo supervisionado, com teto de chamadas por papel | T-015, T-017, T-017a, T-017b, T-020a | T-015 concluída; T-017 concluída; T-017a concluída; T-017b concluída; T-020a concluída |
 | 3.4 Adaptadores | dois fornecedores atrás da mesma fronteira, com o controle de cada um MEDIDO antes | T-003a, T-018, T-018a, T-018b, T-018c, T-018d, T-018e, T-019 | T-003a concluída; T-018 concluída; T-018a concluída; T-018b concluída; T-018c concluída; T-018d concluída; T-018e concluída; T-019 concluída |
-| Entrega Marco da etapa | agente real resolve tarefa real, custo por volta gravado | T-020, T-020b, T-100 | T-020 concluída; T-020b concluída; T-100 pronta |
+| Entrega Marco da etapa | agente real resolve tarefa real, custo por volta gravado | T-020, T-020b, T-100 | T-020 concluída; T-020b concluída; T-100 concluída |
 | Adiado Marco 2 (cache) | medir o cache com a API por token — depende de chave de acesso | T-020c | T-020c backlog |
 
 ## Números (do repositório)
 
-- tarefas: **31/33 concluídas**; aprovadas de primeira: 25; execuções por tarefa (média): 1.19
-- commits das tarefas: 82 · testes nos arquivos da etapa: 413 · linhas em `lib/`: 4149
-- custo medido nas rodadas do painel: US$ 72,31 em 46 despachos (dólar-equivalente de cota; tarefas feitas no chat não entram)
+- tarefas: **32/33 concluídas**; aprovadas de primeira: 26; execuções por tarefa (média): 1.19
+- commits das tarefas: 84 · testes nos arquivos da etapa: 417 · linhas em `lib/`: 4215
+- custo medido nas rodadas do painel: US$ 77,12 em 49 despachos (dólar-equivalente de cota; tarefas feitas no chat não entram)
 
 ## Tarefas
 
@@ -70,7 +70,7 @@
 | T-019 | Operario.MessagesAPI — Req, com controle de cache | concluída | 1 | 2026-08-28 | — |
 | T-020 | MARCO da v0.2: uma tarefa resolvida, e o prefixo escrito uma vez | concluída | 1 | 2026-09-26 | US$ 3,67 |
 | T-020b | O probe do marco 1 roda verde de ponta a ponta, com prompt de tarefa real | concluída | 2 | 2026-09-26 | US$ 10,05 |
-| T-100 | O probe do marco da v0.2 volta a rodar no Windows: a tarefa do probe não precisa de shell, então o agente sobe sem Bash | pronta | 1 | — | — |
+| T-100 | O probe do marco da v0.2 volta a rodar no Windows: a tarefa do probe não precisa de shell, então o agente sobe sem Bash | concluída | 1 | 2026-10-07 | US$ 4,81 |
 | T-020c | MARCO 2 da v0.2, adiado para o fim: o prefixo escrito uma vez, medido com a Messages API | backlog | 1 | — | — |
 
 ## Requisitos desta etapa
@@ -87,18 +87,17 @@
 - Medido antes de decidir (risco previsto no plano): o CLI do fornecedor é um agente completo, não só um modelo — virou um desenho novo, a 'família do operário'.
 - O marco reprovou 3 vezes antes de aprovar, cada vez por um defeito real — um deles com 26 testes verdes: o processo de verificação funcionou.
 - Confinamento endurecido depois da portabilidade para Linux: link relativo, UNC com barras mistas e o shell do agente em sandbox.
+- 07/10: a demonstração voltou a rodar no Windows com o agente SEM shell (menor privilégio) — sem sandbox, quem tem shell nem sobe (T-100). PROBE OK, evidência em `evidencia-marco.txt`.
 - 07/10: a primeira bateria no Windows achou uma fuga REAL — um ciclo de junções era aceito como pasta dentro do projeto. A fábrica diagnosticou, corrigiu e provou com mutação no mesmo dia (T-099).
 
 ## O que está feito / o que falta
 
 **Pendente nesta etapa:**
 
-- A demonstração do marco NÃO roda hoje nesta máquina: rodada em 07/10, o agente recusou subir porque o shell exige sandbox e o Windows não o oferece (fail-closed, nada gasto — a governança funcionando). Corretiva T-100 na fila: o agente do probe sobe sem shell, que a tarefa dele não precisa.
 - Marco 2 (cache medido com a API por token) adiado por decisão: não há chave de acesso nesta máquina (fica para depois do marco final).
 
 **Próxima rodada:**
 
-- Fechar a T-100 antes de 18/10, para a demonstração rodar ao vivo no Windows.
 - Apresentação do fim da E3 (18/10): demonstrar o agente resolvendo uma tarefa real, com o custo gravado.
 - Marco 2 só quando houver chave de acesso à API por token.
 

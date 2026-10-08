@@ -48,6 +48,25 @@ defmodule Fabrica.Memoria.Busca do
   inteiros), os puros num `SELECT` direto. Nao ha uma metade do calculo enxergando um estado do
   banco e a outra outro.
 
+  ## O filtro por projeto roda ANTES da distancia vetorial, nao depois (T-097)
+
+  As duas metades que tocam `embedding` (`:vetor` e a metade semantica do `:hibrido`) comecam
+  por uma CTE `candidatos` **MATERIALIZED** que ja aplica `WHERE projeto_id = $1`, e so DEPOIS
+  disso ordena por distancia. Sem essa cerca, o planner e livre para inverter a ordem — varrer o
+  indice HNSW de `embedding` (aproximado) já em ordem de distancia e aplicar o filtro de projeto
+  SO NO FIM. O pgvector documenta esse comportamento: a varredura aproximada devolve ate
+  `hnsw.ef_search` vizinhos (40 por padrao) e descarta quem nao passa no filtro — com muitas
+  linhas de OUTRO projeto (ou mortas, de rollback) mais pertinho do vetor da consulta do que
+  qualquer trecho do projeto certo, a varredura pode esgotar o orcamento antes de achar QUALQUER
+  linha do projeto, e a busca devolve menos do que `@limite_resultado` pede (ou nada), mesmo
+  havendo trecho de sobra no banco. `MATERIALIZED` forca o Postgres a resolver `candidatos` por
+  inteiro primeiro (pelo indice de `projeto_id`, exato) antes de ordenar por distancia — o que
+  sobra para ordenar e so o do projeto, e a ordenacao nesse conjunto ja filtrado e EXATA, nao
+  aproximada por HNSW. O custo e nao usar mais o indice HNSW nessas duas consultas; aceitavel
+  enquanto o corpus por projeto ficar na faixa medida pela D-001 (centenas a poucas unidades de
+  milhar) — reabrir isto exige medir esse custo crescer de verdade, nao supor que HNSW e sempre
+  mais barato.
+
   `projeto_id` filtra desde o inicio de toda consulta: um trecho de outro projeto nunca entra
   nem como candidato, em modo nenhum.
 
@@ -129,14 +148,32 @@ defmodule Fabrica.Memoria.Busca do
   # contem `float()` que O PROPRIO EMBEDDER gerou (nunca texto vindo de fora), e
   # `Float.to_string/1` nunca produz aspas, ponto-e-virgula ou qualquer caractere que
   # escape do array `[...]`. `k` idem: e sempre um inteiro (guarda abaixo), nunca texto.
+  #
+  # `candidatos` filtra por `projeto_id` ANTES de qualquer coisa, e e MATERIALIZED de
+  # proposito (T-097): sem a cerca de otimizacao, o planner e livre para trocar a ordem —
+  # varrer o indice HNSW (aproximado) em ORDEM de distancia e so DEPOIS aplicar o filtro de
+  # projeto. Esse caminho tem um defeito conhecido do pgvector: a varredura aproximada
+  # devolve ate `hnsw.ef_search` vizinhos (padrao 40) e os descarta se nao passarem no
+  # filtro — com muitas entradas de OUTRO projeto (ou linhas mortas) mais pertinho do vetor
+  # da consulta, o projeto certo pode sobrar com MENOS candidatos do que o limite pede, ou
+  # nenhum. `MATERIALIZED` forca o Postgres a resolver `candidatos` por inteiro primeiro
+  # (usando o indice de `projeto_id`, exato, sem HNSW); so DEPOIS disso a ordenacao por
+  # distancia roda sobre esse conjunto ja filtrado — exata, nao aproximada. O corpus desta
+  # fabrica (D-001: na casa das centenas a poucas unidades de milhar, por projeto) nao
+  # sente o custo de abrir mao do indice aproximado; reabrir isto exige medir esse custo
+  # crescer de verdade, nao so a suposicao de que HNSW e sempre mais barato.
   defp buscar_com_vetor(projeto_id, _termo, vetor, :vetor, _k) do
     literal = literal(vetor)
 
     sql = """
-    SELECT t.id, t.projeto_id, t.fonte, t.corpo, t.hash
-      FROM trechos t
-     WHERE t.projeto_id = $1
-     ORDER BY t.embedding <=> '#{literal}'::vector
+    WITH candidatos AS MATERIALIZED (
+      SELECT id, projeto_id, fonte, corpo, hash, embedding
+        FROM trechos
+       WHERE projeto_id = $1
+    )
+    SELECT id, projeto_id, fonte, corpo, hash
+      FROM candidatos
+     ORDER BY embedding <=> '#{literal}'::vector
      LIMIT $2
     """
 
@@ -150,10 +187,14 @@ defmodule Fabrica.Memoria.Busca do
     # de texto comum ($2): o Postgrex tambem nao tem extensao para o tipo `tsquery`, e
     # construir a tsquery no Postgres evita ter que serializar esse tipo em Elixir.
     sql = """
-    WITH semantico AS (
-      SELECT id, RANK() OVER (ORDER BY embedding <=> '#{literal}'::vector) AS pos
+    WITH candidatos AS MATERIALIZED (
+      SELECT id, embedding
         FROM trechos
        WHERE projeto_id = $1
+    ),
+    semantico AS (
+      SELECT id, RANK() OVER (ORDER BY embedding <=> '#{literal}'::vector) AS pos
+        FROM candidatos
        ORDER BY embedding <=> '#{literal}'::vector
        LIMIT #{@limite_candidatos}
     ),

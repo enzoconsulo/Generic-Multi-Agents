@@ -168,9 +168,11 @@ defmodule Fabrica.Piloto.Servidor do
 
   @doc """
   O fim de uma rodada, informado diretamente. `resultado` aceita `:gasto` (padrao 0),
-  `:concluiu?` (padrao `false`), `:falhou?` (padrao `false`) e `:pediu_replanejamento?`
-  (padrao `false`). Consulta a decisao e age — mesma porta que o evento
-  `[:fabrica, :despacho, :fim]` usa por baixo.
+  `:concluiu?` (padrao `false`), `:falhou?` (padrao `false`), `:parede?` (padrao `false` —
+  T-096: uma rodada que bateu na parede de cota antes de produzir trabalho NAO conta como
+  "rodada sem concluir", ver `@moduledoc`) e `:pediu_replanejamento?` (padrao `false`).
+  Consulta a decisao e age — mesma porta que o evento `[:fabrica, :despacho, :fim]` usa por
+  baixo.
   """
   @spec rodada_concluida(GenServer.server(), map()) :: estado_publico()
   def rodada_concluida(servidor, resultado \\ %{}) do
@@ -241,6 +243,16 @@ defmodule Fabrica.Piloto.Servidor do
     {:noreply, retomar_com_rodada_em_voo(estado, id)}
   end
 
+  # O sono persistido (T-096): se `horario` ainda nao chegou, o piloto continua dormindo ate
+  # la — SEM reavaliar a decisao pela Cota ao vivo (`avaliar_e_agir/2`), que pode ter perdido a
+  # memoria da parede num reinicio do proprio container, porque `Fabrica.Cota` tambem e so
+  # memoria (ver o @moduledoc dela). Reavaliar as cegas despacharia contra uma parede que so
+  # ZEROU porque o PROCESSO caiu, nao porque a cota de verdade reabriu.
+  def handle_continue(:retomar, %{ligado?: true, dormindo_ate: horario} = estado)
+      when not is_nil(horario) do
+    {:noreply, retomar_dormindo(estado, horario)}
+  end
+
   def handle_continue(:retomar, %{ligado?: true} = estado) do
     {:noreply, avaliar_e_agir(estado)}
   end
@@ -255,6 +267,19 @@ defmodule Fabrica.Piloto.Servidor do
     case Repo.get(Tarefa, tarefa_id) do
       %Tarefa{status: :em_execucao} -> estado
       _outro_status_ou_sumiu -> avaliar_e_agir(%{estado | tarefa_em_voo_id: nil})
+    end
+  end
+
+  # `horario` ja passou: o sono salvo ja expirou de verdade, segue o caminho normal. Ainda no
+  # futuro: so reagenda o `:acordar` (rede de seguranca da T-094) e preserva `dormindo_ate` —
+  # nao chama `dormir/2` de novo, porque isto nao e uma NOVA rodada que acabou de bater na
+  # parede, e nao deve contar como mais uma tentativa na parede.
+  defp retomar_dormindo(estado, horario) do
+    if DateTime.compare(horario, DateTime.utc_now()) == :gt do
+      agendar_acordar(estado, horario)
+      estado
+    else
+      avaliar_e_agir(%{estado | dormindo_ate: nil})
     end
   end
 
@@ -326,19 +351,34 @@ defmodule Fabrica.Piloto.Servidor do
   def handle_info(:tentar_de_novo, estado), do: {:noreply, avaliar_e_agir(estado)}
 
   defp resultado_do_evento(metadados) do
+    desfecho = Map.get(metadados, :desfecho)
+
     %{
       gasto: Map.get(metadados, :gasto_usd, 0),
-      concluiu?: Map.get(metadados, :desfecho) == :fim_do_turno,
-      falhou?: Map.get(metadados, :desfecho) == :erro,
+      concluiu?: desfecho == :fim_do_turno,
+      falhou?: desfecho == :erro,
+      parede?: parede_no_desfecho?(desfecho),
       pediu_replanejamento?: false
     }
   end
 
+  defp parede_no_desfecho?({:parede, _motivo}), do: true
+  defp parede_no_desfecho?(_outro), do: false
+
   defp aplicar_rodada_concluida(estado, resultado) do
     concluiu? = Map.get(resultado, :concluiu?, false)
+    parede? = Map.get(resultado, :parede?, false)
 
+    # Parede de cota (T-096): a rodada nao produziu trabalho, mas tambem nao e o sinal de
+    # giro-sem-producao que a regra 5 de `Decisao` mede — ver @moduledoc "Acordar da parede
+    # de cota". Contar teria o mesmo efeito do bug que esta tarefa fecha: parede + UMA rodada
+    # genuina sem concluir ja bastaria para `{:parar, :estagnado}`.
     seguidas_sem_concluir =
-      if concluiu?, do: 0, else: estado.rodadas_seguidas_sem_concluir + 1
+      cond do
+        concluiu? -> 0
+        parede? -> estado.rodadas_seguidas_sem_concluir
+        true -> estado.rodadas_seguidas_sem_concluir + 1
+      end
 
     %{
       estado

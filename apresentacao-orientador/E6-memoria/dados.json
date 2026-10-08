@@ -88,18 +88,18 @@
   {
    "id": "T-101",
    "titulo": "O bloco de memória recuperado chega ao prompt do agente: Fabrica.Despacho anexa Fabrica.Memoria.Contexto",
-   "status": "pronta",
-   "tentativas": 0,
+   "status": "em-revisao",
+   "tentativas": 1,
    "areas": [
     "lib/fabrica/despacho.ex",
     "test/fabrica/despacho_test.exs"
    ],
    "objetivo": "Todo despacho de agente montado por `Fabrica.Despacho.montar/4` leva, quando existir, o bloco de contexto recuperado do histórico do projeto (`Fabrica.Memoria.Contexto`), com as fontes citadas — e nada muda quando não há o que recuperar. É a peça que falta para o marco da v0.5 (T-048, requisito R7: \"consultar o histórico do projeto antes de decidir, citando a fonte\").",
-   "commits": 0,
-   "ultimo_commit": null,
-   "concluida_em": null,
-   "custo_usd": 0,
-   "despachos": 0
+   "commits": 2,
+   "ultimo_commit": "f5ae313",
+   "concluida_em": "2026-10-07",
+   "custo_usd": 3.9,
+   "despachos": 3
   },
   {
    "id": "T-047",
@@ -257,7 +257,7 @@
   }
  ],
  "fechamento": [
-  "ced37e9d7878f6858e22fc8104c8f4a0775299b1",
+  "d68f2f35bc97ccd748cf317c10f1b9a66c45c180",
   "2026-10-07"
  ],
  "arquivos": [
@@ -293,11 +293,11 @@
  ],
  "n_tarefas": 15,
  "n_concluidas": 13,
- "commits": 48,
- "testes": 181,
- "linhas_lib": 1511,
- "custo_usd": 155.95,
- "despachos": 87,
+ "commits": 50,
+ "testes": 186,
+ "linhas_lib": 1583,
+ "custo_usd": 159.85,
+ "despachos": 90,
  "primeira": 7,
  "tent_media": 1.69,
  "marco_status": "bloqueada"

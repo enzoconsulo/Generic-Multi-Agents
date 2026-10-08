@@ -520,19 +520,19 @@
   {
    "id": "T-100",
    "titulo": "O probe do marco da v0.2 volta a rodar no Windows: a tarefa do probe não precisa de shell, então o agente sobe sem Bash",
-   "status": "pronta",
-   "tentativas": 0,
+   "status": "concluida",
+   "tentativas": 1,
    "areas": [
     "priv/probes/marco_v02_agente.exs",
     "lib/fabrica/operario/claude_cli.ex",
     "test/fabrica/operario/claude_cli_test.exs"
    ],
    "objetivo": "`mix run priv/probes/marco_v02_agente.exs` volta a dar `PROBE OK` na máquina Windows de origem, sem desligar nem afrouxar o sandbox de quem tem shell: o agente do probe sobe com um vocabulário que NÃO contém Bash (a tarefa dele é só escrever um arquivo), e por isso não precisa do sandbox.",
-   "commits": 0,
-   "ultimo_commit": null,
-   "concluida_em": null,
-   "custo_usd": 0,
-   "despachos": 0
+   "commits": 2,
+   "ultimo_commit": "09dd7b6",
+   "concluida_em": "2026-10-07",
+   "custo_usd": 4.81,
+   "despachos": 3
   },
   {
    "id": "T-020c",
@@ -552,7 +552,7 @@
   }
  ],
  "fechamento": [
-  "172e15f3174fe6c91ed6bae6b4506bac0ff07b1c",
+  "09dd7b6494796ad7ff8aaf354ccb556b2d908c2e",
   "2026-10-07"
  ],
  "arquivos": [
@@ -594,13 +594,13 @@
   "test/fabrica/prompt/prefixo_test.exs"
  ],
  "n_tarefas": 33,
- "n_concluidas": 31,
- "commits": 82,
- "testes": 413,
- "linhas_lib": 4149,
- "custo_usd": 72.31,
- "despachos": 46,
- "primeira": 25,
+ "n_concluidas": 32,
+ "commits": 84,
+ "testes": 417,
+ "linhas_lib": 4215,
+ "custo_usd": 77.12,
+ "despachos": 49,
+ "primeira": 26,
  "tent_media": 1.19,
  "marco_status": "concluida"
 }

@@ -1518,6 +1518,73 @@ defmodule Fabrica.Operario.ClaudeCLITest do
     end
   end
 
+  describe "vocabulario EXPLICITO substitui o do papel (T-100)" do
+    # A tarefa do probe do marco (T-020/T-100) e so escrever um arquivo: pedir o papel
+    # "construtor" inteiro traria `rodar` -> Bash -> o bloco de sandbox do proprio `claude`
+    # (T-090), e o agente nao sobe onde o sandbox nao existe (D-016, fail-closed). O
+    # vocabulario explicito deixa a tarefa pedir so o que ela precisa.
+
+    test "ferramentas_cli_do_vocabulario traduz igual a ferramentas_cli, sem passar pelo catalogo" do
+      assert ClaudeCLI.ferramentas_cli_do_vocabulario(["escrever", "ler"]) == ["Read", "Write"]
+      # Nome desconhecido e descartado, a mesma regra de ferramentas_cli/1.
+      assert ClaudeCLI.ferramentas_cli_do_vocabulario(["nome-que-nao-existe"]) == []
+      assert ClaudeCLI.ferramentas_cli_do_vocabulario([]) == []
+    end
+
+    test "vocabulario sem `rodar`: --tools so o pedido, SEM --allowedTools e SEM o bloco de sandbox" do
+      # Papel "construtor" teria Bash por padrao — o vocabulario explicito o SUBSTITUI, nunca
+      # soma a ele. E a prova de que menor privilegio aqui nao depende do papel escolhido.
+      requisicao = %Requisicao{
+        papel: "construtor",
+        vocabulario: ["escrever"],
+        modelo: "haiku",
+        mensagens: []
+      }
+
+      linha = linha!(requisicao)
+
+      assert linha =~ ~s(--tools "Write")
+      refute linha =~ "Bash"
+      refute linha =~ "--allowedTools"
+      refute linha =~ "--settings"
+      refute linha =~ "sandbox"
+    end
+
+    test "vocabulario COM `rodar`: continua levando --allowedTools \"Bash\" e o bloco de sandbox" do
+      # O par negativo do teste acima: afrouxar a trava (deixar Bash subir sem o sandbox)
+      # tambem nao pode acontecer pelo caminho do vocabulario explicito. Papel "revisor" (sem
+      # `rodar` no catalogo) prova que a decisao segue o vocabulario, nao o papel.
+      requisicao = %Requisicao{
+        papel: "revisor",
+        vocabulario: ["rodar"],
+        modelo: "haiku",
+        mensagens: []
+      }
+
+      linha = linha!(requisicao)
+
+      assert linha =~ ~s(--tools "Bash")
+      assert linha =~ ~s(--allowedTools "Bash")
+
+      assert [_, bloco] = Regex.run(~r/--settings "((?:[^"\\]|\\.)*)"/, linha)
+
+      assert Jason.decode!(String.replace(bloco, ~s(\\"), ~s("))) == %{
+               "sandbox" => %{
+                 "enabled" => true,
+                 "failIfUnavailable" => true,
+                 "autoAllowBashIfSandboxed" => true,
+                 "allowUnsandboxedCommands" => false
+               }
+             }
+    end
+
+    test "sem vocabulario (nil, o padrao), a linha continua vindo do papel, como sempre" do
+      requisicao = %Requisicao{papel: "construtor", modelo: "haiku", mensagens: []}
+
+      assert linha!(requisicao) =~ ~s(--tools "Bash,Edit,Glob,Grep,Read,Write")
+    end
+  end
+
   describe "o teto de voltas (T-017a) — imposto pela linha de comando, nunca pelo prompt" do
     test "a linha carrega --max-turns derivado de requisicao.teto_de_voltas" do
       requisicao = %Requisicao{

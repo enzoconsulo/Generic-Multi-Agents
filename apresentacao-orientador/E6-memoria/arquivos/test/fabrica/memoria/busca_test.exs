@@ -4,7 +4,9 @@ defmodule Fabrica.Memoria.BuscaTest do
   termo exato que o vetor nao acha e recuperado pela metade textual, trecho de outro projeto
   nunca aparece, e a consulta e uma unica ida ao banco) mais os dois da T-063: o termo e
   vetorizado pelo caminho de CONSULTA (nao de documento), e um embedder que devolve
-  `{:erro, _}` vira erro nomeado em vez de `MatchError`.
+  `{:erro, _}` vira erro nomeado em vez de `MatchError`. Tambem a T-097: a busca por projeto
+  nao perde trecho para vizinhos de OUTRO projeto que a varredura aproximada do indice HNSW
+  alcance primeiro.
   """
 
   use Fabrica.DataCase, async: false
@@ -438,6 +440,63 @@ defmodule Fabrica.Memoria.BuscaTest do
       ids = projeto.id |> Busca.buscar(termo, modo: :hibrido, k: 1) |> Enum.map(& &1.id)
 
       assert alvo in ids
+    end
+  end
+
+  describe "buscar/3 — HNSW nao perde trecho do projeto para vizinhos de OUTRO projeto (T-097)" do
+    test "com muitos decoys de OUTRO projeto mais proximos que a varredura aproximada, os DOIS trechos do projeto aparecem",
+         %{projeto: projeto} do
+      outro = projeto!()
+      termo = "vizinhanca do indice aproximado"
+      vetor_da_consulta = Falso.vetor(termo)
+
+      # Derruba o indice `(projeto_id, fonte)` so DENTRO desta transacao de teste (revertido
+      # pelo rollback do sandbox ao fim do teste): sem um indice mais seletivo concorrendo, o
+      # planner so tem UM jeito de responder "os N mais proximos filtrados por projeto" sem a
+      # cerca `MATERIALIZED` do conserto — varrer o indice HNSW de `embedding` em ordem de
+      # distancia e filtrar DEPOIS. E exatamente o caminho que a Hipotese do Contexto da T-097
+      # aponta como o defeito: com muita entrada de OUTRO projeto mais perto do vetor da
+      # consulta, a varredura aproximada esgota o orcamento (`hnsw.ef_search`, 40 por padrao)
+      # antes de alcancar qualquer trecho do projeto certo.
+      SQL.query!(Repo, "DROP INDEX trechos_projeto_fonte_index", [])
+
+      # decoys: vetor quase IDENTICO ao da consulta (epsilon distinto por decoy, para nao
+      # empatar no ranking), de OUTRO projeto — mais perto da consulta do que os trechos reais
+      # abaixo. 45 decoys (> ef_search padrao de 40) garantem que a varredura aproximada os
+      # encontre TODOS antes de ter chance de alcancar o projeto certo.
+      for indice <- 1..45 do
+        inserir_trecho!(
+          outro.id,
+          "decoy##{indice}",
+          "nada a ver com a busca, decoy numero #{indice}.",
+          vetor_proximo(vetor_da_consulta, 0.0000001 * indice)
+        )
+      end
+
+      # os DOIS trechos reais do projeto, com um vetor mais distante que todos os decoys (mas
+      # ainda proximo da consulta) — e exatamente o que a varredura aproximada, sem a cerca,
+      # deixa de alcancar.
+      vetor_do_projeto = vetor_proximo(vetor_da_consulta, 0.01)
+
+      alvo_1 =
+        inserir_trecho!(projeto.id, "alvo-1", "primeiro trecho do projeto.", vetor_do_projeto)
+
+      alvo_2 =
+        inserir_trecho!(projeto.id, "alvo-2", "segundo trecho do projeto.", vetor_do_projeto)
+
+      # Sem indice seletivo concorrendo, o Postgres so escolhe a varredura HNSW se o Seq Scan
+      # (que seria exato) parecer mais caro — a tabela deste teste e pequena demais para isso
+      # acontecer sozinho, entao desligamos `enable_seqscan` so NESTA transacao de teste para
+      # forcar o mesmo plano que o corpus real (muito maior) escolheria sozinho.
+      SQL.query!(Repo, "SET LOCAL enable_seqscan = off", [])
+
+      ids_vetor = projeto.id |> Busca.buscar(termo, modo: :vetor) |> Enum.map(& &1.id)
+      assert alvo_1 in ids_vetor
+      assert alvo_2 in ids_vetor
+
+      ids_hibrido = projeto.id |> Busca.buscar(termo, modo: :hibrido) |> Enum.map(& &1.id)
+      assert alvo_1 in ids_hibrido
+      assert alvo_2 in ids_hibrido
     end
   end
 end

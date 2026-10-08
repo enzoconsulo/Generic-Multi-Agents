@@ -34,6 +34,14 @@ defmodule Fabrica.Agente.Laco do
   aplicacao; `nil` desliga o aviso). Servidor que nao esta de pe NAO derruba o laco: a parede
   fica so no log, como antes — perder a rodada por causa do aviso seria pior que nao avisar.
 
+  ## `motivo_do_erro` no resumo (T-095)
+
+  `desfecho: :erro` sozinho nao diz SE o turno bateu numa parede (cota, sandbox indisponivel)
+  ou se o erro E do trabalho (`:prazo`, `:fora_do_confinamento`). `Estado.resumo/1` carrega o
+  termo bruto do erro em `motivo_do_erro` exatamente para `Fabrica.Fila.Trabalho` distinguir
+  os dois sem que `desfecho` precise mudar de significado para quem ja le so ele (regra 2 da
+  `Decisao`, acima).
+
   ## Por que GenServer
 
   Porque o laco precisa ser **matavel de fora sem deixar sujeira** (T-053) e supervisionavel
@@ -98,10 +106,10 @@ defmodule Fabrica.Agente.Laco do
       # A parede de cota (T-091): vira estado do sistema ANTES de o laco encerrar — ver
       # @moduledoc. Parede NAO usa o envelope `:com_consumo` (D-015, adendo 6), por isso este
       # ramo casa o sinal nu, antes do `{:erro, motivo}` generico abaixo.
-      {:erro, {:cota, _reabre_em}} = sinal ->
+      {:erro, {:cota, _reabre_em} = motivo} = sinal ->
         Logger.warning("laco encerrado por parede de cota: #{inspect(sinal)}")
         :ok = avisar_parede(cota, sinal)
-        %{estado | desfecho: :erro}
+        %{estado | desfecho: :erro, motivo_do_erro: motivo}
 
       # O erro de uma sessao que JA GASTOU (T-089): o operario entrega o consumo medido, e ele
       # entra na conta ANTES de o laco encerrar — e a regra 4 valendo tambem no erro. O desfecho
@@ -114,10 +122,11 @@ defmodule Fabrica.Agente.Laco do
         estado
         |> contabilizar(consumo, 0)
         |> Map.put(:desfecho, :erro)
+        |> Map.put(:motivo_do_erro, motivo)
 
       {:erro, motivo} ->
         Logger.warning("laco encerrado por erro do operario: #{inspect(motivo)}")
-        %{estado | desfecho: :erro}
+        %{estado | desfecho: :erro, motivo_do_erro: motivo}
     end
   end
 
@@ -283,6 +292,7 @@ defmodule Fabrica.Agente.Laco do
     %Requisicao{
       modelo: estado.modelo,
       papel: estado.papel,
+      vocabulario: estado.vocabulario,
       mensagens: estado.mensagens,
       ferramentas: ferramentas_da_requisicao(familia, estado),
       teto_de_voltas: estado.teto_de_voltas

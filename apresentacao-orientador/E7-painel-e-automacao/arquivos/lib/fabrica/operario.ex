@@ -127,6 +127,13 @@ defmodule Fabrica.Operario do
     blocos ordenados do mais estavel para o mais volatil; `mensagens` e o historico da
     conversa. A separacao existe porque e ela que torna o cache possivel — editar o
     prefixo invalida tudo o que vem depois.
+
+    `vocabulario`, quando presente, e uma lista EXPLICITA de nomes internos do catalogo
+    (`Fabrica.Ferramentas.Catalogo`, ex.: `["escrever"]`) que o `Fabrica.Operario.ClaudeCLI`
+    usa NO LUGAR do vocabulario do `papel` (T-100). Existe para a tarefa cujo trabalho real
+    nao precisa de `rodar` (Bash) poder subir com menos privilegio do que o papel dela teria
+    por padrao — sem isso, so dava para escolher o vocabulario pelo papel inteiro. `nil`
+    (o padrao) mantem o comportamento de sempre: o vocabulario sai do `papel`.
     """
 
     alias Fabrica.Operario.Bloco
@@ -136,6 +143,7 @@ defmodule Fabrica.Operario do
     @type t :: %__MODULE__{
             modelo: String.t(),
             papel: String.t(),
+            vocabulario: [String.t()] | nil,
             prefixo: [Bloco.t()],
             mensagens: [mensagem()],
             ferramentas: [map()],
@@ -144,6 +152,7 @@ defmodule Fabrica.Operario do
 
     defstruct modelo: "haiku-4.5",
               papel: "construtor",
+              vocabulario: nil,
               prefixo: [],
               mensagens: [],
               ferramentas: [],

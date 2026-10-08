@@ -31,6 +31,26 @@ defmodule Fabrica.Fila.Trabalho do
   v1. Por isso `max_attempts: 1`: um `perform/1` que falhar vai direto para `discarded`,
   nunca de volta à fila sozinho.
 
+  A ÚNICA excepção é `{:snooze, segundos}` (T-095, abaixo): o Oban reagenda o MESMO job sem
+  consumir tentativa (`attempt` fica como estava — é a garantia do próprio `Oban.Worker`), e
+  isso não é a retentativa que o parágrafo acima proíbe, porque nada do TRABALHO rodou: o
+  turno nem chegou a ser julgado.
+
+  ## Parede não é julgamento (T-095)
+
+  Cota batida e sandbox indisponível (`Fabrica.Operario.ClaudeCLI`/`MessagesAPI`, T-090/T-091)
+  interrompem o turno ANTES de ele produzir trabalho — e `julgar/3` não sabe disso: olhando só
+  `resumo.desfecho == :erro` ele julgaria uma entrega vazia como se fosse uma reprovação
+  (construtor para `em_teste` sempre; verificador mede a árvore de antes; revisor, pior, lê
+  conformidade de relatos vazios e APROVA por omissão — `Fabrica.Portoes.Revisor.ler_conformidade/1`
+  começa em `:conforme`). `executar/2` checa `resumo.motivo_do_erro`
+  (`Fabrica.Agente.Estado.resumo/1`, T-095) ANTES de julgar: se for parede, não transiciona, não
+  julga, não grava ciclo — só emite o fim (o gasto do turno, zero ou medido, não pode sumir da
+  telemetria, mesma doutrina de `finalizar/3` abaixo) e devolve `{:parede, segundos}`, que
+  `perform/1` traduz em `{:snooze, segundos}`: o Oban reagenda o MESMO job, sem tocar
+  `tentativas` nem o status da tarefa. Erro que É do trabalho (`:prazo`,
+  `:fora_do_confinamento`, teto de voltas) não é parede e segue julgado como sempre.
+
   ## O que `perform/1` faz (T-070): sobe o agente real e fecha o laço
 
   `perform/1` é a COLA entre a fila durável e o agente. Para o `papel` que veio nos `args`:
@@ -186,7 +206,10 @@ defmodule Fabrica.Fila.Trabalho do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"tarefa_id" => tarefa_id, "papel" => papel}}) do
-    executar(tarefa_id, String.to_existing_atom(papel))
+    case executar(tarefa_id, String.to_existing_atom(papel)) do
+      :ok -> :ok
+      {:parede, segundos} -> {:snooze, segundos}
+    end
   end
 
   @doc """
@@ -194,8 +217,12 @@ defmodule Fabrica.Fila.Trabalho do
 
   Publica para o teste poder exercitar o laco sem fabricar um `%Oban.Job{}` a mao. `papel` e um
   dos de `papeis/0`.
+
+  Devolve `{:parede, segundos}` quando o turno foi interrompido por algo que NAO e o trabalho —
+  parede de cota, sandbox indisponivel (T-095) — e so entao `:ok`; e `perform/1` quem traduz o
+  primeiro em `{:snooze, segundos}` para o Oban.
   """
-  @spec executar(integer(), atom()) :: :ok
+  @spec executar(integer(), atom()) :: :ok | {:parede, pos_integer()}
   def executar(tarefa_id, papel) when papel in @papeis do
     Logger.info("fila: subindo agente #{papel} para a tarefa #{tarefa_id}")
 
@@ -206,7 +233,11 @@ defmodule Fabrica.Fila.Trabalho do
 
     case rodar_agente(tarefa, papel) do
       {:concluido, resumo} ->
-        finalizar(tarefa, papel, resumo)
+        if parede?(resumo) do
+          segurar(tarefa, papel, resumo)
+        else
+          finalizar(tarefa, papel, resumo)
+        end
 
       {:morto, motivo} ->
         # Morte em voo: a tarefa continua `em_execucao` (ja despachavel — Fabrica.Tarefas.Fila),
@@ -361,6 +392,45 @@ defmodule Fabrica.Fila.Trabalho do
       gasto_usd: resumo.gasto_usd
     })
   end
+
+  # Cota batida ou sandbox indisponivel (T-095): o turno foi interrompido ANTES de produzir
+  # trabalho — ver @moduledoc "Parede nao e julgamento". So e parede quando o desfecho E
+  # `:erro`; o laco que termina normal nunca chega aqui (o ramo `:morto` de `executar/2` ja
+  # trata a morte em voo antes desta funcao ser chamada).
+  defp parede?(%{desfecho: :erro, motivo_do_erro: motivo}), do: parede_do_motivo?(motivo)
+  defp parede?(_resumo), do: false
+
+  defp parede_do_motivo?({:cota, _reabre_em}), do: true
+  defp parede_do_motivo?(:sandbox_indisponivel), do: true
+  defp parede_do_motivo?(_outro), do: false
+
+  # Nao transiciona, nao julga, nao grava ciclo (ver @moduledoc) — so emite o fim, para o
+  # gasto do turno (zero ou medido) nao sumir da telemetria, mesma doutrina de `finalizar/3`
+  # acima, e devolve {:parede, segundos} para `perform/1` traduzir em {:snooze, segundos}.
+  defp segurar(tarefa, papel, resumo) do
+    Logger.warning(
+      "fila: tarefa #{tarefa.id} (#{papel}) bateu parede (#{inspect(resumo.motivo_do_erro)}); " <>
+        "devolvida a fila sem julgamento"
+    )
+
+    emitir_fim(tarefa, {:parede, resumo.motivo_do_erro}, resumo)
+    {:parede, segundos_de_espera(resumo.motivo_do_erro)}
+  end
+
+  @espera_padrao_apos_parede_segundos 300
+  @espera_minima_apos_parede_segundos 30
+
+  # Com horario de reabertura (cota), respeita-o — o mesmo que paga a cota de verdade — com um
+  # piso para nao reagendar praticamente de imediato. Sem horario (sandbox indisponivel, ou
+  # cota sem `reabre_em`), cai no padrao: nunca trava esperando um dado que o operario nao
+  # tinha.
+  defp segundos_de_espera({:cota, %DateTime{} = reabre_em}) do
+    reabre_em
+    |> DateTime.diff(DateTime.utc_now(), :second)
+    |> max(@espera_minima_apos_parede_segundos)
+  end
+
+  defp segundos_de_espera(_outro), do: @espera_padrao_apos_parede_segundos
 
   # O construtor nao julga: o trabalho dele E o resultado, e a tarefa segue para o verificador.
   defp julgar(:construtor, _tarefa, _resumo), do: {:em_teste, :fim_do_turno}
