@@ -240,18 +240,17 @@ for (const e of D.etapas) {
   s.addChart(pres.charts.BAR, [{ name: "Linhas", labels: com.map((e) => "E" + e.n), values: com.map((e) => e.codigo.linhas_lib) }], Object.assign({}, base, { x: 5.1, title: "Linhas de código em lib/", chartColors: [HEX.accent4] }));
 }
 
-// 15. Processo -------------------------------------------------------------------------------
+// 15. Entregas por etapa -----------------------------------------------------------------------
 {
   const s = slide("CONTEUDO", "Dados");
-  s.addText("Retrabalho por etapa e commits entregues", { placeholder: "title" });
-  const com = D.etapas.filter((e) => e.execucoes_media);
+  s.addText("Entregas por etapa: tarefas e commits", { placeholder: "title" });
+  const cc = D.etapas.filter((e) => e.codigo);
   const base = { y: 1.15, w: 4.4, h: 3.3, barDir: "col", showValue: true, dataLabelPosition: "outEnd", dataLabelFontSize: 10, dataLabelColor: HEX.dk1,
     catAxisLabelColor: HEX.accent5, valAxisHidden: true, valGridLine: { style: "none" }, catGridLine: { style: "none" }, showLegend: false, showTitle: true, titleFontSize: 13, titleColor: HEX.dk2,
-    catAxisLabelFontFace: "+mn-lt", dataLabelFontFace: "+mn-lt", titleFontFace: "+mn-lt" };
-  s.addChart(pres.charts.BAR, [{ name: "Execuções", labels: com.map((e) => "E" + e.n), values: com.map((e) => e.execucoes_media) }], Object.assign({}, base, { x: 0.5, title: "Execuções de agente por item (limite: 2)", chartColors: [HEX.accent1], dataLabelFormatCode: "0.00" }));
-  const cc = D.etapas.filter((e) => e.codigo);
-  s.addChart(pres.charts.BAR, [{ name: "Commits", labels: cc.map((e) => "E" + e.n), values: cc.map((e) => e.codigo.commits.length) }], Object.assign({}, base, { x: 5.1, title: "Commits por etapa", chartColors: [HEX.accent4], dataLabelFormatCode: "0" }));
-  txt(s, "Execuções: quantas vezes um agente precisou construir cada item até ele ser aprovado pelos dois portões. O critério de desempenho “pouco retrabalho” pede média de até 2.", { x: 0.5, y: 4.55, w: 9, h: 0.5, fontSize: 11, color: C.accent5 });
+    catAxisLabelFontFace: "+mn-lt", dataLabelFontFace: "+mn-lt", titleFontFace: "+mn-lt", dataLabelFormatCode: "0" };
+  s.addChart(pres.charts.BAR, [{ name: "Tarefas", labels: cc.map((e) => "E" + e.n), values: cc.map((e) => e.concluidas) }], Object.assign({}, base, { x: 0.5, title: "Tarefas concluídas", chartColors: [HEX.accent2] }));
+  s.addChart(pres.charts.BAR, [{ name: "Commits", labels: cc.map((e) => "E" + e.n), values: cc.map((e) => e.codigo.commits.length) }], Object.assign({}, base, { x: 5.1, title: "Commits na branch da etapa", chartColors: [HEX.accent4] }));
+  txt(s, "Cada tarefa corresponde a um pacote do plano; cada commit entrega um passo de uma tarefa, sempre com a verificação completa verde.", { x: 0.5, y: 4.55, w: 9, h: 0.5, fontSize: 11, color: C.accent5 });
 }
 
 // 16. Requisitos ------------------------------------------------------------------------------

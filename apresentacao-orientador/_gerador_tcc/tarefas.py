@@ -32,13 +32,15 @@ STATUS = {"pt": {"todo": "⬜ A fazer", "done": "✅ Concluída", "blocked": "�
 L = {"pt": {"etapa": "Etapa", "pacote": "Pacote", "o_que": "O que é", "porque": "Por que existe", "como": "Como foi feito",
             "exemplo": "Exemplo", "crit": "Critérios de aceite", "verif": "Como verificar", "onde": "Onde está no código",
             "commits": "Commits", "indice": "Quadro de tarefas", "chave": "Chave", "titulo": "Título", "tipo": "Tipo",
-            "status": "Status", "proposta": "Proposta da etapa", "progresso": "Progresso",
-            "legenda": "Cada tarefa corresponde a um pacote do plano de desenvolvimento. Clique na chave para abrir."},
+            "status": "Status", "proposta": "Proposta da etapa", "progresso": "Progresso", "fez": "O que fez",
+            "geral": "Visão geral", "etapa_col": "Etapa",
+            "legenda": "Cada tarefa corresponde a um pacote do plano de desenvolvimento. Abaixo, o resumo de todas; clique na chave para ver os detalhes."},
      "en": {"etapa": "Stage", "pacote": "Package", "o_que": "What it is", "porque": "Why it exists", "como": "How it was built",
             "exemplo": "Example", "crit": "Acceptance criteria", "verif": "How to verify", "onde": "Where it lives in the code",
             "commits": "Commits", "indice": "Task board", "chave": "Key", "titulo": "Title", "tipo": "Type",
-            "status": "Status", "proposta": "Stage goal", "progresso": "Progress",
-            "legenda": "Each task is one package of the development plan. Click the key to open it."}}
+            "status": "Status", "proposta": "Stage goal", "progresso": "Progress", "fez": "What it did",
+            "geral": "Overview", "etapa_col": "Stage",
+            "legenda": "Each task is one package of the development plan. Below is a summary of every task; click a key for the details."}}
 
 
 def slug(s):
@@ -69,7 +71,13 @@ def gerar(destino, etapa_branch):
     commits = commits_por_ticket()
     for lg in ("pt", "en"):
         base = os.path.join(destino, "docs", "tasks", lg)
-        indice = [f"# {L[lg]['indice']}", "", L[lg]["legenda"], ""]
+        indice = [f"# {L[lg]['indice']}", "", L[lg]["legenda"], "", f"## {L[lg]['geral']}", "",
+                  f"| {L[lg]['etapa_col']} | {L[lg]['proposta']} | {L[lg]['progresso']} |", "|---|---|---|"]
+        for n, e in C.ETAPAS.items():
+            tks = [x for x in C.T if x["etapa"] == n]
+            feitas = sum(1 for x in tks if n <= etapa_branch and x["status"] == "done")
+            indice.append(f"| **E{n}** {e[lg]} | {e['entrega_pt'] if lg == 'pt' else e['entrega_en']} | {barra(feitas, len(tks))} |")
+        indice.append("")
         for n, e in C.ETAPAS.items():
             pasta = f"E{n}-{slug(e[lg])}"
             os.makedirs(os.path.join(base, pasta), exist_ok=True)
@@ -78,7 +86,7 @@ def gerar(destino, etapa_branch):
             entrega = e["entrega_pt"] if lg == "pt" else e["entrega_en"]
             indice += [f"## E{n} — {e[lg]}", "",
                        f"**{L[lg]['proposta']}:** {entrega}  ", f"**{L[lg]['progresso']}:** {barra(sts.count('done'), len(tks))}", "",
-                       f"| {L[lg]['chave']} | {L[lg]['titulo']} | {L[lg]['tipo']} | {L[lg]['status']} |", "|---|---|---|---|"]
+                       f"| {L[lg]['chave']} | {L[lg]['titulo']} | {L[lg]['fez']} | {L[lg]['status']} |", "|---|---|---|---|"]
             for t, st in zip(tks, sts):
                 tx = t[lg]
                 titulo = tx["titulo"] if lg == "pt" else tx["title"]
@@ -113,7 +121,7 @@ def gerar(destino, etapa_branch):
                 if st != "todo" and commits.get(t["key"]):
                     linhas += [f"## {L[lg]['commits']}", ""] + [f"- {s}" for s in commits[t["key"]]] + [""]
                 open(os.path.join(base, pasta, arq), "w", encoding="utf-8", newline="\n").write("\n".join(linhas))
-                indice.append(f"| [{t['key']}]({pasta}/{arq}) | {titulo} | {TIPO[lg][t['tipo']]} | {STATUS[lg][st]} |")
+                indice.append(f"| [{t['key']}]({pasta}/{arq}) | **{titulo}** | {tx['desc']} | {STATUS[lg][st]} |")
             indice.append("")
         open(os.path.join(base, "README.md"), "w", encoding="utf-8", newline="\n").write("\n".join(indice))
 

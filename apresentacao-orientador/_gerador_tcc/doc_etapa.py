@@ -95,14 +95,15 @@ def run_md(p, texto, tam=12, cor="1F2328", negrito=False):
             run(p, pedaco, tam - 0.5 if i % 2 else tam, "2A4A7F" if i % 2 else cor, negrito, fonte="Consolas" if i % 2 else None)
 
 
-def nao_quebra(tabela_):
+def nao_quebra(tabela_, juntas=True):
     for row in tabela_.rows:
         trPr = row._tr.get_or_add_trPr()
         e = OxmlElement("w:cantSplit")
         trPr.append(e)
-        for cel in row.cells:
-            for p in cel.paragraphs:
-                p.paragraph_format.keep_with_next = True
+        if juntas:
+            for cel in row.cells:
+                for p in cel.paragraphs:
+                    p.paragraph_format.keep_with_next = True
 
 
 def par(alvo, texto="", tam=12, cor="1F2328", negrito=False, antes=0, depois=4, alinhar=None, fonte=None):
@@ -242,11 +243,25 @@ def cartao(doc, t):
 
 
 def pagina_tarefas(doc, tarefas):
-    titulo_pagina(doc, "O que foi feito, tarefa por tarefa",
-                  "Cada tarefa é um pacote do plano de desenvolvimento. Detalhes completos em docs/tasks/pt/.")
-    for t in tarefas:
-        if t["tipo"] != "Milestone":
-            cartao(doc, t)
+    titulo_pagina(doc, "Tarefas da etapa", "Uma tarefa por pacote do plano. A descrição completa de cada uma está em docs/tasks/pt/.")
+    t = tabela(doc, len(tarefas) + 1, 3, [3.0, 19.0, 4.5])
+    for c, txt_ in zip(t.rows[0].cells, ("Tarefa", "O que foi feito", "Status")):
+        pronta(c, NAVY, 0.2)
+        par(c, txt_, 11, "FFFFFF", True, depois=0)
+    for i, (row, tk) in enumerate(zip(t.rows[1:], tarefas)):
+        fundo = CINZA if i % 2 == 0 else "FFFFFF"
+        a, b, c = row.cells
+        pronta(a, fundo, 0.12)
+        pronta(b, fundo, 0.12)
+        pronta(c, STATUS_COR[tk["status"]], 0.12)
+        par(a, tk["key"], 11.5, AZUL, True, depois=0, fonte="Consolas")
+        p_ = par(b, depois=1)
+        run(p_, tk["pt"]["titulo"], 11.5, NAVY, True)
+        p_ = par(b, depois=0)
+        run_md(p_, tk["pt"]["desc"], 10, "4A5160")
+        par(c, ("✓ " if tk["status"] == "done" else "■ ") + STATUS_TXT[tk["status"]], 11.5, "FFFFFF", True, depois=0,
+            alinhar=WD_ALIGN_PARAGRAPH.CENTER)
+    nao_quebra(t, juntas=False)
 
 
 def pagina_prova(doc, n, tarefas, tx, cod):
@@ -290,18 +305,16 @@ def grafico(n, cods, caminho):
     plt.close(fig)
 
 
-def pagina_numeros(doc, n, tarefas, cods, proc):
+def pagina_numeros(doc, n, tarefas, cods):
     cod, ant = cods.get(n), cods.get(n - 1)
     titulo_pagina(doc, "Números da etapa", "Medidos no código da branch desta etapa; o crescimento compara com a etapa anterior.")
 
     def delta(k):
         return f"+{cod[k] - ant[k]:,}".replace(",", ".") + " nesta etapa" if ant else "base do sistema"
-    reais = [proc[t["key"]] for t in tarefas if t["key"] in proc]
-    ex = sum(x["execucoes"] for x in reais) / (sum(x["subtarefas"] for x in reais) or 1)
     blocos = [(f"{cod['testes']:,}".replace(",", "."), "testes automáticos", delta("testes")),
               (f"{cod['linhas_lib']:,}".replace(",", "."), "linhas em lib/", delta("linhas_lib")),
               (str(cod["modulos"]), "módulos Elixir", delta("modulos")),
-              (f"{ex:.2f}".replace(".", ","), "execuções por item", "critério: até 2")]
+              (str(len(cod["commits"])), "commits nesta etapa", f"{sum(1 for t in tarefas if t['status'] == 'done')} tarefas concluídas")]
     for c, (v, r, dl) in zip(tabela(doc, 1, 4, [6.6] * 4).rows[0].cells, blocos):
         pronta(c, CINZA)
         par(c, v, 28, NAVY, True, depois=0, fonte="Cambria")
@@ -312,8 +325,6 @@ def pagina_numeros(doc, n, tarefas, cods, proc):
     par(doc, depois=6)
     doc.add_picture(png, width=Cm(23))
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    par(doc, "Execuções por item: quantas vezes um agente precisou construir cada item até ele ser aprovado pelos dois portões.",
-        10.5, "6B7480", antes=2)
 
 
 def pagina_final(doc, n, tarefas, tx):
@@ -356,7 +367,6 @@ def gerar(n, saida):
     tarefas = [t for t in C.T if t["etapa"] == n]
     cods = {k: M.codigo(k) for k in range(2, n + 1)}
     cod = cods.get(n)
-    proc = M.processo()
     d = tempfile.mkdtemp()
     figs = {k: os.path.join(d, k + ".png") for k in ("faixa", "mapa", "diag")}
     F.faixa(n, ETAPA_STATUS, figs["faixa"])
@@ -384,7 +394,7 @@ def gerar(n, saida):
     pagina_tarefas(doc, tarefas)
     pagina_prova(doc, n, tarefas, tx, cod)
     if cod:
-        pagina_numeros(doc, n, tarefas, cods, proc)
+        pagina_numeros(doc, n, tarefas, cods)
     pagina_final(doc, n, tarefas, tx)
     apendice(doc, cod)
     os.makedirs(os.path.dirname(os.path.abspath(saida)), exist_ok=True)
