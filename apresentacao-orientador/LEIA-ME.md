@@ -4,7 +4,7 @@
 |---|---|
 | **Apresentação principal** (19 slides, com notas do apresentador) | `apresentacao-principal.pptx` |
 | **Guia do merge de etapa** (para você ou um chat novo seguir) | `../TCC-MERGE-DE-ETAPA.md` |
-| **Relatório de cada etapa** (Word, 2–3 páginas) | `relatorios-por-etapa/E1…E7.docx` — os mesmos que estão em `docs/etapas/` de cada branch |
+| **Apresentação de cada etapa** (Word em paisagem, 8–14 páginas, uma ideia por página — é o material principal de cada apresentação) | `relatorios-por-etapa/E1…E7.docx` — os mesmos que estão em `docs/etapas/` de cada branch |
 | **Repositório do TCC** (código em inglês, uma branch por etapa) | `projetos/fabrica-tcc/` |
 
 ## O repositório `projetos/fabrica-tcc`
