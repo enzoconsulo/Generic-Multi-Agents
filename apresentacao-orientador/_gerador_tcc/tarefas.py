@@ -29,13 +29,13 @@ TIPO = {"pt": {"Story": "História", "Milestone": "Marco", "Spike": "Investigaç
         "en": {"Story": "Story", "Milestone": "Milestone", "Spike": "Spike", "Doc": "Document"}}
 STATUS = {"pt": {"todo": "⬜ A fazer", "done": "✅ Concluída", "blocked": "⛔ Bloqueada", "in_progress": "🔄 Em andamento"},
           "en": {"todo": "⬜ To do", "done": "✅ Done", "blocked": "⛔ Blocked", "in_progress": "🔄 In progress"}}
-L = {"pt": {"etapa": "Etapa", "pacote": "Pacote", "o_que": "O que é", "porque": "Por que existe", "como": "Como foi feito",
+L = {"pt": {"etapa": "Etapa", "pacote": "Pacote", "ideia": "A ideia", "visao": "Visão geral", "o_que": "O que foi feito", "porque": "Por que existe", "como": "Como foi feito",
             "exemplo": "Exemplo", "crit": "Critérios de aceite", "verif": "Como verificar", "onde": "Onde está no código",
             "commits": "Commits", "indice": "Quadro de tarefas", "chave": "Chave", "titulo": "Título", "tipo": "Tipo",
             "status": "Status", "proposta": "Proposta da etapa", "progresso": "Progresso", "fez": "O que fez",
             "geral": "Visão geral", "etapa_col": "Etapa",
             "legenda": "Cada tarefa corresponde a um pacote do plano de desenvolvimento. Abaixo, o resumo de todas; clique na chave para ver os detalhes."},
-     "en": {"etapa": "Stage", "pacote": "Package", "o_que": "What it is", "porque": "Why it exists", "como": "How it was built",
+     "en": {"etapa": "Stage", "pacote": "Package", "ideia": "The idea", "visao": "Overview", "o_que": "What was done", "porque": "Why it exists", "como": "How it was built",
             "exemplo": "Example", "crit": "Acceptance criteria", "verif": "How to verify", "onde": "Where it lives in the code",
             "commits": "Commits", "indice": "Task board", "chave": "Key", "titulo": "Title", "tipo": "Type",
             "status": "Status", "proposta": "Stage goal", "progresso": "Progress", "fez": "What it did",
@@ -97,6 +97,10 @@ def gerar(destino, etapa_branch):
                 if t["req"]:
                     selo.append(", ".join(t["req"]))
                 linhas = [f"# {t['key']} · {titulo}", "", "> " + " · ".join(selo), ""]
+                if d.get("ideia"):
+                    linhas += [f"## {L[lg]['ideia']}", "", d["ideia"], ""]
+                if det.get("diagrama"):
+                    linhas += [f"## {L[lg]['visao']}", "", "```mermaid", det["diagrama"], "```", ""]
                 linhas += [f"## {L[lg]['o_que']}", "", d.get("resumo") or tx["desc"], ""]
                 if d.get("porque"):
                     linhas += [f"## {L[lg]['porque']}", "", d["porque"], ""]

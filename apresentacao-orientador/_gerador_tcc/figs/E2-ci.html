@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    F["1 · formato<br/>segundos"] --> C["2 · compila<br/>sem avisos"]
+    C --> L["3 · estilo<br/>Credo"]
+    L --> T["4 · testes<br/>sem internet"]
+    T --> Y["5 · tipos<br/>Dialyzer · minutos"]
+    Y --> B["6 · backup<br/>ida e volta"]
+    C -. "falhou? para aqui" .-> X(("vermelho"))
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false}});</script></body></html>

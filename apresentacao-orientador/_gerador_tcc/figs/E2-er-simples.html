@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">erDiagram
+    direction LR
+    projects ||--o{ tasks : "tem"
+    projects ||--o{ specialists : "tem"
+    specialists |o--o{ tasks : "constroi"
+    tasks ||--o{ task_dependencies : "depende de"
+    tasks ||--o{ task_areas : "arquivos que toca"
+    tasks ||--o{ criteria : "criterios de aceite"
+    tasks ||--o{ cycles : "passagens"
+    cycles ||--o{ dispatches : "chamadas ao modelo"
+    dispatches ||--o{ usages : "uma linha por volta"
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false}});</script></body></html>

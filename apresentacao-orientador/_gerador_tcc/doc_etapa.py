@@ -32,6 +32,10 @@ import metricas as M  # noqa: E402
 from dados_deck import REQ_STATUS, REQ_TXT  # noqa: E402
 from textos_etapas import TEXTOS  # noqa: E402
 from tickets_e1 import E1  # noqa: E402
+from extras_etapas import EXTRAS  # noqa: E402
+from PIL import Image  # noqa: E402
+
+FIGS = os.path.join(AQUI, "figs")
 
 DET = dict(E1)
 if os.path.exists(os.path.join(AQUI, "tickets_detalhe.json")):
@@ -242,6 +246,35 @@ def cartao(doc, t):
     par(doc, depois=6)
 
 
+def figura(doc, arquivo, altura_max, largura_max=24.0):
+    caminho = os.path.join(FIGS, arquivo)
+    w, h = Image.open(caminho).size
+    altura = min(altura_max, largura_max * h / w)
+    doc.add_picture(caminho, height=Cm(altura))
+    doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+
+def pagina_conceitos(doc, conceitos):
+    titulo_pagina(doc, "Conceitos em 1 minuto", "Os termos que aparecem nesta etapa, explicados antes de serem usados.")
+    t = tabela(doc, len(conceitos), 2, [6.0, 20.5])
+    for i, (row, (termo, txt_)) in enumerate(zip(t.rows, conceitos)):
+        a, b = row.cells
+        pronta(a, NAVY, 0.22)
+        pronta(b, CINZA if i % 2 == 0 else "FFFFFF", 0.22)
+        par(a, termo, 12.5, "FFFFFF", True, depois=0)
+        par(b, txt_, 12, depois=0)
+    nao_quebra(t, juntas=False)
+
+
+def pagina_figura(doc, titulo, sub, arquivo, altura, frases):
+    titulo_pagina(doc, titulo, sub)
+    figura(doc, arquivo, altura)
+    for f in frases:
+        p = doc.add_paragraph(style="List Bullet")
+        p.paragraph_format.space_after = Pt(2)
+        run_md(p, f, 12)
+
+
 def pagina_tarefas(doc, tarefas):
     titulo_pagina(doc, "Tarefas da etapa", "Uma tarefa por pacote do plano. A descrição completa de cada uma está em docs/tasks/pt/.")
     t = tabela(doc, len(tarefas) + 1, 3, [3.0, 19.0, 4.5])
@@ -267,17 +300,21 @@ def pagina_tarefas(doc, tarefas):
 def pagina_prova(doc, n, tarefas, tx, cod):
     marco = next((t for t in tarefas if t["tipo"] == "Milestone"), None)
     titulo_pagina(doc, "Como se prova a entrega", "A entrega combinada no plano, demonstrada por um teste ou execução real.")
-    caixa(doc, "ENTREGA COMBINADA", C.ETAPAS[n]["entrega_pt"], NAVY, tam=16)
-    par(doc, depois=8)
+    caixa(doc, "ENTREGA COMBINADA", C.ETAPAS[n]["entrega_pt"], NAVY, tam=15)
+    par(doc, depois=4)
+    mf = EXTRAS.get(n, {}).get("marco_fig")
+    if mf:
+        par(doc, mf[2], 11.5, "1F2328", depois=4)
+        figura(doc, mf[0], mf[1])
     if marco:
         d = DET.get(marco["key"], {})
-        passos = d.get("pt", {}).get("como") or []
+        passos = EXTRAS.get(n, {}).get("marco_passos") or d.get("pt", {}).get("como") or []
         if marco["status"] == "done" and passos:
-            par(doc, "O que o teste faz, passo a passo", 14, NAVY, True, depois=4)
+            par(doc, "O que o teste faz, passo a passo", 13, NAVY, True, depois=2)
             for i, s in enumerate(passos, 1):
-                p = par(doc, depois=3)
-                run(p, f"{i}.  ", 13, WARNC, True)
-                run_md(p, re.sub(r"^\s*\d+[.)]\s*", "", s), 12)
+                p = par(doc, depois=2)
+                run(p, f"{i}.  ", 12, WARNC, True)
+                run_md(p, re.sub(r"^\s*\d+[.)]\s*", "", s), 11)
         elif marco["status"] != "done":
             caixa(doc, "SITUAÇÃO DO MARCO", d.get("pt", {}).get("resumo", ""), BADC if marco["status"] == "blocked" else WARNC, tam=13)
     par(doc, depois=6)
@@ -334,7 +371,7 @@ def pagina_final(doc, n, tarefas, tx):
         par(doc, "Requisitos atendidos nesta etapa", 14, NAVY, True, depois=4)
         t = tabela(doc, len(reqs), 2, [2.2, 24.3])
         for row, r in zip(t.rows, reqs):
-            s, como = REQ_STATUS[r]
+            s, como = EXTRAS.get(n, {}).get("req_override", {}).get(r, REQ_STATUS[r])
             a, b = row.cells
             pronta(a, {"ok": OKC, "parcial": WARNC, "pendente": BADC}[s], 0.2)
             pronta(b, "FFFFFF", 0.2)
@@ -391,6 +428,11 @@ def gerar(n, saida):
     capa(doc, n, e, tx, tarefas, cod)
     pagina_mapa(doc, figs, n)
     pagina_como(doc, tx, figs)
+    ex = EXTRAS.get(n, {})
+    if ex.get("conceitos"):
+        pagina_conceitos(doc, ex["conceitos"])
+    for fig in ex.get("figuras", []):
+        pagina_figura(doc, *fig)
     pagina_tarefas(doc, tarefas)
     pagina_prova(doc, n, tarefas, tx, cod)
     if cod:

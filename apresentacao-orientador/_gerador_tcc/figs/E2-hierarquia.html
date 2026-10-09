@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    T["Tarefa<br/>ex.: T-012"] --> C1["Ciclo 1<br/>construir"]
+    T --> C2["Ciclo 2<br/>verificar"]
+    C1 --> D1["Chamada ao modelo"]
+    D1 --> V1["Volta 1<br/>tokens + custo"]
+    D1 --> V2["Volta 2<br/>tokens + custo"]
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false}});</script></body></html>

@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    N["Núcleo do sistema<br/>regras, custo, banco"] --> I{{"Interface<br/>a tomada"}}
+    I --> F["Substituto falso<br/>usado nos testes"]
+    I -. "E3" .-> R1["Fornecedor real 1"]
+    I -. "E3" .-> R2["Fornecedor real 2"]
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false}});</script></body></html>

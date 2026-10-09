@@ -9,7 +9,8 @@
     "`run/2` recebe a função que executa o estágio, então a regra é testável sem rodar comandos reais",
     "Modo rápido pula estágios caros (Dialyzer) e os reporta como SKIPPED, em vez de omiti-los"
    ],
-   "exemplo": "se `mix compile --warnings-as-errors` falha, Credo, testes e Dialyzer nem chegam a rodar e o relatório mostra onde parou."
+   "exemplo": "se `mix compile --warnings-as-errors` falha, Credo, testes e Dialyzer nem chegam a rodar e o relatório mostra onde parou.",
+   "ideia": "Ter um único comando que diz se o projeto está saudável. Em vez de lembrar de rodar várias checagens, `mix factory.ci` roda todas em ordem — da mais barata para a mais cara — e para na primeira que falhar. (`mix` é a ferramenta de linha de comando do Elixir, como `npm` ou `make`.)"
   },
   "en": {
    "resumo": "Creates the Phoenix/Elixir project and a verification battery triggered by a single command, `mix factory.ci`. It runs formatting, warning-free compilation, strict Credo, tests, Dialyzer and the backup test in order, and stops at the first stage that fails.",
@@ -20,7 +21,8 @@
     "`run/2` receives the function that runs a stage, so the rule is testable without real commands",
     "Fast mode skips expensive stages (Dialyzer) and reports them as SKIPPED instead of omitting them"
    ],
-   "exemplo": "if `mix compile --warnings-as-errors` fails, Credo, tests and Dialyzer never run and the report shows where it stopped."
+   "exemplo": "if `mix compile --warnings-as-errors` fails, Credo, tests and Dialyzer never run and the report shows where it stopped.",
+   "ideia": "One command that tells whether the project is healthy. Instead of remembering several checks, `mix factory.ci` runs them all in order — cheapest first — and stops at the first failure. (`mix` is Elixir's command-line tool, like `npm` or `make`.)"
   },
   "verificar": [
    "mix test test/mix/ci_test.exs",
@@ -31,7 +33,8 @@
    "Mix.Tasks.Factory.Ci",
    "Factory.Application",
    "Factory.Repo"
-  ]
+  ],
+  "diagrama": "flowchart LR\n  F[\"formato\"] --> C[\"compila sem avisos\"] --> L[\"estilo\"] --> T[\"testes sem internet\"] --> Y[\"tipos\"] --> B[\"backup\"]\n  C -. \"falhou: para aqui\" .-> X((\"vermelho\"))"
  },
  "FAB-202": {
   "pt": {
@@ -44,7 +47,8 @@
     "`Factory.Cost.Pricing.estimate/2` e `quota_units/2` calculam dólar e cota; preços datados por `checked_on/0`",
     "`Factory.Tasks.Area` guarda um arquivo por linha, nunca diretório, para a interseção de áreas ser exata"
    ],
-   "exemplo": "uma volta com 10 mil tokens lidos do cache custa 0,1× o preço de entrada; uma escrita de cache com TTL de 1h custa 2,0×."
+   "exemplo": "uma volta com 10 mil tokens lidos do cache custa 0,1× o preço de entrada; uma escrita de cache com TTL de 1h custa 2,0×.",
+   "ideia": "Guardar todo o estado do sistema num banco relacional (PostgreSQL) e gravar o custo de cada conversa com o modelo de IA, volta por volta. Assim o custo de qualquer tarefa é uma soma, e o próprio banco recusa dados inválidos (como um status inventado)."
   },
   "en": {
    "resumo": "Creates the system's PostgreSQL database: projects, specialists, tasks, dependencies, areas, criteria, cycles, dispatches and per-turn usage. It also adds the price table and the cost arithmetic of each model turn, in two units: subscription quota and estimated dollars.",
@@ -56,7 +60,8 @@
     "`Factory.Cost.Pricing.estimate/2` and `quota_units/2` compute dollars and quota; prices dated by `checked_on/0`",
     "`Factory.Tasks.Area` stores one file per row, never a directory, so area intersection is exact"
    ],
-   "exemplo": "a turn reading 10k tokens from cache costs 0.1x the input price; a cache write with a 1h TTL costs 2.0x."
+   "exemplo": "a turn reading 10k tokens from cache costs 0.1x the input price; a cache write with a 1h TTL costs 2.0x.",
+   "ideia": "Keep all system state in a relational database (PostgreSQL) and record the cost of every exchange with the AI model, turn by turn. The cost of any task becomes a sum, and the database itself rejects invalid data (such as a made-up status)."
   },
   "verificar": [
    "mix test test/factory/schema_test.exs",
@@ -74,7 +79,8 @@
    "Factory.Projects.Specialist",
    "Factory.Cost.Pricing",
    "Factory.Cost.Usage"
-  ]
+  ],
+  "diagrama": "flowchart LR\n  T[\"Tarefa\"] --> C[\"Ciclos<br/>construir, verificar, revisar\"] --> D[\"Chamadas ao modelo\"] --> V[\"Voltas<br/>tokens, dólar, cota\"]"
  },
  "FAB-203": {
   "pt": {
@@ -86,7 +92,8 @@
     "`Factory.Embedder.Fake` gera vetores por hash: mesmo texto, mesmo vetor; textos diferentes, vetores diferentes",
     "A configuração de teste aponta `:provider` e `:embedder` para os falsos"
    ],
-   "exemplo": "um teste roteiriza duas respostas; a terceira chamada recebe `{:error, :script_exhausted}` em vez de travar."
+   "exemplo": "um teste roteiriza duas respostas; a terceira chamada recebe `{:error, :script_exhausted}` em vez de travar.",
+   "ideia": "O núcleo do sistema não conhece o fornecedor do modelo de IA: conhece só uma interface (uma \"tomada\"). Atrás dela fica, nos testes, um substituto falso — grátis, sem internet e previsível — e, a partir da E3, os fornecedores reais. São duas tomadas: o Provider (conversa com o modelo) e o Embedder (transforma texto em vetor de números, para a memória buscar por significado na E6)."
   },
   "en": {
    "resumo": "Defines two boundaries (Elixir behaviours): one for the language-model vendor (`Factory.Provider`) and one for the embedding generator (`Factory.Embedder`). Each comes with a deterministic fake adapter, the default in the test environment.",
@@ -97,7 +104,8 @@
     "`Factory.Embedder.Fake` produces hash vectors: same text, same vector; different texts, different vectors",
     "The test configuration points `:provider` and `:embedder` at the fakes"
    ],
-   "exemplo": "a test scripts two responses; the third call gets `{:error, :script_exhausted}` instead of hanging."
+   "exemplo": "a test scripts two responses; the third call gets `{:error, :script_exhausted}` instead of hanging.",
+   "ideia": "The system core does not know the AI model provider: it only knows an interface (a \"socket\"). Behind it sits, in tests, a fake substitute — free, offline and predictable — and, from E3 on, the real providers. There are two sockets: the Provider (talks to the model) and the Embedder (turns text into a vector of numbers, so memory can search by meaning in E6)."
   },
   "verificar": [
    "mix test test/factory/provider/fake_test.exs",
@@ -109,7 +117,8 @@
    "Factory.Provider.Fake",
    "Factory.Embedder",
    "Factory.Embedder.Fake"
-  ]
+  ],
+  "diagrama": "flowchart LR\n  N[\"Núcleo\"] --> I{{\"Interface\"}}\n  I --> F[\"Substituto falso<br/>testes\"]\n  I -. \"E3\" .-> R[\"Fornecedor real\"]"
  },
  "FAB-204": {
   "pt": {
@@ -121,7 +130,8 @@
     "Restauração usa `--clean --if-exists`, então é repetível",
     "O teste roda isolado como estágio `backup` (`mix test.backup`), fora da suíte comum"
    ],
-   "exemplo": "grava dados, faz dump, apaga, restaura e confere que os dados voltaram iguais."
+   "exemplo": "grava dados, faz dump, apaga, restaura e confere que os dados voltaram iguais.",
+   "ideia": "Conseguir copiar o banco inteiro e reconstruí-lo, com prova de que funciona. O PostgreSQL traz duas ferramentas: `pg_dump` copia o banco para um arquivo; `pg_restore` reconstrói o banco a partir dele. O teste faz a ida e a volta de verdade."
   },
   "en": {
    "resumo": "Adds `mix factory.backup` (writes a database dump) and `mix factory.restore` (restores a dump, including the latest one with `--latest`). The round trip is proved by a test that runs as its own verification stage.",
@@ -132,7 +142,8 @@
     "Restore uses `--clean --if-exists`, so it is repeatable",
     "The test runs isolated as the `backup` stage (`mix test.backup`), outside the regular suite"
    ],
-   "exemplo": "writes data, dumps, deletes, restores and checks the data came back identical."
+   "exemplo": "writes data, dumps, deletes, restores and checks the data came back identical.",
+   "ideia": "Be able to copy the whole database and rebuild it, with proof that it works. PostgreSQL ships two tools: `pg_dump` copies the database to a file; `pg_restore` rebuilds the database from it. The test performs the real round trip."
   },
   "verificar": [
    "mix test.backup"
@@ -141,32 +152,35 @@
    "Factory.Backup",
    "Mix.Tasks.Factory.Backup",
    "Mix.Tasks.Factory.Restore"
-  ]
+  ],
+  "diagrama": "flowchart LR\n  DB[(\"Banco\")] -- \"pg_dump\" --> A[\"arquivo .dump datado\"] -- \"pg_restore\" --> DB2[(\"Banco reconstruído\")]"
  },
  "FAB-205": {
   "pt": {
    "resumo": "Marco da etapa 2: um teste permanente que prova que a suíte inteira roda sem internet, sem consumir cota e sem chave de API. Ele não é executado só uma vez — roda em toda verificação, para o marco não ficar falso com a próxima dependência.",
    "porque": "Garante R12: testar a governança não pode gastar dinheiro nem depender do fornecedor; se alguém adicionar um cliente HTTP ou ler uma chave fora do lugar, a suíte quebra.",
    "como": [
-    "1. Confere que toda requisição `Req` cai num Plug (`Factory.NoNetwork`) que levanta erro em vez de responder",
-    "2. Confere que nenhum cliente HTTP alheio (HTTPoison, Tesla, hackney…) está carregado ou rodando",
-    "3. Varre `lib/`: só os três adaptadores de rede citam `Req` e ninguém abre socket à mão (`:gen_tcp`, `:httpc`)",
-    "4. Exatamente um módulo (`MessagesAPI`) lê variáveis de ambiente e cita `ANTHROPIC_API_KEY`; nenhum fonte contém chave literal",
-    "5. Os adaptadores configurados são os falsos e nenhuma biblioteca de modelo de embedding está carregada"
+    "Toda requisição HTTP passa por um porteiro que explode nos testes; o teste tenta chamar a API real e confere a explosão",
+    "Nenhuma outra biblioteca de rede está carregada e nenhum código abre conexão por baixo",
+    "Nenhum código lê variáveis de ambiente nem cita o nome da chave de acesso; nenhum arquivo contém algo com formato de chave",
+    "As variáveis de chave não existem no ambiente dos testes",
+    "O Provider e o Embedder configurados são os falsos; nenhuma biblioteca de modelo local está carregada"
    ],
-   "exemplo": "um `Req.get!` para `api.anthropic.com` durante a suíte levanta 'tried to LEAVE during the test suite'."
+   "exemplo": "um `Req.get!` para `api.anthropic.com` durante a suíte levanta 'tried to LEAVE during the test suite'.",
+   "ideia": "Um arquivo de testes automáticos (`test/factory/milestone_e2_test.exs`) cuja missão é provar a entrega da etapa: os testes rodam sem internet e sem consumir o serviço do modelo. Ele roda em toda verificação — se alguém abrir caminho para a internet ou para uma senha, ele quebra."
   },
   "en": {
    "resumo": "Stage 2 milestone: a permanent test proving the whole suite runs with no network, no quota and no API key. It is not run once — it runs on every verification, so the milestone does not become false with the next dependency.",
    "porque": "Guarantees R12: testing governance must not spend money or depend on the vendor; if someone adds an HTTP client or reads a key in the wrong place, the suite breaks.",
    "como": [
-    "1. Checks that every `Req` request hits a Plug (`Factory.NoNetwork`) that raises instead of answering",
-    "2. Checks that no foreign HTTP client (HTTPoison, Tesla, hackney…) is loaded or running",
-    "3. Scans `lib/`: only the three network adapters reference `Req`, and nobody opens sockets by hand (`:gen_tcp`, `:httpc`)",
-    "4. Exactly one module (`MessagesAPI`) reads environment variables and cites `ANTHROPIC_API_KEY`; no source holds a literal key",
-    "5. The configured adapters are the fakes and no embedding model library is loaded"
+    "Every HTTP request goes through a gatekeeper that raises in tests; the test tries to call the real API and checks the error",
+    "No other network library is loaded and no code opens a raw connection",
+    "No code reads environment variables or names the access key; no file contains anything shaped like a key",
+    "Key variables do not exist in the test environment",
+    "The configured Provider and Embedder are the fakes; no local model library is loaded"
    ],
-   "exemplo": "a `Req.get!` to `api.anthropic.com` during the suite raises 'tried to LEAVE during the test suite'."
+   "exemplo": "a `Req.get!` to `api.anthropic.com` during the suite raises 'tried to LEAVE during the test suite'.",
+   "ideia": "An automated test file (`test/factory/milestone_e2_test.exs`) whose job is to prove the stage deliverable: tests run offline and without consuming the model service. It runs on every verification — if anyone opens a path to the internet or to a secret, it fails."
   },
   "verificar": [
    "mix test test/factory/milestone_e2_test.exs"
@@ -174,7 +188,8 @@
   "modulos": [
    "Factory.MilestoneE2Test",
    "Factory.NoNetwork"
-  ]
+  ],
+  "diagrama": "flowchart TB\n  M[\"Teste do marco E2\"] --> A[\"Algo sai da máquina?\"]\n  M --> B[\"Dá para gastar cota<br/>ou existe senha?\"]\n  M --> C[\"Os testes usam<br/>os substitutos?\"]"
  },
  "FAB-301": {
   "pt": {

@@ -28,6 +28,7 @@ def git(*a, env=None, check=True):
 
 assert git("rev-parse", "--show-toplevel").replace("\\", "/").endswith("projetos/fabrica-tcc")
 assert git("status", "--porcelain") == "", "árvore suja"
+BRANCH_ATUAL = git("branch", "--show-current") or "main"
 os.makedirs(TMP, exist_ok=True)
 git("bundle", "create", os.path.join(TMP, "antes-docs.bundle"), "--all")
 
@@ -83,5 +84,5 @@ for ref in git("for-each-ref", "--format=%(refname)", "refs/original").splitline
     git("update-ref", "-d", ref)
 git("reflog", "expire", "--expire=now", "--all")
 git("gc", "-q", "--prune=now")
-git("checkout", "-q", "main")
+git("checkout", "-q", BRANCH_ATUAL)
 print("ok:", len(quadro_etapa), "quadros mapeados;", len(blobs), "relatórios")
