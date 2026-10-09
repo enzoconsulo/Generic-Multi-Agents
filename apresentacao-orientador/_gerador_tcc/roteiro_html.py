@@ -175,7 +175,7 @@ def gerar(n, existentes):
     d = tempfile.mkdtemp()
     caminhos = {k: os.path.join(d, k + ".png") for k in ("faixa", "mapa", "diag")}
     F.faixa(n, ETAPA_STATUS, caminhos["faixa"])
-    F.mapa(n, caminhos["mapa"])
+    F.escada(n, caminhos["mapa"])
     F.diagrama(n, caminhos["diag"])
     figs = {k: b64(v) for k, v in caminhos.items()}
     cod = M.codigo(n) if n >= 2 else None

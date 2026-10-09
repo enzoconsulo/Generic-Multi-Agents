@@ -187,7 +187,11 @@ def capa(doc, n, e, tx, tarefas, cod):
         par(c, r, 11, "6B7480", depois=0)
     par(doc, depois=12)
     par(doc, "NESTA APRESENTAÇÃO", 10.5, AZUL, True, depois=4)
-    roteiro = ["Onde entra no sistema", "Como funciona", "Tarefa por tarefa", "Como se prova"] + (["Números"] if cod else []) + ["Próximos passos"]
+    if EXTRAS.get(n, {}).get("pecas"):
+        roteiro = ["Onde entra no sistema", "O problema", "Conceitos", f"As {sum(1 for p in EXTRAS[n]['pecas'] if p['titulo'].startswith('Peça'))} peças",
+                   "A prova", "Números", "Próximos passos"]
+    else:
+        roteiro = ["Onde entra no sistema", "Como funciona", "Tarefa por tarefa", "Como se prova"] + (["Números"] if cod else []) + ["Próximos passos"]
     for c, (i, nome) in zip(tabela(doc, 1, len(roteiro), [LARG / len(roteiro)] * len(roteiro)).rows[0].cells, enumerate(roteiro, 1)):
         pronta(c, "FFFFFF", 0.15)
         p = par(c, depois=0)
@@ -196,10 +200,13 @@ def capa(doc, n, e, tx, tarefas, cod):
 
 
 def pagina_mapa(doc, figs, n=2):
-    sub = ("A E1 não constrói camada: ela desenha o sistema inteiro. A construção começa pela base, na E2, e sobe uma camada por etapa."
-           if n == 1 else "O sistema é construído de baixo para cima; cada etapa acrescenta uma camada. Em destaque, a camada desta etapa.")
-    titulo_pagina(doc, "Onde esta etapa entra no sistema", sub)
-    doc.add_picture(figs["mapa"], width=Cm(21))
+    acrescenta = {1: "o desenho de todas as etapas", 2: "a base: banco, custo, fronteiras com o modelo, verificação e backup",
+                  3: "o agente e suas ferramentas, confinado ao projeto", 4: "a linha de produção: estados, portões e retrabalho",
+                  5: "vários agentes em paralelo, com tolerância a falhas", 6: "a memória do projeto: histórico e busca com fonte",
+                  7: "a tela ao vivo e o piloto automático"}[n]
+    titulo_pagina(doc, "Onde esta etapa entra no sistema",
+                  f"O sistema é construído em degraus: cada etapa se apoia na anterior. A E{n} acrescenta {acrescenta}.")
+    doc.add_picture(figs["mapa"], width=Cm(24))
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
 
@@ -246,12 +253,42 @@ def cartao(doc, t):
     par(doc, depois=6)
 
 
-def figura(doc, arquivo, altura_max, largura_max=24.0):
+def figura(doc, arquivo, altura_max, largura_max=24.0):  # noqa: D401
     caminho = os.path.join(FIGS, arquivo)
     w, h = Image.open(caminho).size
     altura = min(altura_max, largura_max * h / w)
     doc.add_picture(caminho, height=Cm(altura))
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+
+def pagina_problema(doc, linhas):
+    titulo_pagina(doc, "A ideia: que problema esta etapa resolve", "Antes de construir os agentes, estes problemas precisavam estar resolvidos.")
+    t = tabela(doc, len(linhas) + 1, 3, [9.5, 8.0, 9.0])
+    for c, txt_ in zip(t.rows[0].cells, ("Problema", "Sem resolver agora…", "O que a etapa constrói")):
+        pronta(c, NAVY, 0.22)
+        par(c, txt_, 11.5, "FFFFFF", True, depois=0)
+    for i, (row, (a, b, c)) in enumerate(zip(t.rows[1:], linhas)):
+        fundo = CINZA if i % 2 == 0 else "FFFFFF"
+        for cel, txt_, cor, neg in ((row.cells[0], a, "1F2328", True), (row.cells[1], b, "6B7480", False), (row.cells[2], c, OKC, True)):
+            pronta(cel, fundo, 0.22)
+            par(cel, txt_, 12, cor, neg, depois=0)
+    nao_quebra(t, juntas=False)
+
+
+def pagina_peca(doc, pc):
+    titulo_pagina(doc, pc["titulo"], pc["ideia"])
+    figura(doc, pc["fig"], pc["altura"], pc.get("largura", 24.0))
+    par(doc, depois=4)
+    a, b = tabela(doc, 1, 2, [16.5, 10.0]).rows[0].cells
+    pronta(a, CINZA, 0.3)
+    pronta(b, OKC, 0.3)
+    par(a, "COMO FUNCIONA", 10.5, AZUL, True, depois=3)
+    for c in pc["como"]:
+        p = a.add_paragraph(style="List Bullet")
+        p.paragraph_format.space_after = Pt(2)
+        run_md(p, c, 11)
+    par(b, "POR QUE É RELEVANTE", 10.5, "FFFFFF", True, depois=4)
+    par(b, pc["relevante"], 12, "FFFFFF", True, depois=0)
 
 
 def pagina_conceitos(doc, conceitos):
@@ -299,10 +336,11 @@ def pagina_tarefas(doc, tarefas):
 
 def pagina_prova(doc, n, tarefas, tx, cod):
     marco = next((t for t in tarefas if t["tipo"] == "Milestone"), None)
-    titulo_pagina(doc, "Como se prova a entrega", "A entrega combinada no plano, demonstrada por um teste ou execução real.")
-    caixa(doc, "ENTREGA COMBINADA", C.ETAPAS[n]["entrega_pt"], NAVY, tam=15)
-    par(doc, depois=4)
+    titulo_pagina(doc, "Como se prova a entrega", "Entrega combinada: " + C.ETAPAS[n]["entrega_pt"])
     mf = EXTRAS.get(n, {}).get("marco_fig")
+    if not mf:
+        caixa(doc, "ENTREGA COMBINADA", C.ETAPAS[n]["entrega_pt"], NAVY, tam=15)
+        par(doc, depois=4)
     if mf:
         par(doc, mf[2], 11.5, "1F2328", depois=4)
         figura(doc, mf[0], mf[1])
@@ -407,7 +445,7 @@ def gerar(n, saida):
     d = tempfile.mkdtemp()
     figs = {k: os.path.join(d, k + ".png") for k in ("faixa", "mapa", "diag")}
     F.faixa(n, ETAPA_STATUS, figs["faixa"])
-    F.mapa(n, figs["mapa"])
+    F.escada(n, figs["mapa"])
     F.diagrama(n, figs["diag"])
 
     doc = Document()
@@ -427,12 +465,18 @@ def gerar(n, saida):
 
     capa(doc, n, e, tx, tarefas, cod)
     pagina_mapa(doc, figs, n)
-    pagina_como(doc, tx, figs)
     ex = EXTRAS.get(n, {})
-    if ex.get("conceitos"):
+    if ex.get("pecas"):
+        pagina_problema(doc, ex["problema"])
         pagina_conceitos(doc, ex["conceitos"])
-    for fig in ex.get("figuras", []):
-        pagina_figura(doc, *fig)
+        for pc in ex["pecas"]:
+            pagina_peca(doc, pc)
+    else:
+        pagina_como(doc, tx, figs)
+        if ex.get("conceitos"):
+            pagina_conceitos(doc, ex["conceitos"])
+        for fig in ex.get("figuras", []):
+            pagina_figura(doc, *fig)
     pagina_tarefas(doc, tarefas)
     pagina_prova(doc, n, tarefas, tx, cod)
     if cod:

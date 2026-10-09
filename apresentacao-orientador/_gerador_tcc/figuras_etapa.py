@@ -71,6 +71,40 @@ def mapa(n, caminho):
     plt.close(fig)
 
 
+DEGRAUS = [(2, "Base", "banco, custo,\nverificação, backup"), (3, "Agente", "ferramentas,\nconfinamento"),
+           (4, "Linha de produção", "estados, portões,\nretrabalho"), (5, "Paralelismo", "vários agentes,\nfalhas, fila"),
+           (6, "Memória", "histórico e busca\ncom fonte"), (7, "Painel", "tela ao vivo,\npiloto automático")]
+
+
+def escada(n, caminho):
+    """Ordem de construção: cada etapa é um degrau sobre a anterior; a atual em destaque."""
+    fig, ax = plt.subplots(figsize=(13, 5.2), dpi=200)
+    ax.set_xlim(0, 13)
+    ax.set_ylim(0, 7.0)
+    ax.axis("off")
+    larg, alt, base = 2.05, 0.75, 0.3
+    for i, (k, nome, desc) in enumerate(DEGRAUS):
+        x, h = 0.3 + i * larg, alt * (i + 1)
+        w = larg - 0.14
+        cx, topo = x + w / 2, base + h
+        if k < n:
+            fc, ec, tc, nc = "#DCEFEC", OK, OK, NAVY
+        elif k == n:
+            fc, ec, tc, nc = NAVY, NAVY, "white", NAVY
+        else:
+            fc, ec, tc, nc = "white", "#C9CED6", "#A0A7B1", "#A0A7B1"
+        ax.add_patch(FancyBboxPatch((x, base), w, h, boxstyle="round,pad=0,rounding_size=0.08", fc=fc, ec=ec,
+                                    lw=2.6 if k == n else 1.2, ls="--" if k > n else "-"))
+        ax.text(cx, topo - 0.33, f"E{k}", ha="center", va="center", fontsize=15, weight="bold", color=tc)
+        ax.text(cx, topo + 0.85, nome, ha="center", va="center", fontsize=12, weight="bold", color=nc)
+        ax.text(cx, topo + 0.38, desc, ha="center", va="center", fontsize=8.8, color=MUTED if k <= n else "#B5BBC4", linespacing=1.05)
+        if k == n:
+            ax.annotate("você está aqui", xy=(cx, topo + 1.15), xytext=(cx, min(topo + 2.0, 6.7)), ha="center", va="bottom",
+                        fontsize=11, weight="bold", color=WARN, arrowprops=dict(arrowstyle="-|>", color=WARN, lw=2))
+    fig.savefig(caminho, bbox_inches="tight", pad_inches=0.05, facecolor="white")
+    plt.close(fig)
+
+
 # ---------------------------------------------------------------- diagramas didáticos
 def _caixa(ax, x, y, w, h, titulo, sub="", cor=NAVY, texto="white", tam=12):
     ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0,rounding_size=0.15", fc=cor, ec=cor))

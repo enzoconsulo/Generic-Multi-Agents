@@ -1,12 +1,26 @@
 # -*- coding: utf-8 -*-
-"""Páginas extras por etapa no documento de apresentação: conceitos e figuras explicativas.
+"""Conteúdo extra por etapa no documento de apresentação: o problema, conceitos e as "peças".
 
-Cada figura: (título, subtítulo, arquivo em figs/, altura máxima em cm, [frases curtas]).
-Etapas sem entrada aqui saem sem as páginas extras.
+Cada peça vira uma página: título, a ideia (subtítulo), figura, "Como funciona" e "Por que é relevante".
+Etapas sem entrada aqui usam o formato genérico.
 """
 
 EXTRAS = {
     2: {
+        "problema": [
+            ("Cada chamada ao modelo de IA custa (dinheiro ou cota da assinatura)",
+             "não dá para saber quanto cada tarefa custou nem impor teto de gasto (E4)",
+             "uma tabela que grava o custo de cada chamada"),
+            ("O modelo está na internet e responde diferente a cada vez",
+             "testes lentos, caros e imprevisíveis",
+             "substitutos falsos: grátis, locais e previsíveis"),
+            ("Todo o estado do sistema mora num banco de dados",
+             "uma falha ou um erro apaga o trabalho",
+             "cópia de segurança com restauração testada"),
+            ("Qualidade depende de alguém lembrar de rodar checagens",
+             "erro passa despercebido",
+             "um comando que roda todas as checagens em ordem"),
+        ],
         "conceitos": [
             ("Behaviour (interface)", "Lista de funções que um módulo promete implementar — como uma interface em Java. O núcleo depende dela, nunca de um fornecedor específico."),
             ("Substituto falso", "Implementação simples e previsível da interface, sem rede e sem custo, usada nos testes. Diferente de um mock, ela funciona de verdade."),
@@ -16,20 +30,49 @@ EXTRAS = {
             ("pg_dump / pg_restore", "Ferramentas do PostgreSQL: a primeira copia o banco inteiro para um arquivo; a segunda reconstrói o banco a partir dele."),
             ("Teste do marco", "Arquivo de testes automáticos que prova a entrega combinada da etapa e roda em toda verificação."),
         ],
-        "figuras": [
-            ("O banco de dados", "As 9 tabelas. O custo é gravado em usages, uma linha por volta do modelo.", "E2-er-simples.png", 9.5,
-             ["usages guarda, por volta: tokens de entrada, lidos do cache, escritos no cache, de saída, custo em dólar e em cota.",
-              "tasks guarda código, status (só os estados válidos — o banco recusa valor inventado) e tentativas.",
-              "Cada retrabalho vira um ciclo novo em cycles: o custo de cada tentativa fica separado."]),
-            ("Do trabalho ao custo", "Tarefa → ciclos → chamadas ao modelo → voltas. Somando as voltas, sai o custo de tudo acima.", "E2-hierarquia.png", 7.5,
-             ["Custo de cada volta em dólar (tokens × preço; leitura de cache custa 10%) e em cota (1 unidade = mil tokens do modelo mais barato).",
-              "Modelo sem preço cadastrado gera erro — nunca um zero silencioso."]),
-            ("A tomada: fronteiras com o modelo", "O núcleo conhece só a interface. Atrás dela, nos testes, fica o substituto falso; na E3, os fornecedores reais.", "E2-tomada.png", 7.5,
-             ["Provider: conversa com o modelo de IA. Embedder: transforma texto em números para a memória (E6).",
-              "Por que falsos: o modelo real custa, depende da internet e responde diferente a cada vez; o falso é grátis, local e previsível."]),
-            ("Cópia de segurança", "pg_dump copia o banco para um arquivo datado; pg_restore reconstrói o banco a partir dele.", "E2-backup.png", 4.0,
-             ["O teste grava uma tarefa, faz o backup, apaga tudo, restaura e confere que voltou idêntica — duas vezes seguidas.",
-              "Roda separado dos outros testes porque restaurar apaga e recria as tabelas."]),
+        "pecas": [
+            {"titulo": "Peça 1 · Verificação em um comando", "tarefa": "FAB-201",
+             "ideia": "Um único comando, mix factory.ci, diz se o projeto está saudável: roda seis checagens em ordem e para na primeira que falhar.",
+             "fig": "E2-ci.png", "altura": 4.2,
+             "como": ["Ordem do mais barato ao mais caro: formato → compila sem avisos → estilo → testes → tipos → backup.",
+                      "A lista de checagens fica num arquivo de configuração (_management/ci.json), lido pelo comando.",
+                      "Modo rápido (--fast) pula só a checagem de tipos e a mostra como \"pulada\", nunca a esconde."],
+             "relevante": "Define o que é \"pronto\" de forma objetiva e igual para todos. Toda tarefa das próximas etapas termina com essa verificação verde."},
+            {"titulo": "Peça 2 · Banco de dados e contagem de custo", "tarefa": "FAB-202",
+             "ideia": "Todo o estado do sistema fica no PostgreSQL, e o custo de cada conversa com o modelo é gravado volta por volta.",
+             "fig": "E2-hierarquia.png", "altura": 5.6,
+             "como": ["Uma tarefa passa por ciclos (construir, verificar, revisar); cada ciclo faz chamadas ao modelo; cada chamada tem voltas.",
+                      "Por volta: custo em dólar (tokens × preço; ler do cache custa 10%) e em cota (1 unidade = mil tokens do modelo mais barato).",
+                      "Modelo sem preço cadastrado gera erro — nunca um zero silencioso."],
+             "relevante": "Atende R10: o custo de qualquer tarefa vira uma soma, não um palpite. É a base do teto de gasto da E4."},
+            {"titulo": "O banco: projetos e tarefas", "tarefa": "FAB-202",
+             "ideia": "Como uma tarefa é descrita: quem a constrói, do que depende, quais arquivos toca e como se prova que está pronta.",
+             "fig": "E2-er-tarefas.png", "altura": 7.0, "largura": 25.5,
+             "como": ["status só aceita os estados válidos — o banco recusa um valor inventado.",
+                      "Uma tarefa nunca depende de si mesma; tentativas nunca são negativas (regras no próprio banco).",
+                      "Áreas são arquivos, um por linha: é o que permite paralelismo sem conflito na E5."],
+             "relevante": "As regras de governança começam no banco: dado inválido não entra, não importa quem tente gravar."},
+            {"titulo": "O banco: execução e custo", "tarefa": "FAB-202",
+             "ideia": "Cada passagem da tarefa vira um ciclo; cada chamada ao modelo, um despacho; cada ida e volta, uma linha de consumo.",
+             "fig": "E2-er-custo.png", "altura": 5.0, "largura": 25.5,
+             "como": ["Cada retrabalho é um ciclo novo: o custo de cada tentativa fica separado, nunca sobrescrito.",
+                      "usages guarda a divisão completa: entrada, lidos e escritos no cache, saída, dólar e cota.",
+                      "Apagar uma tarefa apaga, em cascata, seus ciclos, despachos e consumos."],
+             "relevante": "Com a divisão completa dá para ver onde o custo está (ex.: escrita de cache pesa mais que leitura) — o total sozinho esconderia isso."},
+            {"titulo": "Peça 3 · Fronteiras com o modelo e substitutos", "tarefa": "FAB-203",
+             "ideia": "O núcleo conhece só uma interface (a \"tomada\"). Atrás dela: um substituto falso nos testes e, a partir da E3, os fornecedores reais.",
+             "fig": "E2-tomada.png", "altura": 5.4,
+             "como": ["Provider: envia a conversa ao modelo e devolve a resposta — uma volta por chamada; erros voltam como valores.",
+                      "Embedder: transforma texto em vetor de números, para a memória buscar por significado (E6). Nasce aqui como interface.",
+                      "Falsos: o Provider responde de um roteiro escrito pelo teste; o Embedder gera vetores por hash. Ambos são o padrão nos testes."],
+             "relevante": "Atende R12 (testar sem internet e sem custo) e prepara R15 (trocar de fornecedor sem mexer no núcleo, provado na E3)."},
+            {"titulo": "Peça 4 · Cópia de segurança", "tarefa": "FAB-204",
+             "ideia": "pg_dump copia o banco inteiro para um arquivo datado; pg_restore reconstrói o banco a partir dele.",
+             "fig": "E2-backup.png", "altura": 2.8,
+             "como": ["Dois comandos: mix factory.backup (grava priv/backups/AAAAMMDD-HHMMSS.dump) e mix factory.restore --latest.",
+                      "O caminho das ferramentas vem da configuração: versão errada do pg_dump gera arquivo que só falha na restauração.",
+                      "O teste grava, copia, apaga, restaura e confere que voltou idêntico — duas vezes seguidas. Roda separado porque restaurar apaga as tabelas."],
+             "relevante": "Todo o estado vive no banco: sem cópia restaurável, uma falha apagaria o trabalho. E backup que nunca foi restaurado não é garantia."},
         ],
         "req_override": {"R15": ("parcial", "fronteira pronta; a troca real de fornecedor se prova na E3")},
         "marco_passos": [

@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">erDiagram
+    direction LR
+    projects ||--o{ tasks : "tem"
+    projects ||--o{ specialists : "tem"
+    specialists |o--o{ tasks : "constroi"
+    tasks ||--o{ task_dependencies : "depende de"
+    tasks ||--o{ task_areas : "arquivos que toca"
+    tasks ||--o{ criteria : "criterios de aceite"
+    projects {
+        string name "nome unico"
+        string path "pasta do projeto"
+        string domain "software ou outro"
+    }
+    specialists {
+        string identifier "nome do especialista"
+        text prompt "instrucoes"
+        boolean active "versao ativa"
+    }
+    tasks {
+        string code "ex T-012, unico"
+        string title "titulo"
+        string status "um dos 6 estados"
+        string priority "alta, media, baixa"
+        integer attempts "tentativas, nunca negativo"
+    }
+    task_dependencies {
+        bigint task_id "tarefa"
+        bigint depends_on_id "depende desta, nunca dela mesma"
+    }
+    task_areas {
+        string path "um arquivo por linha"
+    }
+    criteria {
+        text text "o que precisa valer"
+        string command "comando que prova"
+        string level "executado, inspecionado, julgado"
+    }
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false}});</script></body></html>

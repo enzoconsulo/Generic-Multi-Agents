@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">erDiagram
+    direction LR
+    tasks ||--o{ cycles : "passagens"
+    cycles ||--o{ dispatches : "chamadas ao modelo"
+    dispatches ||--o{ usages : "uma linha por volta"
+    tasks {
+        string code "ex T-012"
+        string status "estado atual"
+    }
+    cycles {
+        integer number "1, 2, 3"
+        string role "construtor, verificador, revisor"
+        string outcome "resultado"
+        text report "relatorio"
+    }
+    dispatches {
+        string provider "quem respondeu"
+        string model "qual modelo"
+        integer turns "voltas"
+    }
+    usages {
+        integer turn "numero da volta"
+        integer input_tokens "entrada"
+        integer cache_read_tokens "lidos do cache"
+        integer cache_write_tokens "escritos no cache"
+        integer output_tokens "saida"
+        decimal cost_usd "custo em dolar"
+        decimal quota_units "custo em cota"
+    }
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false}});</script></body></html>
