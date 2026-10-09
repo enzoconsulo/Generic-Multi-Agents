@@ -1,0 +1,1309 @@
+{
+ "FAB-201": {
+  "pt": {
+   "resumo": "Cria o projeto Phoenix/Elixir e uma bateria de verificação acionada por um único comando, `mix factory.ci`. Ela roda, em ordem, formatação, compilação sem avisos, Credo estrito, testes, Dialyzer e o teste de backup, e para no primeiro estágio que falhar.",
+   "porque": "Garante R12 (verificação automática e reproduzível): o critério de 'pronto' do próprio sistema é um comando declarado em arquivo, não algo lembrado de cabeça.",
+   "como": [
+    "Os estágios ficam declarados em `_management/ci.json` — o arquivo é a fonte da verdade",
+    "`Factory.CI.stages/1` lê o arquivo; `Factory.CI.run/2` aplica a regra 'primeira falha para o resto'",
+    "`run/2` recebe a função que executa o estágio, então a regra é testável sem rodar comandos reais",
+    "Modo rápido pula estágios caros (Dialyzer) e os reporta como SKIPPED, em vez de omiti-los"
+   ],
+   "exemplo": "se `mix compile --warnings-as-errors` falha, Credo, testes e Dialyzer nem chegam a rodar e o relatório mostra onde parou."
+  },
+  "en": {
+   "resumo": "Creates the Phoenix/Elixir project and a verification battery triggered by a single command, `mix factory.ci`. It runs formatting, warning-free compilation, strict Credo, tests, Dialyzer and the backup test in order, and stops at the first stage that fails.",
+   "porque": "Guarantees R12 (automatic, reproducible verification): the system's own definition of 'done' is a command declared in a file, not something remembered.",
+   "como": [
+    "Stages are declared in `_management/ci.json` — the file is the source of truth",
+    "`Factory.CI.stages/1` reads the file; `Factory.CI.run/2` applies the 'first failure stops the rest' rule",
+    "`run/2` receives the function that runs a stage, so the rule is testable without real commands",
+    "Fast mode skips expensive stages (Dialyzer) and reports them as SKIPPED instead of omitting them"
+   ],
+   "exemplo": "if `mix compile --warnings-as-errors` fails, Credo, tests and Dialyzer never run and the report shows where it stopped."
+  },
+  "verificar": [
+   "mix test test/mix/ci_test.exs",
+   "mix factory.ci"
+  ],
+  "modulos": [
+   "Factory.CI",
+   "Mix.Tasks.Factory.Ci",
+   "Factory.Application",
+   "Factory.Repo"
+  ]
+ },
+ "FAB-202": {
+  "pt": {
+   "resumo": "Cria o banco PostgreSQL do sistema: projetos, especialistas, tarefas, dependências, áreas, critérios, ciclos, despachos e consumo por volta. Também cria a tabela de preços e a conta de custo de cada volta do modelo, em duas unidades: cota da assinatura e dólar estimado.",
+   "porque": "Garante R10 (custo medido e consultável): o banco é a verdade do estado, e cada volta grava seu consumo, então o custo de qualquer ciclo é uma consulta, não uma estimativa.",
+   "como": [
+    "Seis estados + dois terminais em `Factory.Tasks.Task` como `Ecto.Enum`: estado inventado não chega ao banco",
+    "`Factory.Tasks.Cycle` nunca é sobrescrito: cada retrabalho é uma linha nova, e o custo por ciclo fica separável",
+    "`Factory.Tasks.Usage` grava uma linha por volta, separando entrada, leitura e escrita de cache, saída",
+    "`Factory.Cost.Pricing.estimate/2` e `quota_units/2` calculam dólar e cota; preços datados por `checked_on/0`",
+    "`Factory.Tasks.Area` guarda um arquivo por linha, nunca diretório, para a interseção de áreas ser exata"
+   ],
+   "exemplo": "uma volta com 10 mil tokens lidos do cache custa 0,1× o preço de entrada; uma escrita de cache com TTL de 1h custa 2,0×."
+  },
+  "en": {
+   "resumo": "Creates the system's PostgreSQL database: projects, specialists, tasks, dependencies, areas, criteria, cycles, dispatches and per-turn usage. It also adds the price table and the cost arithmetic of each model turn, in two units: subscription quota and estimated dollars.",
+   "porque": "Guarantees R10 (measured, queryable cost): the database is the source of truth, and each turn records its usage, so the cost of any cycle is a query, not a guess.",
+   "como": [
+    "Six states + two terminal ones in `Factory.Tasks.Task` as an `Ecto.Enum`: an invented status never reaches the database",
+    "`Factory.Tasks.Cycle` is never overwritten: each rework is a new row, so cost per cycle stays separable",
+    "`Factory.Tasks.Usage` stores one row per turn, splitting input, cache read, cache write and output",
+    "`Factory.Cost.Pricing.estimate/2` and `quota_units/2` compute dollars and quota; prices dated by `checked_on/0`",
+    "`Factory.Tasks.Area` stores one file per row, never a directory, so area intersection is exact"
+   ],
+   "exemplo": "a turn reading 10k tokens from cache costs 0.1x the input price; a cache write with a 1h TTL costs 2.0x."
+  },
+  "verificar": [
+   "mix test test/factory/schema_test.exs",
+   "mix test test/factory/cost/pricing_test.exs"
+  ],
+  "modulos": [
+   "Factory.Tasks.Task",
+   "Factory.Tasks.Cycle",
+   "Factory.Tasks.Dispatch",
+   "Factory.Tasks.Usage",
+   "Factory.Tasks.Area",
+   "Factory.Tasks.Criterion",
+   "Factory.Tasks.Dependency",
+   "Factory.Projects.Project",
+   "Factory.Projects.Specialist",
+   "Factory.Cost.Pricing",
+   "Factory.Cost.Usage"
+  ]
+ },
+ "FAB-203": {
+  "pt": {
+   "resumo": "Define duas fronteiras (behaviours do Elixir): uma para o fornecedor do modelo de linguagem (`Factory.Provider`) e outra para o gerador de embeddings (`Factory.Embedder`). Cada uma vem com um adaptador falso e determinístico, que é o padrão no ambiente de teste.",
+   "porque": "Garante R12 e R15: toda a governança fica do lado de cá da fronteira e é testada sem rede nem custo; trocar de fornecedor é trocar o adaptador, sem mexer no núcleo.",
+   "como": [
+    "`Factory.Provider.chat/2` é uma única volta síncrona; repetir e contar voltas é do laço do agente, não do adaptador",
+    "`Factory.Provider.Fake` responde a partir de um roteiro declarado pelo teste e devolve `{:error, :script_exhausted}` quando acaba — nunca inventa resposta",
+    "`Factory.Embedder.Fake` gera vetores por hash: mesmo texto, mesmo vetor; textos diferentes, vetores diferentes",
+    "A configuração de teste aponta `:provider` e `:embedder` para os falsos"
+   ],
+   "exemplo": "um teste roteiriza duas respostas; a terceira chamada recebe `{:error, :script_exhausted}` em vez de travar."
+  },
+  "en": {
+   "resumo": "Defines two boundaries (Elixir behaviours): one for the language-model vendor (`Factory.Provider`) and one for the embedding generator (`Factory.Embedder`). Each comes with a deterministic fake adapter, the default in the test environment.",
+   "porque": "Guarantees R12 and R15: all governance lives on this side of the boundary and is tested with no network or cost; switching vendors means switching the adapter without touching the core.",
+   "como": [
+    "`Factory.Provider.chat/2` is a single synchronous turn; repeating and counting turns belongs to the agent loop, not the adapter",
+    "`Factory.Provider.Fake` answers from a script declared by the test and returns `{:error, :script_exhausted}` when it runs out — it never invents an answer",
+    "`Factory.Embedder.Fake` produces hash vectors: same text, same vector; different texts, different vectors",
+    "The test configuration points `:provider` and `:embedder` at the fakes"
+   ],
+   "exemplo": "a test scripts two responses; the third call gets `{:error, :script_exhausted}` instead of hanging."
+  },
+  "verificar": [
+   "mix test test/factory/provider/fake_test.exs",
+   "mix test test/factory/embedder/fake_test.exs",
+   "mix test test/factory/embedder_test.exs"
+  ],
+  "modulos": [
+   "Factory.Provider",
+   "Factory.Provider.Fake",
+   "Factory.Embedder",
+   "Factory.Embedder.Fake"
+  ]
+ },
+ "FAB-204": {
+  "pt": {
+   "resumo": "Adiciona `mix factory.backup` (gera um dump do banco) e `mix factory.restore` (restaura um dump, inclusive o mais recente com `--latest`). A ida e volta é provada por um teste que roda num estágio próprio da verificação.",
+   "porque": "Como todo o estado do sistema vive no banco, não perder trabalho exige cópia restaurável; o teste garante que o backup não é só um arquivo que parece válido.",
+   "como": [
+    "`Factory.Backup.dump/1` e `restore/2` chamam `pg_dump`/`pg_restore` em formato custom",
+    "O caminho dos binários vem de `config :factory, :pg_bin`, nunca do PATH: cliente de versão errada gera dump que falha só na restauração",
+    "Restauração usa `--clean --if-exists`, então é repetível",
+    "O teste roda isolado como estágio `backup` (`mix test.backup`), fora da suíte comum"
+   ],
+   "exemplo": "grava dados, faz dump, apaga, restaura e confere que os dados voltaram iguais."
+  },
+  "en": {
+   "resumo": "Adds `mix factory.backup` (writes a database dump) and `mix factory.restore` (restores a dump, including the latest one with `--latest`). The round trip is proved by a test that runs as its own verification stage.",
+   "porque": "Since the whole system state lives in the database, not losing work requires a restorable copy; the test ensures the backup is not just a file that looks valid.",
+   "como": [
+    "`Factory.Backup.dump/1` and `restore/2` call `pg_dump`/`pg_restore` in custom format",
+    "Binary location comes from `config :factory, :pg_bin`, never the PATH: a wrong-version client produces a dump that fails only on restore",
+    "Restore uses `--clean --if-exists`, so it is repeatable",
+    "The test runs isolated as the `backup` stage (`mix test.backup`), outside the regular suite"
+   ],
+   "exemplo": "writes data, dumps, deletes, restores and checks the data came back identical."
+  },
+  "verificar": [
+   "mix test.backup"
+  ],
+  "modulos": [
+   "Factory.Backup",
+   "Mix.Tasks.Factory.Backup",
+   "Mix.Tasks.Factory.Restore"
+  ]
+ },
+ "FAB-205": {
+  "pt": {
+   "resumo": "Marco da etapa 2: um teste permanente que prova que a suíte inteira roda sem internet, sem consumir cota e sem chave de API. Ele não é executado só uma vez — roda em toda verificação, para o marco não ficar falso com a próxima dependência.",
+   "porque": "Garante R12: testar a governança não pode gastar dinheiro nem depender do fornecedor; se alguém adicionar um cliente HTTP ou ler uma chave fora do lugar, a suíte quebra.",
+   "como": [
+    "1. Confere que toda requisição `Req` cai num Plug (`Factory.NoNetwork`) que levanta erro em vez de responder",
+    "2. Confere que nenhum cliente HTTP alheio (HTTPoison, Tesla, hackney…) está carregado ou rodando",
+    "3. Varre `lib/`: só os três adaptadores de rede citam `Req` e ninguém abre socket à mão (`:gen_tcp`, `:httpc`)",
+    "4. Exatamente um módulo (`MessagesAPI`) lê variáveis de ambiente e cita `ANTHROPIC_API_KEY`; nenhum fonte contém chave literal",
+    "5. Os adaptadores configurados são os falsos e nenhuma biblioteca de modelo de embedding está carregada"
+   ],
+   "exemplo": "um `Req.get!` para `api.anthropic.com` durante a suíte levanta 'tried to LEAVE during the test suite'."
+  },
+  "en": {
+   "resumo": "Stage 2 milestone: a permanent test proving the whole suite runs with no network, no quota and no API key. It is not run once — it runs on every verification, so the milestone does not become false with the next dependency.",
+   "porque": "Guarantees R12: testing governance must not spend money or depend on the vendor; if someone adds an HTTP client or reads a key in the wrong place, the suite breaks.",
+   "como": [
+    "1. Checks that every `Req` request hits a Plug (`Factory.NoNetwork`) that raises instead of answering",
+    "2. Checks that no foreign HTTP client (HTTPoison, Tesla, hackney…) is loaded or running",
+    "3. Scans `lib/`: only the three network adapters reference `Req`, and nobody opens sockets by hand (`:gen_tcp`, `:httpc`)",
+    "4. Exactly one module (`MessagesAPI`) reads environment variables and cites `ANTHROPIC_API_KEY`; no source holds a literal key",
+    "5. The configured adapters are the fakes and no embedding model library is loaded"
+   ],
+   "exemplo": "a `Req.get!` to `api.anthropic.com` during the suite raises 'tried to LEAVE during the test suite'."
+  },
+  "verificar": [
+   "mix test test/factory/milestone_e2_test.exs"
+  ],
+  "modulos": [
+   "Factory.MilestoneE2Test",
+   "Factory.NoNetwork"
+  ]
+ },
+ "FAB-301": {
+  "pt": {
+   "resumo": "Cria as ferramentas que o agente usa: ler, listar, buscar, escrever e editar arquivos, e rodar comandos externos com prazo. Quando o prazo estoura, o sistema mata a árvore inteira de processos, não só o processo lançado. Inclui o catálogo de ferramentas por papel e a ferramenta `report_result`.",
+   "porque": "A governança aparece como ausência: nenhum papel recebe ferramenta que altere o estado ou as tentativas da tarefa, e verificador e revisor não recebem escrita. O agente só relata; quem muda o estado é o sistema.",
+   "como": [
+    "`Factory.Tools.Command` usa `Port` com `:spawn_executable` (expõe o PID do SO) e devolve stdout e stderr separados",
+    "`Factory.Tools.ProcessTree.kill/1` usa `taskkill /T /F` no Windows e sinal ao grupo de processos no Unix",
+    "`Factory.Tools.Files.edit/5` é substituição exata: recusa se o trecho aparece zero ou mais de uma vez",
+    "`Factory.Tools.Catalog.for_role/1` define as ferramentas de cada papel; um teste falha se alguma puder escrever estado",
+    "`Factory.Tools.ReportResult` descarta campos fora da lista permitida e avisa na mesma resposta"
+   ],
+   "exemplo": "um `mix test` que trava além do prazo é encerrado junto com o `erl` filho, e o resultado vem com motivo `:timeout`, não como teste reprovado."
+  },
+  "en": {
+   "resumo": "Creates the tools the agent uses: read, list, search, write and edit files, and run external commands with a timeout. When the timeout expires, the system kills the whole process tree, not just the launched process. Includes the per-role tool catalog and the `report_result` tool.",
+   "porque": "Governance shows up as an absence: no role gets a tool that changes task status or attempts, and verifier and reviewer get no write tool. The agent only reports; the system changes state.",
+   "como": [
+    "`Factory.Tools.Command` uses a `Port` with `:spawn_executable` (exposes the OS pid) and returns stdout and stderr separately",
+    "`Factory.Tools.ProcessTree.kill/1` uses `taskkill /T /F` on Windows and a process-group signal on Unix",
+    "`Factory.Tools.Files.edit/5` is an exact replacement: refused if the target appears zero or several times",
+    "`Factory.Tools.Catalog.for_role/1` sets each role's tools; a test fails if any can write state",
+    "`Factory.Tools.ReportResult` drops fields outside the allowlist and warns in the same response"
+   ],
+   "exemplo": "a `mix test` hanging past the timeout is killed together with its child `erl`, and the result carries reason `:timeout`, not a failed test."
+  },
+  "verificar": [
+   "mix test test/factory/tools/command_test.exs",
+   "mix test test/factory/tools/files_test.exs",
+   "mix test test/factory/tools/report_result_test.exs"
+  ],
+  "modulos": [
+   "Factory.Tools.Files",
+   "Factory.Tools.Command",
+   "Factory.Tools.ProcessTree",
+   "Factory.Tools.Catalog",
+   "Factory.Tools.ReportResult"
+  ]
+ },
+ "FAB-302": {
+  "pt": {
+   "resumo": "Implementa o confinamento: nenhuma ferramenta de arquivo consegue ler ou escrever fora da pasta do projeto. Todo caminho é resolvido até o destino real e recusado se for absoluto, tiver `..`, link ou junção para fora, UNC ou dispositivo do Windows. Também traz guardas que julgam um comando antes de ele rodar.",
+   "porque": "Garante R11 (o agente não sai do projeto) como propriedade do código, não como frase no prompt.",
+   "como": [
+    "`Factory.Tools.Confinement.resolve/2` normaliza, segue links até o alvo real e compara com a raiz antes de tocar o disco",
+    "Barra invertida é separador em toda plataforma; comparação sem caixa no Windows e com caixa no resto",
+    "`Factory.Tools.Guards.check_process/2` RECUSA comandos que matariam a própria fábrica; `check_tooling/1` só AVISA sobre roda reinventada",
+    "Guardas são funções puras, testáveis exaustivamente",
+    "No adaptador CLI, o shell do agente roda em sandbox do SO; sem sandbox o agente nem sobe (`priv/probes/confinement_cli.exs`)"
+   ],
+   "exemplo": "um caminho `../../etc/passwd` ou `CON` é recusado com erro antes de qualquer leitura ou escrita."
+  },
+  "en": {
+   "resumo": "Implements confinement: no file tool can read or write outside the project folder. Every path is resolved to its real target and refused if it is absolute, contains `..`, a link or junction pointing outside, a UNC path or a Windows device. It also adds guards that judge a command before it runs.",
+   "porque": "Guarantees R11 (the agent never leaves the project) as a property of the code, not a sentence in the prompt.",
+   "como": [
+    "`Factory.Tools.Confinement.resolve/2` normalizes, follows links to the real target and compares with the root before touching the disk",
+    "Backslash is a separator on every platform; case-insensitive comparison on Windows, case-sensitive elsewhere",
+    "`Factory.Tools.Guards.check_process/2` REFUSES commands that would kill the factory itself; `check_tooling/1` only WARNS about reinvented wheels",
+    "Guards are pure functions, exhaustively testable",
+    "In the CLI adapter the agent's shell runs in an OS sandbox; without the sandbox the agent does not start (`priv/probes/confinement_cli.exs`)"
+   ],
+   "exemplo": "a `../../etc/passwd` or `CON` path is refused with an error before any read or write."
+  },
+  "verificar": [
+   "mix test test/factory/tools/confinement_test.exs",
+   "mix test test/factory/tools/guards_test.exs",
+   "mix factory.syntax priv/probes/confinement_cli.exs"
+  ],
+  "modulos": [
+   "Factory.Tools.Confinement",
+   "Factory.Tools.Guards"
+  ]
+ },
+ "FAB-303": {
+  "pt": {
+   "resumo": "Gera um índice denso do projeto (`_management/MAP.md`): árvore de arquivos, símbolos públicos e o propósito de cada um, para o agente se orientar sem ler o código inteiro. Também monta a parte estável do prompt em faixas fixas, com um ponto de cache por faixa.",
+   "porque": "Reduz o contexto e o custo por despacho: o cache do fornecedor só vira leitura barata se o prefixo for idêntico byte a byte entre despachos.",
+   "como": [
+    "`Factory.Index.CodeMap.extract/1` usa a AST (`Code.string_to_quoted/2`), nunca regex",
+    "Saída sem data, hash ou contador: duas gerações sobre a mesma árvore dão bytes idênticos",
+    "`Factory.Prompt.Prefix.build/2` ordena as faixas: ferramentas → doutrina → índice (com cache) → tarefa (sem cache)",
+    "Avisa quando o prefixo fica abaixo do mínimo cacheável do modelo (512/1024/4096 tokens)",
+    "`mix factory.map` grava o índice"
+   ],
+   "exemplo": "rodar `mix factory.map` duas vezes sem mudar código produz o mesmo arquivo, então o prefixo continua no cache."
+  },
+  "en": {
+   "resumo": "Generates a dense project index (`_management/MAP.md`): file tree, public symbols and the purpose of each, so the agent can orient itself without reading all the code. It also assembles the stable part of the prompt in fixed bands, with one cache breakpoint per band.",
+   "porque": "Cuts context and cost per dispatch: the vendor cache only turns into cheap reads if the prefix is byte-for-byte identical across dispatches.",
+   "como": [
+    "`Factory.Index.CodeMap.extract/1` uses the AST (`Code.string_to_quoted/2`), never regexes",
+    "Output has no date, hash or counter: two generations over the same tree give identical bytes",
+    "`Factory.Prompt.Prefix.build/2` orders the bands: tools → doctrine → index (cached) → task (not cached)",
+    "Warns when the prefix is below the model's minimum cacheable size (512/1024/4096 tokens)",
+    "`mix factory.map` writes the index"
+   ],
+   "exemplo": "running `mix factory.map` twice without code changes produces the same file, so the prefix stays cached."
+  },
+  "verificar": [
+   "mix test test/factory/index/code_map_test.exs",
+   "mix test test/factory/prompt/prefix_test.exs",
+   "mix factory.map"
+  ],
+  "modulos": [
+   "Factory.Index.CodeMap",
+   "Factory.Prompt.Prefix",
+   "Factory.Prompt.Block",
+   "Mix.Tasks.Factory.Map"
+  ]
+ },
+ "FAB-304": {
+  "pt": {
+   "resumo": "Implementa o núcleo do agente: o laço que monta a requisição, chama o modelo, executa as ferramentas pedidas e repete até o modelo terminar ou um teto ser atingido. O laço é um processo OTP (GenServer), que pode ser supervisionado e encerrado de fora.",
+   "porque": "Os tetos de voltas e de gasto vivem no estado do processo, não no prompt: o modelo não decide se continua, então não pode ignorar o limite.",
+   "como": [
+    "`Factory.Agents.Loop.run/1` devolve todos os resultados de ferramenta numa só volta",
+    "Ferramenta que falha devolve `error: true` em vez de sumir",
+    "Cada volta grava consumo ANTES de decidir continuar, inclusive em erro que já gastou tokens",
+    "`Factory.Agents.State.check_continue/1` aplica os tetos; `Factory.Agents.ToolBudget` mede chamadas por papel (meta e limiar p90)",
+    "`ToolBudget` mede e nunca corta: interromper no meio custa igual e não entrega nada"
+   ],
+   "exemplo": "com teto de 30 voltas, a 31ª não acontece mesmo que o modelo peça mais uma ferramenta."
+  },
+  "en": {
+   "resumo": "Implements the agent core: the loop that builds the request, calls the model, runs the requested tools and repeats until the model is done or a cap is hit. The loop is an OTP process (GenServer) that can be supervised and stopped from outside.",
+   "porque": "Turn and spend caps live in process state, not in the prompt: the model does not decide whether to continue, so it cannot ignore the limit.",
+   "como": [
+    "`Factory.Agents.Loop.run/1` returns all tool results in a single turn",
+    "A failing tool returns `error: true` instead of disappearing",
+    "Each turn records usage BEFORE deciding to continue, including errors that already spent tokens",
+    "`Factory.Agents.State.check_continue/1` enforces the caps; `Factory.Agents.ToolBudget` measures calls per role (target and p90 threshold)",
+    "`ToolBudget` measures and never cuts: interrupting mid-way costs the same and delivers nothing"
+   ],
+   "exemplo": "with a 30-turn cap, turn 31 never happens even if the model asks for another tool."
+  },
+  "verificar": [
+   "mix test test/factory/agents/loop_test.exs",
+   "mix test test/factory/agents/tool_budget_test.exs"
+  ],
+  "modulos": [
+   "Factory.Agents.Loop",
+   "Factory.Agents.State",
+   "Factory.Agents.ToolBudget"
+  ]
+ },
+ "FAB-305": {
+  "pt": {
+   "resumo": "Cria dois adaptadores reais atrás da mesma fronteira `Factory.Provider`: um que dirige o CLI do Claude Code (roda na assinatura, consome cota) e outro que fala HTTP direto com a API de mensagens (paga por token, com controle de cache). As regras de governança do CLI foram medidas contra o binário real antes de decidir.",
+   "porque": "Garante R15 (independência de fornecedor): trocar de adaptador não muda o núcleo, e a governança é imposta na linha de comando e auditada na saída.",
+   "como": [
+    "`Factory.Provider.ClaudeCLI` usa `--permission-mode acceptEdits` e fecha o vocabulário com `--tools`",
+    "Shell só com sandbox do SO obrigatória; indisponível → `{:error, :sandbox_unavailable}`",
+    "`ClaudeCLI.parse/2` audita cada caminho de `tool_use` via `Confinement.resolve/2` e reconhece a parede de cota",
+    "`Factory.Provider.MessagesAPI` usa `Req` puro e põe `cache_control` com TTL 1h no fim de cada faixa estável",
+    "Probes em `priv/probes/` (`cli_governance.exs`, `cli_real.exs`) medem o comportamento do binário real"
+   ],
+   "exemplo": "se o CLI escreveu um arquivo fora da raiz, a resposta vira `{:error, {:outside_confinement, paths}}`, com o consumo já pago registrado."
+  },
+  "en": {
+   "resumo": "Creates two real adapters behind the same `Factory.Provider` boundary: one that drives the Claude Code CLI (runs on the subscription, spends quota) and one that talks HTTP directly to the Messages API (pays per token, with cache control). The CLI's governance rules were measured against the real binary before deciding.",
+   "porque": "Guarantees R15 (vendor independence): switching adapters does not change the core, and governance is enforced on the command line and audited in the output.",
+   "como": [
+    "`Factory.Provider.ClaudeCLI` uses `--permission-mode acceptEdits` and closes the vocabulary with `--tools`",
+    "Shell only with a mandatory OS sandbox; unavailable → `{:error, :sandbox_unavailable}`",
+    "`ClaudeCLI.parse/2` audits every `tool_use` path through `Confinement.resolve/2` and recognises the quota wall",
+    "`Factory.Provider.MessagesAPI` uses plain `Req` and puts `cache_control` with a 1h TTL on the last block of each stable band",
+    "Probes in `priv/probes/` (`cli_governance.exs`, `cli_real.exs`) measure the real binary's behaviour"
+   ],
+   "exemplo": "if the CLI wrote a file outside the root, the response becomes `{:error, {:outside_confinement, paths}}`, with the already-paid usage recorded."
+  },
+  "verificar": [
+   "mix test test/factory/provider/claude_cli_test.exs",
+   "mix test test/factory/provider/messages_api_test.exs",
+   "mix factory.syntax priv/probes/cli_governance.exs",
+   "mix factory.syntax priv/probes/cli_real.exs"
+  ],
+  "modulos": [
+   "Factory.Provider.ClaudeCLI",
+   "Factory.Provider.MessagesAPI"
+  ]
+ },
+ "FAB-306": {
+  "pt": {
+   "resumo": "Marco da etapa 3: um script (probe) que roda um agente contra o modelo REAL, num projeto falso, pedindo que ele crie um arquivo com um conteúdo secreto. Depois confere que a tarefa foi resolvida e que o custo ficou gravado corretamente no banco.",
+   "porque": "Garante R15 e R10 com o fornecedor de verdade: o laço, o adaptador CLI e a contabilidade por volta funcionam juntos fora dos testes simulados.",
+   "como": [
+    "1. Cria uma pasta temporária com 3 arquivos e um segredo único gerado na hora",
+    "2. Roda `Factory.Agents.Loop` com `Provider.ClaudeCLI` e só a ferramenta `write` (não depende de sandbox)",
+    "3. Grava o resultado com `Factory.Tasks.Transition.apply/3`",
+    "4. Afirmação 1: `result.txt` existe com exatamente o segredo pedido",
+    "5. Afirmações 2 e 3: uma linha em `usages` por volta, e a soma de tokens no banco igual à soma no estado do laço; imprime PROBE OK"
+   ],
+   "exemplo": "consome cota da assinatura; por isso é um probe manual e não faz parte de `mix test`."
+  },
+  "en": {
+   "resumo": "Stage 3 milestone: a script (probe) that runs an agent against the REAL model, in a fake project, asking it to create a file with a secret content. It then checks that the task was solved and that cost was recorded correctly in the database.",
+   "porque": "Guarantees R15 and R10 with the real vendor: the loop, the CLI adapter and per-turn accounting work together outside the simulated tests.",
+   "como": [
+    "1. Creates a temporary folder with 3 files and a unique secret generated on the spot",
+    "2. Runs `Factory.Agents.Loop` with `Provider.ClaudeCLI` and only the `write` tool (no sandbox dependency)",
+    "3. Persists the result with `Factory.Tasks.Transition.apply/3`",
+    "4. Claim 1: `result.txt` exists with exactly the requested secret",
+    "5. Claims 2 and 3: one `usages` row per turn, and the token sum in the database equals the sum in the loop state; prints PROBE OK"
+   ],
+   "exemplo": "it spends subscription quota, so it is a manual probe and not part of `mix test`."
+  },
+  "verificar": [
+   "mix factory.syntax priv/probes/milestone_e3_agent.exs",
+   "mix run priv/probes/milestone_e3_agent.exs"
+  ],
+  "modulos": [
+   "Factory.Agents.Loop",
+   "Factory.Provider.ClaudeCLI",
+   "Factory.Tasks.Transition"
+  ]
+ },
+ "FAB-401": {
+  "pt": {
+   "resumo": "Implementa a máquina de estados das tarefas (backlog → pronta → execução → teste → revisão → concluída, mais bloqueada e cancelada) e a transição transacional. Mudar de estado grava, numa única transação, o novo estado, o relatório do ciclo, o despacho e o consumo — ou nada.",
+   "porque": "Garante R2 (ciclo de vida com estados fixos): nenhum caminho grava estado sem checar a regra, e o contador de tentativas é incrementado pelo sistema, nunca pelo agente.",
+   "como": [
+    "`Factory.Tasks.StateMachine` é pura: `can?/2`, `check/2`, `targets/1` sobre o mapa de transições legais",
+    "`Factory.Tasks.Transition.apply/3` monta um `Ecto.Multi` com status, ciclo, despacho e N linhas de consumo",
+    "Entrar em `in_progress` incrementa `attempts` na mesma transação (`hands_to_builder?/1`)",
+    "A linha da tarefa é lida `FOR UPDATE`, então transições concorrentes na mesma tarefa se serializam"
+   ],
+   "exemplo": "`done → in_progress` é recusada: desfazer trabalho aprovado exige uma tarefa nova."
+  },
+  "en": {
+   "resumo": "Implements the task state machine (backlog → ready → in progress → testing → review → done, plus blocked and cancelled) and the transactional transition. Changing state writes, in a single transaction, the new state, the cycle report, the dispatch and the usage — or nothing.",
+   "porque": "Guarantees R2 (fixed-state lifecycle): no code path writes a status without checking the rule, and the attempts counter is incremented by the system, never by the agent.",
+   "como": [
+    "`Factory.Tasks.StateMachine` is pure: `can?/2`, `check/2`, `targets/1` over the map of legal transitions",
+    "`Factory.Tasks.Transition.apply/3` builds an `Ecto.Multi` with status, cycle, dispatch and N usage rows",
+    "Entering `in_progress` increments `attempts` in the same transaction (`hands_to_builder?/1`)",
+    "The task row is read `FOR UPDATE`, so concurrent transitions on the same task serialize"
+   ],
+   "exemplo": "`done → in_progress` is refused: undoing approved work requires a new task."
+  },
+  "verificar": [
+   "mix test test/factory/tasks/state_machine_test.exs",
+   "mix test test/factory/tasks/transition_test.exs"
+  ],
+  "modulos": [
+   "Factory.Tasks.StateMachine",
+   "Factory.Tasks.Transition"
+  ]
+ },
+ "FAB-402": {
+  "pt": {
+   "resumo": "Cria o escalonador: decide quais tarefas passam a 'pronta' (todas as dependências concluídas) e em que ordem a fila é despachada. Também cria a equipe de especialistas versionada e a regra que decide quem constrói cada tarefa: o papel genérico mais, opcionalmente, um especialista.",
+   "porque": "Tira do modelo decisões que cabem num teste (promoção e ordem) e mantém a disciplina do papel sempre presente, com o especialista apenas acrescentando conhecimento de domínio.",
+   "como": [
+    "`Factory.Tasks.Scheduler.promote/1`: dependência cancelada só conta se todas as substitutas estiverem satisfeitas; bloqueada nunca conta",
+    "`Scheduler.next_steps/2` ordena por prioridade, depois por quantas tarefas abertas cada uma destrava, depois por código",
+    "`Factory.Team.define/2` desativa a versão antiga e insere a nova numa transação (índice único parcial `where: active`)",
+    "`Factory.Team.Resolution.resolve/3` dá dois resultados: papel sozinho ou papel + especialista; especialista inexistente é registrado como defeito"
+   ],
+   "exemplo": "em empate de prioridade, a tarefa que destrava três outras vai antes da que não destrava nenhuma."
+  },
+  "en": {
+   "resumo": "Creates the scheduler: decides which tasks become 'ready' (every dependency done) and in which order the queue is dispatched. Also creates the versioned team of specialists and the rule deciding who builds each task: the generic role plus, optionally, a specialist.",
+   "porque": "Takes away from the model decisions that fit in a test (promotion and order), and keeps the role's discipline always present, with the specialist only adding domain knowledge.",
+   "como": [
+    "`Factory.Tasks.Scheduler.promote/1`: a cancelled dependency counts only if every replacement is satisfied; a blocked one never counts",
+    "`Scheduler.next_steps/2` orders by priority, then by how many open tasks each unblocks, then by code",
+    "`Factory.Team.define/2` deactivates the old version and inserts the new one in one transaction (partial unique index `where: active`)",
+    "`Factory.Team.Resolution.resolve/3` has two outcomes: role alone or role + specialist; an unknown specialist is recorded as a defect"
+   ],
+   "exemplo": "on a priority tie, the task that unblocks three others goes before one that unblocks none."
+  },
+  "verificar": [
+   "mix test test/factory/tasks/scheduler_test.exs",
+   "mix test test/factory/team/resolution_test.exs"
+  ],
+  "modulos": [
+   "Factory.Tasks.Scheduler",
+   "Factory.Team",
+   "Factory.Team.Resolution"
+  ]
+ },
+ "FAB-403": {
+  "pt": {
+   "resumo": "Executa sozinho, antes de gastar um despacho de agente, todo critério de aceite que tem comando (`verify:`). Só roda binários de uma lista permitida e classifica cada falha: comando quebrado, problema de ambiente ou entrega errada. A suíte de testes do projeto entra sempre como critério implícito.",
+   "porque": "Separa 'o comando está errado' de 'a entrega está errada': sem isso, o construtor — que não pode mudar critérios — seria despachado de novo para consertar o que já estava certo, queimando ciclos.",
+   "como": [
+    "`Factory.Criteria.run/3` executa; comandos repetidos rodam uma vez e o segundo vira espelho",
+    "`Factory.Criteria.Allowlist.check/1` é lista permitida (falha fechada): `git` só leitura, `npx` excluído",
+    "`Factory.Criteria.FailureClass.classify/1`: `:broken_tool` e `:environment` não gastam ciclo; `:delivery` gasta; na dúvida, `:delivery`",
+    "`Factory.Criteria.Suite` pega o comando de testes de `_management/ci.json` ou detecta pelo ecossistema (`Factory.Ecosystems`)",
+    "O relatório rotula cada critério e fecha com a linha `Proof levels:`"
+   ],
+   "exemplo": "um critério `git push` é recusado sem rodar; um `mix test` cujo arquivo-alvo não existe conta como entrega reprovada."
+  },
+  "en": {
+   "resumo": "Runs on its own, before spending an agent dispatch, every acceptance criterion that has a command (`verify:`). It only runs binaries from an allowlist and classifies each failure: broken command, environment problem or wrong delivery. The project's test suite is always added as an implicit criterion.",
+   "porque": "Separates 'the command is wrong' from 'the delivery is wrong': otherwise the builder — who may not change criteria — would be dispatched again to fix something already right, burning cycles.",
+   "como": [
+    "`Factory.Criteria.run/3` executes; repeated commands run once and the second becomes a mirror",
+    "`Factory.Criteria.Allowlist.check/1` is an allowlist (fails closed): `git` read-only, `npx` excluded",
+    "`Factory.Criteria.FailureClass.classify/1`: `:broken_tool` and `:environment` spend no cycle; `:delivery` does; when in doubt, `:delivery`",
+    "`Factory.Criteria.Suite` takes the test command from `_management/ci.json` or detects it by ecosystem (`Factory.Ecosystems`)",
+    "The report labels each criterion and closes with a `Proof levels:` line"
+   ],
+   "exemplo": "a `git push` criterion is refused without running; a `mix test` whose target file does not exist counts as a failed delivery."
+  },
+  "verificar": [
+   "mix test test/factory/criteria_test.exs",
+   "mix test test/factory/criteria/failure_class_test.exs",
+   "mix test test/factory/criteria/suite_test.exs"
+  ],
+  "modulos": [
+   "Factory.Criteria",
+   "Factory.Criteria.Allowlist",
+   "Factory.Criteria.FailureClass",
+   "Factory.Criteria.Suite",
+   "Factory.Ecosystems"
+  ]
+ },
+ "FAB-404": {
+  "pt": {
+   "resumo": "Cria os dois portões que toda entrega atravessa: o verificador ('funciona?', executando os critérios) e o revisor ('é o que foi pedido?' e 'está correto?', lendo o diff). Nenhum dos dois recebe ferramenta de escrita.",
+   "porque": "Garante R3 (dois portões independentes): um portão que pode consertar o que reprova deixa de ser portão, e conformidade é julgada separada de defeito.",
+   "como": [
+    "`Factory.Gates.Verifier.judge/1` só aprova se nenhum critério falhou; `:inconclusive` bloqueia — 'não sei' nunca vira 'sim'",
+    "`Factory.Gates.Reviewer.judge/2` reprova por não conformidade mesmo com zero achados",
+    "Achados no formato `[severidade] arquivo:linha — problema`, lidos por `parse_findings/1`",
+    "O módulo do revisor não lê o disco (um teste varre o fonte); só recebe o diff commitado"
+   ],
+   "exemplo": "uma entrega que passa em todos os critérios mas implementa outra coisa sai 'não conforme, zero achados' e volta para execução."
+  },
+  "en": {
+   "resumo": "Creates the two gates every delivery goes through: the verifier ('does it work?', running the criteria) and the reviewer ('is it what was asked?' and 'is it correct?', reading the diff). Neither gets a write tool.",
+   "porque": "Guarantees R3 (two independent gates): a gate that can fix what it rejects is no longer a gate, and conformance is judged separately from defects.",
+   "como": [
+    "`Factory.Gates.Verifier.judge/1` approves only if no criterion failed; `:inconclusive` blocks — 'I don't know' never becomes 'yes'",
+    "`Factory.Gates.Reviewer.judge/2` rejects on nonconformance even with zero findings",
+    "Findings use `[severity] file:line — problem`, read by `parse_findings/1`",
+    "The reviewer module cannot read the disk (a test scans its source); it only receives the committed diff"
+   ],
+   "exemplo": "a delivery passing every criterion but implementing something else comes out 'nonconforming, zero findings' and goes back to execution."
+  },
+  "verificar": [
+   "mix test test/factory/gates_test.exs",
+   "mix test test/factory/gates/reviewer_test.exs"
+  ],
+  "modulos": [
+   "Factory.Gates.Verifier",
+   "Factory.Gates.Reviewer"
+  ]
+ },
+ "FAB-405": {
+  "pt": {
+   "resumo": "Decide COMO refazer uma tarefa reprovada, não só que ela deve ser refeita. Uma escada de quatro degraus escolhe a resposta (modelo mais forte, outro especialista, replanejar, bloquear para o humano) e um diagnóstico define o tamanho do retrabalho (escopo, número de voltas, foco).",
+   "porque": "Garante R4 e R5 (limite de ciclos e autocorreção): cada ciclo muda a estratégia com base num fato gravado (o contador de tentativas), e uma tarefa impossível não gera substitutas para sempre.",
+   "como": [
+    "`Factory.Rework.Ladder.next_step/1`: 1ª falha sobe o modelo; 2ª com o mesmo especialista troca para o genérico reforçado; 3 ciclos → replanejar; de novo → bloquear",
+    "Teto de 12 despachos por tarefa numa rodada como defesa em profundidade",
+    "`Factory.Rework.Diagnosis.diagnose/2` classifica a falha: bloqueio, conformidade, funcional ou localizada",
+    "`Factory.Rework.Policy`: estreito 8 voltas, médio 18, amplo 30"
+   ],
+   "exemplo": "um achado menor com arquivo e linha nomeados gera um retrabalho de 8 voltas só naqueles arquivos, não uma reimplementação."
+  },
+  "en": {
+   "resumo": "Decides HOW to redo a rejected task, not just that it must be redone. A four-step ladder picks the response (stronger model, different specialist, replan, block for the human) and a diagnosis sets the size of the rework (scope, number of turns, focus).",
+   "porque": "Guarantees R4 and R5 (cycle limit and self-correction): each cycle changes strategy based on a recorded fact (the attempts counter), and an impossible task does not spawn replacements forever.",
+   "como": [
+    "`Factory.Rework.Ladder.next_step/1`: 1st failure escalates the model; 2nd under the same specialist switches to the generic reinforced builder; 3 cycles → replan; again → block",
+    "A cap of 12 dispatches per task per round as defence in depth",
+    "`Factory.Rework.Diagnosis.diagnose/2` classifies the failure: blocker, conformance, functional or localized",
+    "`Factory.Rework.Policy`: narrow 8 turns, medium 18, wide 30"
+   ],
+   "exemplo": "a minor finding with a named file and line yields an 8-turn rework on those files only, not a reimplementation."
+  },
+  "verificar": [
+   "mix test test/factory/rework/ladder_test.exs",
+   "mix test test/factory/rework/diagnosis_test.exs"
+  ],
+  "modulos": [
+   "Factory.Rework.Ladder",
+   "Factory.Rework.Diagnosis",
+   "Factory.Rework.Policy"
+  ]
+ },
+ "FAB-406": {
+  "pt": {
+   "resumo": "Implementa o teto de gasto: por rodada e por tarefa. Antes de despachar, o sistema verifica se o gasto acumulado mais a estimativa do próximo trabalho cabe no teto; se não cabe, não começa. Trabalho já em andamento nunca é interrompido.",
+   "porque": "Garante R14 (gasto limitado): interromper um agente no meio custa o mesmo e não entrega nada, então o controle é só não COMEÇAR o que não cabe.",
+   "como": [
+    "`Factory.Budget.check_round/3` compara gasto + estimativa com o teto da rodada",
+    "`Factory.Budget.task_cap/2` é uma fração do teto da rodada; `check_task/2` impede redespachar a mesma tarefa",
+    "`estimate_next_task/1` se calibra pela média por tarefa CONCLUÍDA no próprio job, com padrão declarado na falta de medida",
+    "Módulo puro: nenhuma função enxerga um despacho em andamento"
+   ],
+   "exemplo": "com teto de US$ 20, gasto de US$ 15 e estimativa de US$ 7,82, a próxima tarefa não é iniciada."
+  },
+  "en": {
+   "resumo": "Implements the spending ceiling: per round and per task. Before dispatching, the system checks whether accumulated spend plus the estimate of the next piece of work fits the cap; if not, it does not start. Work in progress is never interrupted.",
+   "porque": "Guarantees R14 (bounded spend): interrupting an agent mid-way costs the same and delivers nothing, so the only control is not STARTING what does not fit.",
+   "como": [
+    "`Factory.Budget.check_round/3` compares spend + estimate with the round cap",
+    "`Factory.Budget.task_cap/2` is a fraction of the round cap; `check_task/2` prevents redispatching the same task",
+    "`estimate_next_task/1` calibrates from the mean cost per COMPLETED task in the same job, with a declared default when unmeasured",
+    "Pure module: no function can see a dispatch in flight"
+   ],
+   "exemplo": "with a US$ 20 cap, US$ 15 spent and a US$ 7.82 estimate, the next task is not started."
+  },
+  "verificar": [
+   "mix test test/factory/budget_test.exs"
+  ],
+  "modulos": [
+   "Factory.Budget"
+  ]
+ },
+ "FAB-407": {
+  "pt": {
+   "resumo": "Cria o planejador: transforma um pedido em linguagem natural num grafo de 8 a 12 tarefas, com áreas, critérios e dependências, gravado no banco numa só transação. Em seguida publica cada tarefa como arquivo markdown e faz o commit com git. `mix factory.plan` é a única entrada humana do sistema.",
+   "porque": "Garante R1 (do pedido às tarefas sem intervenção): plano inválido é recusado antes de tocar o banco, e nunca existe plano parcial.",
+   "como": [
+    "`Factory.Planner.plan/3` extrai o bloco JSON da última mensagem do agente (formato em `priv/doctrine/planner.md`)",
+    "Recusa sem JSON válido, contagem fora de 8..12, área terminando em `/` ou ciclo de dependências",
+    "O código `T-NNN` é atribuído pelo sistema, como status e tentativas",
+    "`Factory.Publishing.Markdown.generate/1` é determinístico byte a byte (listas ordenadas, sem data de geração)",
+    "`Factory.Publishing.Git.commit/3` commita só as áreas + o arquivo da tarefa e recusa se houver mudança fora delas"
+   ],
+   "exemplo": "um pedido que gera um plano com dependência circular é recusado e nenhuma linha é gravada."
+  },
+  "en": {
+   "resumo": "Creates the planner: turns a natural-language request into a graph of 8 to 12 tasks, with areas, criteria and dependencies, written to the database in one transaction. It then publishes each task as a markdown file and commits it with git. `mix factory.plan` is the system's only human entry point.",
+   "porque": "Guarantees R1 (from request to tasks without intervention): an invalid plan is refused before touching the database, and there is never a partial plan.",
+   "como": [
+    "`Factory.Planner.plan/3` extracts the JSON block from the agent's last message (format in `priv/doctrine/planner.md`)",
+    "Refuses missing JSON, a count outside 8..12, an area ending in `/` or a dependency cycle",
+    "The `T-NNN` code is assigned by the system, like status and attempts",
+    "`Factory.Publishing.Markdown.generate/1` is byte-for-byte deterministic (sorted lists, no generation date)",
+    "`Factory.Publishing.Git.commit/3` commits only the areas + the task file and refuses if anything changed outside them"
+   ],
+   "exemplo": "a request producing a plan with a circular dependency is refused and no row is written."
+  },
+  "verificar": [
+   "mix test test/factory/planner_test.exs",
+   "mix test test/factory/publishing/markdown_test.exs",
+   "mix test test/factory/publishing/git_test.exs",
+   "mix test test/mix/plan_test.exs"
+  ],
+  "modulos": [
+   "Factory.Planner",
+   "Factory.Publishing.Markdown",
+   "Factory.Publishing.Git",
+   "Factory.Projects.Phase",
+   "Factory.Projects.Milestone",
+   "Mix.Tasks.Factory.Plan"
+  ]
+ },
+ "FAB-408": {
+  "pt": {
+   "resumo": "Marco da etapa 4: um teste permanente em que uma tarefa criada do zero percorre os seis estados, é reprovada de propósito por entrega errada, é refeita com modelo mais forte e conclui. Tudo é gravado por transições transacionais, sem agente real nem rede.",
+   "porque": "Prova R2, R3 e R4 juntos: estados fixos, portão que reprova de verdade e escada de retrabalho que muda de estratégia.",
+   "como": [
+    "1. `ready → in_progress`: `attempts` vira 1; o construtor entrega (`→ in_testing`) sem gastar tentativa",
+    "2. O verificador reprova: o critério exigia a mensagem exata 'invalid message: required field' e veio 'invalid' (`→ in_progress`, `attempts` = 2)",
+    "3. `Factory.Rework.Ladder.next_step/1` responde `:escalate_model`, e o modelo do ciclo 2 difere do ciclo 1",
+    "4. Ciclo 2: teste aprova (`→ in_review`), revisor aprova (`→ done`)",
+    "5. Confere o histórico pronta → execução → teste → execução → teste → revisão → concluída e o custo de cada ciclo consultável separadamente"
+   ],
+   "exemplo": "o teste falha se o modelo do retrabalho for o mesmo da primeira tentativa."
+  },
+  "en": {
+   "resumo": "Stage 4 milestone: a permanent test in which a task created from scratch goes through the six states, is rejected on purpose for a wrong delivery, is reworked on a stronger model and completes. Everything is recorded by transactional transitions, with no real agent or network.",
+   "porque": "Proves R2, R3 and R4 together: fixed states, a gate that really rejects and a rework ladder that changes strategy.",
+   "como": [
+    "1. `ready → in_progress`: `attempts` becomes 1; the builder delivers (`→ in_testing`) without spending an attempt",
+    "2. The verifier rejects: the criterion required the exact message 'invalid message: required field' and got 'invalid' (`→ in_progress`, `attempts` = 2)",
+    "3. `Factory.Rework.Ladder.next_step/1` answers `:escalate_model`, and the cycle-2 model differs from cycle 1",
+    "4. Cycle 2: testing approves (`→ in_review`), reviewer approves (`→ done`)",
+    "5. Checks the history ready → in progress → testing → in progress → testing → review → done, and that each cycle's cost is queryable separately"
+   ],
+   "exemplo": "the test fails if the rework model is the same as the first attempt's."
+  },
+  "verificar": [
+   "mix test test/factory/milestone_e4_test.exs"
+  ],
+  "modulos": [
+   "Factory.Tasks.Transition",
+   "Factory.Rework.Ladder",
+   "Factory.Cost.Pricing",
+   "Factory.Publishing.Markdown"
+  ]
+ },
+ "FAB-501": {
+  "pt": {
+   "resumo": "Cria a árvore de supervisão dos agentes em execução: cada agente é um processo Erlang isolado, com endereço (`{:agent, task_id}` num Registry) e um supervisor dinâmico. A morte de um agente não afeta os outros e é detectada na hora.",
+   "porque": "Garante R13 (tolerância a falhas): o estado do trabalho vive no banco, não no processo, então um agente pode morrer a qualquer momento sem perder nada.",
+   "como": [
+    "`Factory.Agents.Supervisor.start_agent/4` sob `DynamicSupervisor` `:one_for_one`",
+    "Filhos com `restart: :temporary`: reiniciar às cegas criaria um agente sem memória da conversa e pagaria de novo",
+    "Mortes detectadas por `Process.monitor/1` (pega até `:kill`), chamando `on_crash(task_id, reason)`",
+    "`list/0` e `stop_agent/1` consultam e encerram pelo Registry"
+   ],
+   "exemplo": "matar o processo do agente da tarefa 7 não altera os agentes das tarefas 5 e 6, e o chamador recebe o motivo da morte."
+  },
+  "en": {
+   "resumo": "Creates the supervision tree for running agents: each agent is an isolated Erlang process, with an address (`{:agent, task_id}` in a Registry) and a dynamic supervisor. One agent's death does not affect the others and is detected immediately.",
+   "porque": "Guarantees R13 (fault tolerance): work state lives in the database, not in the process, so an agent can die at any time without losing anything.",
+   "como": [
+    "`Factory.Agents.Supervisor.start_agent/4` under a `:one_for_one` `DynamicSupervisor`",
+    "Children use `restart: :temporary`: a blind restart would create an agent with no memory of the conversation and pay again",
+    "Deaths are detected via `Process.monitor/1` (catches even `:kill`), calling `on_crash(task_id, reason)`",
+    "`list/0` and `stop_agent/1` query and stop through the Registry"
+   ],
+   "exemplo": "killing task 7's agent process leaves the agents of tasks 5 and 6 untouched, and the caller receives the death reason."
+  },
+  "verificar": [
+   "mix test test/factory/agents/supervisor_test.exs"
+  ],
+  "modulos": [
+   "Factory.Agents.Supervisor"
+  ]
+ },
+ "FAB-502": {
+  "pt": {
+   "resumo": "Cria a fila durável de trabalho usando Oban, no mesmo PostgreSQL. Enfileirar o próximo passo de uma tarefa e mudar seu estado acontecem na mesma transação, e o trabalho enfileirado sobrevive a reinícios. O worker da fila é quem sobe o agente e aplica o julgamento do papel.",
+   "porque": "Evita o estado impossível 'em execução sem ninguém executando': ou o job e a mudança de estado existem juntos, ou nenhum dos dois.",
+   "como": [
+    "`Factory.Queue.Worker.dispatch/3` enxerta `Transition.append/4` num `Ecto.Multi` que também insere o `Oban.Job`",
+    "Jobs únicos por `{task_id, role}`; `max_attempts: 1` porque retentativa é da escada de retrabalho",
+    "Exceção: parede de cota ou sandbox indisponível reagenda o mesmo job (`{:snooze, s}`) sem gastar tentativa",
+    "`Factory.Queue.Rescue` devolve a `available` jobs presos em `executing` após queda do nó"
+   ],
+   "exemplo": "se o nó cai no meio, o job preso volta à fila sozinho, em vez de ser descartado como esgotado."
+  },
+  "en": {
+   "resumo": "Creates the durable work queue using Oban on the same PostgreSQL. Enqueueing a task's next step and changing its state happen in the same transaction, and queued work survives restarts. The queue worker is what starts the agent and applies the role's judgement.",
+   "porque": "Prevents the impossible state 'in progress with nobody running it': either the job and the state change exist together, or neither does.",
+   "como": [
+    "`Factory.Queue.Worker.dispatch/3` grafts `Transition.append/4` into an `Ecto.Multi` that also inserts the `Oban.Job`",
+    "Jobs unique per `{task_id, role}`; `max_attempts: 1` because retrying belongs to the rework ladder",
+    "Exception: a quota wall or unavailable sandbox reschedules the same job (`{:snooze, s}`) without spending an attempt",
+    "`Factory.Queue.Rescue` moves jobs stuck in `executing` after a node crash back to `available`"
+   ],
+   "exemplo": "if the node dies mid-run, the stuck job returns to the queue on its own instead of being discarded as exhausted."
+  },
+  "verificar": [
+   "mix test test/factory/queue/worker_test.exs"
+  ],
+  "modulos": [
+   "Factory.Queue.Worker",
+   "Factory.Queue.Rescue"
+  ]
+ },
+ "FAB-503": {
+  "pt": {
+   "resumo": "Permite várias tarefas em paralelo sem que duas editem o mesmo arquivo. As áreas declaradas de cada tarefa funcionam como exclusão mútua em dois pontos: antes de despachar e dentro da ferramenta de escrita. O número de agentes simultâneos respeita o perfil da máquina (8 GB).",
+   "porque": "Garante R6 (paralelismo seguro) e R9 (cabe na máquina-alvo): a regra é do sistema, não uma instrução que um prompt mal escrito poderia furar.",
+   "como": [
+    "`Factory.Queue.Exclusion.batch/2` delega a `Scheduler.next_steps/2` e reconfere as garantias, levantando erro se alguma quebrar",
+    "Regra: até N construtores com áreas disjuntas, verificador só com projeto quieto, revisor junto de qualquer um",
+    "`Factory.Queue.Exclusion.allow?/2` é chamada por `Factory.Tools.Files.write/4` e `edit/5`, que devolvem `{:error, :outside_areas}`",
+    "`all_disjoint?/1` checa a interseção arquivo a arquivo"
+   ],
+   "exemplo": "duas tarefas que declaram `lib/a.ex` nunca saem no mesmo lote, e um agente que tenta escrever fora das suas áreas é recusado."
+  },
+  "en": {
+   "resumo": "Allows several tasks in parallel without two editing the same file. Each task's declared areas act as a mutex at two points: before dispatching and inside the write tool. The number of simultaneous agents follows the machine profile (8 GB).",
+   "porque": "Guarantees R6 (safe parallelism) and R9 (fits the target machine): the rule belongs to the system, not to an instruction a badly written prompt could bypass.",
+   "como": [
+    "`Factory.Queue.Exclusion.batch/2` delegates to `Scheduler.next_steps/2` and re-checks the guarantees, raising if one breaks",
+    "Rule: up to N builders with disjoint areas, verifier only on a quiet project, reviewer alongside anything",
+    "`Factory.Queue.Exclusion.allow?/2` is called by `Factory.Tools.Files.write/4` and `edit/5`, which return `{:error, :outside_areas}`",
+    "`all_disjoint?/1` checks the intersection file by file"
+   ],
+   "exemplo": "two tasks declaring `lib/a.ex` are never in the same batch, and an agent writing outside its areas is refused."
+  },
+  "verificar": [
+   "mix test test/factory/queue/exclusion_test.exs"
+  ],
+  "modulos": [
+   "Factory.Queue.Exclusion",
+   "Factory.Tasks.Scheduler",
+   "Factory.Tools.Files"
+  ]
+ },
+ "FAB-504": {
+  "pt": {
+   "resumo": "Trata o limite de uso da assinatura como um estado do sistema, não como falha de um despacho. Ao bater na cota, o sistema pausa as filas sem cancelar nada, dorme até o horário de reabertura anunciado e retoma sozinho.",
+   "porque": "Sob assinatura o recurso escasso é cota, não dinheiro; sem isso, cada parede de cota seria julgada como reprovação e queimaria ciclos.",
+   "como": [
+    "Os adaptadores convertem a resposta do fornecedor em `{:error, {:quota, reopens_at}}`",
+    "`Factory.Quota.hit/2` pausa as filas Oban sem tocar em `oban_jobs`",
+    "Um timer rearma no horário de reabertura + margem; sem horário legível, backoff exponencial limitado",
+    "`reopen_time/1` aceita também texto como '5:30pm (America/Sao_Paulo)'",
+    "O worker reagenda (`snooze`) o despacho que bateu na parede, sem julgá-lo"
+   ],
+   "exemplo": "às 14h a cota acaba com reabertura às 17h30: as filas pausam, os jobs ficam `available` e às 17h30 + margem tudo volta a rodar."
+  },
+  "en": {
+   "resumo": "Treats the subscription usage limit as a system state, not as the failure of one dispatch. When quota runs out, the system pauses the queues without cancelling anything, sleeps until the announced reopening time and resumes on its own.",
+   "porque": "Under a subscription the scarce resource is quota, not money; without this, every quota wall would be judged as a rejection and burn cycles.",
+   "como": [
+    "The adapters turn the vendor response into `{:error, {:quota, reopens_at}}`",
+    "`Factory.Quota.hit/2` pauses the Oban queues without touching `oban_jobs`",
+    "A timer rearms at the reopening time + margin; without a readable time, capped exponential backoff",
+    "`reopen_time/1` also accepts text like '5:30pm (America/Sao_Paulo)'",
+    "The worker snoozes the dispatch that hit the wall instead of judging it"
+   ],
+   "exemplo": "at 2pm quota runs out with reopening at 5:30pm: queues pause, jobs stay `available`, and at 5:30pm + margin everything runs again."
+  },
+  "verificar": [
+   "mix test test/factory/quota_test.exs"
+  ],
+  "modulos": [
+   "Factory.Quota"
+  ]
+ },
+ "FAB-505": {
+  "pt": {
+   "resumo": "Recupera trabalho interrompido quando o sistema sobe depois de uma queda. Cruza o banco (tarefas em estado transitório) com o Registry (agentes vivos) e com o git (arquivos alterados e não commitados), e commita o trabalho parcial em nome da tarefa certa.",
+   "porque": "Garante R13: nada se perde em silêncio. Um portão que morreu deixou veredito desconhecido, nunca favorável, então volta para execução.",
+   "como": [
+    "`Factory.Recovery.reconcile/1` acha tarefas em `in_progress`/`in_testing`/`in_review` sem agente vivo (órfãs)",
+    "`in_progress` fica como está (já é despachável como construtor); teste e revisão voltam a `in_progress` com resultado `recovery`",
+    "Mudanças não commitadas nas áreas da órfã são commitadas via `Factory.Publishing.Git.commit/3`",
+    "Sempre devolve um relatório, mesmo vazio: limpeza que só fala quando acha algo não se distingue de uma quebrada"
+   ],
+   "exemplo": "um construtor morto deixou `c.txt` sem commit; na subida, o arquivo é commitado com mensagem que cita a tarefa e 'recovery'."
+  },
+  "en": {
+   "resumo": "Recovers interrupted work when the system starts after a crash. It crosses the database (tasks in a transient state) with the Registry (live agents) and git (changed, uncommitted files), and commits partial work on behalf of the right task.",
+   "porque": "Guarantees R13: nothing is lost silently. A gate that died left an unknown verdict, never a favourable one, so it goes back to execution.",
+   "como": [
+    "`Factory.Recovery.reconcile/1` finds tasks in `in_progress`/`in_testing`/`in_review` with no live agent (orphans)",
+    "`in_progress` stays as it is (already dispatchable as builder); testing and review go back to `in_progress` with outcome `recovery`",
+    "Uncommitted changes in the orphan's areas are committed through `Factory.Publishing.Git.commit/3`",
+    "Always returns a report, even empty: a cleanup that only speaks when it finds something cannot be told apart from a broken one"
+   ],
+   "exemplo": "a dead builder left `c.txt` uncommitted; on startup the file is committed with a message citing the task and 'recovery'."
+  },
+  "verificar": [
+   "mix test test/factory/recovery_test.exs"
+  ],
+  "modulos": [
+   "Factory.Recovery"
+  ]
+ },
+ "FAB-506": {
+  "pt": {
+   "resumo": "Marco da etapa 5: um teste permanente com processos reais em que três agentes rodam ao mesmo tempo, um deles é morto no meio e os outros dois seguem. A tarefa morta volta à fila com o motivo, e o trabalho parcial dela é recuperado.",
+   "porque": "Prova R6 e R13 pela composição: supervisor, exclusão por áreas, recuperação e cota funcionam juntos, não só cada um na sua suíte.",
+   "como": [
+    "1. `Queue.Exclusion.batch/2` libera 3 construtores com áreas disjuntas; o Registry confirma os três em voo",
+    "2. A e B esperam um sinal; C escreve trabalho parcial em `c.txt` e trava — e é morto com `stop_agent/1`",
+    "3. A e B chegam a `in_testing`; C volta à fila com motivo, em `in_progress`, despachável como construtor",
+    "4. Nenhum consumo perdido (1 linha para A e B, 0 para C); `Recovery.reconcile/1` commita `c.txt` citando a tarefa",
+    "5. Segundo teste: um erro de cota injetado pausa as filas, o job continua `available` e o rearme retoma"
+   ],
+   "exemplo": "depois da recuperação, `git status` do projeto fica vazio: nenhum arquivo sem dono."
+  },
+  "en": {
+   "resumo": "Stage 5 milestone: a permanent test with real processes in which three agents run at once, one is killed midway and the other two carry on. The killed task returns to the queue with a reason, and its partial work is recovered.",
+   "porque": "Proves R6 and R13 through composition: supervisor, area exclusion, recovery and quota work together, not only each in its own suite.",
+   "como": [
+    "1. `Queue.Exclusion.batch/2` releases 3 builders with disjoint areas; the Registry confirms all three in flight",
+    "2. A and B wait for a signal; C writes partial work to `c.txt` and hangs — and is killed with `stop_agent/1`",
+    "3. A and B reach `in_testing`; C returns to the queue with a reason, in `in_progress`, dispatchable as builder",
+    "4. No usage lost (1 row for A and B, 0 for C); `Recovery.reconcile/1` commits `c.txt` citing the task",
+    "5. Second test: an injected quota error pauses the queues, the job stays `available` and the rearm resumes"
+   ],
+   "exemplo": "after recovery the project's `git status` is empty: no ownerless file."
+  },
+  "verificar": [
+   "mix test test/factory/milestone_e5_test.exs"
+  ],
+  "modulos": [
+   "Factory.Agents.Supervisor",
+   "Factory.Queue.Exclusion",
+   "Factory.Recovery",
+   "Factory.Quota",
+   "Factory.Queue.Worker"
+  ]
+ },
+ "FAB-601": {
+  "pt": {
+   "resumo": "Investigação (spike) para escolher onde gerar os embeddings da memória: modelo local em processo, servidor local Ollama ou serviço pago. Mediu memória e tempo e escolheu o Ollama com `embeddinggemma` como padrão. A dimensão da coluna de vetores no banco passou a ser conferida contra o embedder configurado.",
+   "porque": "Garante R9 (roda numa máquina de 8 GB): o embedding é a única peça pesada do projeto, e a escolha foi feita com números medidos.",
+   "como": [
+    "`Factory.Embedder.Ollama` (padrão): prefixos diferentes para documento e consulta, exigidos pelo `embeddinggemma`",
+    "`Factory.Embedder.Local` (Bumblebee): ~220 MB residentes; sem binário EXLA no Windows, então só atrás de `FACTORY_EMBEDDER_LOCAL=1`",
+    "`Factory.Embedder.Service`: HTTP para serviço externo, deixado sem configuração",
+    "`Factory.Memory.Dimension.check/0` compara a coluna `chunks.embedding` com o embedder; `align!/0` corrige",
+    "Todo vetor devolvido é conferido: dimensão errada vira `{:error, {:invalid_dimension, ...}}`"
+   ],
+   "exemplo": "trocar de um embedder de 384 para um de 768 dimensões é detectado por `check/0` antes de qualquer gravação."
+  },
+  "en": {
+   "resumo": "Spike to choose where memory embeddings are generated: an in-process local model, a local Ollama server or a paid service. It measured memory and time and picked Ollama with `embeddinggemma` as the default. The dimension of the database vector column is now checked against the configured embedder.",
+   "porque": "Guarantees R9 (runs on an 8 GB machine): embedding is the only heavy piece of the design, and the choice was made from measured numbers.",
+   "como": [
+    "`Factory.Embedder.Ollama` (default): different prefixes for documents and queries, required by `embeddinggemma`",
+    "`Factory.Embedder.Local` (Bumblebee): ~220 MB resident; no EXLA binary on Windows, so only behind `FACTORY_EMBEDDER_LOCAL=1`",
+    "`Factory.Embedder.Service`: HTTP to an external service, left unconfigured",
+    "`Factory.Memory.Dimension.check/0` compares the `chunks.embedding` column with the embedder; `align!/0` fixes it",
+    "Every returned vector is checked: a wrong dimension becomes `{:error, {:invalid_dimension, ...}}`"
+   ],
+   "exemplo": "switching from a 384- to a 768-dimension embedder is detected by `check/0` before any write."
+  },
+  "verificar": [
+   "mix test test/factory/embedder/ollama_test.exs",
+   "mix test test/factory/embedder/service_test.exs",
+   "mix test test/factory/memory/dimension_test.exs",
+   "mix factory.syntax priv/probes/ollama_real.exs"
+  ],
+  "modulos": [
+   "Factory.Embedder.Ollama",
+   "Factory.Embedder.Local",
+   "Factory.Embedder.Service",
+   "Factory.Memory.Dimension"
+  ]
+ },
+ "FAB-602": {
+  "pt": {
+   "resumo": "Ingestão da memória: quebra o histórico do projeto (decisões, achados de revisão, relatórios de verificação, tarefas concluídas) em trechos por seção do markdown e grava cada trecho com seu embedding. Não indexa código — isso já é papel do índice denso.",
+   "porque": "Dá ao agente acesso ao que já foi decidido no projeto, a custo baixo: só trechos novos ou alterados são reprocessados.",
+   "como": [
+    "`Factory.Memory.Ingestion.split/1` corta em cada título `#`..`######`, nunca dentro de bloco de código",
+    "`process/3` compara o sha256 de cada trecho (`Factory.Memory.Chunk.hash/1`) e só embeda o que mudou",
+    "Todos os trechos novos de uma passada vão numa única chamada `embed/1`",
+    "`source` identifica arquivo e seção, ex.: `_management/DECISIONS.md#6.2`"
+   ],
+   "exemplo": "reingerir o mesmo `DECISIONS.md` sem alterações não cria nenhum trecho novo."
+  },
+  "en": {
+   "resumo": "Memory ingestion: splits the project history (decisions, review findings, verification reports, finished tasks) into chunks by markdown section and stores each chunk with its embedding. It does not index code — the dense index already does that.",
+   "porque": "Gives the agent access to what was already decided in the project at low cost: only new or changed chunks are reprocessed.",
+   "como": [
+    "`Factory.Memory.Ingestion.split/1` cuts at every `#`..`######` heading, never inside a code block",
+    "`process/3` compares each chunk's sha256 (`Factory.Memory.Chunk.hash/1`) and only embeds what changed",
+    "All new chunks of one pass go in a single `embed/1` call",
+    "`source` identifies file and section, e.g. `_management/DECISIONS.md#6.2`"
+   ],
+   "exemplo": "re-ingesting the same unchanged `DECISIONS.md` creates no new chunk."
+  },
+  "verificar": [
+   "mix test test/factory/memory/ingestion_test.exs"
+  ],
+  "modulos": [
+   "Factory.Memory.Ingestion",
+   "Factory.Memory.Chunk"
+  ]
+ },
+ "FAB-603": {
+  "pt": {
+   "resumo": "Busca na memória do projeto em três modos: por significado (vetor), por termo exato (texto completo do Postgres) e híbrido, que funde os dois rankings por Reciprocal Rank Fusion. O híbrido é o padrão, escolhido por medição.",
+   "porque": "Vetores perdem nomes próprios (como o nome de uma opção) e busca textual perde sinônimos; um cobre a lacuna do outro.",
+   "como": [
+    "`Factory.Memory.Search.search/3` com `mode: :vector | :text | :hybrid`; cada modo é uma única consulta SQL",
+    "CTE `MATERIALIZED` filtra por `project_id` ANTES da distância vetorial, para o índice HNSW não devolver menos resultados",
+    "O termo é embedado como CONSULTA (`Factory.Embedder.embed_query/2`), não como documento",
+    "Medido: recall@8 híbrido 0,667, vetor 0,619, texto 0,048"
+   ],
+   "exemplo": "uma busca por `--require` acha a decisão certa pelo texto, mesmo que o embedding não saiba o que a opção significa."
+  },
+  "en": {
+   "resumo": "Searches project memory in three modes: by meaning (vector), by exact term (Postgres full text) and hybrid, which fuses both rankings with Reciprocal Rank Fusion. Hybrid is the default, chosen by measurement.",
+   "porque": "Vectors miss proper names (like an option name) and text search misses synonyms; each covers the other's gap.",
+   "como": [
+    "`Factory.Memory.Search.search/3` with `mode: :vector | :text | :hybrid`; each mode is a single SQL statement",
+    "A `MATERIALIZED` CTE filters by `project_id` BEFORE vector distance, so the HNSW index does not return fewer results",
+    "The term is embedded as a QUERY (`Factory.Embedder.embed_query/2`), not as a document",
+    "Measured: recall@8 hybrid 0.667, vector 0.619, text 0.048"
+   ],
+   "exemplo": "a search for `--require` finds the right decision through text, even though the embedding does not know what the option means."
+  },
+  "verificar": [
+   "mix test test/factory/memory/search_test.exs"
+  ],
+  "modulos": [
+   "Factory.Memory.Search"
+  ]
+ },
+ "FAB-604": {
+  "pt": {
+   "resumo": "Monta o bloco de contexto recuperado: os melhores trechos do histórico do projeto, cada um com a fonte citada, para anexar ao despacho do agente. O bloco entra depois da parte cacheada do prompt e, sem trechos, o prompt não muda.",
+   "porque": "Garante R7 (o agente usa a memória do projeto com fonte): a citação permite conferir de onde veio a informação, e a posição preserva o cache.",
+   "como": [
+    "`Factory.Memory.Context.build/3` busca e limita a `max_chunks/0` trechos e `max_bytes/0` bytes",
+    "O corte é sempre por trechos inteiros, do fim da lista; o primeiro (mais relevante) sempre entra",
+    "`format/1` escreve a fonte de cada trecho; `append/2` só concatena ao prefixo, nunca o altera",
+    "`Factory.Dispatch.build/4` chama a memória por padrão (`memory: false` desliga)"
+   ],
+   "exemplo": "um trecho aparece como 'fonte: `_management/DECISIONS.md#6.2 — the database is the truth`' seguido do texto."
+  },
+  "en": {
+   "resumo": "Builds the retrieved-context block: the best chunks of the project history, each citing its source, to attach to the agent's dispatch. The block goes after the cached part of the prompt, and with no chunks the prompt is unchanged.",
+   "porque": "Guarantees R7 (the agent uses project memory with sources): the citation lets anyone check where the information came from, and the position preserves the cache.",
+   "como": [
+    "`Factory.Memory.Context.build/3` searches and caps at `max_chunks/0` chunks and `max_bytes/0` bytes",
+    "Cuts are always whole chunks from the end of the list; the first (most relevant) is always included",
+    "`format/1` writes each chunk's source; `append/2` only concatenates to the prefix, never alters it",
+    "`Factory.Dispatch.build/4` calls memory by default (`memory: false` turns it off)"
+   ],
+   "exemplo": "a chunk shows up as 'source: `_management/DECISIONS.md#6.2 — the database is the truth`' followed by its text."
+  },
+  "verificar": [
+   "mix test test/factory/memory/context_test.exs"
+  ],
+  "modulos": [
+   "Factory.Memory.Context"
+  ]
+ },
+ "FAB-605": {
+  "pt": {
+   "resumo": "Avalia a qualidade da busca com um conjunto fixo de perguntas de resposta conhecida, sobre um corpus de histórico de exemplo. Calcula recall@8, recall@1 e MRR para cada modo, e desliga o bloco de memória quando a busca fica abaixo da linha de base.",
+   "porque": "Memória ruim é pior que nenhuma: contexto errado leva o agente a decidir errado com confiança. A medição também justifica o modo híbrido como padrão.",
+   "como": [
+    "`Factory.Memory.Evaluation` (em `priv/evaluation/questions.exs`) guarda o gabarito de perguntas e respostas esperadas",
+    "Corpus de teste em `test/support/fixtures/evaluation_corpus/` (decisões, guia, progresso, tarefas)",
+    "`measure_all_modes/2` mede os três modos; `baseline/2` é a linha de base só por palavra-chave",
+    "`build_safe_context/3` desliga o bloco quando `below_baseline?/2` é verdadeiro ou a busca dá erro"
+   ],
+   "exemplo": "se o recall@8 cair abaixo da linha de base, o despacho segue sem bloco de memória em vez de mandar trechos irrelevantes."
+  },
+  "en": {
+   "resumo": "Evaluates search quality with a fixed set of questions with known answers, over a sample history corpus. It computes recall@8, recall@1 and MRR for each mode, and switches the memory block off when search falls below the baseline.",
+   "porque": "Bad memory is worse than none: wrong context leads the agent to decide wrongly with confidence. The measurement also justifies hybrid as the default mode.",
+   "como": [
+    "`Factory.Memory.Evaluation` (in `priv/evaluation/questions.exs`) holds the answer key of questions and expected answers",
+    "Test corpus in `test/support/fixtures/evaluation_corpus/` (decisions, guide, progress, tasks)",
+    "`measure_all_modes/2` measures the three modes; `baseline/2` is the keyword-only baseline",
+    "`build_safe_context/3` switches the block off when `below_baseline?/2` is true or search errors"
+   ],
+   "exemplo": "if recall@8 drops below the baseline, the dispatch goes out with no memory block instead of irrelevant chunks."
+  },
+  "verificar": [
+   "mix test test/factory/memory/evaluation_test.exs"
+  ],
+  "modulos": [
+   "Factory.Memory.Evaluation",
+   "Factory.Memory.Search",
+   "Factory.Memory.Context"
+  ]
+ },
+ "FAB-606": {
+  "pt": {
+   "resumo": "Marco da etapa 6, AINDA NÃO ATINGIDO (bloqueado): observar um agente real recebendo o bloco de memória e citando a decisão anterior com a fonte certa, em vez de decidir de novo. Todas as peças existem e estão testadas, mas o caminho real ainda não as liga.",
+   "porque": "Provaria R7 com o modelo real. Está bloqueado porque a fila (`Factory.Queue.Worker`) monta a mensagem do agente sem o bloco de memória.",
+   "como": [
+    "Bloqueio concreto: `Factory.Dispatch.build/4` anexa a memória em `prefix.text`",
+    "Mas `Worker.initial_message/2` junta só `prefix.blocks`, descartando o texto com a memória",
+    "Resultado: no despacho real o agente nunca recebe o bloco, então o marco não pode ser observado",
+    "Para destravar: o worker usar o texto completo e rodar o probe com um agente real",
+    "Nenhum arquivo foi entregue para este marco"
+   ]
+  },
+  "en": {
+   "resumo": "Stage 6 milestone, NOT YET ACHIEVED (blocked): observe a real agent receiving the memory block and citing the earlier decision with the right source, instead of deciding again. Every piece exists and is tested, but the real path does not wire them together yet.",
+   "porque": "It would prove R7 with the real model. It is blocked because the queue (`Factory.Queue.Worker`) builds the agent's message without the memory block.",
+   "como": [
+    "Concrete blocker: `Factory.Dispatch.build/4` appends memory to `prefix.text`",
+    "But `Worker.initial_message/2` joins only `prefix.blocks`, discarding the text that carries the memory",
+    "Result: in a real dispatch the agent never receives the block, so the milestone cannot be observed",
+    "To unblock: the worker must use the full text, then run the probe with a real agent",
+    "No files have been delivered for this milestone"
+   ]
+  },
+  "verificar": [],
+  "modulos": [
+   "Factory.Queue.Worker",
+   "Factory.Dispatch",
+   "Factory.Memory.Context"
+  ]
+ },
+ "FAB-701": {
+  "pt": {
+   "resumo": "Cria o barramento de eventos do motor: todo despacho emite início, cada volta (com tokens e custo), fim, mudança de estado de tarefa e parede/rearme de cota. A tela assina esses eventos e recebe tudo sem tocar no motor.",
+   "porque": "A contabilidade não depende de alguém lembrar de registrar, e a tela lê exatamente os mesmos eventos que o motor produz.",
+   "como": [
+    "`Factory.Events` emite via `:telemetry.execute/3` (`dispatch_start/1`, `dispatch_turn/2`, `dispatch_stop/1`, `task_transition/1`, `quota_hit/1`)",
+    "`dispatch_turn/2` dispara a cada volta, então o dinheiro gasto fica registrado mesmo se o despacho for cortado",
+    "`Factory.Telemetry.attach/0` liga um único handler que repassa cada evento ao Phoenix.PubSub",
+    "Assinantes usam `Factory.Events.subscribe/0`"
+   ],
+   "exemplo": "cada volta do agente publica `[:factory, :dispatch, :turn]` com tokens de entrada, de cache e de saída e `cost_usd`."
+  },
+  "en": {
+   "resumo": "Creates the engine's event bus: every dispatch emits start, each turn (with tokens and cost), stop, task state changes and quota hit/rearm. The UI subscribes to these events and receives everything without touching the engine.",
+   "porque": "Accounting does not depend on someone remembering to record it, and the UI reads exactly the events the engine produces.",
+   "como": [
+    "`Factory.Events` emits through `:telemetry.execute/3` (`dispatch_start/1`, `dispatch_turn/2`, `dispatch_stop/1`, `task_transition/1`, `quota_hit/1`)",
+    "`dispatch_turn/2` fires every turn, so money spent stays recorded even if the dispatch is cut",
+    "`Factory.Telemetry.attach/0` attaches a single handler that forwards each event to Phoenix.PubSub",
+    "Subscribers use `Factory.Events.subscribe/0`"
+   ],
+   "exemplo": "each agent turn publishes `[:factory, :dispatch, :turn]` with input, cache and output tokens and `cost_usd`."
+  },
+  "verificar": [
+   "mix test test/factory/events_test.exs"
+  ],
+  "modulos": [
+   "Factory.Events",
+   "Factory.Telemetry"
+  ]
+ },
+ "FAB-702": {
+  "pt": {
+   "resumo": "Cria as duas telas web ao vivo (Phoenix LiveView): o quadro de tarefas de um projeto, agrupado pelos estados do pipeline, e o console, que mostra os agentes em execução, o custo de cada volta e por tarefa, e o estado da cota.",
+   "porque": "Garante R8 (acompanhar o trabalho em tempo real com custo): o operador vê o que está acontecendo sem consultar o banco nem os logs.",
+   "como": [
+    "`FactoryWeb.BoardLive` assina `Factory.Events` e recarrega só quando uma tarefa muda de estado — sem polling",
+    "`FactoryWeb.ConsoleLive` lista agentes em voo por `Factory.Agents.Supervisor.list/0`, com atualização periódica",
+    "Custo por tarefa somado de `Factory.Tasks.Usage`, mostrando entrada / escrita de cache / leitura de cache / saída",
+    "Parede de cota acompanhada pelos eventos `quota hit`/`rearm`"
+   ],
+   "exemplo": "quando uma tarefa passa de teste para revisão, o cartão muda de coluna no quadro sem recarregar a página."
+  },
+  "en": {
+   "resumo": "Creates the two live web screens (Phoenix LiveView): a project's task board, grouped by pipeline state, and the console, showing agents in flight, the cost of each turn and per task, and the quota state.",
+   "porque": "Guarantees R8 (follow the work in real time with cost): the operator sees what is happening without querying the database or logs.",
+   "como": [
+    "`FactoryWeb.BoardLive` subscribes to `Factory.Events` and reloads only when a task changes state — no polling",
+    "`FactoryWeb.ConsoleLive` lists agents in flight through `Factory.Agents.Supervisor.list/0`, with a periodic refresh",
+    "Cost per task summed from `Factory.Tasks.Usage`, showing input / cache write / cache read / output",
+    "Quota wall followed through the `quota hit`/`rearm` events"
+   ],
+   "exemplo": "when a task moves from testing to review, its card changes column on the board without a page reload."
+  },
+  "verificar": [
+   "mix test test/factory_web/live/board_live_test.exs",
+   "mix test test/factory_web/live/console_live_test.exs"
+  ],
+  "modulos": [
+   "FactoryWeb.BoardLive",
+   "FactoryWeb.ConsoleLive"
+  ]
+ },
+ "FAB-703": {
+  "pt": {
+   "resumo": "Adiciona à tela os botões Parar e Retomar de uma tarefa. Parar encerra só o processo supervisionado daquela tarefa; Retomar a devolve à fila, commitando antes o trabalho parcial feito nas suas áreas.",
+   "porque": "Dá controle humano sem perder trabalho e sem punir a tarefa: uma parada do operador nunca gasta um ciclo.",
+   "como": [
+    "`FactoryWeb.Components.Controls` compõe dois mecanismos já testados",
+    "Parar = `Factory.Agents.Supervisor.stop_agent/1` + evento com motivo `:stopped_by_operator`, sem passar por `Transition`",
+    "Retomar = `Factory.Recovery.reconcile/1` restrito a UMA tarefa",
+    "Parar pede confirmação (`request_stop` → `confirm_stop`)"
+   ],
+   "exemplo": "parar a tarefa 7 não toca nas tarefas 5 e 6, e o contador de tentativas da 7 continua igual."
+  },
+  "en": {
+   "resumo": "Adds Stop and Resume buttons for a task to the UI. Stop kills only that task's supervised process; Resume returns it to the queue, first committing the partial work done in its areas.",
+   "porque": "Gives human control without losing work and without penalising the task: an operator stop never spends a cycle.",
+   "como": [
+    "`FactoryWeb.Components.Controls` composes two already-tested mechanisms",
+    "Stop = `Factory.Agents.Supervisor.stop_agent/1` + an event with reason `:stopped_by_operator`, without going through `Transition`",
+    "Resume = `Factory.Recovery.reconcile/1` scoped to ONE task",
+    "Stop asks for confirmation (`request_stop` → `confirm_stop`)"
+   ],
+   "exemplo": "stopping task 7 leaves tasks 5 and 6 untouched, and task 7's attempts counter stays the same."
+  },
+  "verificar": [
+   "mix test test/factory_web/controls_test.exs"
+  ],
+  "modulos": [
+   "FactoryWeb.Components.Controls",
+   "Factory.Agents.Supervisor",
+   "Factory.Recovery"
+  ]
+ },
+ "FAB-704": {
+  "pt": {
+   "resumo": "Cria o piloto automático: encadeia rodadas de trabalho sozinho até um critério de parada. Ligá-lo exige dois freios — teto de gasto total e número máximo de rodadas — e a decisão de continuar, dormir ou parar é uma função pura testada.",
+   "porque": "Permite operar sem intervenção com gasto limitado. Desligar nunca corta trabalho em andamento, porque a decisão só é consultada ENTRE rodadas.",
+   "como": [
+    "`Factory.Autopilot.Decision.enable/2` exige os dois freios",
+    "`decide/1` em ordem fixa: desligado → cota (dorme) → sem tarefa → replanejamento → 2 rodadas sem concluir → falha → teto → máximo de rodadas",
+    "`Factory.Autopilot.Server.build_round/1` usa o mesmo caminho do botão (`Exclusion.batch/2` + `Worker.dispatch/3`)",
+    "Estado persistido em JSON por projeto, sobrevive a reinício; `FactoryWeb.Components.Autopilot` é só a vista"
+   ],
+   "exemplo": "ao bater a cota, o piloto dorme até o horário de reabertura e rearma, em vez de contar a rodada como 'sem progresso'."
+  },
+  "en": {
+   "resumo": "Creates the autopilot: chains work rounds on its own until a stop criterion. Enabling it requires two brakes — a total spend cap and a maximum number of rounds — and the continue/sleep/stop decision is a tested pure function.",
+   "porque": "Allows unattended operation with bounded spend. Disabling never cuts work in flight, because the decision is only consulted BETWEEN rounds.",
+   "como": [
+    "`Factory.Autopilot.Decision.enable/2` requires both brakes",
+    "`decide/1` in fixed order: disabled → quota (sleep) → no task → replanning → 2 rounds finishing nothing → failure → spend cap → max rounds",
+    "`Factory.Autopilot.Server.build_round/1` uses the same path as the button (`Exclusion.batch/2` + `Worker.dispatch/3`)",
+    "State persisted as JSON per project, survives restarts; `FactoryWeb.Components.Autopilot` is only the view"
+   ],
+   "exemplo": "on a quota hit the autopilot sleeps until the reopening time and rearms, instead of counting the round as 'no progress'."
+  },
+  "verificar": [
+   "mix test test/factory/autopilot/decision_test.exs",
+   "mix test test/factory/autopilot/server_test.exs"
+  ],
+  "modulos": [
+   "Factory.Autopilot.Decision",
+   "Factory.Autopilot.Server",
+   "FactoryWeb.Components.Autopilot"
+  ]
+ },
+ "FAB-705": {
+  "pt": {
+   "resumo": "Cria a trilha genérica, para entregas que não são código (apresentação, documento, análise de dados). O domínio do projeto escolhe a trilha, e todo critério de aceite precisa sair rotulado com um grau de prova: executado, inspecionado ou julgado.",
+   "porque": "Fora do software não há prova mecânica de graça; o rótulo obrigatório impede o verificador de pular em silêncio o critério que não sabe provar.",
+   "como": [
+    "`Factory.Tracks.for_domain/1`: `nil` ou `\"software\"` → `:software`; qualquer outro valor → `:generic`",
+    "Os papéis (construtor, verificador, revisor) são os mesmos; só muda o agente que serve cada um (`agent/2`)",
+    "`Factory.Criteria.ProofLevel.close/2` recusa fechar sem rótulo em todos os critérios",
+    "`:judged` exige rubrica de itens binários na tarefa; `judged_ratio/1` mede quanto do projeto depende de julgamento"
+   ],
+   "exemplo": "num projeto com domínio `apresentacao`, um critério 'slides legíveis' sem comando só fecha como `[judged]` se a tarefa tiver rubrica."
+  },
+  "en": {
+   "resumo": "Creates the generic track, for deliverables that are not code (presentation, document, data analysis). The project's domain picks the track, and every acceptance criterion must be labelled with a proof level: executed, inspected or judged.",
+   "porque": "Outside software there is no free mechanical proof; the mandatory label stops the verifier from silently skipping a criterion it cannot prove.",
+   "como": [
+    "`Factory.Tracks.for_domain/1`: `nil` or `\"software\"` → `:software`; any other value → `:generic`",
+    "Roles (builder, verifier, reviewer) are the same; only the agent serving each changes (`agent/2`)",
+    "`Factory.Criteria.ProofLevel.close/2` refuses to close without a label on every criterion",
+    "`:judged` requires a rubric of binary items in the task; `judged_ratio/1` measures how much of a project rests on judgement"
+   ],
+   "exemplo": "in a project with domain `presentation`, a 'readable slides' criterion with no command only closes as `[judged]` if the task has a rubric."
+  },
+  "verificar": [
+   "mix test test/factory/tracks_test.exs"
+  ],
+  "modulos": [
+   "Factory.Tracks",
+   "Factory.Criteria.ProofLevel"
+  ]
+ },
+ "FAB-706": {
+  "pt": {
+   "resumo": "Varre o conteúdo que vai ser commitado ou publicado em busca de chaves de API e credenciais, e recusa a publicação quando encontra uma. Falsos positivos conhecidos são liberados um a um, com motivo registrado.",
+   "porque": "O sistema commita sozinho; um segredo vazado fica no histórico do git e é praticamente irreversível — por isso aqui a regra recusa, não só avisa.",
+   "como": [
+    "`Factory.Security.scan/1` recebe a lista `{caminho, conteúdo}` e devolve `:ok` ou `{:refused, achados}` — sem terceira forma",
+    "`patterns/0` lista os padrões de segredo",
+    "`allowed/0` perdoa só o achado exato (arquivo, padrão, trecho, motivo), nunca um padrão inteiro",
+    "O módulo não lê disco nem decide o que será commitado; quem chama passa o conteúdo"
+   ],
+   "exemplo": "um arquivo com algo no formato `sk-ant-...` é recusado antes do commit."
+  },
+  "en": {
+   "resumo": "Scans content about to be committed or published for API keys and credentials, and refuses publication when it finds one. Known false positives are cleared one by one, with a recorded reason.",
+   "porque": "The system commits on its own; a leaked secret stays in git history and is practically irreversible — so here the rule refuses instead of just warning.",
+   "como": [
+    "`Factory.Security.scan/1` takes a `{path, content}` list and returns `:ok` or `{:refused, findings}` — no third shape",
+    "`patterns/0` lists the secret patterns",
+    "`allowed/0` forgives only the exact finding (file, pattern, excerpt, reason), never a whole pattern",
+    "The module does not read the disk or decide what gets committed; the caller passes the content"
+   ],
+   "exemplo": "a file containing something shaped like `sk-ant-...` is refused before the commit."
+  },
+  "verificar": [
+   "mix test test/factory/security_test.exs"
+  ],
+  "modulos": [
+   "Factory.Security"
+  ]
+ },
+ "FAB-707": {
+  "pt": {
+   "resumo": "Liga todas as peças no caminho real: o despacho do agente passa a ser montado a partir da tarefa e da doutrina escrita de cada papel (construtor, verificador, revisor), e a fila sobe o agente real com suas ferramentas, grava o resultado e aplica os portões. Inclui `mix factory.syntax`, que verifica a sintaxe de um arquivo Elixir sem executá-lo.",
+   "porque": "Fecha o laço de ponta a ponta: sem esta integração, cada mecanismo funcionava isolado nos testes mas nenhum agente real passava por todos eles.",
+   "como": [
+    "`Factory.Dispatch.build/4` monta as quatro faixas do prefixo (ferramentas, doutrina, índice, tarefa) a partir da tarefa real",
+    "Doutrinas por papel em `priv/doctrine/builder.md`, `verifier.md` e `reviewer.md`",
+    "`Factory.Agents.Tools.build/4` liga cada nome do catálogo à função real, presa à raiz e às áreas da tarefa",
+    "`Factory.Queue.Worker.perform/1` sobe `Agents.Loop` sob o supervisor e julga por papel",
+    "Risco conhecido e declarado: a ferramenta `run` pode chamar `git` direto, contornando o commit restrito às áreas"
+   ],
+   "exemplo": "`mix factory.syntax priv/probes/confinement_cli.exs` confirma que um probe que gastaria cota ao menos compila, sem rodá-lo."
+  },
+  "en": {
+   "resumo": "Wires every piece into the real path: the agent's dispatch is now assembled from the task and each role's written doctrine (builder, verifier, reviewer), and the queue starts the real agent with its tools, records the result and applies the gates. Includes `mix factory.syntax`, which checks an Elixir file's syntax without running it.",
+   "porque": "Closes the loop end to end: without this integration each mechanism worked in isolation in tests, but no real agent went through all of them.",
+   "como": [
+    "`Factory.Dispatch.build/4` assembles the four prefix bands (tools, doctrine, index, task) from the real task",
+    "Role doctrines in `priv/doctrine/builder.md`, `verifier.md` and `reviewer.md`",
+    "`Factory.Agents.Tools.build/4` binds each catalog name to the real function, bound to the task root and areas",
+    "`Factory.Queue.Worker.perform/1` starts `Agents.Loop` under the supervisor and judges by role",
+    "Known, declared risk: the `run` tool can call `git` directly, bypassing the area-scoped commit"
+   ],
+   "exemplo": "`mix factory.syntax priv/probes/confinement_cli.exs` confirms that a probe which would spend quota at least parses, without running it."
+  },
+  "verificar": [
+   "mix test test/factory/dispatch_test.exs",
+   "mix test test/factory/agents/tools_test.exs",
+   "mix test test/mix/syntax_test.exs",
+   "mix test test/factory/queue/worker_test.exs"
+  ],
+  "modulos": [
+   "Factory.Dispatch",
+   "Factory.Agents.Tools",
+   "Factory.Queue.Worker",
+   "Mix.Tasks.Factory.Syntax"
+  ]
+ },
+ "FAB-708": {
+  "pt": {
+   "resumo": "Marco da etapa 7, EM ANDAMENTO (ainda não atingido): rodar um projeto de teste inteiro, do pedido à entrega, com uma única intervenção humana (o pedido), teto de gasto e custo acompanhado ao vivo na tela. Essa execução completa sem intervenção ainda não foi feita.",
+   "porque": "Provaria R8 e a tese como um todo: o sistema conduz um projeto real sozinho, sob as regras que estão no código.",
+   "como": [
+    "Caminho previsto: `mix factory.plan` gera as tarefas → piloto automático (`Factory.Autopilot.Server`) encadeia rodadas",
+    "Acompanhamento em `FactoryWeb.BoardLive` e `FactoryWeb.ConsoleLive`, com teto em `Factory.Autopilot.Decision`",
+    "Pendente: tarefas corretivas abertas (incluindo a ligação da memória no worker, que bloqueia o FAB-606)",
+    "Pendente: autorização do teto de gasto da execução real, que consome cota",
+    "Nenhum arquivo foi entregue para este marco"
+   ]
+  },
+  "en": {
+   "resumo": "Stage 7 milestone, IN PROGRESS (not yet achieved): run a whole test project, from request to delivery, with a single human intervention (the request), a spending ceiling and cost followed live on screen. That full unattended run has not been executed yet.",
+   "porque": "It would prove R8 and the thesis as a whole: the system drives a real project on its own, under rules that live in the code.",
+   "como": [
+    "Planned path: `mix factory.plan` creates the tasks → autopilot (`Factory.Autopilot.Server`) chains rounds",
+    "Followed on `FactoryWeb.BoardLive` and `FactoryWeb.ConsoleLive`, with the cap in `Factory.Autopilot.Decision`",
+    "Pending: open corrective tasks (including wiring memory into the worker, which blocks FAB-606)",
+    "Pending: authorisation of the spending cap for the real run, which spends quota",
+    "No files have been delivered for this milestone"
+   ]
+  },
+  "verificar": [],
+  "modulos": [
+   "Factory.Autopilot.Server",
+   "Factory.Autopilot.Decision",
+   "FactoryWeb.BoardLive",
+   "FactoryWeb.ConsoleLive",
+   "Mix.Tasks.Factory.Plan"
+  ]
+ }
+}

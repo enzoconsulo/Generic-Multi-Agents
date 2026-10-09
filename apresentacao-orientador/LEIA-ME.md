@@ -2,7 +2,8 @@
 
 | O quê | Onde |
 |---|---|
-| **Apresentação principal** (18 slides, com notas do apresentador) | `apresentacao-principal.pptx` |
+| **Apresentação principal** (19 slides, com notas do apresentador) | `apresentacao-principal.pptx` |
+| **Guia do merge de etapa** (para você ou um chat novo seguir) | `../TCC-MERGE-DE-ETAPA.md` |
 | **Relatório de cada etapa** (Word, 2–3 páginas) | `relatorios-por-etapa/E1…E7.docx` — os mesmos que estão em `docs/etapas/` de cada branch |
 | **Repositório do TCC** (código em inglês, uma branch por etapa) | `projetos/fabrica-tcc/` |
 
@@ -43,10 +44,10 @@ Dentro do repositório:
 | Tempo | Slides | O que mostrar |
 |---|---|---|
 | 1 min | 1–3 | a tese (a regra mora na estrutura) e a régua de 8 critérios |
-| 1 min | 4–6 | o plano em cascata, as branches e o panorama |
-| 5 min | 7–13 | uma etapa por slide — foco na etapa do dia |
-| 2 min | 14–16 | crescimento, retrabalho/custo e os requisitos |
-| 1 min | 17–18 | o que não está pronto e o próximo passo |
+| 1 min | 4–7 | o plano em cascata, as branches, o panorama e onde cada etapa entra no sistema |
+| 5 min | 8–14 | uma etapa por slide: proposta do plano × o que foi entregue — foco na etapa do dia |
+| 2 min | 15–17 | crescimento, retrabalho e os requisitos |
+| 1 min | 18–19 | o que não está pronto e o próximo passo |
 
 Demonstrações (na pasta do repositório, com o Postgres de pé):
 

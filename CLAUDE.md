@@ -19,6 +19,13 @@ RETRABALHO — quando uma reprovação já provou que o modelo do disparo não d
 contra rubrica, e julgamento barato no portão do meio é aprovação falsa. Para trocar o
 modelo da fábrica, use `/model`.
 
+## TCC — apresentação e merge de etapa
+
+O repositório que o orientador vê é `projetos/fabrica-tcc` (código em inglês, uma branch por etapa
+E1–E7, encadeadas). Quando o Enzo pedir para "fazer o commit/merge da etapa EN" ou preparar uma
+apresentação de etapa, **siga `TCC-MERGE-DE-ETAPA.md`** passo a passo. Material da apresentação:
+`apresentacao-orientador/` (`LEIA-ME.md`).
+
 ## Mapa do diretório
 
 ```

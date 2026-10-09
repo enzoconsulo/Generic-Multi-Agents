@@ -173,8 +173,7 @@ def gerar(n, saida):
         if reais:
             ex = sum(x["execucoes"] for x in reais)
             sub = sum(x["subtarefas"] for x in reais)
-            dados += [["Execuções de agente por item de trabalho (média)", f"{ex / sub:.2f}".replace(".", ",") + "  (critério: ≤ 2)"],
-                      ["Custo medido dos agentes (dólar-equivalente da cota)", f"US$ {sum(x['custo_usd'] for x in reais):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")]]
+            dados += [["Execuções de agente por item de trabalho (média)", f"{ex / sub:.2f}".replace(".", ",") + "  (critério: ≤ 2)"]]
         tabela(doc, ["Indicador", "Valor"], dados, [10, 6.5])
         png = grafico(n, cods, os.path.join(tempfile.gettempdir(), f"grafico-e{n}.png"))
         if png:

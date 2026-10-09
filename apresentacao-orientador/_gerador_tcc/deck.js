@@ -176,28 +176,56 @@ const E = (n) => D.etapas.find((e) => e.n === n);
   s.addTable([cab, ...linhas], { x: 0.5, y: 1.15, w: 9, colW: [1.9, 4.2, 1.5, 0.75, 0.65], fontSize: 10, fontFace: THEME.bodyFontFace, color: HEX.dk1, border: { type: "solid", pt: 0.5, color: HEX.lt2 }, valign: "middle", rowH: 0.48 });
 }
 
-// 7–13. Uma por etapa -----------------------------------------------------------------------
+// 7. Onde cada etapa entra no sistema ---------------------------------------------------
+{
+  const s = slide("CONTEUDO", "Panorama");
+  s.addText("Onde cada etapa entra no sistema", { placeholder: "title" });
+  const camadas = [
+    ["Tela", "quadro de tarefas, console ao vivo, piloto automático", 7],
+    ["Motor", "seis estados, fila por dependências, portões, escada de falha, teto de gasto", 4],
+    ["Execução", "um processo por tarefa, fila durável, paralelismo, parede de cota, recuperação", 5],
+    ["Memória", "histórico do projeto, busca híbrida, contexto com fonte", 6],
+    ["Agentes", "laço de ferramentas, confinamento, teto de chamadas, adaptadores do fornecedor", 3],
+    ["Base", "banco e custo, fronteiras com substitutos de teste, verificação, backup", 2],
+  ];
+  camadas.forEach(([nome, desc, n], i) => {
+    const y = 1.12 + i * 0.66, e = E(n);
+    card(s, 0.5, y, 7.6, 0.56, "camada-" + i);
+    txt(s, nome, { x: 0.7, y: y + 0.08, w: 1.4, h: 0.4, fontSize: 15, bold: true, color: C.text2, valign: "middle" });
+    txt(s, desc, { x: 2.1, y: y + 0.08, w: 5.9, h: 0.4, fontSize: 12, valign: "middle" });
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 8.3, y, w: 1.2, h: 0.56, rectRadius: 0.08, fill: { color: ST[e.status].cor }, line: { color: ST[e.status].cor } });
+    txt(s, "E" + n, { x: 8.3, y, w: 1.2, h: 0.56, fontSize: 18, bold: true, color: C.background1, align: "center", valign: "middle" });
+  });
+  s.addNotes("Cada etapa construiu uma camada do sistema, de baixo para cima. A cor da etiqueta é a situação da entrega da etapa.");
+}
+
+// 8–14. Uma por etapa: proposta × entregue -----------------------------------------------
 for (const e of D.etapas) {
   const s = slide("CONTEUDO", "Etapas");
   s.addText(`E${e.n} — ${e.nome}`, { placeholder: "title" });
-  txt(s, e.datas + "  ·  " + e.branch, { x: 0.5, y: 1.0, w: 6, h: 0.3, fontSize: 11, color: C.accent5 });
+  txt(s, e.datas + "  ·  branch " + e.branch, { x: 0.5, y: 1.0, w: 6, h: 0.3, fontSize: 11, color: C.accent5 });
   pill(s, 7.3, 1.0, 2.2, e.status);
-  txt(s, [{ text: "Entrega combinada: ", options: { bold: true } }, { text: e.entrega }], { x: 0.5, y: 1.45, w: 5.6, h: 0.65, fontSize: 13 });
-  txt(s, e.texto.como.slice(0, 4).map((c, i, a) => ({ text: c, options: { bullet: true, breakLine: i < a.length - 1, paraSpaceAfter: 5 } })), { x: 0.5, y: 2.15, w: 5.6, h: 2.4, fontSize: 12 });
+  // Proposta (esquerda)
+  card(s, 0.5, 1.45, 4.2, 2.95, "proposta-" + e.n, C.text2);
+  txt(s, "PROPOSTA DO PLANO", { x: 0.75, y: 1.62, w: 3.7, h: 0.3, fontSize: 11, bold: true, color: C.accent1, charSpacing: 2 });
+  txt(s, e.entrega, { x: 0.75, y: 1.98, w: 3.75, h: 1.5, fontSize: 16, bold: true, color: C.background1, fontFace: THEME.headFontFace });
+  if (e.reqs.length) txt(s, "Requisitos: " + e.reqs.join(" · "), { x: 0.75, y: 3.85, w: 3.7, h: 0.3, fontSize: 11, color: C.background2 });
+  // Entregue (direita)
+  txt(s, "O QUE FOI ENTREGUE", { x: 5.0, y: 1.5, w: 4.5, h: 0.3, fontSize: 11, bold: true, color: C.accent4, charSpacing: 2 });
+  const passo = Math.min(0.36, 2.55 / e.lista.length);
+  e.lista.forEach((t, i) => {
+    const y = 1.88 + i * passo, v = ST[t.status] || ST.in_progress;
+    s.addShape(pres.shapes.OVAL, { x: 5.0, y: y + 0.07, w: 0.18, h: 0.18, fill: { color: v.cor }, line: { color: v.cor } });
+    txt(s, t.titulo.replace(/^MARCO E\d — /, "Marco: "), { x: 5.3, y, w: 4.2, h: passo, fontSize: passo < 0.33 ? 10.5 : 11.5, valign: "middle", bold: t.titulo.startsWith("MARCO") });
+  });
+  // Números e prova (rodapé)
   const c = e.codigo;
-  if (c) {
-    stat(s, 6.4, 1.5, 1.5, e.concluidas + "/" + e.tarefas, "tarefas");
-    stat(s, 8.0, 1.5, 1.5, fmt(c.testes), "testes");
-    stat(s, 6.4, 2.7, 1.5, fmt(c.linhas_lib), "linhas em lib/");
-    stat(s, 8.0, 2.7, 1.5, c.commits.length, "commits");
-  } else {
-    stat(s, 6.4, 1.5, 3.1, e.concluidas + "/" + e.tarefas, "documentos de planejamento");
-    stat(s, 6.4, 2.7, 3.1, "15 + 8", "requisitos + critérios");
-  }
-  card(s, 0.5, 4.6, 9, 0.5, "prova-" + e.n, C.background2);
-  txt(s, [{ text: "Prova: ", options: { bold: true } }, { text: e.texto.prova }], { x: 0.65, y: 4.65, w: 8.7, h: 0.42, fontSize: 10.5, valign: "middle" });
-  const notas = [e.texto.resumo, "Pendente: " + (e.texto.pendente.join(" ") || "nada."), "Próxima: " + e.texto.proxima];
-  s.addNotes(notas.join("\n"));
+  const nums = c ? [[e.concluidas + "/" + e.tarefas, "tarefas"], [fmt(c.testes), "testes"], [c.commits.length, "commits"]] : [[e.concluidas + "/" + e.tarefas, "documentos"], ["15", "requisitos"], ["8", "critérios"]];
+  nums.forEach(([v, r], i) => {
+    txt(s, [{ text: String(v) + " ", options: { bold: true, fontSize: 16, color: C.text2, fontFace: THEME.headFontFace } }, { text: r, options: { fontSize: 11, color: C.accent5 } }], { x: 0.5 + i * 1.45, y: 4.55, w: 1.4, h: 0.35, valign: "middle" });
+  });
+  txt(s, [{ text: "Prova: ", options: { bold: true } }, { text: e.texto.prova }], { x: 4.9, y: 4.5, w: 4.6, h: 0.5, fontSize: 9.5, valign: "middle", color: C.text1 });
+  s.addNotes([e.texto.resumo, "Como: " + e.texto.como.join(" "), "Pendente: " + (e.texto.pendente.join(" ") || "nada."), "Próxima: " + e.texto.proxima].join("\n"));
 }
 
 // 14. Crescimento ----------------------------------------------------------------------------
@@ -215,14 +243,15 @@ for (const e of D.etapas) {
 // 15. Processo -------------------------------------------------------------------------------
 {
   const s = slide("CONTEUDO", "Dados");
-  s.addText("Como o trabalho foi feito: retrabalho e custo", { placeholder: "title" });
+  s.addText("Retrabalho por etapa e commits entregues", { placeholder: "title" });
   const com = D.etapas.filter((e) => e.execucoes_media);
   const base = { y: 1.15, w: 4.4, h: 3.3, barDir: "col", showValue: true, dataLabelPosition: "outEnd", dataLabelFontSize: 10, dataLabelColor: HEX.dk1,
     catAxisLabelColor: HEX.accent5, valAxisHidden: true, valGridLine: { style: "none" }, catGridLine: { style: "none" }, showLegend: false, showTitle: true, titleFontSize: 13, titleColor: HEX.dk2,
     catAxisLabelFontFace: "+mn-lt", dataLabelFontFace: "+mn-lt", titleFontFace: "+mn-lt" };
   s.addChart(pres.charts.BAR, [{ name: "Execuções", labels: com.map((e) => "E" + e.n), values: com.map((e) => e.execucoes_media) }], Object.assign({}, base, { x: 0.5, title: "Execuções de agente por item (limite: 2)", chartColors: [HEX.accent1], dataLabelFormatCode: "0.00" }));
-  s.addChart(pres.charts.BAR, [{ name: "Custo", labels: com.map((e) => "E" + e.n), values: com.map((e) => e.custo_usd) }], Object.assign({}, base, { x: 5.1, title: "Custo medido dos agentes (US$, cota)", chartColors: [HEX.accent4], dataLabelFormatCode: "0" }));
-  txt(s, "Execuções: quantas vezes um agente construiu cada item até ele ser aprovado. Custo: dólar-equivalente da cota da assinatura, medido nas rodadas do painel.", { x: 0.5, y: 4.55, w: 9, h: 0.5, fontSize: 11, color: C.accent5 });
+  const cc = D.etapas.filter((e) => e.codigo);
+  s.addChart(pres.charts.BAR, [{ name: "Commits", labels: cc.map((e) => "E" + e.n), values: cc.map((e) => e.codigo.commits.length) }], Object.assign({}, base, { x: 5.1, title: "Commits por etapa", chartColors: [HEX.accent4], dataLabelFormatCode: "0" }));
+  txt(s, "Execuções: quantas vezes um agente precisou construir cada item até ele ser aprovado pelos dois portões. O critério de desempenho “pouco retrabalho” pede média de até 2.", { x: 0.5, y: 4.55, w: 9, h: 0.5, fontSize: 11, color: C.accent5 });
 }
 
 // 16. Requisitos ------------------------------------------------------------------------------

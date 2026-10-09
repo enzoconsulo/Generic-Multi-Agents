@@ -55,8 +55,8 @@ def main(saida):
             "tarefas": len(tarefas), "concluidas": sum(1 for t in tarefas if t["status"] == "done"),
             "lista": [{"key": t["key"], "titulo": t["pt"]["titulo"], "status": t["status"]} for t in tarefas],
             "codigo": cod,
+            "reqs": sorted({r for t in tarefas for r in t["req"]}, key=lambda x: int(x[1:])),
             "execucoes_media": round(sum(x["execucoes"] for x in reais) / sub, 2) if reais else None,
-            "custo_usd": round(sum(x["custo_usd"] for x in reais), 2),
         })
     req = [{"r": r, "txt": REQ_TXT[r], "status": s, "como": c} for r, (s, c) in REQ_STATUS.items()]
     json.dump({"etapas": etapas, "requisitos": req}, open(saida, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
