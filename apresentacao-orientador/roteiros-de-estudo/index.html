@@ -1,0 +1,61 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roteiros de estudo — TCC</title><style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1f2328;--ink2:#4a5160;--muted:#7a8290;--line:#e3e6eb;--navy:#1b2a41;
+--acc:#2a78d6;--ok:#2a9d8f;--warn:#e9a23b;--bad:#c0392b;--code:#f1f3f6;--ideia:#e8f1fc;--dica:#e6f5f3;
+--atencao:#fdf1e2;--fala:#f1ecfb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121417;--card:#1b1e23;--ink:#eceef1;
+--ink2:#c3c8d0;--muted:#8d95a1;--line:#2c3139;--navy:#9db4d8;--acc:#5b9cf0;--code:#23272e;--ideia:#17263a;
+--dica:#13302c;--atencao:#352812;--fala:#262038}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+.topo{background:#fff;border-bottom:1px solid var(--line);padding:14px 24px 6px}
+.topo img{width:100%;max-width:1150px;display:block;margin:0 auto}
+.nav{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:8px 16px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.nav a{padding:4px 12px;border-radius:99px;text-decoration:none;color:var(--ink2);font-weight:600;font-size:14px;border:1px solid var(--line)}
+.nav a.atual{background:var(--navy);color:#fff;border-color:var(--navy)}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;max-width:1240px;margin:0 auto;padding:24px}
+aside{position:sticky;top:60px;align-self:start;max-height:calc(100vh - 80px);overflow:auto}
+aside h4{margin:0 0 8px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+aside a{display:block;padding:5px 10px;border-radius:8px;color:var(--ink2);text-decoration:none;font-size:14px}
+aside a:hover{background:var(--card)}
+main{min-width:0}
+.hero{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 30px;margin-bottom:22px}
+.hero .k{font-size:13px;letter-spacing:.12em;font-weight:700;color:var(--muted)}
+.hero h1{margin:4px 0 6px;font-size:38px;line-height:1.15;color:var(--navy);font-family:Cambria,Georgia,serif}
+.selo{display:inline-block;padding:4px 14px;border-radius:99px;color:#fff;font-weight:700;font-size:14px}
+.selo.ok{background:var(--ok)}.selo.warn{background:var(--warn)}.selo.bad{background:var(--bad)}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.bloco{border-radius:12px;padding:16px 20px;color:#fff}.bloco small{display:block;font-weight:700;letter-spacing:.08em;font-size:12px;opacity:.9;margin-bottom:6px}
+.bloco b{font-family:Cambria,Georgia,serif;font-size:19px;line-height:1.35}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.tile{background:var(--bg);border-radius:12px;padding:14px 16px}.tile .v{font-size:32px;font-weight:700;color:var(--navy);font-family:Cambria,Georgia,serif;line-height:1}
+.tile .l{color:var(--muted);font-size:13px;margin-top:6px}
+.figs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0 6px}
+.figs figure{margin:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
+.figs img{width:100%;display:block}.figs figcaption{font-size:13px;color:var(--muted);margin-top:4px;text-align:center}
+article{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 34px 30px}
+article h1{display:none}
+article h2{font-size:26px;color:var(--navy);font-family:Cambria,Georgia,serif;margin:40px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+article h2:first-of-type{border-top:0}
+article h3{font-size:19px;margin:28px 0 8px;padding:8px 14px;background:var(--bg);border-radius:10px}
+article h4{font-size:16px;margin:18px 0 6px;color:var(--ink2)}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14.5px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}th{background:var(--bg)}
+code{font-family:Consolas,"Cascadia Mono",monospace;font-size:.9em;background:var(--code);padding:.1em .35em;border-radius:5px}
+pre{background:var(--code);border-radius:10px;padding:14px 16px;overflow:auto;line-height:1.45}pre code{background:none;padding:0}
+.diagrama{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin:14px 0;overflow-x:auto;text-align:center}
+.diagrama pre{background:none}
+.caixa{border-radius:12px;padding:12px 18px;margin:14px 0}.caixa p{margin:4px 0}
+.caixa-rot{font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2)}
+.caixa.ideia{background:var(--ideia)}.caixa.dica{background:var(--dica)}.caixa.atencao{background:var(--atencao)}.caixa.fala{background:var(--fala)}
+.caixa.fala p{font-size:17px;font-style:italic}
+@media (max-width:900px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none}.duas,.figs{grid-template-columns:1fr}.tiles{grid-template-columns:1fr 1fr}article{padding:4px 18px 20px}}
+@media print{.nav,aside{display:none}.layout{display:block}article,.hero{border:0}}
+
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;max-width:1100px;margin:30px auto;padding:0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;text-decoration:none;color:var(--ink)}
+.card:hover{border-color:var(--acc)}.card h3{margin:4px 0 8px;font-family:Cambria,Georgia,serif;font-size:22px;color:var(--navy)}
+.card .k{font-size:12px;letter-spacing:.12em;color:var(--muted);font-weight:700}.card p{color:var(--ink2);font-size:15px}
+h1.t{text-align:center;font-family:Cambria,Georgia,serif;color:var(--navy);margin:36px 16px 4px}p.s{text-align:center;color:var(--muted);margin:0 16px}</style></head>
+<body><h1 class="t">Roteiros de estudo por etapa</h1><p class="s">Fábrica de Software Multi-Agente — material de preparação para as apresentações ao orientador</p>
+<div class="grade"><a class="card" href="E2-fundacao.html"><div class="k">ETAPA 2</div><h3>Fundação do sistema</h3><p>Os testes rodam sem internet e sem consumir o serviço do modelo.</p><span class="selo ok">Entrega aprovada</span></a></div></body></html>
