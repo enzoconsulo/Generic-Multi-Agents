@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart TB
+    subgraph SF["softwarefabrik.io · o vizinho mais próximo"]
+        direction LR
+        a1["pedido"] --> a2["execução<br/>em contêiner"] --> a3["comitê de<br/>6 revisores"] --> a4{{"PESSOA<br/>APROVA"}} --> a5["commit"]
+    end
+    subgraph EU["Este trabalho"]
+        direction LR
+        b1["pedido"] --> b2["plano<br/>e fila"] --> b3["construtor"] --> b4["verificador<br/>funciona?"] --> b5["revisor<br/>é o pedido?"] --> b6["commit"]
+        b4 -. "reprova" .-> b3
+        b5 -. "reprova" .-> b3
+    end
+    SF ~~~ EU
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false},state:{useMaxWidth:false}});</script></body></html>

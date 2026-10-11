@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    A["projeto falso<br/>3 arquivos<br/>+ segredo novo"] --> B["laço com o<br/>CLI real<br/>só escrita"]
+    B --> C["modelo cria<br/>result.txt"]
+    C --> D["grava ciclo, despacho<br/>e consumos<br/>numa transação"]
+    D --> E1["1 · arquivo tem<br/>o segredo?"]
+    D --> E2["2 · uma linha<br/>por volta?"]
+    D --> E3["3 · soma no banco<br/>= soma no laço?"]
+    E1 --> OK(["PROBE OK"])
+    E2 --> OK
+    E3 --> OK
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

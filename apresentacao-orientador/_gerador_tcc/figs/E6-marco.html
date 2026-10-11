@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    H["histórico<br/>do projeto"] --> I["ingestão"] --> S["trechos<br/>no banco"] --> B["busca<br/>híbrida"] --> K["bloco<br/>com fonte"]
+    K -. "falta a ligação" .-> A["mensagem do<br/>agente real"]
+    classDef ok fill:#e6f2e6,stroke:#3a7d44
+    classDef no fill:#fde8e8,stroke:#9b1c1c,color:#9b1c1c
+    class H,I,S,B,K ok
+    class A no
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

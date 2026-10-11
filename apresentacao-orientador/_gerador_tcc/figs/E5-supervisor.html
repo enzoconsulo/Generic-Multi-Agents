@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    S["Supervisor dos agentes<br/>vigia cada um<br/>com um monitor"] --> D["supervisor dinâmico<br/>um por um<br/>sem reinício cego"]
+    D --> A["agente da tarefa A<br/>processo isolado"]
+    D --> B["agente da tarefa B<br/>processo isolado"]
+    D --> C["agente da tarefa C<br/>processo isolado"]
+    C -- "morre" --> X["aviso ao chamador<br/>tarefa e motivo"]
+    X --> Q(["tarefa volta à fila<br/>A e B nem percebem"])
+    classDef morto fill:#fbe3e1,stroke:#c0392b
+    class C,X morto
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

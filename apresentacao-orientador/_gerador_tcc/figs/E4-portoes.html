@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    C["construtor<br/>entrega"] --> V{{"PORTÃO 1 · verificador<br/>funciona?<br/>roda os critérios"}}
+    V -- "reprova" --> C
+    V -- "aprova" --> R{{"PORTÃO 2 · revisor<br/>é o que foi pedido?<br/>está correto?<br/>lê o diff"}}
+    R -- "reprova" --> C
+    R -- "aprova" --> D(["concluída"])
+    classDef g fill:#1f3a5f,color:#fff,stroke:#1f3a5f
+    class V,R g
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart TB
+    subgraph P1["1 · o estado da tarefa órfã"]
+        direction LR
+        V["em execução, teste ou<br/>revisão SEM agente vivo<br/>no registro = órfã"] --> S{"em que<br/>estado?"}
+        S -- "em execução" --> E1["fica como está<br/>já é despachável"]
+        S -- "teste ou revisão" --> E2["volta para execução<br/>motivo: recovery"]
+    end
+    subgraph P2["2 · o trabalho que ela deixou"]
+        direction LR
+        G["há arquivos não<br/>commitados nas<br/>áreas da tarefa?"] -- "sim" --> C["commit em nome da tarefa<br/>T-NNN: recovery after crash"]
+        C --> RP(["relatório<br/>sempre, mesmo vazio"])
+        G -- "não" --> RP
+    end
+    P1 ~~~ P2
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

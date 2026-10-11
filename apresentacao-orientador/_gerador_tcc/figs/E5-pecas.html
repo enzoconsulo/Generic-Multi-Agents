@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    A["1 · Um processo<br/>por tarefa"] --> B["2 · Fila durável<br/>no banco"]
+    B --> C["3 · Paralelo sem<br/>disputar arquivo"]
+    C --> D["4 · Parede de cota<br/>dorme e rearma"]
+    D --> E["5 · Recuperar<br/>trabalho interrompido"]
+    E --> F["Marco<br/>três em voo, um morto"]
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

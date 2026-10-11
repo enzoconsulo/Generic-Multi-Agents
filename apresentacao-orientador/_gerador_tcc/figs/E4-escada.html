@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    F1["1ª falha"] --> S1["1 · sobe o modelo"]
+    F2["2ª falha com o<br/>mesmo especialista"] --> S2["2 · troca para o<br/>genérico reforçado"]
+    F3["3 ciclos<br/>esgotados"] --> S3["3 · replaneja<br/>a original é cancelada"]
+    F4["esgotou de novo<br/>já replanejada"] --> S4["4 · bloqueia<br/>para o humano"]
+    S1 --> S2 --> S3 --> S4
+    classDef s fill:#e6f2e6,stroke:#3a7d44
+    classDef b fill:#fbe3e1,stroke:#c0392b
+    class S1,S2,S3 s
+    class S4 b
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart TB
+    UI["Tela · Phoenix LiveView<br/>quadro, console, piloto automático"]
+    ENG["Motor<br/>estados, fila, portões, escada de falha, orçamento"]
+    AG["Agentes<br/>laço de ferramentas, confinamento, teto de chamadas"]
+    subgraph B["Fronteiras · trocáveis"]
+        direction LR
+        P["Provider · fala com o modelo<br/>CLI do fornecedor · API · falso"]
+        E["Embedder · texto vira vetor<br/>local · serviço · falso"]
+    end
+    DB[("PostgreSQL<br/>estado, fila,<br/>custo, memória")]
+    UI --> ENG --> AG --> B
+    ENG --> DB
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false},state:{useMaxWidth:false}});</script></body></html>

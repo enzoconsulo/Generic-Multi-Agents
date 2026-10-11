@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    R(["Entrega<br/>reprovada"]) --> C1["1º ciclo<br/>refaz com um<br/>modelo mais forte"]
+    C1 -- "reprovou<br/>de novo" --> C2["2º ciclo<br/>troca o agente<br/>especializado"]
+    C2 -- "reprovou<br/>de novo" --> C3["3º ciclo<br/>quebra ou reescreve<br/>a tarefa"]
+    C3 -- "reprovou<br/>de novo" --> C4{{"4º ciclo<br/>bloqueia e passa<br/>ao humano"}}
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false},state:{useMaxWidth:false}});</script></body></html>

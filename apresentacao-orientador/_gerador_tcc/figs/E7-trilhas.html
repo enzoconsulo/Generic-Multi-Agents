@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    D["domínio do projeto"] --> T{"for_domain/1"}
+    T -- "vazio ou software" --> S["trilha de software<br/>executor · tester · reviewer"]
+    T -- "qualquer outro valor" --> G["trilha genérica<br/>builder · checker · generic-reviewer"]
+    G --> L["cada critério recebe<br/>um grau de prova"]
+    S --> L
+    L --> F{"close/2<br/>todos rotulados?"}
+    F -- "sim" --> OK["verificação fecha"]
+    F -- "não" --> X["recusa fechar e diz qual critério<br/>falta rótulo, ou julgado sem rubrica"]
+    classDef y fill:#e6f2e6,stroke:#3a7d44
+    classDef n fill:#fde8e8,stroke:#9b1c1c
+    class OK y
+    class X n
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

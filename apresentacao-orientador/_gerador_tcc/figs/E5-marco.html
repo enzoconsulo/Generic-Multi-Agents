@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    L["lote com 3 áreas<br/>a.txt · b.txt · c.txt"] --> V["registro confirma<br/>3 agentes em voo"]
+    V --> AB["A e B terminam<br/>vão para teste<br/>1 consumo cada"]
+    V --> C["C escreve c.txt<br/>pela metade e trava"]
+    C --> K["C é morto<br/>de verdade"]
+    K --> Q["C volta à fila<br/>com o motivo<br/>0 consumo perdido"]
+    Q --> R["saneamento commita c.txt<br/>em nome de C<br/>git status vazio"]
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

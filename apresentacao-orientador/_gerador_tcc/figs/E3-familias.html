@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart LR
+    L1["<b>AGENTE COMPLETO</b><br/>ClaudeCLI"] --> a1["sistema envia<br/>1 pedido"] --> a2["o CLI roda as próprias<br/>ferramentas, várias voltas"] --> a3["sistema audita<br/>o que foi feito"]
+    L2["<b>SÓ O MODELO</b><br/>MessagesAPI"] --> b1["sistema envia<br/>o pedido"] --> b2["modelo pede<br/>ferramentas"] --> b3["sistema executa<br/>com confinamento"]
+    b3 -- "próxima volta" --> b1
+    classDef t fill:#1f3a5f,color:#fff,stroke:#1f3a5f
+    class L1,L2 t
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",themeVariables:{fontSize:"40px",fontFamily:"Segoe UI"},flowchart:{useMaxWidth:false,wrappingWidth:700},er:{useMaxWidth:false},sequence:{useMaxWidth:false,messageFontSize:36,actorFontSize:36,width:380,height:90,messageFontFamily:"Segoe UI",actorFontFamily:"Segoe UI"},state:{useMaxWidth:false}});</script></body></html>

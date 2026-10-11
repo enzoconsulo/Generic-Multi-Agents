@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#fff;font-family:Segoe UI}#d{display:inline-block;padding:16px;zoom:2}</style></head>
+<body><div id="d"><pre class="mermaid">flowchart TB
+    subgraph PEQ["Pequenos"]
+        direction LR
+        P1["P1 · Lista de tarefas<br/>no terminal<br/>código"]
+        P3["P3 · Relatório<br/>a partir de planilha<br/>dados"]
+        P5["P5 · Apresentação<br/>a partir de dados<br/>não-código"]
+    end
+    subgraph MED["Médios"]
+        direction LR
+        P2["P2 · API de<br/>biblioteca<br/>código + banco"]
+        P4["P4 · Site de<br/>portfólio<br/>visual"]
+    end
+    P3 -. "usa os números de P3" .-> P5
+</pre></div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"neutral",flowchart:{useMaxWidth:false},er:{useMaxWidth:false},sequence:{useMaxWidth:false},state:{useMaxWidth:false}});</script></body></html>
