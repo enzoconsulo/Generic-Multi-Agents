@@ -376,7 +376,7 @@ O índice linear, com as dependências, é `_sistema/v2/ROTEIRO.md`. Ele e as ta
 mesmo gerador (`_sistema/v2/gerar-tarefas.py`), então não podem divergir — e o gerador
 **nunca sobrescreve tarefa já executada**, porque estado não se regenera.
 
-**Para começar numa máquina nova**, cole `prompt_inicial.txt` (na raiz) numa sessão nova do
+**Para começar numa máquina nova**, cole `_sistema/v2/prompt_inicial.txt` numa sessão nova do
 Claude Code: ele explica o projeto, a ordem de leitura, o loop de execução e as regras que
 não se negociam.
 

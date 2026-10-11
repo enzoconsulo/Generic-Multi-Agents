@@ -5,7 +5,7 @@ evidência nova é pagar duas vezes pela mesma resposta. Se você está prestes 
 desta lista, leia o motivo primeiro — e, se ainda achar que vale, diga explicitamente qual
 FATO NOVO mudou o quadro.
 
-(Resgatadas de `proximo_prompt.txt` em 2026-08-11, quando o handoff foi reescrito. Handoff é
+(Resgatadas de `proximo_prompt.txt` — hoje em `_sistema/historico/` — em 2026-08-11, quando o handoff foi reescrito. Handoff é
 rotativo por natureza; regra e decisão não podem morar nele.)
 
 ## Custo e medição
