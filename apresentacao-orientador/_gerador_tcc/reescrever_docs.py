@@ -75,7 +75,7 @@ with open(filtro, "w", newline="\n") as f:
                 f"git update-index --cacheinfo 100644,{b},docs/etapas/{nome}.docx\n")
     f.write("true\n")
 env = dict(os.environ, FILTER_BRANCH_SQUELCH_WARNING="1")
-r = subprocess.run(["git", "filter-branch", "-f", "--index-filter", f"sh '{filtro}'", "--", *BR],
+r = subprocess.run(["git", "filter-branch", "-f", "--index-filter", f"sh '{filtro}'", "--", "main", *BR],
                    cwd=REPO, env=env, capture_output=True, text=True)
 print(r.stdout[-400:], r.stderr[-400:])
 if r.returncode != 0:

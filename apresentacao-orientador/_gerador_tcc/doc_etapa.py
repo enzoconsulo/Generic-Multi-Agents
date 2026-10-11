@@ -204,8 +204,9 @@ def pagina_mapa(doc, figs, n=2):
                   3: "o agente e suas ferramentas, confinado ao projeto", 4: "a linha de produção: estados, portões e retrabalho",
                   5: "vários agentes em paralelo, com tolerância a falhas", 6: "a memória do projeto: histórico e busca com fonte",
                   7: "a tela ao vivo e o piloto automático"}[n]
-    titulo_pagina(doc, "Onde esta etapa entra no sistema",
-                  f"O sistema é construído em degraus: cada etapa se apoia na anterior. A E{n} acrescenta {acrescenta}.")
+    sub = (f"O sistema é construído em degraus: cada etapa se apoia na anterior. A E{n} acrescenta {acrescenta}." if n > 1 else
+           "O sistema é construído em degraus, um por etapa. A E1 não constrói um degrau: desenha a planta de todos eles.")
+    titulo_pagina(doc, "Onde esta etapa entra no sistema", sub)
     doc.add_picture(figs["mapa"], width=Cm(24))
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -261,8 +262,8 @@ def figura(doc, arquivo, altura_max, largura_max=24.0):  # noqa: D401
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
 
-def pagina_problema(doc, linhas):
-    titulo_pagina(doc, "A ideia: que problema esta etapa resolve", "Antes de construir os agentes, estes problemas precisavam estar resolvidos.")
+def pagina_problema(doc, linhas, sub=None):
+    titulo_pagina(doc, "A ideia: que problema esta etapa resolve", sub or "Antes de construir os agentes, estes problemas precisavam estar resolvidos.")
     t = tabela(doc, len(linhas) + 1, 3, [9.5, 8.0, 9.0])
     for c, txt_ in zip(t.rows[0].cells, ("Problema", "Sem resolver agora…", "O que a etapa constrói")):
         pronta(c, NAVY, 0.22)
@@ -354,7 +355,21 @@ def pagina_prova(doc, n, tarefas, tx, cod):
                 run(p, f"{i}.  ", 12, WARNC, True)
                 run_md(p, re.sub(r"^\s*\d+[.)]\s*", "", s), 11)
         elif marco["status"] != "done":
-            caixa(doc, "SITUAÇÃO DO MARCO", d.get("pt", {}).get("resumo", ""), BADC if marco["status"] == "blocked" else WARNC, tam=13)
+            if passos and EXTRAS.get(n, {}).get("marco_passos"):
+                par(doc, EXTRAS[n].get("marco_passos_titulo", "O que se confere, item a item"), 13, NAVY, True, depois=2)
+                for i, s in enumerate(passos, 1):
+                    p = par(doc, depois=2)
+                    run(p, f"{i}.  ", 12, WARNC, True)
+                    run_md(p, s, 11)
+                par(doc, depois=4)
+            caixa(doc, "SITUAÇÃO DO MARCO", d.get("pt", {}).get("resumo", ""), BADC if marco["status"] == "blocked" else WARNC,
+                  tam=12 if EXTRAS.get(n, {}).get("marco_passos") else 13)
+    elif EXTRAS.get(n, {}).get("marco_passos"):
+        par(doc, "O que se confere, item a item", 13, NAVY, True, depois=2)
+        for i, s in enumerate(EXTRAS[n]["marco_passos"], 1):
+            p = par(doc, depois=2)
+            run(p, f"{i}.  ", 12, WARNC, True)
+            run_md(p, s, 11)
     par(doc, depois=6)
     c = pronta(tabela(doc, 1, 1, [LARG]).rows[0].cells[0], "EEF2F7")
     par(c, "COMO DEMONSTRAR", 10.5, AZUL, True, depois=3)
@@ -436,6 +451,14 @@ def apendice(doc, cod):
         run(p, s, 10, fonte="Consolas")
 
 
+def commits_e1(n):
+    """A E1 não tem código (sem métricas), mas tem commits: os da branch, sem o inicial e o do relatório."""
+    if n != 1 or not M.existe(M.BRANCH[1]):
+        return None
+    linhas = M.git("log", "--format=%h	%s", M.BRANCH[1]).splitlines()
+    return {"commits": [c.split("	", 1) for c in reversed(linhas) if not c.endswith(("stage report", "initial commit"))]}
+
+
 def gerar(n, saida):
     e = C.ETAPAS[n]
     tx = TEXTOS[n]
@@ -467,7 +490,7 @@ def gerar(n, saida):
     pagina_mapa(doc, figs, n)
     ex = EXTRAS.get(n, {})
     if ex.get("pecas"):
-        pagina_problema(doc, ex["problema"])
+        pagina_problema(doc, ex["problema"], ex.get("problema_sub"))
         pagina_conceitos(doc, ex["conceitos"])
         for pc in ex["pecas"]:
             pagina_peca(doc, pc)
@@ -482,7 +505,7 @@ def gerar(n, saida):
     if cod:
         pagina_numeros(doc, n, tarefas, cods)
     pagina_final(doc, n, tarefas, tx)
-    apendice(doc, cod)
+    apendice(doc, cod or commits_e1(n))
     os.makedirs(os.path.dirname(os.path.abspath(saida)), exist_ok=True)
     doc.save(saida)
     print("ok", saida)

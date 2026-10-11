@@ -14,12 +14,12 @@ from textos_etapas import TEXTOS  # noqa: E402
 
 REQ_STATUS = {  # situação real de cada requisito hoje
     "R1": ("parcial", "implementado; pedido real na validação"), "R2": ("ok", "teste do marco E4"),
-    "R3": ("ok", "dois portões, teste do marco E4"), "R4": ("ok", "escada de resposta"),
-    "R5": ("ok", "humano no 4º ciclo"), "R6": ("ok", "teste do marco E5"),
+    "R3": ("ok", "dois portões, teste do marco E4"), "R4": ("parcial", "escada pronta e testada; o laço automático ainda não a chama"),
+    "R5": ("parcial", "limite de 3 ciclos definido e testado; ainda não acionado automaticamente"), "R6": ("ok", "teste do marco E5"),
     "R7": ("pendente", "bloco ainda não chega ao agente"), "R8": ("parcial", "tela pronta; projeto inteiro pendente"),
     "R9": ("parcial", "busca medida; pico com 3 em paralelo a medir"), "R10": ("ok", "consumos em cota e US$"),
     "R11": ("ok", "confinamento + sandbox"), "R12": ("ok", "teste do marco E2"),
-    "R13": ("ok", "teste do marco E5"), "R14": ("ok", "teto que nunca corta no meio"),
+    "R13": ("ok", "teste do marco E5"), "R14": ("parcial", "regra do teto testada; o piloto (E7) para por gasto acumulado"),
     "R15": ("ok", "dois adaptadores, mesma fronteira"),
 }
 REQ_TXT = {

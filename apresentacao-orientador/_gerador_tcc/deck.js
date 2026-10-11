@@ -256,7 +256,8 @@ for (const e of D.etapas) {
 // 16. Requisitos ------------------------------------------------------------------------------
 {
   const s = slide("CONTEUDO", "Dados");
-  s.addText("Requisitos: 11 atendidos, 3 parciais, 1 pendente", { placeholder: "title" });
+  const conta = (st) => D.requisitos.filter((r) => r.status === st).length;
+  s.addText(`Requisitos: ${conta("ok")} atendidos, ${conta("parcial")} parciais, ${conta("pendente")} pendente${conta("pendente") === 1 ? "" : "s"}`, { placeholder: "title" });
   D.requisitos.forEach((r, i) => {
     const col = Math.floor(i / 8), lin = i % 8, x = 0.5 + col * 4.6, y = 1.15 + lin * 0.47;
     const st = r.status === "ok" ? "ok" : r.status === "parcial" ? "parcial" : "pendente";
@@ -270,12 +271,23 @@ for (const e of D.etapas) {
 {
   const s = slide("CONTEUDO", "Próximos passos");
   s.addText("O que ainda não está pronto", { placeholder: "title" });
-  const pend = D.etapas.flatMap((e) => e.texto.pendente.map((p) => ["E" + e.n, p]));
-  pend.forEach(([e, p], i) => {
-    const y = 1.2 + i * 0.75;
-    card(s, 0.5, y, 9, 0.62, "pend-" + i);
-    txt(s, e, { x: 0.65, y: y + 0.12, w: 0.6, h: 0.38, fontSize: 16, bold: true, color: C.accent3 });
-    txt(s, p, { x: 1.35, y: y + 0.08, w: 8.0, h: 0.48, fontSize: 12, valign: "middle" });
+  // As pendências de cada etapa, agrupadas, em duas colunas com o número de itens equilibrado.
+  const grupos = D.etapas.filter((e) => e.texto.pendente.length).map((e) => ["E" + e.n, e.texto.pendente]);
+  const total = grupos.reduce((a, [, p]) => a + p.length, 0);
+  const cols = [[], []];
+  let acc = 0;
+  grupos.forEach((g) => {
+    cols[acc + g[1].length / 2 < total / 2 ? 0 : 1].push(g);
+    acc += g[1].length;
+  });
+  cols.forEach((col, c) => {
+    const runs = [];
+    col.forEach(([e, itens], k) => {
+      runs.push({ text: e, options: { bold: true, fontSize: 12, color: C.accent3, breakLine: true, paraSpaceBefore: k ? 6 : 0 } });
+      itens.forEach((p) => runs.push({ text: p, options: { fontSize: 9.5, bullet: { indent: 12 }, breakLine: true, paraSpaceAfter: 2 } }));
+    });
+    card(s, 0.5 + c * 4.6, 1.1, 4.4, 4.0, "pend-col-" + c);
+    txt(s, runs, { x: 0.65 + c * 4.6, y: 1.2, w: 4.1, h: 3.8 });
   });
 }
 

@@ -39,6 +39,9 @@ def b64(caminho):
 
 
 def converter(md):
+    # duas caixas seguidas, separadas só por linha em branco, viram UM blockquote no Markdown;
+    # um comentário entre elas mantém cada caixa separada
+    md = re.sub(r"(?m)^(>[^\n]*)\n\n(?=> \[!)", r"\1\n\n<!-- -->\n\n", md)
     corpo = markdown.markdown(md, extensions=["tables", "fenced_code", "toc", "sane_lists"],
                               extension_configs={"toc": {"permalink": False}})
     # Mermaid: <pre><code class="language-mermaid"> → <pre class="mermaid">

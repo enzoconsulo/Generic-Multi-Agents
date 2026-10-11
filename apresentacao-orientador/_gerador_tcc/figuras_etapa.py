@@ -83,6 +83,11 @@ def escada(n, caminho):
     ax.set_ylim(0, 7.0)
     ax.axis("off")
     larg, alt, base = 2.05, 0.75, 0.3
+    if n == 1:  # a E1 é a planta: uma faixa sob todos os degraus, que ficam todos por construir
+        base = 1.05
+        ax.add_patch(FancyBboxPatch((0.3, 0.1), 6 * larg - 0.14, 0.75, boxstyle="round,pad=0,rounding_size=0.08", fc=NAVY, ec=NAVY, lw=2.6))
+        ax.text(0.6, 0.475, "E1  ·  Planejamento — a planta de todos os degraus", ha="left", va="center", fontsize=12.5, weight="bold", color="white")
+        ax.text(0.3 + 6 * larg - 0.45, 0.475, "◀  você está aqui", ha="right", va="center", fontsize=12, weight="bold", color=WARN)
     for i, (k, nome, desc) in enumerate(DEGRAUS):
         x, h = 0.3 + i * larg, alt * (i + 1)
         w = larg - 0.14
@@ -206,7 +211,7 @@ def diagrama(n, caminho):
         _caixa(ax, 0.3, 2.0, 2.6, 1.5, "Motor", "despachos e\ntransições")
         _caixa(ax, 4.0, 2.0, 2.6, 1.5, "Eventos", "telemetria por\ndespacho", cor=BLUE)
         _caixa(ax, 7.8, 3.4, 3.8, 1.1, "Quadro de tarefas", "ao vivo, por estado", cor=OK)
-        _caixa(ax, 7.8, 1.9, 3.8, 1.1, "Console do agente", "saída e custo da rodada", cor=OK)
+        _caixa(ax, 7.8, 1.9, 3.8, 1.1, "Console", "agentes em voo, custo e cota", cor=OK)
         _caixa(ax, 7.8, 0.3, 3.8, 1.1, "Piloto automático", "rodadas com teto de gasto", cor=WARN)
         _seta(ax, (2.9, 2.75), (4.0, 2.75))
         _seta(ax, (6.6, 3.0), (7.8, 3.9))
