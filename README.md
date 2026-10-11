@@ -345,6 +345,8 @@ CLAUDE.md                          regras do orquestrador           edita: você
 README.md                          este manual                      edita: você/orquestrador
 INICIAR.bat / iniciar.ps1          sobe o painel web (duplo-clique) edita: você
 manter-painel.ps1                  supervisor: mantém o painel de pé edita: você
+manter-postgres.ps1                vigia: mantém o Postgres de pé   edita: você
+TCC-MERGE-DE-ETAPA.md              roteiro do merge de etapa (TCC)  edita: você/orquestrador
 .gitignore                         raiz ignora projetos/ e afins    edita: você
 .claude/settings.json              permissões pré-aprovadas         edita: você (§6.3)
 .claude/agents/*.md                definição dos 12 agentes         edita: você (§6.1)
@@ -362,6 +364,13 @@ _sistema/templates/                modelos de documentos            raramente mu
 _sistema/ideias/                   caixa de entrada                 escreve: /ideia
 _sistema/logs/AAAA-MM-DD.md        memória diária da fábrica        escreve: orquestrador
 _sistema/documentos-tcc/           documentos de arquitetura (§10)  edita: você/orquestrador
+  atuais/                          os .docx/.pdf vivos (gerados)    escrevem: geradores/
+  historico/                       versões superadas                só adiciona
+_sistema/relatorios/               relatórios de jornada p/ o Enzo  escreve: orquestrador
+_sistema/historico/                prompts de passagem antigos      só adiciona
+_sistema/v2/                       preparação e prompt inicial da v2 raramente muda
+_sistema/ferramentas/marco-v2/     scripts do marco T-058 da v2     edita: orquestrador
+apresentacao-orientador/           material das apresentações (TCC) edita: orquestrador (gerador)
 painel/                            cockpit web (opcional, Node 22+) edita: você/orquestrador
   CLAUDE.md                        stack e como rodar/testar        ver painel/CLAUDE.md
 projetos/<nome>/                   um projeto = um repositório git
