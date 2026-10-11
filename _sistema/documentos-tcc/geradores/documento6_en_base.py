@@ -10,7 +10,7 @@ from docx.oxml import OxmlElement
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 FIGS = os.path.join(AQUI, "figs_en")
-DESTINO = r"C:\Users\enzoc\OneDrive\Documentos\Gerador_de_projetos\multi-agent-software-factory-SUMMARY-en.docx"
+DESTINO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "atuais", "multi-agent-software-factory-SUMMARY-en.docx")
 
 AZUL = RGBColor(0x18, 0x4F, 0x95)
 TINTA = RGBColor(0x0B, 0x0B, 0x0B)

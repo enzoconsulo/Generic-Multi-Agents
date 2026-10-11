@@ -137,7 +137,7 @@ def medir(caminho):
 
 def _raiz():
     aqui = os.path.dirname(os.path.abspath(__file__))
-    return os.path.dirname(os.path.dirname(os.path.dirname(aqui)))
+    return os.path.join(os.path.dirname(aqui), "atuais")
 
 
 if __name__ == "__main__":

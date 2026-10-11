@@ -1,5 +1,5 @@
 import win32com.client, os, pymupdf
-src = r"C:\Users\enzoc\OneDrive\Documentos\Gerador_de_projetos\multi-agent-software-factory-COMPLETE-en.docx"
+src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "atuais", "multi-agent-software-factory-COMPLETE-en.docx")
 pdf = os.path.join(os.path.dirname(os.path.abspath(__file__)), "preview7_en.pdf")
 w = win32com.client.Dispatch("Word.Application")
 w.Visible = False

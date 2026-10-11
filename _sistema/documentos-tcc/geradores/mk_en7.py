@@ -4,10 +4,9 @@ import io, re
 
 s = io.open("documento7_base.py", encoding="utf-8").read()
 s = s.replace('FIGS = os.path.join(AQUI, "figs3")', 'FIGS = os.path.join(AQUI, "figs_en")')
-novo = ('DESTINO = r"C:' + chr(92) + 'Users' + chr(92) + 'enzoc' + chr(92) + 'OneDrive' + chr(92)
-        + 'Documentos' + chr(92) + 'Gerador_de_projetos' + chr(92)
-        + 'multi-agent-software-factory-COMPLETE-en.docx"')
-s = re.sub(r'^DESTINO = r".*"$', lambda m: novo, s, count=1, flags=re.M)
+novo = ('DESTINO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '
+        + '"atuais", "multi-agent-software-factory-COMPLETE-en.docx")')
+s = re.sub(r'^DESTINO = .*$', lambda m: novo, s, count=1, flags=re.M)
 s = s.replace(chr(34)+"PARTE "+chr(34), chr(34)+"PART "+chr(34))
 io.open("documento7_en_base.py", "w", encoding="utf-8").write(s)
 

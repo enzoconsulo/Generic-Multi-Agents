@@ -28,16 +28,19 @@ tratada como protótipo que validou o desenho.
 
 ## 2. Estado atual — qual arquivo é qual
 
-**A raiz foi centralizada em 21/08/2026**: só ficam os quatro documentos vivos. Os seis
-superados foram **movidos** (não apagados) para `_sistema/documentos-tcc/historico/`.
-**Nenhum .docx está commitado.**
+**Desde 11/10/2026 os documentos vivos ficam em `_sistema/documentos-tcc/atuais/`** (antes
+ficavam na raiz do repositório, centralizados em 21/08). Os geradores gravam direto lá. Os
+superados continuam em `_sistema/documentos-tcc/historico/`. Estão todos versionados no git.
 
-| Arquivo (raiz) | Pág. | O que é |
+| Arquivo (`atuais/`) | Pág. | O que é |
 |---|---|---|
 | `fabrica-multi-agente-arquitetura-6.docx` | 7 | **versão resumida** de apresentação, em português |
 | `fabrica-multi-agente-arquitetura-7.docx` | 19 | **documentação completa** — 8 partes, 21 figuras, 28 seções |
 | `multi-agent-software-factory-SUMMARY-en.docx` | 7 | tradução do v6 |
 | `multi-agent-software-factory-COMPLETE-en.docx` | 19 | tradução do v7 |
+| `fabrica-multi-agente-plano-de-desenvolvimento.docx` | — | plano de desenvolvimento (gerado por `geradores/plano_base.py`) |
+| `originalidade-completo.docx` / `.pdf` | — | análise de originalidade, com fontes (`geradores/originalidade.py`) |
+| `originalidade-resumo.docx` / `.pdf` | — | resumo da análise de originalidade, para apresentar |
 
 Em `historico/` (referência, não usar como entrega): `Fabrica-Multi-Agente-Arquitetura.docx`
 (primeira tentativa), `-2` (só a v1; foi a base visual de tudo), `-3-completo` (11 pág., é

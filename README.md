@@ -380,7 +380,7 @@ projetos/<nome>/                   um projeto = um repositório git
 
 ## 10. Documentos de arquitetura
 
-Esta fábrica é o TCC do autor, e os documentos que a **apresentam** ficam na raiz —
+Esta fábrica é o TCC do autor, e os documentos que a **apresentam** ficam em `_sistema/documentos-tcc/atuais/` —
 gerados por script (python-docx + matplotlib), não escritos à mão no Word. Eles descrevem
 a **versão 2 do sistema: uma reimplementação em Elixir/OTP**; a versão 1 é o que roda neste
 repositório.

@@ -31,7 +31,7 @@ FIGS = os.path.join(AQUI, "figs_plano")
 # A raiz da fabrica sao tres niveis acima de geradores/ — assim o gerador nao
 # carrega o caminho de uma maquina especifica, como o do documento 7 carregava.
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(AQUI)))
-DESTINO = os.path.join(RAIZ, "fabrica-multi-agente-plano-de-desenvolvimento.docx")
+DESTINO = os.path.join(os.path.dirname(AQUI), "atuais", "fabrica-multi-agente-plano-de-desenvolvimento.docx")
 
 AZUL = RGBColor(0x18, 0x4F, 0x95)
 AZUL_CLARO = RGBColor(0x2A, 0x78, 0xD6)

@@ -24,7 +24,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+# Destino dos .docx/.pdf: _sistema/documentos-tcc/atuais/ (ao lado de historico/).
+RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "atuais"))
 
 AZUL = RGBColor(0x18, 0x4F, 0x95)
 AZUL_TAB = "2A78D6"
