@@ -1,0 +1,3 @@
+# saidas do vigia e dos disparos (geradas a cada uso)
+vigia-*.log
+disparo-*.log

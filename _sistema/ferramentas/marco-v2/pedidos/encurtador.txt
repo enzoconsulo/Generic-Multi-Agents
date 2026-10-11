@@ -1,0 +1,9 @@
+Crie o encurtador: um encurtador de URLs com API HTTP mínima e uma página simples. Node.js 24, sem dependências externas: servidor com `node:http` e persistência com o módulo nativo `node:sqlite` (arquivo local; o caminho vem da variável ENCURTADOR_DB, com padrão `dados.db`; a porta vem de PORT, com padrão 3000).
+
+Funcionalidades:
+- `POST /api/links` com JSON `{"url": "...", "slug": "opcional"}` cria um link curto. Sem slug, gera um aleatório de 6 caracteres [a-zA-Z0-9] sem colisão. Slug customizado aceita só [a-zA-Z0-9_-], de 3 a 32 caracteres. Responde 201 com `{slug, url, curto}`. URL inválida (só http/https) ou slug com formato inválido → 400; slug já existente → 409.
+- `GET /:slug` redireciona com 302 para a URL original e incrementa o contador de acessos; slug inexistente → 404.
+- `GET /api/links/:slug` devolve `{slug, url, acessos, criado_em}`; inexistente → 404.
+- `GET /` serve uma página HTML mínima com um formulário que cria o link (via fetch na API) e mostra o link curto gerado.
+
+Testes com o runner nativo `node --test`, subindo o servidor numa porta efêmera e fazendo requisições HTTP reais (cada critério verificável por um teste). README curto com como rodar e exemplos com curl. Entre 8 e 10 tarefas.

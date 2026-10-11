@@ -1,0 +1,14 @@
+Crie o xadrez: um jogo de xadrez web para 2 jogadores, pensado para celular, em que cada jogador usa o seu próprio aparelho e os dois veem a mesma partida em tempo real, acessando um endereço comum na rede local.
+
+Requisitos:
+- Node.js 24. Use bibliotecas maduras em vez de código próprio onde elas existem: `chess.js` para as regras (movimentos legais, xeque, xeque-mate, empate, roque, en passant, promoção) e uma biblioteca de WebSocket (ex. `ws`) para o tempo real. Instale com npm.
+- O servidor escuta em 0.0.0.0 (porta de PORT, padrão 3000) e imprime no início o endereço da rede local para abrir no celular.
+- Criar partida gera um código curto; o segundo jogador entra com esse código (ou por um link). O primeiro joga de brancas, o segundo de pretas; um terceiro que tente entrar recebe uma mensagem clara de partida cheia.
+- O servidor é a autoridade: valida cada lance com o chess.js e rejeita lance ilegal ou fora da vez; os dois clientes recebem o novo estado na hora.
+- Tabuleiro responsivo, sem rolagem horizontal em telas de 360 px; o jogador move tocando na peça e depois na casa de destino; o tabuleiro aparece do ponto de vista de cada jogador (pretas embaixo para quem joga de pretas); destaque do último lance e indicação de xeque.
+- Fim de jogo: xeque-mate, afogamento e demais empates detectados e anunciados aos dois; botão de desistir; botão de nova partida.
+- Relógio de partida: ao criar, escolhe-se o tempo por jogador (ex. 5, 10 ou 15 minutos); o relógio de quem está na vez corre, é controlado pelo servidor, aparece para os dois em tempo real, e quem zera o tempo perde.
+- Reconexão: se um jogador recarregar a página, volta para a mesma partida e mesma cor.
+- Testes com o runner nativo `node --test`: regras e estado da partida (incluindo relógio com tempo simulado) e um teste de integração com dois clientes WebSocket reais jogando um mate do pastor.
+- README com como rodar e como abrir nos dois celulares.
+Entre 10 e 12 tarefas.
